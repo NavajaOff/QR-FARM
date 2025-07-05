@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionar Animales - QR FARM</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-dark bg-success">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-user-circle fa-lg me-2"></i>
+                <span class="fw-bold">Usuario</span>
+            </div>
+            
+            <a class="navbar-brand mx-auto d-flex align-items-center" href="menu.html">
+                <span class="fw-bold fs-2">QR FARM</span>
+                <i class="fas fa-cow ms-2 logo-icon"></i>
+            </a>
+            
+            <div class="navbar-brand">
+                <i class="fas fa-cow fa-2x"></i>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Layout -->
+    <div class="d-flex">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <nav class="nav flex-column">
+                <a class="nav-link" href="inventario.html">
+                    <i class="fas fa-boxes me-2"></i>Inventario
+                </a>
+                <a class="nav-link active" href="gestionar_animales.html">
+                    <i class="fas fa-cow me-2"></i>Gestionar animales
+                </a>
+                <a class="nav-link" href="gestionar_potreros.html">
+                    <i class="fas fa-map-marked-alt me-2"></i>Gestionar potreros
+                </a>
+                <a class="nav-link" href="escanear_qr.html">
+                    <i class="fas fa-qrcode me-2"></i>Escanear QR
+                </a>
+                <a class="nav-link" href="registrar_producto.html">
+                    <i class="fas fa-plus-circle me-2"></i>Registrar producto
+                </a>
+                <a class="nav-link" href="vender_producto.html">
+                    <i class="fas fa-shopping-cart me-2"></i>Vender producto
+                </a>
+                <a class="nav-link" href="gestionar_clientes.html">
+                    <i class="fas fa-users me-2"></i>Gestionar clientes
+                </a>
+                <a class="nav-link" href="#" onclick="logout()">
+                    <i class="fas fa-sign-out-alt me-2"></i>Salir
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content" style="margin-left: 200px; padding: 20px;">
+            <div class="container-fluid">
+                <h2 class="fw-bold text-dark mb-4">
+                    <i class="fas fa-cow me-2 text-success"></i>Gestionar Animales
+                </h2>
+                
+                <!-- Filtros y Búsqueda -->
+                <div class="card border-0 shadow mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label">Buscar por código/nombre:</label>
+                                <input type="text" class="form-control" placeholder="Buscar animal...">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Filtrar por raza:</label>
+                                <select class="form-select">
+                                    <option>Todas las razas</option>
+                                    <option>Holstein</option>
+                                    <option>Angus</option>
+                                    <option>Jersey</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Estado de salud:</label>
+                                <select class="form-select">
+                                    <option>Todos los estados</option>
+                                    <option>Saludable</option>
+                                    <option>En tratamiento</option>
+                                    <option>Enfermo</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button class="btn btn-primary w-100">
+                                    <i class="fas fa-search me-1"></i>Buscar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grid de Animales -->
+                <div class="row">
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <i class="fas fa-cow fa-3x text-success mb-3"></i>
+                                <h5 class="card-title">Holstein-001</h5>
+                                <p class="text-muted">Raza: Holstein</p>
+                                <p class="text-muted">Edad: 3 años</p>
+                                <span class="badge bg-success mb-3">Saludable</span>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-outline-primary" onclick="verPerfilAnimal('Holstein-001')">
+                                        <i class="fas fa-eye me-1"></i>Ver Perfil
+                                    </button>
+                                    <button class="btn btn-outline-warning" onclick="editarAnimal('Holstein-001')">
+                                        <i class="fas fa-edit me-1"></i>Editar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <i class="fas fa-cow fa-3x text-warning mb-3"></i>
+                                <h5 class="card-title">Angus-002</h5>
+                                <p class="text-muted">Raza: Angus</p>
+                                <p class="text-muted">Edad: 2 años</p>
+                                <span class="badge bg-warning mb-3">En Tratamiento</span>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-outline-primary" onclick="verPerfilAnimal('Angus-002')">
+                                        <i class="fas fa-eye me-1"></i>Ver Perfil
+                                    </button>
+                                    <button class="btn btn-outline-warning" onclick="editarAnimal('Angus-002')">
+                                        <i class="fas fa-edit me-1"></i>Editar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <i class="fas fa-cow fa-3x text-info mb-3"></i>
+                                <h5 class="card-title">Jersey-003</h5>
+                                <p class="text-muted">Raza: Jersey</p>
+                                <p class="text-muted">Edad: 4 años</p>
+                                <span class="badge bg-success mb-3">Saludable</span>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-outline-primary" onclick="verPerfilAnimal('Jersey-003')">
+                                        <i class="fas fa-eye me-1"></i>Ver Perfil
+                                    </button>
+                                    <button class="btn btn-outline-warning" onclick="editarAnimal('Jersey-003')">
+                                        <i class="fas fa-edit me-1"></i>Editar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botón Agregar Animal -->
+                <div class="text-center mt-4">
+                    <button class="btn btn-success btn-lg" onclick="agregarNuevoAnimal()">
+                        <i class="fas fa-plus me-2"></i>Agregar Nuevo Animal
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function verPerfilAnimal(nombre) {
+            Swal.fire({
+                title: `Perfil de ${nombre}`,
+                html: `
+                    <div class="text-start">
+                        <p><strong>Código QR:</strong> QR-${nombre}</p>
+                        <p><strong>Fecha de nacimiento:</strong> 15/03/2021</p>
+                        <p><strong>Peso actual:</strong> 450 kg</p>
+                        <p><strong>Última vacunación:</strong> 10/01/2024</p>
+                        <p><strong>Potrero actual:</strong> Potrero 1</p>
+                        <p><strong>Historial médico:</strong> Sin incidencias</p>
+                    </div>
+                `,
+                confirmButtonColor: '#00d563'
+            });
+        }
+
+        function editarAnimal(nombre) {
+            Swal.fire({
+                title: `Editar ${nombre}`,
+                html: `
+                    <form class="text-start">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre/Código:</label>
+                            <input type="text" class="form-control" value="${nombre}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Estado de salud:</label>
+                            <select class="form-select">
+                                <option>Saludable</option>
+                                <option>En tratamiento</option>
+                                <option>Enfermo</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Peso (kg):</label>
+                            <input type="number" class="form-control" value="450">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Potrero:</label>
+                            <select class="form-select">
+                                <option>Potrero 1</option>
+                                <option>Potrero 2</option>
+                                <option>Potrero 3</option>
+                            </select>
+                        </div>
+                    </form>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Guardar Cambios',
+                confirmButtonColor: '#00d563'
+            });
+        }
+
+        function agregarNuevoAnimal() {
+            window.location.href = 'registrar_producto.html';
+        }
+
+        function logout() {
+            Swal.fire({
+                title: '¿Cerrar sesión?',
+                text: '¿Estás seguro de que quieres cerrar sesión?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, cerrar sesión',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#dc3545'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    localStorage.removeItem('isLoggedIn');
+                    localStorage.removeItem('nombreUsuario');
+                    window.location.href = 'index.html';
+                }
+            });
+        }
+
+        // Verificar autenticación
+        document.addEventListener('DOMContentLoaded', function() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            if (isLoggedIn !== 'true') {
+                window.location.href = 'iniciar_sesion.html';
+            }
+        });
+    </script>
+</body>
+</html>
