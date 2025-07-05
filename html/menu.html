@@ -59,6 +59,9 @@
                 <a class="nav-link" href="#" onclick="setActiveMenu(this, 'gestionar-animales')">
                     <i class="fas fa-cow me-2"></i>Gestionar animales
                 </a>
+                <a class="nav-link" href="#" onclick="setActiveMenu(this, 'gestionar-potreros')">
+                    <i class="fas fa-map-marked-alt me-2"></i>Gestionar potreros
+                </a>
                 <a class="nav-link" href="#" onclick="setActiveMenu(this, 'escanear-qr')">
                     <i class="fas fa-qrcode me-2"></i>Escanear QR
                 </a>
@@ -98,7 +101,7 @@
                         <div class="card-body p-4">
                             <!-- Imagen -->
                             <div class="text-center mb-4">
-                                <img src="../images/vascas-holstein.jpg" alt="Vacas Holstein - QR Farm" class="img-fluid rounded-3 shadow" style="max-width: 100%; height: 250px; object-fit: cover;">
+                                <img src="../images/vacas-holstein.png" alt="Vacas Holstein - QR Farm" class="img-fluid rounded-3 shadow" style="max-width: 100%; height: 250px; object-fit: cover;">
                             </div>
 
                             <!-- Estadísticas -->
@@ -176,22 +179,38 @@
 
         // Función para mostrar contenido de cada sección
         function showSectionContent(section) {
-            const sectionNames = {
-                'inventario': 'Inventario',
-                'gestionar-animales': 'Gestionar Animales',
-                'escanear-qr': 'Escanear QR',
-                'registrar-producto': 'Registrar Producto',
-                'vender-producto': 'Vender Producto',
-                'gestionar-clientes': 'Gestionar Clientes'
-            };
-
+    // Redirigir a las páginas correspondientes
+    switch(section) {
+        case 'inventario':
+            window.location.href = 'inventario.html';
+            break;
+        case 'gestionar-animales':
+            window.location.href = 'gestionar_animales.html';
+            break;
+        case 'gestionar-potreros':
+            window.location.href = 'gestionar_potreros.html';
+            break;
+        case 'escanear-qr':
+            window.location.href = 'escanear_qr.html';
+            break;
+        case 'registrar-producto':
+            window.location.href = 'registrar_producto.html';
+            break;
+        case 'vender-producto':
+            window.location.href = 'vender_producto.html';
+            break;
+        case 'gestionar-clientes':
+            window.location.href = 'gestionar_clientes.html';
+            break;
+        default:
             Swal.fire({
-                title: sectionNames[section] || 'Sección',
-                text: `Funcionalidad de ${sectionNames[section]} en desarrollo`,
+                title: 'Sección',
+                text: 'Funcionalidad en desarrollo',
                 icon: 'info',
                 confirmButtonColor: '#00d563'
             });
-        }
+    }
+}
 
         // Función para mostrar notificaciones
         function showNotifications() {

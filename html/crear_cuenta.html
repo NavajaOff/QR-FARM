@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iniciar Sesión - QR FARM</title>
+    <title>Crear Cuenta - QR FARM</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -37,53 +37,113 @@
     </nav>
 
     <!-- Main Content -->
-    <div class="container-fluid vh-100 d-flex align-items-center" style="background-color: #f8f9fa;">
+    <div class="container-fluid vh-100 d-flex align-items-center bg-light-custom">
         <div class="row w-100 justify-content-center">
             <div class="col-lg-10">
-                <div class="row bg-white rounded-4 shadow-lg overflow-hidden" style="min-height: 600px;">
-                    <!-- Left Side - Image and Description -->
-                    <div class="col-md-6 p-5 d-flex flex-column justify-content-center" style="background-color: #ffffff;">
-                        <div class="text-center mb-4">
-                            <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-C7VwFKE2Ge08TsJBkbkKkXUqUGwMMu.png" alt="Ganado QR Farm" class="img-fluid rounded-4 shadow" style="max-height: 300px; border: 3px solid #007bff;">
-                        </div>
+                <div class="row bg-white rounded-4 shadow-lg overflow-hidden">
+                    <!-- Left Side - Image -->
+                    <div class="col-md-6 p-5 d-flex flex-column justify-content-center">
                         <div class="text-center">
-                            <p class="text-muted mb-2">Tu aliado inteligente en la gestión ganadera.</p>
-                            <p class="text-muted mb-2">Simplifica el control de tu ganado, mejora la trazabilidad</p>
-                            <p class="text-muted mb-2">y optimiza tus procesos con tecnología QR.</p>
-                            <p class="text-muted"><strong>¡Transforma tu finca hoy!</strong></p>
+                            <img src="../images/crear_cuenta.jpg" alt="Vacas Holstein - QR Farm" class="img-fluid rounded-4 shadow register-image">
                         </div>
                     </div>
 
-                    <!-- Right Side - Login Form -->
-                    <div class="col-md-6 p-5 d-flex align-items-center" style="background-color: #6c757d;">
+                    <!-- Right Side - Registration Form -->
+                    <div class="col-md-6 p-4 d-flex align-items-center bg-form-register">
                         <div class="w-100">
                             <div class="text-center mb-4">
-                                <i class="fas fa-user-circle fa-3x text-white mb-3"></i>
-                                <h4 class="text-white fw-bold">Inicio de Sesión</h4>
+                                <h3 class="text-white fw-bold">Crear una cuenta</h3>
+                                <p class="text-white-50">Es rápido y fácil</p>
                             </div>
 
-                            <form id="loginForm">
+                            <form id="registerForm">
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <input type="text" class="form-control" id="primerNombre" name="primerNombre" placeholder="Primer Nombre" required>
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="text" class="form-control" id="segundoNombre" name="segundoNombre" placeholder="Segundo Nombre">
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <input type="text" class="form-control" id="primerApellido" name="primerApellido" placeholder="Primer Apellido" required>
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="text" class="form-control" id="segundoApellido" name="segundoApellido" placeholder="Segundo Apellido">
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <input type="text" class="form-control" id="direccion" name="direccion" placeholder="Dirección" required>
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="tel" class="form-control" id="telefono" name="telefono" placeholder="Número de teléfono" required>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <input type="email" class="form-control" id="email" name="email" placeholder="Email" required>
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="password" class="form-control" id="password" name="password" placeholder="Contraseña" required>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <select class="form-select" id="pais" name="pais" required>
+                                            <option value="">Seleccionar País</option>
+                                            <option value="colombia">Colombia</option>
+                                            <option value="mexico">México</option>
+                                            <option value="argentina">Argentina</option>
+                                            <option value="chile">Chile</option>
+                                            <option value="peru">Perú</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-6">
+                                        <select class="form-select" id="tipoDocumento" name="tipoDocumento" required>
+                                            <option value="">Tipo de Documento</option>
+                                            <option value="cedula">Cédula de Ciudadanía</option>
+                                            <option value="pasaporte">Pasaporte</option>
+                                            <option value="cedula_extranjeria">Cédula de Extranjería</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <input type="text" class="form-control" id="numeroDocumento" name="numeroDocumento" placeholder="Número de DNI" required>
+                                    </div>
+                                    <div class="col-6">
+                                        <input type="text" class="form-control" id="codigoElectronico" name="codigoElectronico" placeholder="Código electrónico">
+                                    </div>
+                                </div>
+
                                 <div class="mb-3">
-                                    <label for="usuario" class="form-label text-white fw-bold">Usuario</label>
-                                    <input type="text" class="form-control form-control-lg" id="usuario" name="usuario" placeholder="Ingresa tu usuario" required>
+                                    <textarea class="form-control" id="observaciones" name="observaciones" rows="3" placeholder="Observaciones adicionales (opcional)"></textarea>
                                 </div>
 
-                                <div class="mb-4">
-                                    <label for="password" class="form-label text-white fw-bold">Contraseña</label>
-                                    <input type="password" class="form-control form-control-lg" id="password" name="password" placeholder="Ingresa tu contraseña" required>
+                                <div class="mb-3 form-check">
+                                    <input type="checkbox" class="form-check-input" id="terminos" name="terminos" required>
+                                    <label class="form-check-label text-white" for="terminos">
+                                        Acepto los <a href="#" class="text-info">términos y condiciones</a> y la <a href="#" class="text-info">política de privacidad</a>
+                                    </label>
                                 </div>
 
-                                <div class="d-grid mb-3">
+                                <div class="d-grid">
                                     <button type="submit" class="btn btn-success btn-lg fw-bold">
-                                        <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                                        Crear Cuenta
                                     </button>
                                 </div>
 
-                                <div class="text-center">
-                                    <p class="text-white mb-2">¿Has olvidado la contraseña?</p>
-                                    <a href="crear_cuenta.html" class="btn btn-primary fw-bold">
-                                        <i class="fas fa-user-plus me-2"></i>Crear una Cuenta
-                                    </a>
+                                <div class="text-center mt-3">
+                                    <p class="text-white">¿Ya tienes una cuenta? 
+                                        <a href="iniciar_sesion.html" class="text-info fw-bold">Iniciar Sesión</a>
+                                    </p>
                                 </div>
                             </form>
                         </div>
@@ -96,40 +156,70 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const usuario = document.getElementById('usuario').value;
-            const password = document.getElementById('password').value;
+            const formData = new FormData(this);
+            const primerNombre = formData.get('primerNombre');
+            const primerApellido = formData.get('primerApellido');
+            const email = formData.get('email');
+            const password = formData.get('password');
+            const terminos = formData.get('terminos');
             
-            if (usuario && password) {
-                Swal.fire({
-                    title: 'Iniciando sesión...',
-                    html: '<i class="fas fa-spinner fa-spin"></i> Verificando credenciales',
-                    showConfirmButton: false,
-                    allowOutsideClick: false,
-                    timer: 2000
-                }).then(() => {
-                    // Simular login exitoso
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Bienvenido!',
-                        text: `Hola ${usuario}, sesión iniciada correctamente`,
-                        confirmButtonColor: '#00d563'
-                    }).then(() => {
-                        // Redirigir al dashboard
-                        localStorage.setItem('nombreUsuario', usuario);
-                        window.location.href = 'menu.html';
-                    });
-                });
-            } else {
+            // Validaciones básicas
+            if (!primerNombre || !primerApellido || !email || !password) {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Error',
-                    text: 'Por favor completa todos los campos',
+                    title: 'Campos requeridos',
+                    text: 'Por favor completa todos los campos obligatorios',
                     confirmButtonColor: '#dc3545'
                 });
+                return;
             }
+            
+            if (!terminos) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Términos y condiciones',
+                    text: 'Debes aceptar los términos y condiciones para continuar',
+                    confirmButtonColor: '#dc3545'
+                });
+                return;
+            }
+            
+            if (password.length < 6) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Contraseña débil',
+                    text: 'La contraseña debe tener al menos 6 caracteres',
+                    confirmButtonColor: '#dc3545'
+                });
+                return;
+            }
+            
+            // Simular creación de cuenta
+            Swal.fire({
+                title: 'Creando cuenta...',
+                html: '<i class="fas fa-spinner fa-spin"></i> Procesando información',
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                timer: 2500
+            }).then(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Cuenta creada exitosamente!',
+                    html: `
+                        <p>Bienvenido <strong>${primerNombre} ${primerApellido}</strong></p>
+                        <p>Tu cuenta ha sido creada correctamente.</p>
+                        <p>Se ha enviado un email de confirmación a <strong>${email}</strong></p>
+                    `,
+                    confirmButtonColor: '#00d563',
+                    confirmButtonText: 'Continuar'
+                }).then(() => {
+                    // Redirigir al login
+                    window.location.href = 'iniciar_sesion.html';
+                });
+            });
         });
     </script>
 </body>
