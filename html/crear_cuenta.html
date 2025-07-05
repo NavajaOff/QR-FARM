@@ -1,108 +1,136 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crear Cuenta - QR FARM</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-    <link rel="stylesheet" href="estilos.css">
+    <title>Iniciar Sesión - QR FARM</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
 </head>
-
 <body>
     <!-- Header -->
-    <header class="bg-success d-flex justify-content-between align-items-center p-3 text-white">
-        <a href="index.html" class="btn btn-dark">
-            <i class="fas fa-home"></i> Inicio
-        </a>
-        <h1 class="m-0">QR FARM <i class="fas fa-qrcode"></i></h1>
-        <i class="fas fa-cow fa-2x"></i>
-    </header>
-
-    <!-- Registro -->
-    <section class="d-flex justify-content-center align-items-center p-4 flex-wrap">
-        <!-- Imagen -->
-        <div class="p-3">
-            <img src="imagenes/fondo.jpg" alt="Registro QR Farm" class="img-fluid rounded"
-                style="max-height: 500px; border: 5px solid #007bff;">
+    <nav class="navbar navbar-dark bg-success">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <i class="fas fa-home me-2"></i>Inicio
+            </a>
+            
+            <a class="navbar-brand mx-auto d-flex align-items-center" href="index.html">
+                <span class="fw-bold fs-2">QR FARM</span>
+                <i class="fas fa-cow ms-2 logo-icon"></i>
+            </a>
+            
+            <div class="navbar-brand">
+                <i class="fas fa-cow fa-2x"></i>
+            </div>
         </div>
+    </nav>
 
-        <!-- Formulario -->
-        <div class="bg-secondary text-white p-4 rounded" style="max-width: 600px;">
-            <h2 class="text-center">Crear una cuenta</h2>
-            <p class="text-center">Es rápido y fácil</p>
-            <form>
-                <div class="row g-2">
-                    <div class="col-md-6">
-                        <input type="text" class="form-control" placeholder="Primer Nombre">
+    <!-- Main Content -->
+    <div class="container-fluid vh-100 d-flex align-items-center" style="background-color: #f8f9fa;">
+        <div class="row w-100 justify-content-center">
+            <div class="col-lg-10">
+                <div class="row bg-white rounded-4 shadow-lg overflow-hidden" style="min-height: 600px;">
+                    <!-- Left Side - Image and Description -->
+                    <div class="col-md-6 p-5 d-flex flex-column justify-content-center" style="background-color: #ffffff;">
+                        <div class="text-center mb-4">
+                            <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-C7VwFKE2Ge08TsJBkbkKkXUqUGwMMu.png" alt="Ganado QR Farm" class="img-fluid rounded-4 shadow" style="max-height: 300px; border: 3px solid #007bff;">
+                        </div>
+                        <div class="text-center">
+                            <p class="text-muted mb-2">Tu aliado inteligente en la gestión ganadera.</p>
+                            <p class="text-muted mb-2">Simplifica el control de tu ganado, mejora la trazabilidad</p>
+                            <p class="text-muted mb-2">y optimiza tus procesos con tecnología QR.</p>
+                            <p class="text-muted"><strong>¡Transforma tu finca hoy!</strong></p>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <input type="text" class="form-control" placeholder="Segundo Nombre">
-                    </div>
-                    <div class="col-md-6">
-                        <input type="text" class="form-control" placeholder="Primer Apellido">
-                    </div>
-                    <div class="col-md-6">
-                        <input type="text" class="form-control" placeholder="Segundo Apellido">
-                    </div>
-                    <div class="col-md-6">
-                        <input type="date" class="form-control" placeholder="Fecha de Nacimiento">
-                    </div>
-                    <div class="col-md-6">
-                        <select class="form-select">
-                            <option selected>Seleccionar Género</option>
-                            <option>Masculino</option>
-                            <option>Femenino</option>
-                            <option>Otro</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <select class="form-select">
-                            <option selected>Tipo de Documento</option>
-                            <option>CC</option>
-                            <option>TI</option>
-                            <option>CE</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <input type="text" class="form-control" placeholder="Número de Documento">
-                    </div>
-                    <div class="col-md-6">
-                        <input type="tel" class="form-control" placeholder="Número de móvil">
-                    </div>
-                    <div class="col-md-6">
-                        <input type="email" class="form-control" placeholder="Correo electrónico">
-                    </div>
-                    <div class="col-12">
-                        <input type="password" class="form-control" placeholder="Contraseña nueva">
+
+                    <!-- Right Side - Login Form -->
+                    <div class="col-md-6 p-5 d-flex align-items-center" style="background-color: #6c757d;">
+                        <div class="w-100">
+                            <div class="text-center mb-4">
+                                <i class="fas fa-user-circle fa-3x text-white mb-3"></i>
+                                <h4 class="text-white fw-bold">Inicio de Sesión</h4>
+                            </div>
+
+                            <form id="loginForm">
+                                <div class="mb-3">
+                                    <label for="usuario" class="form-label text-white fw-bold">Usuario</label>
+                                    <input type="text" class="form-control form-control-lg" id="usuario" name="usuario" placeholder="Ingresa tu usuario" required>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label for="password" class="form-label text-white fw-bold">Contraseña</label>
+                                    <input type="password" class="form-control form-control-lg" id="password" name="password" placeholder="Ingresa tu contraseña" required>
+                                </div>
+
+                                <div class="d-grid mb-3">
+                                    <button type="submit" class="btn btn-success btn-lg fw-bold">
+                                        <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                                    </button>
+                                </div>
+
+                                <div class="text-center">
+                                    <p class="text-white mb-2">¿Has olvidado la contraseña?</p>
+                                    <a href="crear_cuenta.html" class="btn btn-primary fw-bold">
+                                        <i class="fas fa-user-plus me-2"></i>Crear una Cuenta
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
-
-                <div class="text-center mt-4">
-                    <button type="submit" class="btn btn-success w-100">Crear Cuenta</button>
-                </div>
-            </form>
+            </div>
         </div>
-    </section>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.getElementById('form-registro').addEventListener('submit', function (e) {
-            e.preventDefault(); // Evita el envío real
-
-            Swal.fire({
-                icon: 'success',
-                title: '¡Cuenta creada!',
-                text: 'Tu cuenta fue registrada correctamente.',
-                confirmButtonText: 'Continuar',
-                timer: 2000,
-                timerProgressBar: true
-            }).then(() => {
-                // Redirige a tu dashboard o página principal
-                window.location.href = 'dashboard.html'; // cambia esto por el nombre real del archivo
-            });
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const usuario = document.getElementById('usuario').value;
+            const password = document.getElementById('password').value;
+            
+            if (usuario && password) {
+                Swal.fire({
+                    title: 'Iniciando sesión...',
+                    html: '<i class="fas fa-spinner fa-spin"></i> Verificando credenciales',
+                    showConfirmButton: false,
+                    allowOutsideClick: false,
+                    timer: 2000
+                }).then(() => {
+                    // Simular login exitoso
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Bienvenido!',
+                        text: `Hola ${usuario}, sesión iniciada correctamente`,
+                        confirmButtonColor: '#00d563'
+                    }).then(() => {
+                        // Redirigir al dashboard
+                        localStorage.setItem('nombreUsuario', usuario);
+                        window.location.href = 'menu.html';
+                    });
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Por favor completa todos los campos',
+                    confirmButtonColor: '#dc3545'
+                });
+            }
         });
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
-
 </html>

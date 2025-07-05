@@ -40,11 +40,11 @@
     <div class="container-fluid vh-100 d-flex align-items-center" style="background-color: #f8f9fa;">
         <div class="row w-100 justify-content-center">
             <div class="col-lg-10">
-                <div class="row bg-white rounded-4 shadow-lg overflow-hidden">
+                <div class="row bg-white rounded-4 shadow-lg overflow-hidden" style="min-height: 600px;">
                     <!-- Left Side - Image and Description -->
-                    <div class="col-md-6 p-5 d-flex flex-column justify-content-center">
+                    <div class="col-md-6 p-5 d-flex flex-column justify-content-center" style="background-color: #ffffff;">
                         <div class="text-center mb-4">
-                            <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-C7VwFKE2Ge08TsJBkbkKkXUqUGwMMu.png" alt="Ganado QR Farm" class="img-fluid rounded-4 shadow" style="max-height: 300px; border: 3px solid #007bff;">
+                            <img src="../images/vacas-grupo.jpg" alt="Grupo de vacas - QR Farm" class="img-fluid rounded-4 shadow" style="max-height: 350px; width: 100%; object-fit: cover; border: 3px solid #007bff;">
                         </div>
                         <div class="text-center">
                             <p class="text-muted mb-2">Tu aliado inteligente en la gestión ganadera.</p>
@@ -64,25 +64,25 @@
 
                             <form id="loginForm">
                                 <div class="mb-3">
-                                    <label for="usuario" class="form-label text-white fw-bold">Usuario</label>
-                                    <input type="text" class="form-control form-control-lg" id="usuario" name="usuario" required>
+                                    <label for="usuario" class="form-label text-dark fw-bold bg-light px-2 py-1 rounded">Usuario</label>
+                                    <input type="text" class="form-control form-control-lg" id="usuario" name="usuario" placeholder="Ingresa tu usuario" required>
                                 </div>
 
                                 <div class="mb-4">
-                                    <label for="password" class="form-label text-white fw-bold">Contraseña</label>
-                                    <input type="password" class="form-control form-control-lg" id="password" name="password" required>
+                                    <label for="password" class="form-label text-dark fw-bold bg-light px-2 py-1 rounded">Contraseña</label>
+                                    <input type="password" class="form-control form-control-lg" id="password" name="password" placeholder="Ingresa tu contraseña" required>
                                 </div>
 
                                 <div class="d-grid mb-3">
                                     <button type="submit" class="btn btn-success btn-lg fw-bold">
-                                        Iniciar Sesión
+                                        <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
                                     </button>
                                 </div>
 
                                 <div class="text-center">
-                                    <p class="text-white mb-2">¿Has olvidado la contraseña?</p>
+                                    <p class="text-light mb-2" style="background-color: rgba(0,0,0,0.3); padding: 8px; border-radius: 5px; display: inline-block;">¿Has olvidado la contraseña?</p>
                                     <a href="crear_cuenta.html" class="btn btn-primary fw-bold">
-                                        Crear una Cuenta
+                                        <i class="fas fa-user-plus me-2"></i>Crear una Cuenta
                                     </a>
                                 </div>
                             </form>
@@ -99,35 +99,71 @@
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const usuario = document.getElementById('usuario').value;
-            const password = document.getElementById('password').value;
+            const usuario = document.getElementById('usuario').value.trim();
+            const password = document.getElementById('password').value.trim();
             
-            if (usuario && password) {
-                Swal.fire({
-                    title: 'Iniciando sesión...',
-                    html: '<i class="fas fa-spinner fa-spin"></i> Verificando credenciales',
-                    showConfirmButton: false,
-                    allowOutsideClick: false,
-                    timer: 2000
-                }).then(() => {
-                    // Simular login exitoso
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Bienvenido!',
-                        text: `Hola ${usuario}, sesión iniciada correctamente`,
-                        confirmButtonColor: '#00d563'
-                    }).then(() => {
-                        // Redirigir al dashboard
-                        window.location.href = 'dashboard.html';
-                    });
-                });
-            } else {
+            // Validar que los campos no estén vacíos
+            if (!usuario || !password) {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Error',
+                    title: 'Campos requeridos',
                     text: 'Por favor completa todos los campos',
                     confirmButtonColor: '#dc3545'
                 });
+                return;
+            }
+            
+            // Mostrar loading
+            Swal.fire({
+                title: 'Iniciando sesión...',
+                html: '<i class="fas fa-spinner fa-spin"></i> Verificando credenciales',
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                timer: 2000
+            }).then(() => {
+                // Guardar datos del usuario
+                localStorage.setItem('nombreUsuario', usuario);
+                localStorage.setItem('isLoggedIn', 'true');
+                
+                // Mostrar mensaje de éxito
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Bienvenido!',
+                    text: `Hola ${usuario}, sesión iniciada correctamente`,
+                    confirmButtonColor: '#00d563',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                    // Redirigir al menú
+                    console.log('Redirigiendo a menu.html...');
+                    window.location.href = 'menu.html';
+                });
+            });
+        });
+
+        // Verificar si ya está logueado
+        document.addEventListener('DOMContentLoaded', function() {
+            const isLoggedIn = localStorage.getItem('isLoggedIn');
+            if (isLoggedIn === 'true') {
+                const nombreUsuario = localStorage.getItem('nombreUsuario');
+                if (nombreUsuario) {
+                    Swal.fire({
+                        title: 'Ya tienes una sesión activa',
+                        text: `¿Quieres continuar como ${nombreUsuario}?`,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sí, continuar',
+                        cancelButtonText: 'Iniciar nueva sesión',
+                        confirmButtonColor: '#00d563'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = 'menu.html';
+                        } else {
+                            localStorage.removeItem('isLoggedIn');
+                            localStorage.removeItem('nombreUsuario');
+                        }
+                    });
+                }
             }
         });
     </script>
