@@ -27,7 +27,7 @@
                 <span class="fw-bold">Usuario</span>
             </div>
             
-            <a class="navbar-brand mx-auto d-flex align-items-center" href="menu.html">
+            <a class="navbar-brand mx-auto d-flex align-items-center" href="./menu.html">
                 <span class="fw-bold fs-2">QR FARM</span>
                 <i class="fas fa-cow ms-2 logo-icon"></i>
             </a>
@@ -173,25 +173,25 @@
     // Redirigir a las páginas correspondientes
     switch(section) {
         case 'inventario':
-            window.location.href = 'inventario.html';
+            window.location.href = './inventario.html';
             break;
         case 'gestionar-animales':
-            window.location.href = 'gestionar_animales.html';
+            window.location.href = './gestionar_animales.html';
             break;
         case 'gestionar-potreros':
-            window.location.href = 'gestionar_potreros.html';
+            window.location.href = './gestionar_potreros.html';
             break;
         case 'escanear-qr':
-            window.location.href = 'escanear_qr.html';
+            window.location.href = './escanear_qr.html';
             break;
         case 'registrar-producto':
-            window.location.href = 'registrar_producto.html';
+            window.location.href = './registrar_producto.html';
             break;
         case 'vender-producto':
-            window.location.href = 'vender_producto.html';
+            window.location.href = './vender_producto.html';
             break;
         case 'gestionar-clientes':
-            window.location.href = 'gestionar_clientes.html';
+            window.location.href = './gestionar_clientes.html';
             break;
         default:
             Swal.fire({
@@ -299,7 +299,7 @@
                         showConfirmButton: false,
                         timer: 1500
                     }).then(() => {
-                        window.location.href = 'index.html';
+                        window.location.href = '../index.html';
                     });
                 }
             });
@@ -310,7 +310,7 @@
             // Verificar si está logueado
             const isLoggedIn = localStorage.getItem('isLoggedIn');
             if (isLoggedIn !== 'true') {
-                window.location.href = 'iniciar_sesion.html';
+                window.location.href = './iniciar_sesion.html';
                 return;
             }
             
