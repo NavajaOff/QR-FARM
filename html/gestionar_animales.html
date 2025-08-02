@@ -179,16 +179,20 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function verPerfilAnimal(nombre) {
+            // Obtener datos completos del animal
+            let animales = JSON.parse(localStorage.getItem('animales')) || [];
+            let animal = animales.find(a => a.nombre === nombre);
             Swal.fire({
                 title: `Perfil de ${nombre}`,
                 html: `
                     <div class="text-start">
-                        <p><strong>Código QR:</strong> QR-${nombre}</p>
-                        <p><strong>Fecha de nacimiento:</strong> 15/03/2021</p>
-                        <p><strong>Peso actual:</strong> 450 kg</p>
-                        <p><strong>Última vacunación:</strong> 10/01/2024</p>
-                        <p><strong>Potrero actual:</strong> Potrero 1</p>
-                        <p><strong>Historial médico:</strong> Sin incidencias</p>
+                        <p><strong>Código QR:</strong> ${animal ? animal.codigoQR : 'Sin código'}</p>
+                        <p><strong>Propietario:</strong> ${animal ? animal.propietario : 'Sin propietario'}</p>
+                        <p><strong>Fecha de nacimiento:</strong> ${animal ? animal.fechaNacimiento : 'Sin dato'}</p>
+                        <p><strong>Peso actual:</strong> ${animal ? animal.pesoActual : 'Sin dato'} kg</p>
+                        <p><strong>Última vacunación:</strong> ${animal ? animal.ultimaVacunacion : 'Sin dato'}</p>
+                        <p><strong>Potrero actual:</strong> ${animal ? animal.potreroActual : 'Sin dato'}</p>
+                        <p><strong>Historial médico:</strong> ${animal ? animal.historialMedico : 'Sin incidencias'}</p>
                     </div>
                 `,
                 confirmButtonColor: '#00d563'
@@ -233,7 +237,82 @@
         }
 
         function agregarNuevoAnimal() {
-            window.location.href = 'registrar_producto.html';
+            // Modal para crear animal con todos los campos organizados
+            Swal.fire({
+                title: 'Agregar Nuevo Animal',
+                html: `
+                    <form id='formNuevoAnimal' class='text-start'>
+                        <div class='row mb-2'>
+                            <div class='col-12 mb-2'>
+                                <label class='form-label'>Nombre/Código:</label>
+                                <input id='nombreAnimal' class='form-control' placeholder='Nombre/Código'>
+                            </div>
+                            <div class='col-12 mb-2'>
+                                <label class='form-label'>Código QR:</label>
+                                <input id='codigoQR' class='form-control' placeholder='Código QR (ej: QR-Holstein-001)'>
+                            </div>
+                            <div class='col-12 mb-2'>
+                                <label class='form-label'>Propietario:</label>
+                                <input id='propietarioAnimal' class='form-control' placeholder='Propietario'>
+                            </div>
+                        </div>
+                        <div class='row mb-2'>
+                            <div class='col-6 mb-2'>
+                                <label class='form-label'>Fecha de nacimiento:</label>
+                                <input id='fechaNacimiento' class='form-control' type='date'>
+                            </div>
+                            <div class='col-6 mb-2'>
+                                <label class='form-label'>Peso actual (kg):</label>
+                                <input id='pesoActual' class='form-control' type='number' placeholder='Peso actual'>
+                            </div>
+                        </div>
+                        <div class='row mb-2'>
+                            <div class='col-6 mb-2'>
+                                <label class='form-label'>Última vacunación:</label>
+                                <input id='ultimaVacunacion' class='form-control' type='date'>
+                            </div>
+                            <div class='col-6 mb-2'>
+                                <label class='form-label'>Potrero actual:</label>
+                                <input id='potreroActual' class='form-control' placeholder='Potrero actual'>
+                            </div>
+                        </div>
+                        <div class='row mb-2'>
+                            <div class='col-12 mb-2'>
+                                <label class='form-label'>Historial médico:</label>
+                                <input id='historialMedico' class='form-control' placeholder='Historial médico'>
+                            </div>
+                        </div>
+                    </form>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Crear',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#00d563',
+                cancelButtonColor: '#dc3545',
+                preConfirm: () => {
+                    const nombre = document.getElementById('nombreAnimal').value;
+                    const codigoQR = document.getElementById('codigoQR').value;
+                    const propietario = document.getElementById('propietarioAnimal').value;
+                    const fechaNacimiento = document.getElementById('fechaNacimiento').value;
+                    const pesoActual = document.getElementById('pesoActual').value;
+                    const ultimaVacunacion = document.getElementById('ultimaVacunacion').value;
+                    const potreroActual = document.getElementById('potreroActual').value;
+                    const historialMedico = document.getElementById('historialMedico').value;
+                    if (!nombre || !codigoQR || !propietario || !fechaNacimiento || !pesoActual || !ultimaVacunacion || !potreroActual || !historialMedico) {
+                        Swal.showValidationMessage('Completa todos los campos');
+                        return false;
+                    }
+                    return { nombre, codigoQR, propietario, fechaNacimiento, pesoActual, ultimaVacunacion, potreroActual, historialMedico };
+                }
+            }).then((result) => {
+                if (result.isConfirmed && result.value) {
+                    let animales = JSON.parse(localStorage.getItem('animales')) || [];
+                    animales.push(result.value);
+                    localStorage.setItem('animales', JSON.stringify(animales));
+                    Swal.fire('¡Animal creado!', '', 'success');
+                    renderAnimales();
+                }
+            });
         }
 
         function logout() {
