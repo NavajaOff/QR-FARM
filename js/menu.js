@@ -112,7 +112,8 @@ function generateReport() {
     });
 }
 
-function logout() {
+function logout(event) {
+    if (event) event.preventDefault();
     Swal.fire({
         title: '¿Cerrar sesión?',
         text: '¿Estás seguro de que quieres cerrar sesión?',
