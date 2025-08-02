@@ -64,108 +64,18 @@
 
                             <form id="loginForm">
                                 <div class="mb-3">
-                                    <label for="usuario" class="form-label text-dark fw-bold bg-light px-2 py-1 rounded">Usuario</label>
-                                    <input type="text" class="form-control form-control-lg" id="usuario" name="usuario" placeholder="Ingresa tu usuario" required>
+                                    <input type="text" class="form-control" id="usuario" name="usuario" placeholder="Usuario" required>
                                 </div>
-
-                                <div class="mb-4">
-                                    <label for="password" class="form-label text-dark fw-bold bg-light px-2 py-1 rounded">Contraseña</label>
-                                    <input type="password" class="form-control form-control-lg" id="password" name="password" placeholder="Ingresa tu contraseña" required>
+                                <div class="mb-3">
+                                    <input type="password" class="form-control" id="password" name="password" placeholder="Contraseña" required>
                                 </div>
-
-                                <div class="d-grid mb-3">
-                                    <button type="submit" class="btn btn-success btn-lg fw-bold">
-                                        <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
-                                    </button>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-success btn-lg fw-bold">Iniciar Sesión</button>
                                 </div>
-
-                                <div class="text-center">
-                                    <p class="text-light mb-2" style="background-color: rgba(0,0,0,0.3); padding: 8px; border-radius: 5px; display: inline-block;">¿Has olvidado la contraseña?</p>
-                                    <a href="crear_cuenta.html" class="btn btn-primary fw-bold">
-                                        <i class="fas fa-user-plus me-2"></i>Crear una Cuenta
-                                    </a>
+                                <div class="text-center mt-3">
+                                    <p class="text-white">¿No tienes cuenta? <a href="crear_cuenta.html" class="text-info fw-bold">Crear cuenta</a></p>
                                 </div>
                             </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const usuario = document.getElementById('usuario').value.trim();
-            const password = document.getElementById('password').value.trim();
-            
-            // Validar que los campos no estén vacíos
-            if (!usuario || !password) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Campos requeridos',
-                    text: 'Por favor completa todos los campos',
-                    confirmButtonColor: '#dc3545'
-                });
-                return;
-            }
-            
-            // Mostrar loading
-            Swal.fire({
-                title: 'Iniciando sesión...',
-                html: '<i class="fas fa-spinner fa-spin"></i> Verificando credenciales',
-                showConfirmButton: false,
-                allowOutsideClick: false,
-                timer: 2000
-            }).then(() => {
-                // Guardar datos del usuario
-                localStorage.setItem('nombreUsuario', usuario);
-                localStorage.setItem('isLoggedIn', 'true');
-                
-                // Mostrar mensaje de éxito
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Bienvenido!',
-                    text: `Hola ${usuario}, sesión iniciada correctamente`,
-                    confirmButtonColor: '#00d563',
-                    timer: 1500,
-                    showConfirmButton: false
-                }).then(() => {
-                    // Redirigir al menú
-                    console.log('Redirigiendo a menu.html...');
-                    window.location.href = 'menu.html';
-                });
-            });
-        });
-
-        // Verificar si ya está logueado
-        document.addEventListener('DOMContentLoaded', function() {
-            const isLoggedIn = localStorage.getItem('isLoggedIn');
-            if (isLoggedIn === 'true') {
-                const nombreUsuario = localStorage.getItem('nombreUsuario');
-                if (nombreUsuario) {
-                    Swal.fire({
-                        title: 'Ya tienes una sesión activa',
-                        text: `¿Quieres continuar como ${nombreUsuario}?`,
-                        icon: 'question',
-                        showCancelButton: true,
-                        confirmButtonText: 'Sí, continuar',
-                        cancelButtonText: 'Iniciar nueva sesión',
-                        confirmButtonColor: '#00d563'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            window.location.href = 'menu.html';
-                        } else {
-                            localStorage.removeItem('isLoggedIn');
-                            localStorage.removeItem('nombreUsuario');
-                        }
-                    });
-                }
-            }
-        });
-    </script>
+                            <script src="../js/iniciar_sesion.js"></script>
 </body>
 </html>
