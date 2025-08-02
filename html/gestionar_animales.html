@@ -73,7 +73,7 @@
                         <div class="row">
                             <div class="col-md-4">
                                 <label class="form-label">Buscar por código/nombre:</label>
-                                <input type="text" class="form-control" placeholder="Buscar animal...">
+                                <input type="text" class="form-control" id="busquedaAnimal" placeholder="Buscar animal..." oninput="filtrarAnimales()">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Filtrar por raza:</label>
@@ -103,7 +103,7 @@
                 </div>
 
                 <!-- Grid de Animales -->
-                <div class="row">
+                <div class="row" id="gridAnimales">
                     <div class="col-md-6 col-lg-4 mb-4">
                         <div class="card border-0 shadow-sm h-100">
                             <div class="card-body text-center">
