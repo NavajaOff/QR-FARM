@@ -21,19 +21,19 @@
     <!-- Header -->
     <nav class="navbar navbar-dark bg-success">
         <div class="container">
-            <a class="navbar-brand" href="../index.html">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
                 <i class="fas fa-arrow-left me-2"></i>Volver al Inicio
             </a>
             
-            <a class="navbar-brand mx-auto d-flex align-items-center" href="../index.html">
+            <a class="navbar-brand mx-auto d-flex align-items-center" href="{{ url_for('index') }}">
                 <i class="fas fa-cow me-2 logo-icon"></i>
                 <span class="fw-bold fs-2">QR FARM</span>
             </a>
         
             <div class="d-flex align-items-center">
-                <button class="btn btn-light" onclick="window.location.href='iniciar_sesion.html'">
+                <a class="btn btn-light" href="{{ url_for('iniciar_sesion') }}" role="button">
                     <i class="fas fa-user me-1"></i>Iniciar Sesión
-                </button>
+                </a>
             </div>
         </div>
     </nav>
