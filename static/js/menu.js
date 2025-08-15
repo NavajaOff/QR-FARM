@@ -11,25 +11,25 @@ function setActiveMenu(element, section) {
 function showSectionContent(section) {
     switch(section) {
         case 'inventario':
-            window.location.href = './inventario.html';
+            window.location.href = '/inventario';
             break;
         case 'gestionar-animales':
-            window.location.href = './gestionar_animales.html';
+            window.location.href = '/gestionar_animales';
             break;
         case 'gestionar-potreros':
-            window.location.href = './gestionar_potreros.html';
+            window.location.href = '/gestionar_potreros';
             break;
         case 'escanear-qr':
-            window.location.href = './escanear_qr.html';
+            window.location.href = '/escanear_qr';
             break;
         case 'registrar-producto':
-            window.location.href = './registrar_producto.html';
+            window.location.href = '/registrar_producto';
             break;
         case 'vender-producto':
-            window.location.href = './vender_producto.html';
+            window.location.href = '/vender_producto';
             break;
         case 'gestionar-clientes':
-            window.location.href = './gestionar_clientes.html';
+            window.location.href = '/gestionar_clientes';
             break;
         default:
             Swal.fire({
@@ -133,33 +133,18 @@ function logout(event) {
                 showConfirmButton: false,
                 timer: 1500
             }).then(() => {
-                window.location.href = '../index.html';
+                window.location.href = '/';
             });
         }
     });
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
-    if (isLoggedIn !== 'true') {
-        window.location.href = './iniciar_sesion.html';
-        return;
+    // El backend Flask controla la sesión. Solo mostramos el nombre si está disponible en el DOM.
+    const nombreUsuarioElem = document.getElementById('nombreUsuario');
+    if (nombreUsuarioElem) {
+        nombreUsuarioElem.textContent = nombreUsuarioElem.textContent || 'Usuario';
     }
-    const nombreUsuario = localStorage.getItem('nombreUsuario') || 'Usuario';
-    document.getElementById('nombreUsuario').textContent = nombreUsuario;
-    setTimeout(() => {
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true
-        });
-        Toast.fire({
-            icon: 'success',
-            title: `¡Bienvenido de vuelta, ${nombreUsuario}!`
-        });
-    }, 1000);
 });
 
 function activarEscanearQR() {

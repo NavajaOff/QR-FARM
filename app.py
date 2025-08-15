@@ -21,8 +21,6 @@ from flask import request, redirect, url_for, flash, session
 @app.route('/iniciar_sesion', methods=['GET', 'POST'])
 def iniciar_sesion():
     if request.method == 'POST':
-        usuario = request.form.get('usuario')
-        session['usuario'] = usuario
         return redirect(url_for('menu'))
     return render_template('iniciar_sesion.html', error=None)
 

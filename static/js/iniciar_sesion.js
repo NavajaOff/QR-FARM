@@ -29,7 +29,7 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
             timer: 1500,
             showConfirmButton: false
         }).then(() => {
-            window.location.href = 'menu.html';
+            window.location.href = '/menu';
         });
     });
 });
