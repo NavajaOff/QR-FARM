@@ -15,17 +15,16 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
     <!-- Header -->
     <nav class="navbar navbar-dark bg-success">
         <div class="container">
-            <a class="navbar-brand" href="../index.html">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
                 <i class="fas fa-home me-2"></i>Inicio
             </a>
-            
-            <a class="navbar-brand mx-auto d-flex align-items-center" href="../index.html">
+            <a class="navbar-brand mx-auto d-flex align-items-center" href="{{ url_for('index') }}">
                 <span class="fw-bold fs-2">QR FARM</span>
                 <i class="fas fa-cow ms-2 logo-icon"></i>
             </a>
@@ -44,7 +43,7 @@
                     <!-- Left Side - Image -->
                     <div class="col-md-6 p-5 d-flex flex-column justify-content-center">
                         <div class="text-center">
-                            <img src="../images/crear_cuenta.jpg" alt="Vacas Holstein - QR Farm" class="img-fluid rounded-4 shadow register-image">
+                            <img src="{{ url_for('static', filename='images/crear_cuenta.jpg') }}" alt="Vacas Holstein - QR Farm" class="img-fluid rounded-4 shadow register-image">
                         </div>
                     </div>
 
@@ -142,7 +141,7 @@
 
                                 <div class="text-center mt-3">
                                     <p class="text-white">¿Ya tienes una cuenta? 
-                                        <a href="iniciar_sesion.html" class="text-info fw-bold">Iniciar Sesión</a>
+                                        <a href="{{ url_for('iniciar_sesion') }}" class="text-info fw-bold">Iniciar Sesión</a>
                                     </p>
                                 </div>
                             </form>

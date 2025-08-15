@@ -52,7 +52,7 @@ document.getElementById('registerForm').addEventListener('submit', function(e) {
             confirmButtonColor: '#00d563',
             confirmButtonText: 'Continuar'
         }).then(() => {
-            window.location.href = 'iniciar_sesion.html';
+            window.location.href = '/iniciar_sesion';
         });
     });
 });

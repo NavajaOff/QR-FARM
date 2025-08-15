@@ -11,12 +11,12 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="../css/styles.css">
-    <script src="../js/gestionar_potreros.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script src="{{ url_for('static', filename='js/gestionar_potreros.js') }}"></script>
     <!-- Header -->
     <nav class="navbar navbar-dark bg-success">
         <div class="container-fluid">
-            <a class="navbar-brand mx-auto d-flex align-items-center" href="../index.html">
+            <a class="navbar-brand mx-auto d-flex align-items-center" href="{{ url_for('menu') }}">
                 <span class="fw-bold fs-2">QR FARM</span>
                 <i class="fas fa-cow ms-2 logo-icon"></i>
             </a>
@@ -31,19 +31,19 @@
         <!-- Sidebar -->
         <div class="sidebar">
             <nav class="nav flex-column">
-                <a class="nav-link" href="menu.html">
+                <a class="nav-link{% if request.endpoint == 'inventario' %} active{% endif %}" href="{{ url_for('inventario') }}">
                     <i class="fas fa-boxes me-2"></i>Inventario
                 </a>
-                <a class="nav-link" href="#">
+                <a class="nav-link{% if request.endpoint == 'gestionar_animales' %} active{% endif %}" href="{{ url_for('gestionar_animales') }}">
                     <i class="fas fa-cow me-2"></i>Gestionar animales
                 </a>
-                <a class="nav-link active" href="gestionar_potreros.html">
+                <a class="nav-link{% if request.endpoint == 'gestionar_potreros' %} active{% endif %}" href="{{ url_for('gestionar_potreros') }}">
                     <i class="fas fa-map-marked-alt me-2"></i>Gestionar potreros
                 </a>
-                <a class="nav-link" href="escanear_qr.html">
+                <a class="nav-link{% if request.endpoint == 'escanear_qr' %} active{% endif %}" href="{{ url_for('escanear_qr') }}">
                     <i class="fas fa-qrcode me-2"></i>Escanear QR
                 </a>
-                <a class="nav-link" href="#" onclick="logout()">
+                <a class="nav-link" href="{{ url_for('iniciar_sesion') }}">
                     <i class="fas fa-sign-out-alt me-2"></i>Salir
                 </a>
             </nav>
@@ -129,25 +129,25 @@
                                                 </div>
                                             </div>
 
-                                            <div class="mb-3">
-                                                <div class="border rounded p-2 bg-light">
-                                                    <strong>Notas:</strong> "Zona sombría, ideal para novillos"
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Imagen del Potrero -->
-                                        <div class="col-md-5">
-                                            <div class="text-center">
-                                                <img src="../images/potrero.jpg" alt="Potrero con vacas" class="img-fluid rounded-3 shadow" style="max-width: 100%; height: 300px; object-fit: cover;">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Botones de Acción -->
-                                    <div class="row mt-4">
-                                        <div class="col-12">
-                                            <div class="d-flex justify-content-between align-items-center">
+        <div class="sidebar">
+            <nav class="nav flex-column">
+                <a class="nav-link{% if request.endpoint == 'inventario' %} active{% endif %}" href="{{ url_for('inventario') }}">
+                    <i class="fas fa-boxes me-2"></i>Inventario
+                </a>
+                <a class="nav-link{% if request.endpoint == 'gestionar_animales' %} active{% endif %}" href="{{ url_for('gestionar_animales') }}">
+                    <i class="fas fa-cow me-2"></i>Gestionar animales
+                </a>
+                <a class="nav-link{% if request.endpoint == 'gestionar_potreros' %} active{% endif %}" href="{{ url_for('gestionar_potreros') }}">
+                    <i class="fas fa-map-marked-alt me-2"></i>Gestionar potreros
+                </a>
+                <a class="nav-link{% if request.endpoint == 'escanear_qr' %} active{% endif %}" href="{{ url_for('escanear_qr') }}">
+                    <i class="fas fa-qrcode me-2"></i>Escanear QR
+                </a>
+                <a class="nav-link" href="{{ url_for('iniciar_sesion') }}">
+                    <i class="fas fa-sign-out-alt me-2"></i>Salir
+                </a>
+            </nav>
+        </div>
                                                 <button class="btn btn-outline-secondary" onclick="previousPotrero()">
                                                     <i class="fas fa-chevron-left me-1"></i>Anterior
                                                 </button>

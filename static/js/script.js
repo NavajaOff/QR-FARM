@@ -56,7 +56,7 @@ function handleLoginClick() {
         allowOutsideClick: false,
         timer: 1500,
       }).then(() => {
-        window.location.href = "iniciar_sesion.html"
+        window.location.href = "/iniciar_sesion"
       })
     }
   })
