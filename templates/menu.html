@@ -15,7 +15,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     
 </head>
 <body>
@@ -27,7 +27,7 @@
                 <span class="fw-bold">Usuario</span>
             </div>
             
-            <a class="navbar-brand mx-auto d-flex align-items-center" href="./menu.html">
+            <a class="navbar-brand mx-auto d-flex align-items-center" href="{{ url_for('menu') }}">
                 <span class="fw-bold fs-2">QR FARM</span>
                 <i class="fas fa-cow ms-2 logo-icon"></i>
             </a>
@@ -53,19 +53,19 @@
         <!-- Sidebar -->
         <div class="sidebar">
             <nav class="nav flex-column">
-                <a class="nav-link active" href="#" onclick="setActiveMenu(this, 'inventario')">
+                <a class="nav-link active" href="{{ url_for('inventario') }}">
                     <i class="fas fa-boxes me-2"></i>Inventario
                 </a>
-                <a class="nav-link" href="#" onclick="setActiveMenu(this, 'gestionar-animales')">
+                <a class="nav-link" href="{{ url_for('gestionar_animales') }}">
                     <i class="fas fa-cow me-2"></i>Gestionar animales
                 </a>
-                <a class="nav-link" href="#" onclick="setActiveMenu(this, 'gestionar-potreros')">
+                <a class="nav-link" href="{{ url_for('gestionar_potreros') }}">
                     <i class="fas fa-map-marked-alt me-2"></i>Gestionar potreros
                 </a>
-                <a class="nav-link" href="#" onclick="setActiveMenu(this, 'escanear-qr')">
+                <a class="nav-link" href="{{ url_for('escanear_qr') }}">
                     <i class="fas fa-qrcode me-2"></i>Escanear QR
                 </a>
-                <a class="nav-link" href="#" onclick="logout()">
+                <a class="nav-link" href="{{ url_for('iniciar_sesion') }}">
                     <i class="fas fa-sign-out-alt me-2"></i>Salir
                 </a>
             </nav>
@@ -92,7 +92,7 @@
                         <div class="card-body p-4">
                             <!-- Imagen -->
                             <div class="text-center mb-4">
-                                <img src="../images/vascas-holstein.jpg" alt="Vacas Holstein - QR Farm" class="img-fluid rounded-3 shadow" style="max-width: 100%; height: 250px; object-fit: cover;">
+                                <img src="{{ url_for('static', filename='images/vascas-holstein.jpg') }}" alt="Vacas Holstein - QR Farm" class="img-fluid rounded-3 shadow" style="max-width: 100%; height: 250px; object-fit: cover;">
                             </div>
 
                             <!-- Estadísticas -->
@@ -131,15 +131,15 @@
                             <div class="text-center">
                                 <h5 class="fw-bold mb-3 text-success">Acciones Rápidas</h5>
                                 <div class="d-flex justify-content-center gap-2 flex-wrap">
-                                    <button class="btn btn-success" onclick="activarEscanearQR()" style="min-width: 130px;">
+                                    <a class="btn btn-success" href="{{ url_for('escanear_qr') }}" style="min-width: 130px;">
                                         <i class="fas fa-qrcode me-1"></i>Escanear QR
-                                    </button>
-                                    <button class="btn btn-primary" onclick="activarRegistrarProducto()" style="min-width: 130px;">
+                                    </a>
+                                    <a class="btn btn-primary" href="{{ url_for('gestionar_animales') }}" style="min-width: 130px;">
                                         <i class="fas fa-plus-circle me-1"></i>Registrar Animal
-                                    </button>
-                                    <button class="btn btn-info" onclick="generateReport()" style="min-width: 130px;">
+                                    </a>
+                                    <a class="btn btn-info" href="{{ url_for('inventario') }}" style="min-width: 130px;">
                                         <i class="fas fa-chart-bar me-1"></i>Ver Reportes
-                                    </button>
+                                    </a>
                                 </div>
                             </div>
                         </div>

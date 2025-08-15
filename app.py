@@ -1,6 +1,8 @@
+
 from flask import Flask, render_template
 
 app = Flask(__name__)
+app.secret_key = 'qr_farm_super_secret_key_2025'
 
 @app.route('/')
 def index():
@@ -14,9 +16,15 @@ def menu():
 def inventario():
     return render_template('inventario.html')
 
-@app.route('/iniciar_sesion')
+from flask import request, redirect, url_for, flash, session
+
+@app.route('/iniciar_sesion', methods=['GET', 'POST'])
 def iniciar_sesion():
-    return render_template('iniciar_sesion.html')
+    if request.method == 'POST':
+        usuario = request.form.get('usuario')
+        session['usuario'] = usuario
+        return redirect(url_for('menu'))
+    return render_template('iniciar_sesion.html', error=None)
 
 @app.route('/gestionar_animales')
 def gestionar_animales():
