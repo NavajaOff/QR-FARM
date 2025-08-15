@@ -31,19 +31,19 @@
         <!-- Sidebar -->
         <div class="sidebar">
             <nav class="nav flex-column">
-                <a class="nav-link" href="menu.html">
+                <a class="nav-link{% if request.endpoint == 'inventario' %} active{% endif %}" href="{{ url_for('inventario') }}">
                     <i class="fas fa-boxes me-2"></i>Inventario
                 </a>
-                <a class="nav-link" href="#">
+                <a class="nav-link{% if request.endpoint == 'gestionar_animales' %} active{% endif %}" href="{{ url_for('gestionar_animales') }}">
                     <i class="fas fa-cow me-2"></i>Gestionar animales
                 </a>
-                <a class="nav-link active" href="gestionar_potreros.html">
+                <a class="nav-link{% if request.endpoint == 'gestionar_potreros' %} active{% endif %}" href="{{ url_for('gestionar_potreros') }}">
                     <i class="fas fa-map-marked-alt me-2"></i>Gestionar potreros
                 </a>
-                <a class="nav-link" href="escanear_qr.html">
+                <a class="nav-link{% if request.endpoint == 'escanear_qr' %} active{% endif %}" href="{{ url_for('escanear_qr') }}">
                     <i class="fas fa-qrcode me-2"></i>Escanear QR
                 </a>
-                <a class="nav-link" href="#" onclick="logout()">
+                <a class="nav-link" href="{{ url_for('iniciar_sesion') }}">
                     <i class="fas fa-sign-out-alt me-2"></i>Salir
                 </a>
             </nav>
