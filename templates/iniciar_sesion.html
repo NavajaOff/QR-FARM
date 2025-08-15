@@ -15,17 +15,16 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
     <!-- Header -->
     <nav class="navbar navbar-dark bg-success">
         <div class="container">
-            <a class="navbar-brand" href="../index.html">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
                 <i class="fas fa-home me-2"></i>Inicio
             </a>
-            
-            <a class="navbar-brand mx-auto d-flex align-items-center" href="../index.html">
+            <a class="navbar-brand mx-auto d-flex align-items-center" href="{{ url_for('index') }}">
                 <span class="fw-bold fs-2">QR FARM</span>
                 <i class="fas fa-cow ms-2 logo-icon"></i>
             </a>
@@ -44,7 +43,7 @@
                     <!-- Left Side - Image and Description -->
                     <div class="col-md-6 p-5 d-flex flex-column justify-content-center" style="background-color: #ffffff;">
                         <div class="text-center mb-4">
-                            <img src="../images/vacas-grupo.jpg" alt="Grupo de vacas - QR Farm" class="img-fluid rounded-4 shadow" style="max-height: 350px; width: 100%; object-fit: cover; border: 3px solid #007bff;">
+                            <img src="{{ url_for('static', filename='images/vacas-grupo.jpg') }}" alt="Grupo de vacas - QR Farm" class="img-fluid rounded-4 shadow" style="max-height: 350px; width: 100%; object-fit: cover; border: 3px solid #007bff;">
                         </div>
                         <div class="text-center">
                             <p class="text-muted mb-2">Tu aliado inteligente en la gestión ganadera.</p>
@@ -73,7 +72,7 @@
                                     <button type="submit" class="btn btn-success btn-lg fw-bold">Iniciar Sesión</button>
                                 </div>
                                 <div class="text-center mt-3">
-                                    <p class="text-white">¿No tienes cuenta? <a href="crear_cuenta.html" class="text-info fw-bold">Crear cuenta</a></p>
+                                    <p class="text-white">¿No tienes cuenta? <a href="{{ url_for('crear_cuenta') }}" class="text-info fw-bold">Crear cuenta</a></p>
                                 </div>
                             </form>
                             <script src="../js/iniciar_sesion.js"></script>
