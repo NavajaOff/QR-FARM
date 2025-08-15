@@ -395,3 +395,10 @@ footer .list-unstyled a:hover {
 .social-links a:hover {
   transform: translateY(-2px);
 }
+
+#inventarioPie{
+  max-width: 300px;
+  max-height: 300px;
+  width: 100%;
+  height: auto;
+}
