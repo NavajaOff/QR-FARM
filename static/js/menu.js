@@ -1,0 +1,3 @@
+// Archivo JS original migrado a static/js/menu.js
+
+// ...contenido original del archivo...

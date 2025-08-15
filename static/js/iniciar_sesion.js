@@ -1,0 +1,3 @@
+// Archivo JS original migrado a static/js/iniciar_sesion.js
+
+// ...contenido original del archivo...

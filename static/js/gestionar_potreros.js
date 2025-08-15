@@ -1,0 +1,3 @@
+// Archivo JS original migrado a static/js/gestionar_potreros.js
+
+// ...contenido original del archivo...

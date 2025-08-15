@@ -1,0 +1,3 @@
+// Archivo JS original migrado a static/js/chart-inventario.js
+
+// ...contenido original del archivo...

@@ -1,0 +1,3 @@
+// Archivo JS original migrado a static/js/crear_cuenta.js
+
+// ...contenido original del archivo...

@@ -1,0 +1,3 @@
+// Archivo JS original migrado a static/js/script.js
+
+// ...contenido original del archivo...

@@ -1,0 +1,3 @@
+// Archivo JS original migrado a static/js/gestionar_animales.js
+
+// ...contenido original del archivo...
