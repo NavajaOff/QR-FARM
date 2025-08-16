@@ -305,6 +305,41 @@ function showRegistrationForm() {
   })
 }
 
+// Control del menú móvil
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebarToggle = document.querySelector('.sidebar-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    const mainContent = document.querySelector('.main-content');
+
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('active');
+            sidebarToggle.classList.toggle('active');
+        });
+
+        // Cerrar sidebar al hacer clic fuera
+        document.addEventListener('click', function(event) {
+            if (!sidebar.contains(event.target) && 
+                !sidebarToggle.contains(event.target) && 
+                sidebar.classList.contains('active')) {
+                sidebar.classList.remove('active');
+                sidebarToggle.classList.remove('active');
+            }
+        });
+    }
+
+    // Ajustar sidebar en cambio de tamaño de ventana
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 768) {
+            sidebar.classList.remove('active');
+            sidebarToggle.classList.remove('active');
+        }
+    });
+});
+
+// Mejorar la experiencia táctil
+document.addEventListener('touchstart', function() {}, {passive: true});
+
 // Inicializar tooltips de Bootstrap y animación de contadores
 document.addEventListener("DOMContentLoaded", () => {
   // Inicializar tooltips

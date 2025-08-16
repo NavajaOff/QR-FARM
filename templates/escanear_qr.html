@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Escanear QR - QR FARM</title>
     
     <!-- Bootstrap CSS -->
@@ -37,11 +37,11 @@
         </div>
     </nav>
 
-    <!-- Main Layout -->
+    <!-- Wrapper para el contenido -->
     <div class="d-flex">
         <!-- Sidebar -->
         <div class="sidebar">
-            <nav class="nav flex-column">
+            <nav class="nav flex-column py-3">
                 <a class="nav-link{% if request.endpoint == 'inventario' %} active{% endif %}" href="{{ url_for('inventario') }}">
                     <i class="fas fa-boxes me-2"></i>Inventario
                 </a>
@@ -61,30 +61,34 @@
         </div>
 
         <!-- Main Content -->
-        <div class="main-content d-flex align-items-center justify-content-center" style="min-height: calc(100vh - 56px); margin-left: 200px;">
-            <div class="container-fluid">
-                <div class="row justify-content-center">
-                    <div class="col-lg-8">
-                        <div class="text-center mb-4">
-                            <h2 class="fw-bold text-dark mb-2">
-                                <i class="fas fa-qrcode me-2 text-primary"></i>Escáner QR
-                            </h2>
-                            <p class="lead text-muted">
-                                Escanea el código QR de un animal para ver su información
-                            </p>
-                        </div>
-
-                        <!-- Scanner Area -->
-                        <div class="card border-0 shadow-lg">
-                            <div class="card-body p-5 text-center">
+        <div class="main-content">
+            <div class="container-fluid py-4 py-md-5">
+                <div class="row justify-content-center g-4">
+                    <div class="col-12 col-lg-10 col-xl-8">
+                        <!-- Scanner Section -->
+                        <div class="card border-0 shadow-lg mb-4">
+                            <div class="card-body p-3 p-sm-4 p-lg-5">
                                 <!-- Simulación de cámara -->
                                 <div class="scanner-area mb-4" style="background: #f8f9fa; border: 3px dashed #dee2e6; border-radius: 15px; padding: 60px; position: relative;">
-                                    <i class="fas fa-camera fa-4x text-muted mb-3"></i>
-                                    <h5 class="text-muted">Área de escaneo</h5>
-                                    <p class="text-muted">Coloca el código QR dentro del marco</p>
-                                    
-                                    <!-- Marco de escaneo -->
-                                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 200px; border: 3px solid #007bff; border-radius: 10px;"></div>
+                                    <!-- Marco de escaneo centrado -->
+                                    <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 300px;">
+                                        <!-- Marco de escaneo con icono centrado -->
+                                        <div style="position: relative; width: 200px; height: 200px; margin: 20px 0;">
+                                            <!-- Borde azul -->
+                                            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 3px solid #007bff; border-radius: 10px;"></div>
+                                            
+                                            <!-- Icono de cámara centrado dentro del marco -->
+                                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                                                <i class="fas fa-camera fa-3x text-muted"></i>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Texto informativo debajo del marco -->
+                                        <div class="text-center mt-3">
+                                            <h5 class="text-muted mb-2">Área de escaneo</h5>
+                                            <p class="text-muted mb-0">Coloca el código QR dentro del marco</p>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <!-- Botones de acción -->
@@ -110,16 +114,14 @@
                             </div>
                         </div>
 
-                        <!-- Historial de escaneos recientes -->
-                        <div class="card border-0 shadow mt-4">
-                            <div class="card-header bg-light">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-history me-2"></i>Escaneos Recientes
-                                </h5>
+                        <!-- Recent Scans -->
+                        <div class="card border-0 shadow-lg">
+                            <div class="card-header bg-light p-3">
+                                <h5 class="mb-0">Escaneos Recientes</h5>
                             </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-4 mb-3">
+                            <div class="card-body p-3 p-sm-4">
+                                <div class="row g-3">
+                                    <div class="col-12 col-sm-6 col-lg-4">
                                         <div class="card border">
                                             <div class="card-body text-center">
                                                 <i class="fas fa-cow fa-2x text-success mb-2"></i>
@@ -133,7 +135,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-12 col-sm-6 col-lg-4">
                                         <div class="card border">
                                             <div class="card-body text-center">
                                                 <i class="fas fa-cow fa-2x text-warning mb-2"></i>
@@ -147,7 +149,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-12 col-sm-6 col-lg-4">
                                         <div class="card border">
                                             <div class="card-body text-center">
                                                 <i class="fas fa-cow fa-2x text-info mb-2"></i>

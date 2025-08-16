@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Menu Principal - QR FARM</title>
     
     <!-- Bootstrap CSS -->
@@ -71,75 +71,78 @@
             </nav>
         </div>
 
-        <!-- Main Content - Cajita centrada considerando el sidebar -->
-<div class="main-content d-flex align-items-center justify-content-center" style="min-height: calc(100vh - 56px); margin-left: 200px;">
-    <div class="container-fluid">
-        <div class="row justify-content-center">
-            <div class="col-12">
-                <!-- Título principal -->
-                <div class="text-center mb-4">
-                    <h2 class="fw-bold text-dark mb-2">
-                        ¡Bienvenido, <span id="nombreUsuario">Nombre del usuario</span>!
-                    </h2>
-                    <p class="lead text-muted">
-                        Gestiona tu finca de manera inteligente con QR Farm
-                    </p>
-                </div>
+        <!-- Main Content -->
+        <div class="main-content d-flex align-items-center justify-content-center">
+            <div class="container-fluid py-4 py-md-5">
+                <div class="row justify-content-center g-4">
+                    <div class="col-12 col-lg-10 col-xl-8">
+                        <!-- Título principal -->
+                        <div class="text-center mb-4 mb-md-5">
+                            <h2 class="fw-bold text-dark mb-2 mb-md-3">
+                                ¡Bienvenido, <span id="nombreUsuario">Nombre del usuario</span>!
+                            </h2>
+                            <p class="lead text-muted">
+                                Gestiona tu finca de manera inteligente con QR Farm
+                            </p>
+                        </div>
 
-                <!-- Cajita centrada con todo el contenido -->
-                <div class="d-flex justify-content-center">
-                    <div class="card border-0 shadow-lg" style="max-width: 700px; width: 90%;">
-                        <div class="card-body p-4">
-                            <!-- Imagen -->
-                            <div class="text-center mb-4">
-                                <img src="{{ url_for('static', filename='images/vascas-holstein.jpg') }}" alt="Vacas Holstein - QR Farm" class="img-fluid rounded-3 shadow" style="max-width: 100%; height: 250px; object-fit: cover;">
-                            </div>
+                        <!-- Card principal -->
+                        <div class="card border-0 shadow-lg">
+                            <div class="card-body p-3 p-sm-4 p-lg-5">
+                                <!-- Imagen -->
+                                <div class="text-center mb-4">
+                                    <img src="{{ url_for('static', filename='images/vascas-holstein.jpg') }}" 
+                                         alt="Vacas Holstein - QR Farm" 
+                                         class="img-fluid rounded-4 shadow-sm"
+                                         style="max-height: 350px; width: 100%; object-fit: cover;">
+                                </div>
 
-                            <!-- Estadísticas -->
-                            <div class="row mb-4">
-                                <div class="col-6 col-md-3 mb-3">
-                                    <div class="text-center p-3 bg-light rounded-3">
-                                        <i class="fas fa-cow fa-2x text-success mb-2"></i>
-                                        <h5 class="fw-bold mb-1">125</h5>
-                                        <small class="text-muted">Animales</small>
+                                <!-- Estadísticas -->
+                                <div class="row g-3 mb-4">
+                                    <div class="col-6 col-md-3">
+                                        <div class="p-3 bg-light rounded-4 text-center h-100">
+                                            <i class="fas fa-cow fa-2x text-success mb-2"></i>
+                                            <h5 class="fw-bold mb-1">125</h5>
+                                            <small class="text-muted">Animales</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="p-3 bg-light rounded-4 text-center h-100">
+                                            <i class="fas fa-qrcode fa-2x text-primary mb-2"></i>
+                                            <h5 class="fw-bold mb-1">125</h5>
+                                            <small class="text-muted">Códigos QR</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="p-3 bg-light rounded-4 text-center h-100">
+                                            <i class="fas fa-chart-line fa-2x text-warning mb-2"></i>
+                                            <h5 class="fw-bold mb-1">98%</h5>
+                                            <small class="text-muted">Salud</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="p-3 bg-light rounded-4 text-center h-100">
+                                            <i class="fas fa-dollar-sign fa-2x text-info mb-2"></i>
+                                            <h5 class="fw-bold mb-1">$45K</h5>
+                                            <small class="text-muted">Ingresos</small>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="col-6 col-md-3 mb-3">
-                                    <div class="text-center p-3 bg-light rounded-3">
-                                        <i class="fas fa-qrcode fa-2x text-primary mb-2"></i>
-                                        <h5 class="fw-bold mb-1">125</h5>
-                                        <small class="text-muted">Códigos QR</small>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-3 mb-3">
-                                    <div class="text-center p-3 bg-light rounded-3">
-                                        <i class="fas fa-chart-line fa-2x text-warning mb-2"></i>
-                                        <h5 class="fw-bold mb-1">98%</h5>
-                                        <small class="text-muted">Salud</small>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-3 mb-3">
-                                    <div class="text-center p-3 bg-light rounded-3">
-                                        <i class="fas fa-dollar-sign fa-2x text-info mb-2"></i>
-                                        <h5 class="fw-bold mb-1">$45K</h5>
-                                        <small class="text-muted">Ingresos</small>
-                                    </div>
-                                </div>
-                            </div>
 
-                            <!-- Acciones Rápidas -->
-                            <div class="text-center">
-                                <h5 class="fw-bold mb-3 text-success">Acciones Rápidas</h5>
-                                <div class="d-flex justify-content-center gap-2 flex-wrap">
-                                    <a class="btn btn-success" href="{{ url_for('escanear_qr') }}" style="min-width: 130px;">
-                                        <i class="fas fa-qrcode me-1"></i>Escanear QR
-                                    </a>
-                                    <a class="btn btn-primary" href="{{ url_for('gestionar_animales') }}" style="min-width: 130px;">
-                                        <i class="fas fa-plus-circle me-1"></i>Registrar Animal
-                                    </a>
-                                    <a class="btn btn-info" href="{{ url_for('inventario') }}" style="min-width: 130px;">
-                                        <i class="fas fa-chart-bar me-1"></i>Ver Reportes
-                                    </a>
+                                <!-- Acciones Rápidas -->
+                                <div class="text-center px-2 px-sm-3 px-md-4">
+                                    <h5 class="fw-bold mb-3 text-success">Acciones Rápidas</h5>
+                                    <div class="d-flex justify-content-center gap-2 gap-md-3 flex-wrap">
+                                        <a class="btn btn-success" href="{{ url_for('escanear_qr') }}" style="min-width: 130px;">
+                                            <i class="fas fa-qrcode me-1"></i>Escanear QR
+                                        </a>
+                                        <a class="btn btn-primary" href="{{ url_for('gestionar_animales') }}" style="min-width: 130px;">
+                                            <i class="fas fa-plus-circle me-1"></i>Registrar Animal
+                                        </a>
+                                        <a class="btn btn-info" href="{{ url_for('inventario') }}" style="min-width: 130px;">
+                                            <i class="fas fa-chart-bar me-1"></i>Ver Reportes
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -147,8 +150,6 @@
                 </div>
             </div>
         </div>
-    </div>
-</div>
     </div>
 
     <!-- Scripts -->

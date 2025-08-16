@@ -3,6 +3,8 @@
   --qr-green: #00d563;
   --qr-dark-green: #00b854;
   --qr-light-green: #e8f5e8;
+  --sidebar-width: 250px;
+  --sidebar-width-mobile: 0px;
 }
 
 /* Clases personalizadas para reemplazar CSS inline */
@@ -32,7 +34,10 @@
 .sidebar {
   background-color: #6c757d;
   min-height: calc(100vh - 56px);
-  width: 200px;
+  width: var(--sidebar-width);
+  position: fixed;
+  height: 100vh;
+  transition: transform 0.3s ease-in-out;
 }
 
 .sidebar .nav-link {
@@ -55,6 +60,9 @@
 .main-content {
   flex: 1;
   background-color: #f8f9fa;
+  margin-left: var(--sidebar-width);
+  padding: 20px;
+  transition: margin-left 0.3s ease-in-out;
 }
 
 .welcome-image {
@@ -120,6 +128,7 @@
 .card {
   transition: all 0.3s ease;
   border-radius: 15px !important;
+  margin-bottom: 20px;
 }
 
 .card:hover {
@@ -230,175 +239,170 @@
   animation-delay: 0.4s;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .hero-section {
-    min-height: 60vh;
-    text-align: center !important;
-  }
+/* Ajustes para el layout principal */
+body {
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+}
 
-  .display-4 {
-    font-size: 2.5rem;
-  }
+/* Navbar ajustado */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+    height: 80px; /* Aumentado para dar más espacio */
+    padding: 0 1rem; /* Ajustado el padding horizontal */
+    display: flex;
+    align-items: center; /* Centrar verticalmente */
+}
 
-  .navbar-brand span {
+/* Ajustes para el contenido del navbar */
+.navbar .container-fluid {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+}
+
+/* Ajustes específicos para el navbar de contacto */
+.navbar .container-fluid {
+    height: 80px; /* Altura consistente con el resto de la aplicación */
+}
+
+.navbar-brand {
     font-size: 1.2rem;
-  }
-
-  .sidebar {
-    width: 100%;
-    min-height: auto;
-  }
-
-  .main-content {
-    margin-left: 0;
-  }
+    padding: 0.5rem 0;
+    margin: 0;
+    white-space: nowrap;
 }
 
-/* Footer */
+.navbar-brand .logo-icon {
+    font-size: 1.5rem;
+}
+
+/* Ajustes responsivos para el navbar */
+@media (max-width: 768px) {
+    .navbar-brand span {
+        font-size: 1.1rem;
+    }
+    
+    .navbar-brand .logo-icon {
+        font-size: 1.3rem;
+    }
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    padding: 0.5rem 0;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.navbar-brand .logo-icon {
+    font-size: 1.8rem;
+    margin-right: 10px;
+}
+
+/* Ajuste de altura del contenido principal para coincidir con el nuevo navbar */
+.sidebar {
+    top: 80px; /* Ajustado a la nueva altura del navbar */
+    height: calc(100vh - 80px);
+}
+
+.main-content {
+    margin-top: 80px; /* Ajustado a la nueva altura del navbar */
+}
+
+/* Ajustes responsivos para el navbar */
+@media (max-width: 768px) {
+    .navbar {
+        height: 70px; /* Ligeramente más pequeño en móviles */
+    }
+
+    .navbar-brand {
+        font-size: 1.2rem;
+    }
+
+    .navbar-brand .logo-icon {
+        font-size: 1.5rem;
+    }
+
+    .sidebar {
+        top: 70px;
+        height: calc(100vh - 70px);
+    }
+
+    .main-content {
+        margin-top: 70px;
+    }
+}
+
+/* Ajustes para tablets */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .sidebar {
+        width: 200px;
+    }
+
+    .main-content {
+        margin-left: 200px;
+    }
+}
+
+/* Animaciones para el menú móvil */
+.sidebar-toggle {
+    transition: all 0.3s;
+}
+
+.sidebar-toggle.active {
+    transform: rotate(180deg);
+}
+
+/* Ajustes para el footer */
 footer {
-  background: linear-gradient(135deg, #212529 0%, #343a40 100%) !important;
+    padding: 20px;
 }
 
-/* Utilidades adicionales */
-.text-qr-green {
-  color: var(--qr-green) !important;
+@media (max-width: 576px) {
+    footer {
+        text-align: center;
+        padding: 20px;
+    }
+    .social-links {
+        justify-content: center;
+        margin-top: 1rem;
+    }
 }
 
-.bg-qr-green {
-  background-color: var(--qr-green) !important;
+/* Ajustes para el escáner QR */
+.scanner-container {
+    max-width: 100%;
+    aspect-ratio: 1;
 }
 
-.border-qr-green {
-  border-color: var(--qr-green) !important;
+/* Ajustes para gráficos */
+canvas {
+    margin-top: 1rem;
+    max-width: 100% !important;
+    height: auto !important;
+}
+/* Ajustes para el escáner QR */
+.scanner-container {
+    max-width: 100%;
+    aspect-ratio: 1;
 }
 
-/* Estilos para la nueva imagen hero */
-.hero-image-wrapper {
-  position: relative;
-  overflow: hidden;
-  border-radius: 50px !important;
+/* Ajustes para gráficos */
+canvas {
+    max-width: 100% !important;
+    height: auto !important;
 }
 
-.hero-image {
-  transition: transform 0.3s ease;
-  width: 100%;
-  height: auto;
-}
-
-.hero-image:hover {
-  transform: scale(1.05);
-}
-
-.image-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(45deg, rgba(0, 213, 99, 0.8), rgba(0, 184, 84, 0.6));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.hero-image-wrapper:hover .image-overlay {
-  opacity: 1;
-}
-
-.overlay-content {
-  text-align: center;
-  transform: translateY(20px);
-  transition: transform 0.3s ease;
-}
-
-.hero-image-wrapper:hover .overlay-content {
-  transform: translateY(0);
-}
-
-/* Botón flotante de WhatsApp */
-.whatsapp-float {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 1000;
-}
-
-.whatsapp-float .btn {
-  width: 60px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  animation: pulse-whatsapp 2s infinite;
-}
-
-@keyframes pulse-whatsapp {
-  0% {
-    box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(37, 211, 102, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(37, 211, 102, 0);
-  }
-}
-
-/* Estilos para el footer mejorado */
-footer .social-links a {
-  transition: all 0.3s ease;
-}
-
-footer .social-links a:hover {
-  color: var(--qr-green) !important;
-  transform: translateY(-3px);
-}
-
-footer .list-unstyled a:hover {
-  color: var(--qr-green) !important;
-  padding-left: 5px;
-  transition: all 0.3s ease;
-}
-
-/* Contadores animados */
-.counter {
-  font-size: 2.5rem;
-}
-
-/* Estilos adicionales para formularios */
-.form-control:focus {
-  border-color: var(--qr-green);
-  box-shadow: 0 0 0 0.2rem rgba(0, 213, 99, 0.25);
-}
-
-.form-select:focus {
-  border-color: var(--qr-green);
-  box-shadow: 0 0 0 0.2rem rgba(0, 213, 99, 0.25);
-}
-
-/* Estilos para contacto */
-.contact-item {
-  transition: all 0.3s ease;
-}
-
-.contact-item:hover {
-  transform: translateX(5px);
-}
-
-.social-links a {
-  transition: all 0.3s ease;
-}
-
-.social-links a:hover {
-  transform: translateY(-2px);
-}
-
-#inventarioPie{
-  max-width: 300px;
-  max-height: 300px;
-  width: 100%;
-  height: auto;
+/* Estilos específicos para la gráfica de inventario */
+#inventarioPie {
+    max-height: 400px !important;
+    width: 100% !important;
 }
