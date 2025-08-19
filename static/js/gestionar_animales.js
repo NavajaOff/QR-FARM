@@ -122,7 +122,7 @@ function verPerfilAnimal(nombre) {
                         <div class='row mb-2'>
                             <div class='col-12 mb-2'>
                                 <label class='form-label'>Nombre:</label>
-                                <input id='nombreAnimal' class='form-control' placeholder='Nombre/Código'>
+                                <input id='nombreAnimal' class='form-control' placeholder='Nombre'>
                             </div>
                             <div class='col-12 mb-2'>
                                 <label class='form-label'>Código QR:</label>
