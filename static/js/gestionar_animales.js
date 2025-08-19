@@ -12,6 +12,7 @@ function verPerfilAnimal(nombre) {
                         <p><strong>Fecha de nacimiento:</strong> ${animal ? animal.fechaNacimiento : 'Sin dato'}</p>
                         <p><strong>Peso actual:</strong> ${animal ? animal.pesoActual : 'Sin dato'} kg</p>
                         <p><strong>Última vacunación:</strong> ${animal ? animal.ultimaVacunacion : 'Sin dato'}</p>
+                        <p><strong>Próxima vacunación:</strong> ${animal ? animal.proximaVacunacion || 'Sin dato' : 'Sin dato'}</p>
                         <p><strong>Potrero actual:</strong> ${animal ? animal.potreroActual : 'Sin dato'}</p>
                         <p><strong>Historial médico:</strong> ${animal ? animal.historialMedico : 'Sin incidencias'}</p>
                     </div>
@@ -29,7 +30,7 @@ function verPerfilAnimal(nombre) {
                 html: `
                     <form class='text-start'>
                         <div class='mb-2'>
-                            <label class='form-label'>Nombre/Código:</label>
+                            <label class='form-label'>Nombre:</label>
                             <input id='editNombre' type='text' class='form-control' value='${animal.nombre}'>
                         </div>
                         <div class='mb-2'>
@@ -56,9 +57,13 @@ function verPerfilAnimal(nombre) {
                                 <input id='editUltimaVacunacion' type='date' class='form-control' value='${animal.ultimaVacunacion}'>
                             </div>
                             <div class='col-6 mb-2'>
-                                <label class='form-label'>Potrero actual:</label>
-                                <input id='editPotreroActual' type='text' class='form-control' value='${animal.potreroActual}'>
+                                <label class='form-label'>Próxima vacunación:</label>
+                                <input id='editProximaVacunacion' type='date' class='form-control' value='${animal.proximaVacunacion || ''}'>
                             </div>
+                        </div>
+                        <div class='mb-2'>
+                            <label class='form-label'>Potrero actual:</label>
+                            <input id='editPotreroActual' type='text' class='form-control' value='${animal.potreroActual}'>
                         </div>
                         <div class='mb-2'>
                             <label class='form-label'>Historial médico:</label>
@@ -82,11 +87,12 @@ function verPerfilAnimal(nombre) {
                     const editUltimaVacunacion = document.getElementById('editUltimaVacunacion').value;
                     const editPotreroActual = document.getElementById('editPotreroActual').value;
                     const editHistorialMedico = document.getElementById('editHistorialMedico').value;
-                    if (!editNombre || !editCodigoQR || !editPropietario || !editFechaNacimiento || !editPesoActual || !editUltimaVacunacion || !editPotreroActual || !editHistorialMedico) {
+                    const editProximaVacunacion = document.getElementById('editProximaVacunacion').value;
+                    if (!editNombre || !editCodigoQR || !editPropietario || !editFechaNacimiento || !editPesoActual || !editUltimaVacunacion || !editProximaVacunacion || !editPotreroActual || !editHistorialMedico) {
                         Swal.showValidationMessage('Completa todos los campos');
                         return false;
                     }
-                    return { editNombre, editCodigoQR, editPropietario, editFechaNacimiento, editPesoActual, editUltimaVacunacion, editPotreroActual, editHistorialMedico };
+                    return { editNombre, editCodigoQR, editPropietario, editFechaNacimiento, editPesoActual, editUltimaVacunacion, editProximaVacunacion, editPotreroActual, editHistorialMedico };
                 }
             }).then((result) => {
                 if (result.isConfirmed && result.value) {
@@ -97,6 +103,7 @@ function verPerfilAnimal(nombre) {
                     animal.fechaNacimiento = result.value.editFechaNacimiento;
                     animal.pesoActual = result.value.editPesoActual;
                     animal.ultimaVacunacion = result.value.editUltimaVacunacion;
+                    animal.proximaVacunacion = result.value.editProximaVacunacion;
                     animal.potreroActual = result.value.editPotreroActual;
                     animal.historialMedico = result.value.editHistorialMedico;
                     localStorage.setItem('animales', JSON.stringify(animales));

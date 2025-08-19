@@ -9,7 +9,8 @@ let potreros = JSON.parse(localStorage.getItem('potreros')) || [
         fechaUltimoUso: '10/04/2025',
         responsable: 'Juan Pérez',
         area: 2.5,
-        ultimaLimpieza: '10/04/2025',
+    ultimaLimpieza: '10/04/2025',
+    proximaLimpieza: '',
         notas: 'Zona sombría, ideal para novillos'
     }
 ];
@@ -68,6 +69,11 @@ function mostrarPotrero(idx) {
                     <div class="col-6">
                         <div class="border rounded p-2 text-center bg-light">
                             <strong>Última limpieza:</strong> ${p.ultimaLimpieza || ''}
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="border rounded p-2 text-center bg-light">
+                            <strong>Próxima limpieza:</strong> ${p.proximaLimpieza || ''}
                         </div>
                     </div>
                 </div>
