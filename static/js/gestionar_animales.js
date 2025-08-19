@@ -8,7 +8,7 @@ function verPerfilAnimal(nombre) {
                 html: `
                     <div class="text-start">
                         <p><strong>Código QR:</strong> ${animal ? animal.codigoQR : 'Sin código'}</p>
-                        <p><strong>Propietario:</strong> ${animal ? animal.propietario : 'Sin propietario'}</p>
+                        <p><strong>Encargado:</strong> ${animal ? animal.propietario : 'Sin encargado'}</p>
                         <p><strong>Fecha de nacimiento:</strong> ${animal ? animal.fechaNacimiento : 'Sin dato'}</p>
                         <p><strong>Peso actual:</strong> ${animal ? animal.pesoActual : 'Sin dato'} kg</p>
                         <p><strong>Última vacunación:</strong> ${animal ? animal.ultimaVacunacion : 'Sin dato'}</p>
@@ -38,7 +38,7 @@ function verPerfilAnimal(nombre) {
                             <input id='editCodigoQR' type='text' class='form-control' value='${animal.codigoQR}'>
                         </div>
                         <div class='mb-2'>
-                            <label class='form-label'>Propietario:</label>
+                            <label class='form-label'>Encargado:</label>
                             <input id='editPropietario' type='text' class='form-control' value='${animal.propietario}'>
                         </div>
                         <div class='row mb-2'>
@@ -121,7 +121,7 @@ function verPerfilAnimal(nombre) {
                     <form id='formNuevoAnimal' class='text-start'>
                         <div class='row mb-2'>
                             <div class='col-12 mb-2'>
-                                <label class='form-label'>Nombre/Código:</label>
+                                <label class='form-label'>Nombre:</label>
                                 <input id='nombreAnimal' class='form-control' placeholder='Nombre/Código'>
                             </div>
                             <div class='col-12 mb-2'>
@@ -129,8 +129,8 @@ function verPerfilAnimal(nombre) {
                                 <input id='codigoQR' class='form-control' placeholder='Código QR (ej: QR-Holstein-001)'>
                             </div>
                             <div class='col-12 mb-2'>
-                                <label class='form-label'>Propietario:</label>
-                                <input id='propietarioAnimal' class='form-control' placeholder='Propietario'>
+                                <label class='form-label'>Encargado:</label>
+                                <input id='propietarioAnimal' class='form-control' placeholder='Encargado'>
                             </div>
                             <div class='col-12 mb-2'>
                                 <label class='form-label'>Raza:</label>
@@ -277,7 +277,7 @@ function verPerfilAnimal(nombre) {
                             <i class="fas fa-cow fa-3x mb-3" style="color:#00d563;"></i>
                             <h5 class="card-title">${animal.nombre}</h5>
                             <p class="text-muted">Código QR: ${animal.codigoQR}</p>
-                            <p class="text-muted">Propietario: ${animal.propietario}</p>
+                            <p class="text-muted">Encargado: ${animal.propietario}</p>
                             <p class="text-muted">Raza: ${animal.raza}</p>
                             <p class="text-muted">Fecha nacimiento: ${animal.fechaNacimiento}</p>
                             <p class="text-muted">Peso: ${animal.pesoActual} kg</p>
