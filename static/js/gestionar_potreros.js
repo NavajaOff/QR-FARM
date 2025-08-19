@@ -208,23 +208,21 @@ function editarPotrero() {
             const proximaLimpieza = document.getElementById('proximaLimpieza').value;
             const area = document.getElementById('area').value;
             const notas = document.getElementById('notas').value;
-            if (!estado || !capacidad || !tipoPasto || !responsable || !area || !ultimaLimpieza || !proximaLimpieza) {
-                Swal.showValidationMessage('Completa todos los campos');
-                return false;
-            }
+            // Permitir guardar aunque algunos campos estén vacíos
             return { estado, capacidad, tipoPasto, responsable, ultimaLimpieza, proximaLimpieza, area, notas };
         }
     }).then((result) => {
         if (result.isConfirmed && result.value) {
             const p = potreros[potreroActual];
-            p.estado = result.value.estado;
-            p.capacidad = parseInt(result.value.capacidad);
-            p.tipoPasto = result.value.tipoPasto;
-            p.responsable = result.value.responsable;
-            p.ultimaLimpieza = result.value.ultimaLimpieza;
-            p.proximaLimpieza = result.value.proximaLimpieza;
-            p.area = parseFloat(result.value.area);
-            p.notas = result.value.notas;
+            // Solo actualiza si el campo tiene valor, si no, conserva el anterior
+            p.estado = result.value.estado || p.estado;
+            p.capacidad = result.value.capacidad ? parseInt(result.value.capacidad) : p.capacidad;
+            p.tipoPasto = result.value.tipoPasto || p.tipoPasto;
+            p.responsable = result.value.responsable || p.responsable;
+            p.ultimaLimpieza = result.value.ultimaLimpieza || p.ultimaLimpieza;
+            p.proximaLimpieza = result.value.proximaLimpieza || p.proximaLimpieza;
+            p.area = result.value.area ? parseFloat(result.value.area) : p.area;
+            p.notas = result.value.notas || p.notas;
             localStorage.setItem('potreros', JSON.stringify(potreros));
             Swal.fire({
                 icon: 'success',
