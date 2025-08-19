@@ -196,8 +196,22 @@ function verPerfilAnimal(nombre) {
                     const proximaVacunacion = document.getElementById('proximaVacunacion').value;
                     const potreroActual = document.getElementById('potreroActual').value;
                     const historialMedico = document.getElementById('historialMedico').value;
-                    if (!nombre || !codigoQR || !propietario || !raza || !fechaNacimiento || !pesoActual || !ultimaVacunacion || !proximaVacunacion || !potreroActual || !historialMedico) {
-                        Swal.showValidationMessage('Completa todos los campos');
+                    // Validación mejorada
+                    if (
+                        !nombre.trim() ||
+                        !codigoQR.trim() ||
+                        !propietario.trim() ||
+                        !raza.trim() ||
+                        !fechaNacimiento.trim() ||
+                        !pesoActual.trim() ||
+                        isNaN(Number(pesoActual)) ||
+                        Number(pesoActual) <= 0 ||
+                        !ultimaVacunacion.trim() ||
+                        !proximaVacunacion.trim() ||
+                        !potreroActual.trim() ||
+                        !historialMedico.trim()
+                    ) {
+                        Swal.showValidationMessage('Completa todos los campos correctamente. El peso debe ser mayor a cero.');
                         return false;
                     }
                     return { nombre, codigoQR, propietario, raza, fechaNacimiento, pesoActual, ultimaVacunacion, proximaVacunacion, potreroActual, historialMedico };
