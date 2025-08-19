@@ -8,10 +8,11 @@ function verPerfilAnimal(nombre) {
                 html: `
                     <div class="text-start">
                         <p><strong>Código QR:</strong> ${animal ? animal.codigoQR : 'Sin código'}</p>
-                        <p><strong>Propietario:</strong> ${animal ? animal.propietario : 'Sin propietario'}</p>
+                        <p><strong>Encargado:</strong> ${animal ? animal.propietario : 'Sin encargado'}</p>
                         <p><strong>Fecha de nacimiento:</strong> ${animal ? animal.fechaNacimiento : 'Sin dato'}</p>
                         <p><strong>Peso actual:</strong> ${animal ? animal.pesoActual : 'Sin dato'} kg</p>
                         <p><strong>Última vacunación:</strong> ${animal ? animal.ultimaVacunacion : 'Sin dato'}</p>
+                        <p><strong>Próxima vacunación:</strong> ${animal ? animal.proximaVacunacion || 'Sin dato' : 'Sin dato'}</p>
                         <p><strong>Potrero actual:</strong> ${animal ? animal.potreroActual : 'Sin dato'}</p>
                         <p><strong>Historial médico:</strong> ${animal ? animal.historialMedico : 'Sin incidencias'}</p>
                     </div>
@@ -29,7 +30,7 @@ function verPerfilAnimal(nombre) {
                 html: `
                     <form class='text-start'>
                         <div class='mb-2'>
-                            <label class='form-label'>Nombre/Código:</label>
+                            <label class='form-label'>Nombre:</label>
                             <input id='editNombre' type='text' class='form-control' value='${animal.nombre}'>
                         </div>
                         <div class='mb-2'>
@@ -37,7 +38,7 @@ function verPerfilAnimal(nombre) {
                             <input id='editCodigoQR' type='text' class='form-control' value='${animal.codigoQR}'>
                         </div>
                         <div class='mb-2'>
-                            <label class='form-label'>Propietario:</label>
+                            <label class='form-label'>Encargado:</label>
                             <input id='editPropietario' type='text' class='form-control' value='${animal.propietario}'>
                         </div>
                         <div class='row mb-2'>
@@ -56,9 +57,13 @@ function verPerfilAnimal(nombre) {
                                 <input id='editUltimaVacunacion' type='date' class='form-control' value='${animal.ultimaVacunacion}'>
                             </div>
                             <div class='col-6 mb-2'>
-                                <label class='form-label'>Potrero actual:</label>
-                                <input id='editPotreroActual' type='text' class='form-control' value='${animal.potreroActual}'>
+                                <label class='form-label'>Próxima vacunación:</label>
+                                <input id='editProximaVacunacion' type='date' class='form-control' value='${animal.proximaVacunacion || ''}'>
                             </div>
+                        </div>
+                        <div class='mb-2'>
+                            <label class='form-label'>Potrero actual:</label>
+                            <input id='editPotreroActual' type='text' class='form-control' value='${animal.potreroActual}'>
                         </div>
                         <div class='mb-2'>
                             <label class='form-label'>Historial médico:</label>
@@ -82,11 +87,12 @@ function verPerfilAnimal(nombre) {
                     const editUltimaVacunacion = document.getElementById('editUltimaVacunacion').value;
                     const editPotreroActual = document.getElementById('editPotreroActual').value;
                     const editHistorialMedico = document.getElementById('editHistorialMedico').value;
-                    if (!editNombre || !editCodigoQR || !editPropietario || !editFechaNacimiento || !editPesoActual || !editUltimaVacunacion || !editPotreroActual || !editHistorialMedico) {
+                    const editProximaVacunacion = document.getElementById('editProximaVacunacion').value;
+                    if (!editNombre || !editCodigoQR || !editPropietario || !editFechaNacimiento || !editPesoActual || !editUltimaVacunacion || !editProximaVacunacion || !editPotreroActual || !editHistorialMedico) {
                         Swal.showValidationMessage('Completa todos los campos');
                         return false;
                     }
-                    return { editNombre, editCodigoQR, editPropietario, editFechaNacimiento, editPesoActual, editUltimaVacunacion, editPotreroActual, editHistorialMedico };
+                    return { editNombre, editCodigoQR, editPropietario, editFechaNacimiento, editPesoActual, editUltimaVacunacion, editProximaVacunacion, editPotreroActual, editHistorialMedico };
                 }
             }).then((result) => {
                 if (result.isConfirmed && result.value) {
@@ -97,6 +103,7 @@ function verPerfilAnimal(nombre) {
                     animal.fechaNacimiento = result.value.editFechaNacimiento;
                     animal.pesoActual = result.value.editPesoActual;
                     animal.ultimaVacunacion = result.value.editUltimaVacunacion;
+                    animal.proximaVacunacion = result.value.editProximaVacunacion;
                     animal.potreroActual = result.value.editPotreroActual;
                     animal.historialMedico = result.value.editHistorialMedico;
                     localStorage.setItem('animales', JSON.stringify(animales));
@@ -114,16 +121,16 @@ function verPerfilAnimal(nombre) {
                     <form id='formNuevoAnimal' class='text-start'>
                         <div class='row mb-2'>
                             <div class='col-12 mb-2'>
-                                <label class='form-label'>Nombre/Código:</label>
-                                <input id='nombreAnimal' class='form-control' placeholder='Nombre/Código'>
+                                <label class='form-label'>Nombre:</label>
+                                <input id='nombreAnimal' class='form-control' placeholder='Nombre'>
                             </div>
                             <div class='col-12 mb-2'>
                                 <label class='form-label'>Código QR:</label>
                                 <input id='codigoQR' class='form-control' placeholder='Código QR (ej: QR-Holstein-001)'>
                             </div>
                             <div class='col-12 mb-2'>
-                                <label class='form-label'>Propietario:</label>
-                                <input id='propietarioAnimal' class='form-control' placeholder='Propietario'>
+                                <label class='form-label'>Encargado:</label>
+                                <input id='propietarioAnimal' class='form-control' placeholder='Encargado'>
                             </div>
                             <div class='col-12 mb-2'>
                                 <label class='form-label'>Raza:</label>
@@ -151,6 +158,12 @@ function verPerfilAnimal(nombre) {
                                 <input id='ultimaVacunacion' class='form-control' type='date'>
                             </div>
                             <div class='col-6 mb-2'>
+                                <label class='form-label'>Próxima vacunación:</label>
+                                <input id='proximaVacunacion' class='form-control' type='date'>
+                            </div>
+                        </div>
+                        <div class='row mb-2'>
+                            <div class='col-12 mb-2'>
                                 <label class='form-label'>Potrero actual:</label>
                                 <input id='potreroActual' class='form-control' placeholder='Potrero actual'>
                             </div>
@@ -180,13 +193,28 @@ function verPerfilAnimal(nombre) {
                     const fechaNacimiento = document.getElementById('fechaNacimiento').value;
                     const pesoActual = document.getElementById('pesoActual').value;
                     const ultimaVacunacion = document.getElementById('ultimaVacunacion').value;
+                    const proximaVacunacion = document.getElementById('proximaVacunacion').value;
                     const potreroActual = document.getElementById('potreroActual').value;
                     const historialMedico = document.getElementById('historialMedico').value;
-                    if (!nombre || !codigoQR || !propietario || !raza || !fechaNacimiento || !pesoActual || !ultimaVacunacion || !potreroActual || !historialMedico) {
-                        Swal.showValidationMessage('Completa todos los campos');
+                    // Validación mejorada
+                    if (
+                        !nombre.trim() ||
+                        !codigoQR.trim() ||
+                        !propietario.trim() ||
+                        !raza.trim() ||
+                        !fechaNacimiento.trim() ||
+                        !pesoActual.trim() ||
+                        isNaN(Number(pesoActual)) ||
+                        Number(pesoActual) <= 0 ||
+                        !ultimaVacunacion.trim() ||
+                        !proximaVacunacion.trim() ||
+                        !potreroActual.trim() ||
+                        !historialMedico.trim()
+                    ) {
+                        Swal.showValidationMessage('Completa todos los campos correctamente. El peso debe ser mayor a cero.');
                         return false;
                     }
-                    return { nombre, codigoQR, propietario, raza, fechaNacimiento, pesoActual, ultimaVacunacion, potreroActual, historialMedico };
+                    return { nombre, codigoQR, propietario, raza, fechaNacimiento, pesoActual, ultimaVacunacion, proximaVacunacion, potreroActual, historialMedico };
                 }
             }).then((result) => {
                 if (result.isConfirmed && result.value) {
@@ -249,7 +277,7 @@ function verPerfilAnimal(nombre) {
                             <i class="fas fa-cow fa-3x mb-3" style="color:#00d563;"></i>
                             <h5 class="card-title">${animal.nombre}</h5>
                             <p class="text-muted">Código QR: ${animal.codigoQR}</p>
-                            <p class="text-muted">Propietario: ${animal.propietario}</p>
+                            <p class="text-muted">Encargado: ${animal.propietario}</p>
                             <p class="text-muted">Raza: ${animal.raza}</p>
                             <p class="text-muted">Fecha nacimiento: ${animal.fechaNacimiento}</p>
                             <p class="text-muted">Peso: ${animal.pesoActual} kg</p>

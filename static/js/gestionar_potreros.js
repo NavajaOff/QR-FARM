@@ -9,7 +9,8 @@ let potreros = JSON.parse(localStorage.getItem('potreros')) || [
         fechaUltimoUso: '10/04/2025',
         responsable: 'Juan Pérez',
         area: 2.5,
-        ultimaLimpieza: '10/04/2025',
+    ultimaLimpieza: '10/04/2025',
+    proximaLimpieza: '',
         notas: 'Zona sombría, ideal para novillos'
     }
 ];
@@ -68,6 +69,11 @@ function mostrarPotrero(idx) {
                     <div class="col-6">
                         <div class="border rounded p-2 text-center bg-light">
                             <strong>Última limpieza:</strong> ${p.ultimaLimpieza || ''}
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="border rounded p-2 text-center bg-light">
+                            <strong>Próxima limpieza:</strong> ${p.proximaLimpieza || ''}
                         </div>
                     </div>
                 </div>
@@ -168,6 +174,16 @@ function editarPotrero() {
                         <input type='text' class='form-control' id='responsable' value='${p.responsable}'>
                     </div>
                 </div>
+                <div class='row mb-3'>
+                    <div class='col-6'>
+                        <label class='form-label'>Última limpieza:</label>
+                        <input type='date' class='form-control' id='ultimaLimpieza' value='${p.ultimaLimpieza || ''}'>
+                    </div>
+                    <div class='col-6'>
+                        <label class='form-label'>Próxima limpieza:</label>
+                        <input type='date' class='form-control' id='proximaLimpieza' value='${p.proximaLimpieza || ''}'>
+                    </div>
+                </div>
                 <div class='mb-3'>
                     <label class='form-label'>Área (hectáreas):</label>
                     <input type='number' step='0.1' class='form-control' id='area' value='${p.area}'>
@@ -188,23 +204,25 @@ function editarPotrero() {
             const capacidad = document.getElementById('capacidad').value;
             const tipoPasto = document.getElementById('tipoPasto').value;
             const responsable = document.getElementById('responsable').value;
+            const ultimaLimpieza = document.getElementById('ultimaLimpieza').value;
+            const proximaLimpieza = document.getElementById('proximaLimpieza').value;
             const area = document.getElementById('area').value;
             const notas = document.getElementById('notas').value;
-            if (!estado || !capacidad || !tipoPasto || !responsable || !area) {
-                Swal.showValidationMessage('Completa todos los campos');
-                return false;
-            }
-            return { estado, capacidad, tipoPasto, responsable, area, notas };
+            // Permitir guardar aunque algunos campos estén vacíos
+            return { estado, capacidad, tipoPasto, responsable, ultimaLimpieza, proximaLimpieza, area, notas };
         }
     }).then((result) => {
         if (result.isConfirmed && result.value) {
             const p = potreros[potreroActual];
-            p.estado = result.value.estado;
-            p.capacidad = parseInt(result.value.capacidad);
-            p.tipoPasto = result.value.tipoPasto;
-            p.responsable = result.value.responsable;
-            p.area = parseFloat(result.value.area);
-            p.notas = result.value.notas;
+            // Solo actualiza si el campo tiene valor, si no, conserva el anterior
+            p.estado = result.value.estado || p.estado;
+            p.capacidad = result.value.capacidad ? parseInt(result.value.capacidad) : p.capacidad;
+            p.tipoPasto = result.value.tipoPasto || p.tipoPasto;
+            p.responsable = result.value.responsable || p.responsable;
+            p.ultimaLimpieza = result.value.ultimaLimpieza || p.ultimaLimpieza;
+            p.proximaLimpieza = result.value.proximaLimpieza || p.proximaLimpieza;
+            p.area = result.value.area ? parseFloat(result.value.area) : p.area;
+            p.notas = result.value.notas || p.notas;
             localStorage.setItem('potreros', JSON.stringify(potreros));
             Swal.fire({
                 icon: 'success',
@@ -248,9 +266,21 @@ function crearPotrero() {
                         <input type='text' class='form-control' id='responsableNuevo' placeholder='Nombre del responsable'>
                     </div>
                 </div>
-                <div class='mb-3'>
-                    <label class='form-label'>Área (hectáreas):</label>
-                    <input type='number' step='0.1' class='form-control' id='areaNuevo' placeholder='Ej: 3.5'>
+                <div class='row mb-3'>
+                    <div class='col-6'>
+                        <label class='form-label'>Última limpieza:</label>
+                        <input type='date' class='form-control' id='ultimaLimpiezaNuevo'>
+                    </div>
+                    <div class='col-6'>
+                        <label class='form-label'>Próxima limpieza:</label>
+                        <input type='date' class='form-control' id='proximaLimpiezaNuevo'>
+                    </div>
+                </div>
+                <div class='row mb-3'>
+                    <div class='col-6'>
+                        <label class='form-label'>Área (hectáreas):</label>
+                        <input type='number' step='0.1' class='form-control' id='areaNuevo' placeholder='Ej: 3.5'>
+                    </div>
                 </div>
                 <div class='mb-3'>
                     <label class='form-label'>Notas:</label>
@@ -268,13 +298,15 @@ function crearPotrero() {
             const capacidadNuevo = document.getElementById('capacidadNuevo').value;
             const tipoPastoNuevo = document.getElementById('tipoPastoNuevo').value;
             const responsableNuevo = document.getElementById('responsableNuevo').value;
+            const ultimaLimpiezaNuevo = document.getElementById('ultimaLimpiezaNuevo').value;
+            const proximaLimpiezaNuevo = document.getElementById('proximaLimpiezaNuevo').value;
             const areaNuevo = document.getElementById('areaNuevo').value;
             const notasNuevo = document.getElementById('notasNuevo').value;
-            if (!nombrePotrero || !capacidadNuevo || !tipoPastoNuevo || !responsableNuevo || !areaNuevo) {
+            if (!nombrePotrero || !capacidadNuevo || !tipoPastoNuevo || !responsableNuevo || !ultimaLimpiezaNuevo || !proximaLimpiezaNuevo || !areaNuevo) {
                 Swal.showValidationMessage('Completa todos los campos');
                 return false;
             }
-            return { nombrePotrero, capacidadNuevo, tipoPastoNuevo, responsableNuevo, areaNuevo, notasNuevo };
+            return { nombrePotrero, capacidadNuevo, tipoPastoNuevo, responsableNuevo, ultimaLimpiezaNuevo, proximaLimpiezaNuevo, areaNuevo, notasNuevo };
         }
     }).then((result) => {
         if (result.isConfirmed && result.value) {
@@ -286,8 +318,9 @@ function crearPotrero() {
                 tipoPasto: result.value.tipoPastoNuevo,
                 fechaUltimoUso: '',
                 responsable: result.value.responsableNuevo,
+                ultimaLimpieza: result.value.ultimaLimpiezaNuevo,
+                proximaLimpieza: result.value.proximaLimpiezaNuevo,
                 area: parseFloat(result.value.areaNuevo),
-                ultimaLimpieza: '',
                 notas: result.value.notasNuevo
             });
             localStorage.setItem('potreros', JSON.stringify(potreros));
