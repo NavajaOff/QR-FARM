@@ -158,6 +158,12 @@ function verPerfilAnimal(nombre) {
                                 <input id='ultimaVacunacion' class='form-control' type='date'>
                             </div>
                             <div class='col-6 mb-2'>
+                                <label class='form-label'>Próxima vacunación:</label>
+                                <input id='proximaVacunacion' class='form-control' type='date'>
+                            </div>
+                        </div>
+                        <div class='row mb-2'>
+                            <div class='col-12 mb-2'>
                                 <label class='form-label'>Potrero actual:</label>
                                 <input id='potreroActual' class='form-control' placeholder='Potrero actual'>
                             </div>
@@ -187,13 +193,14 @@ function verPerfilAnimal(nombre) {
                     const fechaNacimiento = document.getElementById('fechaNacimiento').value;
                     const pesoActual = document.getElementById('pesoActual').value;
                     const ultimaVacunacion = document.getElementById('ultimaVacunacion').value;
+                    const proximaVacunacion = document.getElementById('proximaVacunacion').value;
                     const potreroActual = document.getElementById('potreroActual').value;
                     const historialMedico = document.getElementById('historialMedico').value;
-                    if (!nombre || !codigoQR || !propietario || !raza || !fechaNacimiento || !pesoActual || !ultimaVacunacion || !potreroActual || !historialMedico) {
+                    if (!nombre || !codigoQR || !propietario || !raza || !fechaNacimiento || !pesoActual || !ultimaVacunacion || !proximaVacunacion || !potreroActual || !historialMedico) {
                         Swal.showValidationMessage('Completa todos los campos');
                         return false;
                     }
-                    return { nombre, codigoQR, propietario, raza, fechaNacimiento, pesoActual, ultimaVacunacion, potreroActual, historialMedico };
+                    return { nombre, codigoQR, propietario, raza, fechaNacimiento, pesoActual, ultimaVacunacion, proximaVacunacion, potreroActual, historialMedico };
                 }
             }).then((result) => {
                 if (result.isConfirmed && result.value) {
