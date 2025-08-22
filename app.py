@@ -44,5 +44,9 @@ def crear_cuenta():
 def contacto():
     return render_template('contacto.html')
 
+@app.route('/registro_vacunacion')
+def registro_vacunacion():
+    return render_template('registro_vacunacion.html')
+
 if __name__ == '__main__':
     app.run(debug=True)
