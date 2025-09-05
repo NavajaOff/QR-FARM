@@ -411,3 +411,26 @@ canvas {
     max-height: 400px !important;
     width: 100% !important;
 }
+
+/* Sidebar en móviles */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    transform: translateX(-100%);
+    z-index: 1050;
+  }
+
+  .sidebar.active {
+    transform: translateX(0);
+  }
+
+  .sidebar .nav-link {
+    text-align: center;
+    font-size: 1.2rem;
+    padding: 20px;
+  }
+
+  .main-content {
+    margin-left: 0;
+  }
+}
