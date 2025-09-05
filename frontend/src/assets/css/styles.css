@@ -5,6 +5,9 @@
   --qr-light-green: #e8f5e8;
   --sidebar-width: 250px;
   --sidebar-width-mobile: 0px;
+  color-scheme: light;
+  background-color: #f8f9fa !important;
+  color: #212529 !important;
 }
 
 /* Clases personalizadas para reemplazar CSS inline */
@@ -244,6 +247,8 @@ body {
     overflow-x: hidden;
     margin: 0;
     padding: 0;
+    background-color: #f8f9fa !important;
+    color: #212529 !important;
 }
 
 /* Navbar ajustado */
