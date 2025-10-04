@@ -26,9 +26,9 @@
                         <div class="p-3 p-sm-4 p-lg-5 h-100 d-flex flex-column justify-content-center bg-white">
                             <div class="text-center mb-4">
                                 <img src="{{ url_for('static', filename='images/vacas-grupo.jpg') }}" 
-                                     alt="Grupo de vacas - QR Farm" 
-                                     class="img-fluid rounded-4 shadow-sm" 
-                                     style="max-height: 350px; width: 100%; object-fit: cover;">
+                                    alt="Grupo de vacas - QR Farm" 
+                                    class="img-fluid rounded-4 shadow-sm" 
+                                    style="max-height: 350px; width: 100%; object-fit: cover;">
                             </div>
                             <div class="text-center px-2 px-sm-3 px-md-4">
                                 <p class="text-muted mb-2">Tu aliado inteligente en la gestión ganadera.</p>
@@ -55,20 +55,20 @@
                                     
                                     <div class="form-group mb-3">
                                         <input type="text" 
-                                               class="form-control form-control-lg" 
-                                               id="usuario" 
-                                               name="usuario" 
-                                               placeholder="Usuario" 
-                                               required>
+                                            class="form-control form-control-lg" 
+                                            id="usuario" 
+                                            name="usuario" 
+                                            placeholder="Usuario" 
+                                            required>
                                     </div>
                                     
                                     <div class="form-group mb-4">
                                         <input type="password" 
-                                               class="form-control form-control-lg" 
-                                               id="password" 
-                                               name="password" 
-                                               placeholder="Contraseña" 
-                                               required>
+                                            class="form-control form-control-lg" 
+                                            id="password" 
+                                            name="password" 
+                                            placeholder="Contraseña" 
+                                            required>
                                     </div>
                                     
                                     <div class="d-grid gap-2 mb-3">
