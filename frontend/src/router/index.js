@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 import Menu from '../views/Menu.vue';
+import Home from '../views/Home.vue';
 import Login from '../views/Login.vue';
 import CrearCuenta from '../views/CrearCuenta.vue';
 import Contacto from '../views/Contacto.vue';
@@ -11,7 +12,9 @@ import EscanearQR from '../views/EscanearQR.vue';
 import RegistroVacunacion from '../views/RegistroVacunacion.vue';
 
 const routes = [
-  { path: '/', name: 'Menu', component: Menu },
+  { path: '/', name: 'Home', component: Home },
+  { path: '/', redirect: '/login' },
+  { path: '/menu', name: 'Menu', component: Menu },
   { path: '/login', name: 'Login', component: Login },
   { path: '/crear_cuenta', name: 'CrearCuenta', component: CrearCuenta },
   { path: '/contacto', name: 'Contacto', component: Contacto },
