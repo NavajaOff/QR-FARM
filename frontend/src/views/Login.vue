@@ -2,11 +2,11 @@
   <!-- Header -->
   <nav class="navbar navbar-dark bg-success">
     <div class="container-fluid py-2 py-md-3 px-3 px-md-4">
-      <router-link class="navbar-brand" to="/">
+      <router-link class="navbar-brand" to="/login">
         <i class="fas fa-home me-2"></i>Inicio
       </router-link>
 
-      <router-link class="navbar-brand mx-auto d-flex align-items-center" to="/">
+      <router-link class="navbar-brand mx-auto d-flex align-items-center" to="/login">
         <span class="fw-bold fs-2">QR FARM</span>
         <i class="fas fa-cow ms-2 logo-icon"></i>
       </router-link>
@@ -72,7 +72,7 @@
                   <div class="text-center">
                     <p class="text-white mb-0">
                       ¿No tienes cuenta?
-                      <router-link to="/crear-cuenta" class="text-info fw-bold">
+                      <router-link to="/crear_cuenta" class="text-info fw-bold">
                         Crear cuenta
                       </router-link>
                     </p>
@@ -105,7 +105,9 @@ function login() {
     // Aquí iría tu lógica para hacer la petición al backend Flask
     console.log('Usuario:', usuario.value);
     console.log('Password:', password.value);
-    router.push('/dashboard');
+    
+    // IMPORTANTE: la ruta debe coincidir exactamente con la definida en router
+    router.push('/menu');  // Cambiado de '/Menu' a '/menu'
   }
 }
 </script>

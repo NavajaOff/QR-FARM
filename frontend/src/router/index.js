@@ -11,7 +11,8 @@ import EscanearQR from '../views/EscanearQR.vue';
 import RegistroVacunacion from '../views/RegistroVacunacion.vue';
 
 const routes = [
-  { path: '/', name: 'Menu', component: Menu },
+  { path: '/', redirect: '/login' },
+  { path: '/menu', name: 'Menu', component: Menu },
   { path: '/login', name: 'Login', component: Login },
   { path: '/crear_cuenta', name: 'CrearCuenta', component: CrearCuenta },
   { path: '/contacto', name: 'Contacto', component: Contacto },
