@@ -1,4 +1,8 @@
-"""Módulo de conexión a la base de datos."""
+"""Módulo de conexión a la base de                'host': os.getenv('DB_HOST', 'localhost'),
+                'user': os.getenv('DB_USER', 'root'),
+                'password': os.getenv('DB_PASSWORD', ''),
+                'database': os.getenv('DB_NAME', 'gestion_ganadera'),
+                'port': int(os.getenv('DB_PORT', '3306'),s."""
 import os
 from typing import Dict, Any, Generator, Optional
 from contextlib import contextmanager
@@ -15,6 +19,9 @@ logging.basicConfig(level=logging.INFO)
 class ErrorBaseDatos(Exception):
     """Excepción personalizada para errores de base de datos."""
     pass
+
+# Alias para mantener compatibilidad con código existente
+DatabaseError = ErrorBaseDatos
 
 class ConexionBaseDatos:
     """Clase para gestionar la conexión a la base de datos."""
@@ -117,6 +124,15 @@ class ConexionBaseDatos:
         if self._conexion and self._conexion.is_connected():
             self._conexion.close()
             registrador.info("Conexión a la base de datos cerrada")
+
+def init_db():
+    """Inicializar la base de datos."""
+    return ConexionBaseDatos()
+
+def get_connection():
+    """Obtener una conexión a la base de datos."""
+    db = ConexionBaseDatos()
+    return db._conexion
 
 # Crear instancia global
 db = ConexionBaseDatos()
