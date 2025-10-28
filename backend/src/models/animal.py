@@ -1,78 +1,89 @@
-# Modelo Animal
+# Modelo Ganado
 from typing import Optional, Dict, Any
 from datetime import date
+from enum import Enum
 
-class Animal:
-    def __init__(self, 
+class EstadoGanado(str, Enum):
+    ACTIVO = 'activo'
+    VENDIDO = 'vendido'
+    MUERTO = 'muerto'
+
+class SexoGanado(str, Enum):
+    MACHO = 'macho'
+    HEMBRA = 'hembra'
+    OTRO = 'otro'
+
+class Ganado:
+    def __init__(self,
                  id: Optional[int] = None,
-                 codigo_qr: str = "",
+                 codigo_qr: Optional[str] = None,
+                 id_potrero: Optional[int] = None,
+                 id_persona: Optional[int] = None,
                  nombre: str = "",
-                 raza: str = "",
-                 genero: str = "",
+                 raza: Optional[str] = None,
                  fecha_nacimiento: Optional[date] = None,
-                 peso: float = 0.0,
-                 estado_salud: str = "",
-                 historial_vacunas: str = "",
-                 potrero_id: Optional[int] = None,
-                 madre_id: Optional[int] = None,
-                 padre_id: Optional[int] = None,
-                 fecha_registro: Optional[date] = None,
-                 ultima_actualizacion: Optional[date] = None):
-        
+                 edad: Optional[int] = None,
+                 sexo: SexoGanado = SexoGanado.MACHO,
+                 peso: Optional[float] = None,
+                 estado: EstadoGanado = EstadoGanado.ACTIVO,
+                 estado_salud: Optional[str] = None,
+                 created_at: Optional[date] = None,
+                 updated_at: Optional[date] = None):
+
         self.id = id
         self.codigo_qr = codigo_qr
+        self.id_potrero = id_potrero
+        self.id_persona = id_persona
         self.nombre = nombre
         self.raza = raza
-        self.genero = genero
         self.fecha_nacimiento = fecha_nacimiento
+        self.edad = edad
+        self.sexo = sexo
         self.peso = peso
+        self.estado = estado
         self.estado_salud = estado_salud
-        self.historial_vacunas = historial_vacunas
-        self.potrero_id = potrero_id
-        self.madre_id = madre_id
-        self.padre_id = padre_id
-        self.fecha_registro = fecha_registro
-        self.ultima_actualizacion = ultima_actualizacion
+        self.created_at = created_at
+        self.updated_at = updated_at
 
     @staticmethod
-    def from_dict(data: Dict[str, Any]) -> 'Animal':
+    def from_dict(data: Dict[str, Any]) -> 'Ganado':
         """
-        Crea una instancia de Animal desde un diccionario
+        Crea una instancia de Ganado desde un diccionario
         """
-        return Animal(
+        return Ganado(
             id=data.get('id'),
-            codigo_qr=data.get('codigo_qr', ''),
+            codigo_qr=data.get('codigo_qr'),
+            id_potrero=data.get('id_potrero'),
+            id_persona=data.get('id_persona'),
             nombre=data.get('nombre', ''),
-            raza=data.get('raza', ''),
-            genero=data.get('genero', ''),
+            raza=data.get('raza'),
             fecha_nacimiento=data.get('fecha_nacimiento'),
-            peso=float(data.get('peso', 0.0)),
-            estado_salud=data.get('estado_salud', ''),
-            historial_vacunas=data.get('historial_vacunas', ''),
-            potrero_id=data.get('potrero_id'),
-            madre_id=data.get('madre_id'),
-            padre_id=data.get('padre_id'),
-            fecha_registro=data.get('fecha_registro'),
-            ultima_actualizacion=data.get('ultima_actualizacion')
+            edad=data.get('edad'),
+            sexo=SexoGanado(data.get('sexo', 'macho')),
+            peso=float(data.get('peso')) if data.get('peso') is not None else None,
+            estado=EstadoGanado(data.get('estado', 'activo')),
+            estado_salud=data.get('estado_salud'),
+            created_at=data.get('created_at'),
+            updated_at=data.get('updated_at')
         )
 
     def to_dict(self) -> Dict[str, Any]:
         """
-        Convierte la instancia de Animal a un diccionario
+        Convierte la instancia de Ganado a un diccionario
         """
         return {
             'id': self.id,
             'codigo_qr': self.codigo_qr,
+            'id_potrero': self.id_potrero,
+            'id_persona': self.id_persona,
             'nombre': self.nombre,
             'raza': self.raza,
-            'genero': self.genero,
             'fecha_nacimiento': self.fecha_nacimiento.isoformat() if self.fecha_nacimiento else None,
+            'edad': self.edad,
+            'sexo': self.sexo.value,
             'peso': self.peso,
+            'estado': self.estado.value,
             'estado_salud': self.estado_salud,
-            'historial_vacunas': self.historial_vacunas,
-            'potrero_id': self.potrero_id,
-            'madre_id': self.madre_id,
-            'padre_id': self.padre_id,
-            'fecha_registro': self.fecha_registro.isoformat() if self.fecha_registro else None,
-            'ultima_actualizacion': self.ultima_actualizacion.isoformat() if self.ultima_actualizacion else None
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

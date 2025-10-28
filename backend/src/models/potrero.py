@@ -2,6 +2,13 @@
 from typing import Dict, Any, Optional
 from datetime import datetime
 from decimal import Decimal
+from enum import Enum
+
+class EstadoPotrero(str, Enum):
+    DISPONIBLE = 'disponible'
+    EN_USO = 'en_uso'
+    MANTENIMIENTO = 'mantenimiento'
+    INACTIVO = 'inactivo'
 
 class Potrero:
     """Potrero model representing a paddock/field in the system."""
@@ -10,7 +17,7 @@ class Potrero:
         self,
         id: Optional[int] = None,
         nombre: str = None,
-        estado: str = 'disponible',
+        estado: EstadoPotrero = EstadoPotrero.DISPONIBLE,
         capacidad: Optional[int] = None,
         ocupacion: int = 0,
         tipo_pasto: Optional[str] = None,
@@ -29,7 +36,7 @@ class Potrero:
         """Initialize Potrero model."""
         self.id = id
         self.nombre = nombre
-        self.estado = estado
+        self.estado = estado if isinstance(estado, EstadoPotrero) else EstadoPotrero(estado)
         self.capacidad = capacidad
         self.ocupacion = ocupacion
         self.tipo_pasto = tipo_pasto
@@ -51,7 +58,7 @@ class Potrero:
         return Potrero(
             id=row.get('id'),
             nombre=row.get('nombre'),
-            estado=row.get('estado'),
+            estado=EstadoPotrero(row.get('estado', 'disponible')),
             capacidad=row.get('capacidad'),
             ocupacion=row.get('ocupacion'),
             tipo_pasto=row.get('tipo_pasto'),
@@ -73,7 +80,7 @@ class Potrero:
         return {
             'id': self.id,
             'nombre': self.nombre,
-            'estado': self.estado,
+            'estado': self.estado.value,
             'capacidad': self.capacidad,
             'ocupacion': self.ocupacion,
             'tipo_pasto': self.tipo_pasto,
@@ -95,7 +102,7 @@ class Potrero:
         """Create model from dictionary."""
         return Potrero(
             nombre=data.get('nombre'),
-            estado=data.get('estado', 'disponible'),
+            estado=EstadoPotrero(data.get('estado', 'disponible')),
             capacidad=data.get('capacidad'),
             ocupacion=data.get('ocupacion', 0),
             tipo_pasto=data.get('tipo_pasto'),

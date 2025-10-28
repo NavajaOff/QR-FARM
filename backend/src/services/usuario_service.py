@@ -31,17 +31,11 @@ class UsuarioService:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
-            
+
             # Verificar si el email ya existe
             cursor.execute("SELECT id FROM personas WHERE email = %s", (persona.email,))
             if cursor.fetchone():
                 return None, "El email ya está registrado"
-
-            # Verificar si el username ya existe
-            if usuario.username:
-                cursor.execute("SELECT id FROM usuarios WHERE username = %s", (usuario.username,))
-                if cursor.fetchone():
-                    return None, "El nombre de usuario ya está registrado"
 
             try:
                 # Iniciar transacción
@@ -51,53 +45,52 @@ class UsuarioService:
                 sql_persona = """
                     INSERT INTO personas (
                         id_rol, primer_nombre, segundo_nombre, primer_apellido,
-                        segundo_apellido, email, telefono, created_at, updated_at
+                        segundo_apellido, email, telefono, fecha_creacion
                     ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()
+                        %s, %s, %s, %s, %s, %s, %s, NOW()
                     )
                 """
-                
+
                 values_persona = (
                     persona.id_rol, persona.primer_nombre, persona.segundo_nombre,
-                    persona.primer_apellido, persona.segundo_apellido, 
+                    persona.primer_apellido, persona.segundo_apellido,
                     persona.email, persona.telefono
                 )
-                
+
                 cursor.execute(sql_persona, values_persona)
                 id_persona = cursor.lastrowid
-                
+
                 # Luego crear el usuario
                 sql_usuario = """
                     INSERT INTO usuarios (
-                        id_persona, id_rol, username, password_hash,
-                        estado, created_at, updated_at
+                        id_persona, id_rol, contraseña, estado
                     ) VALUES (
-                        %s, %s, %s, %s, %s, NOW(), NOW()
+                        %s, %s, %s, %s
                     )
                 """
-                
+
                 values_usuario = (
-                    id_persona, usuario.id_rol, usuario.username,
-                    usuario.password_hash, usuario.estado.value
+                    id_persona, usuario.id_rol or 1, usuario.contraseña,
+                    usuario.estado.value
                 )
-                
+
                 cursor.execute(sql_usuario, values_usuario)
-                
+
                 # Commit de la transacción
                 conn.commit()
-                
+
                 usuario.id = cursor.lastrowid
                 usuario.id_persona = id_persona
                 persona.id = id_persona
                 usuario.persona = persona
-                
+
                 return usuario, "Usuario creado exitosamente"
 
             except Exception as e:
                 # Rollback en caso de error
                 conn.rollback()
                 raise e
-            
+
         except Exception as e:
             print(f"Error al crear usuario: {e}")
             return None, str(e)
@@ -455,65 +448,60 @@ class UsuarioService:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
-            
-            # Primero crear la persona
-            sql_persona = """
-                INSERT INTO personas (
-                    id_rol, primer_nombre, segundo_nombre, primer_apellido,
-                    segundo_apellido, email, telefono, created_at, updated_at
-                ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()
-                )
-            """
-            
+
             # Verificar si el email ya existe
             cursor.execute("SELECT id FROM personas WHERE email = %s", (persona.email,))
             if cursor.fetchone():
                 return None, "El email ya está registrado"
 
-            # Verificar si el username ya existe
-            if usuario.username:
-                cursor.execute("SELECT id FROM usuarios WHERE username = %s", (usuario.username,))
-                if cursor.fetchone():
-                    return None, "El nombre de usuario ya está registrado"
-
             # Insertar persona
+            sql_persona = """
+                INSERT INTO personas (
+                    id_rol, primer_nombre, segundo_nombre, primer_apellido,
+                    segundo_apellido, email, telefono, fecha_creacion
+                ) VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, NOW()
+                )
+            """
+
             values_persona = (
                 persona.id_rol, persona.primer_nombre, persona.segundo_nombre,
-                persona.primer_apellido, persona.segundo_apellido, 
+                persona.primer_apellido, persona.segundo_apellido,
                 persona.email, persona.telefono
             )
-            
+
             cursor.execute(sql_persona, values_persona)
-            conn.commit()
-            
             id_persona = cursor.lastrowid
-            
+
             # Luego crear el usuario
             sql_usuario = """
                 INSERT INTO usuarios (
-                    id_persona, id_rol, username, password_hash,
-                    estado, created_at, updated_at
+                    id_persona, id_rol, contraseña, estado
                 ) VALUES (
-                    %s, %s, %s, %s, %s, NOW(), NOW()
+                    %s, %s, %s, %s
                 )
             """
-            
+
             values_usuario = (
-                id_persona, usuario.id_rol, usuario.username,
-                usuario.password_hash, usuario.estado.value
+                id_persona, usuario.id_rol or 1, usuario.contraseña,
+                usuario.estado.value
             )
-            
-            cursor.execute(sql, values)
+
+            cursor.execute(sql_usuario, values_usuario)
+
+            # Commit de la transacción
             conn.commit()
-            
+
             usuario.id = cursor.lastrowid
-            usuario.fecha_registro = datetime.now()
-            return usuario
-            
+            usuario.id_persona = id_persona
+            persona.id = id_persona
+            usuario.persona = persona
+
+            return usuario, "Usuario creado exitosamente"
+
         except Exception as e:
             print(f"Error al crear usuario: {e}")
-            return None
+            return None, str(e)
         finally:
             if 'conn' in locals():
                 conn.close()
@@ -523,15 +511,42 @@ class UsuarioService:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
-            
-            sql = "SELECT * FROM usuarios WHERE id = %s AND activo = TRUE"
+
+            sql = """
+                SELECT u.*, p.* FROM usuarios u
+                INNER JOIN personas p ON u.id_persona = p.id
+                WHERE u.id = %s AND u.estado = 'activo'
+            """
             cursor.execute(sql, (id,))
-            
+
             result = cursor.fetchone()
             if result:
-                return Usuario.from_dict(result)
+                # Crear persona
+                persona = Persona(
+                    id=result['id_persona'],
+                    id_rol=result['id_rol'],
+                    primer_nombre=result['primer_nombre'],
+                    segundo_nombre=result['segundo_nombre'],
+                    primer_apellido=result['primer_apellido'],
+                    segundo_apellido=result['segundo_apellido'],
+                    email=result['email'],
+                    telefono=result['telefono'],
+                    fecha_creacion=result['fecha_creacion']
+                )
+
+                # Crear usuario
+                usuario = Usuario(
+                    id=result['id'],
+                    id_persona=result['id_persona'],
+                    id_rol=result['id_rol'],
+                    contraseña=result['contraseña'],
+                    estado=EstadoUsuario(result['estado']),
+                    persona=persona
+                )
+
+                return usuario
             return None
-            
+
         except Exception as e:
             print(f"Error al obtener usuario: {e}")
             return None
@@ -544,13 +559,44 @@ class UsuarioService:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
-            
-            sql = "SELECT * FROM usuarios WHERE activo = TRUE"
+
+            sql = """
+                SELECT u.*, p.* FROM usuarios u
+                INNER JOIN personas p ON u.id_persona = p.id
+                WHERE u.estado = 'activo'
+            """
             cursor.execute(sql)
             results = cursor.fetchall()
-            
-            return [Usuario.from_dict(result) for result in results]
-            
+
+            usuarios = []
+            for result in results:
+                # Crear persona
+                persona = Persona(
+                    id=result['id_persona'],
+                    id_rol=result['id_rol'],
+                    primer_nombre=result['primer_nombre'],
+                    segundo_nombre=result['segundo_nombre'],
+                    primer_apellido=result['primer_apellido'],
+                    segundo_apellido=result['segundo_apellido'],
+                    email=result['email'],
+                    telefono=result['telefono'],
+                    fecha_creacion=result['fecha_creacion']
+                )
+
+                # Crear usuario
+                usuario = Usuario(
+                    id=result['id'],
+                    id_persona=result['id_persona'],
+                    id_rol=result['id_rol'],
+                    contraseña=result['contraseña'],
+                    estado=EstadoUsuario(result['estado']),
+                    persona=persona
+                )
+
+                usuarios.append(usuario)
+
+            return usuarios
+
         except Exception as e:
             print(f"Error al obtener usuarios: {e}")
             return []
@@ -563,37 +609,20 @@ class UsuarioService:
         try:
             conn = get_connection()
             cursor = conn.cursor()
-            
+
             sql = """
-                UPDATE usuarios SET 
-                    primer_nombre = %s,
-                    segundo_nombre = %s,
-                    primer_apellido = %s,
-                    segundo_apellido = %s,
-                    direccion = %s,
-                    telefono = %s,
-                    email = %s,
-                    pais = %s,
-                    tipo_documento = %s,
-                    numero_documento = %s,
-                    observaciones = %s
-                WHERE id = %s AND activo = TRUE
+                UPDATE usuarios SET
+                    estado = %s
+                WHERE id = %s
             """
-            
-            values = (
-                usuario.primer_nombre, usuario.segundo_nombre,
-                usuario.primer_apellido, usuario.segundo_apellido,
-                usuario.direccion, usuario.telefono, usuario.email,
-                usuario.pais, usuario.tipo_documento,
-                usuario.numero_documento, usuario.observaciones,
-                id
-            )
-            
+
+            values = (usuario.estado.value, id)
+
             cursor.execute(sql, values)
             conn.commit()
-            
+
             return cursor.rowcount > 0
-            
+
         except Exception as e:
             print(f"Error al actualizar usuario: {e}")
             return False
@@ -606,14 +635,14 @@ class UsuarioService:
         try:
             conn = get_connection()
             cursor = conn.cursor()
-            
-            # Soft delete - marcar como inactivo en lugar de eliminar
-            sql = "UPDATE usuarios SET activo = FALSE WHERE id = %s"
+
+            # Cambiar estado a inactivo
+            sql = "UPDATE usuarios SET estado = 'inactivo' WHERE id = %s"
             cursor.execute(sql, (id,))
             conn.commit()
-            
+
             return cursor.rowcount > 0
-            
+
         except Exception as e:
             print(f"Error al eliminar usuario: {e}")
             return False
@@ -626,15 +655,42 @@ class UsuarioService:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
-            
-            sql = "SELECT * FROM usuarios WHERE email = %s AND activo = TRUE"
+
+            sql = """
+                SELECT u.*, p.* FROM usuarios u
+                INNER JOIN personas p ON u.id_persona = p.id
+                WHERE p.email = %s AND u.estado = 'activo'
+            """
             cursor.execute(sql, (email,))
-            
+
             result = cursor.fetchone()
             if result:
-                return Usuario.from_dict(result)
+                # Crear persona
+                persona = Persona(
+                    id=result['id_persona'],
+                    id_rol=result['id_rol'],
+                    primer_nombre=result['primer_nombre'],
+                    segundo_nombre=result['segundo_nombre'],
+                    primer_apellido=result['primer_apellido'],
+                    segundo_apellido=result['segundo_apellido'],
+                    email=result['email'],
+                    telefono=result['telefono'],
+                    fecha_creacion=result['fecha_creacion']
+                )
+
+                # Crear usuario
+                usuario = Usuario(
+                    id=result['id'],
+                    id_persona=result['id_persona'],
+                    id_rol=result['id_rol'],
+                    contraseña=result.get('contraseña'),
+                    estado=EstadoUsuario(result['estado']),
+                    persona=persona
+                )
+
+                return usuario
             return None
-            
+
         except Exception as e:
             print(f"Error al buscar usuario por email: {e}")
             return None
@@ -642,40 +698,18 @@ class UsuarioService:
             if 'conn' in locals():
                 conn.close()
 
-    @staticmethod
-    def buscar_por_documento(tipo_documento: str, numero_documento: str) -> Optional[Usuario]:
-        try:
-            conn = get_connection()
-            cursor = conn.cursor(dictionary=True)
-            
-            sql = """
-                SELECT * FROM usuarios 
-                WHERE tipo_documento = %s 
-                AND numero_documento = %s 
-                AND activo = TRUE
-            """
-            cursor.execute(sql, (tipo_documento, numero_documento))
-            
-            result = cursor.fetchone()
-            if result:
-                return Usuario.from_dict(result)
-            return None
-            
-        except Exception as e:
-            print(f"Error al buscar usuario por documento: {e}")
-            return None
-        finally:
-            if 'conn' in locals():
-                conn.close()
+    # Remover método buscar_por_documento ya que no existen campos tipo_documento y numero_documento en la nueva BD
 
     @staticmethod
     def autenticar_usuario(email: str, password: str) -> Optional[Usuario]:
         try:
             usuario = UsuarioService.buscar_por_email(email)
-            if usuario and usuario.check_password(password):
+            if usuario and usuario.check_password(password) and usuario.estado == EstadoUsuario.ACTIVO:
                 return usuario
             return None
-            
+
         except Exception as e:
             print(f"Error en autenticación: {e}")
             return None
+
+    # Remover método actualizar_last_login ya que no existe el campo last_login en la nueva BD

@@ -51,7 +51,7 @@
           </a>
           <div class="collapse ps-3" id="gestionMenuMobile">
             <router-link class="nav-link" to="/gestionar_animales">
-              <i class="fas fa-cow me-2"></i>Animales
+              <i class="fas fa-cow me-2"></i>Ganado
             </router-link>
             <router-link class="nav-link" to="/gestionar_potreros">
               <i class="fas fa-map-marked-alt me-2"></i>Potreros
@@ -82,7 +82,7 @@
         </a>
         <div class="collapse ps-3" id="gestionMenuDesktop">
           <router-link class="nav-link" to="/gestionar_animales">
-            <i class="fas fa-cow me-2"></i>Animales
+            <i class="fas fa-cow me-2"></i>Ganado
           </router-link>
           <router-link class="nav-link" to="/gestionar_potreros">
             <i class="fas fa-map-marked-alt me-2"></i>Potreros
@@ -107,9 +107,9 @@
           <div class="col-12 col-lg-10 col-xl-8">
             <div class="text-center mb-4 mb-md-5">
               <h2 class="fw-bold text-dark mb-2 mb-md-3">
-                ¡Bienvenido, <span id="nombreUsuario">Nombre del usuario</span>!
+                ¡Bienvenido a QR Farm!
               </h2>
-              <p class="lead text-muted">Gestiona tu finca de manera inteligente con QR Farm</p>
+              <p class="lead text-muted">Gestiona tu finca ganadera de manera inteligente</p>
             </div>
             <div class="card border-0 shadow-lg">
               <div class="card-body p-3 p-sm-4 p-lg-5">
@@ -120,22 +120,22 @@
                   <div class="col-12 col-md-4 d-flex justify-content-center">
                     <div class="p-3 bg-light rounded-4 text-center h-100 w-100">
                       <i class="fas fa-cow fa-2x text-success mb-2"></i>
-                      <h5 class="fw-bold mb-1">125</h5>
-                      <small class="text-muted">Animales</small>
+                      <h5 class="fw-bold mb-1">{{ estadisticas.animales }}</h5>
+                      <small class="text-muted">Ganado</small>
                     </div>
                   </div>
                   <div class="col-12 col-md-4 d-flex justify-content-center">
                     <div class="p-3 bg-light rounded-4 text-center h-100 w-100">
-                      <i class="fas fa-qrcode fa-2x text-primary mb-2"></i>
-                      <h5 class="fw-bold mb-1">125</h5>
-                      <small class="text-muted">Códigos QR</small>
+                      <i class="fas fa-map-marked-alt fa-2x text-primary mb-2"></i>
+                      <h5 class="fw-bold mb-1">{{ estadisticas.potreros }}</h5>
+                      <small class="text-muted">Potreros</small>
                     </div>
                   </div>
                   <div class="col-12 col-md-4 d-flex justify-content-center">
                     <div class="p-3 bg-light rounded-4 text-center h-100 w-100">
                       <i class="fas fa-chart-line fa-2x text-warning mb-2"></i>
-                      <h5 class="fw-bold mb-1">98%</h5>
-                      <small class="text-muted">Salud</small>
+                      <h5 class="fw-bold mb-1">{{ estadisticas.salud }}%</h5>
+                      <small class="text-muted">Salud Promedio</small>
                     </div>
                   </div>
                 </div>
@@ -146,7 +146,7 @@
                       <i class="fas fa-qrcode me-1"></i>Escanear QR
                     </router-link>
                     <router-link class="btn btn-primary" to="/gestionar_animales" style="min-width: 130px;">
-                      <i class="fas fa-plus-circle me-1"></i>Registrar Animal
+                      <i class="fas fa-plus-circle me-1"></i>Registrar Ganado
                     </router-link>
                     <router-link class="btn btn-info" to="/inventario" style="min-width: 130px;">
                       <i class="fas fa-chart-bar me-1"></i>Ver Reportes
@@ -163,8 +163,52 @@
 </template>
 
 <script>
+import axios from 'axios';
+
 export default {
   name: "Menu",
+  data() {
+    return {
+      estadisticas: {
+        animales: 0,
+        potreros: 0,
+        salud: 0
+      }
+    };
+  },
+  mounted() {
+    this.cargarEstadisticas();
+  },
+  methods: {
+    async cargarEstadisticas() {
+      try {
+        // Cargar estadísticas de ganado
+        const ganadoResponse = await axios.get('http://localhost:5000/api/ganados/');
+        this.estadisticas.animales = ganadoResponse.data.data ? ganadoResponse.data.data.length : 0;
+
+        // Cargar estadísticas de potreros
+        const potrerosResponse = await axios.get('http://localhost:5000/api/potreros/');
+        this.estadisticas.potreros = potrerosResponse.data.data ? potrerosResponse.data.data.length : 0;
+
+        // Calcular salud promedio (simulado por ahora)
+        this.estadisticas.salud = this.calcularSaludPromedio();
+
+      } catch (error) {
+        console.error('Error cargando estadísticas:', error);
+        // Valores por defecto
+        this.estadisticas = {
+          animales: 0,
+          potreros: 0,
+          salud: 0
+        };
+      }
+    },
+    calcularSaludPromedio() {
+      // Lógica para calcular salud promedio basada en datos reales
+      // Por ahora retornamos un valor simulado
+      return Math.floor(Math.random() * 20) + 80; // Entre 80-99%
+    }
+  }
 };
 </script>
 

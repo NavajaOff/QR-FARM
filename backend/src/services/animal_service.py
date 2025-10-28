@@ -1,38 +1,38 @@
-# Servicio Animal
+# Servicio Ganado
 from typing import List, Optional
 from datetime import datetime
 from ..database.db import get_connection
-from ..models.animal import Animal
+from ..models.animal import Ganado
 
-class AnimalService:
+class GanadoService:
     @staticmethod
-    def crear_animal(animal: Animal) -> Optional[Animal]:
+    def crear_ganado(ganado: Ganado) -> Optional[Ganado]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
             
             sql = """
-                INSERT INTO animales (
-                    codigo_qr, nombre, raza, genero, fecha_nacimiento,
-                    peso, estado_salud, historial_vacunas, potrero_id,
-                    madre_id, padre_id, fecha_registro, ultima_actualizacion
+                INSERT INTO ganado (
+                    codigo_qr, nombre, raza, fecha_nacimiento, edad,
+                    sexo, peso, estado, estado_salud, id_potrero, id_persona,
+                    created_at, updated_at
                 ) VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()
                 )
             """
-            
+
             values = (
-                animal.codigo_qr, animal.nombre, animal.raza, animal.genero,
-                animal.fecha_nacimiento, animal.peso, animal.estado_salud,
-                animal.historial_vacunas, animal.potrero_id, animal.madre_id,
-                animal.padre_id
+                ganado.codigo_qr, ganado.nombre, ganado.raza,
+                ganado.fecha_nacimiento, ganado.edad, ganado.sexo.value,
+                ganado.peso, ganado.estado.value, ganado.estado_salud,
+                ganado.id_potrero, ganado.id_persona
             )
             
             cursor.execute(sql, values)
             conn.commit()
             
-            animal.id = cursor.lastrowid
-            return animal
+            ganado.id = cursor.lastrowid
+            return ganado
             
         except Exception as e:
             print(f"Error al crear animal: {e}")
@@ -42,96 +42,96 @@ class AnimalService:
                 conn.close()
 
     @staticmethod
-    def obtener_animal(id: int) -> Optional[Animal]:
+    def obtener_ganado(id: int) -> Optional[Ganado]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
-            
-            sql = "SELECT * FROM animales WHERE id = %s"
+
+            sql = "SELECT * FROM ganado WHERE id = %s"
             cursor.execute(sql, (id,))
-            
+
             result = cursor.fetchone()
             if result:
-                return Animal.from_dict(result)
+                return Ganado.from_dict(result)
             return None
-            
+
         except Exception as e:
-            print(f"Error al obtener animal: {e}")
+            print(f"Error al obtener ganado: {e}")
             return None
         finally:
             if 'conn' in locals():
                 conn.close()
 
     @staticmethod
-    def obtener_todos_animales() -> List[Animal]:
+    def obtener_todos_ganados() -> List[Ganado]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
-            
-            cursor.execute("SELECT * FROM animales")
+
+            cursor.execute("SELECT * FROM ganado")
             results = cursor.fetchall()
-            
-            return [Animal.from_dict(result) for result in results]
-            
+
+            return [Ganado.from_dict(result) for result in results]
+
         except Exception as e:
-            print(f"Error al obtener animales: {e}")
+            print(f"Error al obtener ganados: {e}")
             return []
         finally:
             if 'conn' in locals():
                 conn.close()
 
     @staticmethod
-    def actualizar_animal(id: int, animal: Animal) -> bool:
+    def actualizar_ganado(id: int, ganado: Ganado) -> bool:
         try:
             conn = get_connection()
             cursor = conn.cursor()
-            
+
             sql = """
-                UPDATE animales SET 
+                UPDATE ganado SET
                     codigo_qr = %s,
                     nombre = %s,
                     raza = %s,
-                    genero = %s,
                     fecha_nacimiento = %s,
+                    edad = %s,
+                    sexo = %s,
                     peso = %s,
+                    estado = %s,
                     estado_salud = %s,
-                    historial_vacunas = %s,
-                    potrero_id = %s,
-                    madre_id = %s,
-                    padre_id = %s,
-                    ultima_actualizacion = NOW()
+                    id_potrero = %s,
+                    id_persona = %s,
+                    updated_at = NOW()
                 WHERE id = %s
             """
-            
+
             values = (
-                animal.codigo_qr, animal.nombre, animal.raza, animal.genero,
-                animal.fecha_nacimiento, animal.peso, animal.estado_salud,
-                animal.historial_vacunas, animal.potrero_id, animal.madre_id,
-                animal.padre_id, id
+                ganado.codigo_qr, ganado.nombre, ganado.raza,
+                ganado.fecha_nacimiento, ganado.edad, ganado.sexo.value,
+                ganado.peso, ganado.estado.value, ganado.estado_salud,
+                ganado.id_potrero, ganado.id_persona, id
             )
-            
+
             cursor.execute(sql, values)
             conn.commit()
-            
+
             return cursor.rowcount > 0
-            
+
         except Exception as e:
-            print(f"Error al actualizar animal: {e}")
+            print(f"Error al actualizar ganado: {e}")
             return False
         finally:
             if 'conn' in locals():
                 conn.close()
 
     @staticmethod
-    def eliminar_animal(id: int) -> bool:
+    def eliminar_ganado(id: int) -> bool:
         try:
             conn = get_connection()
             cursor = conn.cursor()
-            
-            sql = "DELETE FROM animales WHERE id = %s"
+
+            sql = "DELETE FROM ganado WHERE id = %s"
             cursor.execute(sql, (id,))
             conn.commit()
-            
+
             return cursor.rowcount > 0
             
         except Exception as e:
@@ -142,16 +142,16 @@ class AnimalService:
                 conn.close()
 
     @staticmethod
-    def buscar_por_potrero(potrero_id: int) -> List[Animal]:
+    def buscar_por_potrero(potrero_id: int) -> List[Ganado]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
-            
-            sql = "SELECT * FROM animales WHERE potrero_id = %s"
+
+            sql = "SELECT * FROM ganado WHERE id_potrero = %s"
             cursor.execute(sql, (potrero_id,))
             results = cursor.fetchall()
-            
-            return [Animal.from_dict(result) for result in results]
+
+            return [Ganado.from_dict(result) for result in results]
             
         except Exception as e:
             print(f"Error al buscar animales por potrero: {e}")
@@ -160,18 +160,18 @@ class AnimalService:
             if 'conn' in locals():
                 conn.close()
 
-    @staticmethod 
-    def buscar_por_codigo_qr(codigo_qr: str) -> Optional[Animal]:
+    @staticmethod
+    def buscar_por_codigo_qr(codigo_qr: str) -> Optional[Ganado]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
-            
-            sql = "SELECT * FROM animales WHERE codigo_qr = %s"
+
+            sql = "SELECT * FROM ganado WHERE codigo_qr = %s"
             cursor.execute(sql, (codigo_qr,))
-            
+
             result = cursor.fetchone()
             if result:
-                return Animal.from_dict(result)
+                return Ganado.from_dict(result)
             return None
             
         except Exception as e:
@@ -180,54 +180,19 @@ class AnimalService:
         finally:
             if 'conn' in locals():
                 conn.close()
-    @staticmethod
-    def crear_animal(animal: Animal) -> Optional[Animal]:
-        try:
-            conn = get_connection()
-            cursor = conn.cursor(dictionary=True)
-            
-            sql = """
-                INSERT INTO animales (
-                    codigo_qr, nombre, raza, genero, fecha_nacimiento,
-                    peso, estado_salud, historial_vacunas, potrero_id,
-                    madre_id, padre_id, fecha_registro, ultima_actualizacion
-                ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()
-                )
-            """
-            
-            values = (
-                animal.numero_arete, animal.nombre, animal.raza, animal.genero,
-                animal.fecha_nacimiento, animal.peso, animal.estado_salud,
-                animal.historial_vacunas, animal.potrero_id, animal.madre_id,
-                animal.padre_id
-            )
-            
-            cursor.execute(sql, values)
-            conn.commit()
-            
-            animal.id = cursor.lastrowid
-            return animal
-            
-        except Exception as e:
-            print(f"Error al crear animal: {e}")
-            return None
-        finally:
-            if 'conn' in locals():
-                conn.close()
 
     @staticmethod
-    def obtener_animal(id: int) -> Optional[Animal]:
+    def obtener_ganado(id: int) -> Optional[Ganado]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
-            
-            sql = "SELECT * FROM animales WHERE id = %s"
+
+            sql = "SELECT * FROM ganado WHERE id = %s"
             cursor.execute(sql, (id,))
-            
+
             result = cursor.fetchone()
             if result:
-                return Animal.from_dict(result)
+                return Ganado.from_dict(result)
             return None
             
         except Exception as e:
@@ -238,15 +203,15 @@ class AnimalService:
                 conn.close()
 
     @staticmethod
-    def obtener_todos_animales() -> List[Animal]:
+    def obtener_todos_ganados() -> List[Ganado]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
-            
-            cursor.execute("SELECT * FROM animales")
+
+            cursor.execute("SELECT * FROM ganado")
             results = cursor.fetchall()
-            
-            return [Animal.from_dict(result) for result in results]
+
+            return [Ganado.from_dict(result) for result in results]
             
         except Exception as e:
             print(f"Error al obtener animales: {e}")
@@ -256,33 +221,33 @@ class AnimalService:
                 conn.close()
 
     @staticmethod
-    def actualizar_animal(id: int, animal: Animal) -> bool:
+    def actualizar_ganado(id: int, ganado: Ganado) -> bool:
         try:
             conn = get_connection()
             cursor = conn.cursor()
-            
+
             sql = """
-                UPDATE animales SET 
+                UPDATE ganado SET
                     codigo_qr = %s,
                     nombre = %s,
                     raza = %s,
-                    genero = %s,
                     fecha_nacimiento = %s,
+                    edad = %s,
+                    sexo = %s,
                     peso = %s,
+                    estado = %s,
                     estado_salud = %s,
-                    historial_vacunas = %s,
-                    potrero_id = %s,
-                    madre_id = %s,
-                    padre_id = %s,
-                    ultima_actualizacion = NOW()
+                    id_potrero = %s,
+                    id_persona = %s,
+                    updated_at = NOW()
                 WHERE id = %s
             """
-            
+
             values = (
-                animal.codigo_qr, animal.nombre, animal.raza, animal.genero,
-                animal.fecha_nacimiento, animal.peso, animal.estado_salud,
-                animal.historial_vacunas, animal.potrero_id, animal.madre_id,
-                animal.padre_id, id
+                ganado.codigo_qr, ganado.nombre, ganado.raza,
+                ganado.fecha_nacimiento, ganado.edad, ganado.sexo.value,
+                ganado.peso, ganado.estado.value, ganado.estado_salud,
+                ganado.id_potrero, ganado.id_persona, id
             )
             
             cursor.execute(sql, values)
@@ -298,59 +263,59 @@ class AnimalService:
                 conn.close()
 
     @staticmethod
-    def eliminar_animal(id: int) -> bool:
+    def eliminar_ganado(id: int) -> bool:
         try:
             conn = get_connection()
             cursor = conn.cursor()
-            
-            sql = "DELETE FROM animales WHERE id = %s"
+
+            sql = "DELETE FROM ganado WHERE id = %s"
             cursor.execute(sql, (id,))
             conn.commit()
-            
+
             return cursor.rowcount > 0
-            
+
         except Exception as e:
-            print(f"Error al eliminar animal: {e}")
+            print(f"Error al eliminar ganado: {e}")
             return False
         finally:
             if 'conn' in locals():
                 conn.close()
 
     @staticmethod
-    def buscar_por_potrero(potrero_id: int) -> List[Animal]:
+    def buscar_por_potrero(potrero_id: int) -> List[Ganado]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
-            
-            sql = "SELECT * FROM animales WHERE potrero_id = %s"
+
+            sql = "SELECT * FROM ganado WHERE id_potrero = %s"
             cursor.execute(sql, (potrero_id,))
             results = cursor.fetchall()
-            
-            return [Animal.from_dict(result) for result in results]
-            
+
+            return [Ganado.from_dict(result) for result in results]
+
         except Exception as e:
-            print(f"Error al buscar animales por potrero: {e}")
+            print(f"Error al buscar ganados por potrero: {e}")
             return []
         finally:
             if 'conn' in locals():
                 conn.close()
 
-    @staticmethod 
-    def buscar_por_codigo_qr(codigo_qr: str) -> Optional[Animal]:
+    @staticmethod
+    def buscar_por_codigo_qr(codigo_qr: str) -> Optional[Ganado]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
-            
-            sql = "SELECT * FROM animales WHERE codigo_qr = %s"
+
+            sql = "SELECT * FROM ganado WHERE codigo_qr = %s"
             cursor.execute(sql, (codigo_qr,))
-            
+
             result = cursor.fetchone()
             if result:
-                return Animal.from_dict(result)
+                return Ganado.from_dict(result)
             return None
-            
+
         except Exception as e:
-            print(f"Error al buscar animal por arete: {e}")
+            print(f"Error al buscar ganado por código QR: {e}")
             return None
         finally:
             if 'conn' in locals():

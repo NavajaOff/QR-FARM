@@ -54,8 +54,8 @@
                   </div>
 
                   <div class="form-group mb-3">
-                    <input v-model="usuario" type="text" class="form-control form-control-lg"
-                      placeholder="Usuario" required />
+                    <input v-model="email" type="email" class="form-control form-control-lg"
+                      placeholder="Email" required />
                   </div>
 
                   <div class="form-group mb-4">
@@ -64,8 +64,9 @@
                   </div>
 
                   <div class="d-grid gap-2 mb-3">
-                    <button type="submit" class="btn btn-success btn-lg fw-bold">
-                      Iniciar Sesión
+                    <button type="submit" class="btn btn-success btn-lg fw-bold" :disabled="loading">
+                      <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                      {{ loading ? 'Iniciando...' : 'Iniciar Sesión' }}
                     </button>
                   </div>
 
@@ -93,21 +94,43 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-const usuario = ref('');
+import axios from 'axios';
+
+const email = ref('');
 const password = ref('');
 const error = ref('');
+const loading = ref(false);
 const router = useRouter();
 
-function login() {
-  if (usuario.value === '' || password.value === '') {
+async function login() {
+  if (email.value === '' || password.value === '') {
     error.value = 'Por favor completa todos los campos';
-  } else {
-    // Aquí iría tu lógica para hacer la petición al backend Flask
-    console.log('Usuario:', usuario.value);
-    console.log('Password:', password.value);
-    
-    // IMPORTANTE: la ruta debe coincidir exactamente con la definida en router
-    router.push('/menu');  // Cambiado de '/Menu' a '/menu'
+    return;
+  }
+
+  loading.value = true;
+  error.value = '';
+
+  try {
+    const response = await axios.post('http://localhost:5000/api/usuarios/login', {
+      email: email.value,
+      password: password.value
+    });
+
+    if (response.data.status === 'success') {
+      // Guardar token en localStorage
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+
+      // Redirigir al menú
+      router.push('/menu');
+    } else {
+      error.value = response.data.message || 'Error en el inicio de sesión';
+    }
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Error al conectar con el servidor';
+  } finally {
+    loading.value = false;
   }
 }
 </script>

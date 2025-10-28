@@ -1,34 +1,34 @@
-# Controlador Animal
+# Controlador Ganado
 from datetime import datetime
 from flask import jsonify, request
-from ..models.animal import Animal
-from ..services.animal_service import AnimalService
+from ..models.animal import Ganado
+from ..services.animal_service import GanadoService
 
-class AnimalController:
+class GanadoController:
     @staticmethod
-    def crear_animal():
+    def crear_ganado():
         try:
             data = request.get_json()
-            
+
             # Convertir fechas de string a objeto date si están presentes
             if 'fecha_nacimiento' in data:
                 data['fecha_nacimiento'] = datetime.strptime(data['fecha_nacimiento'], '%Y-%m-%d').date()
-            
-            animal = Animal.from_dict(data)
-            nuevo_animal = AnimalService.crear_animal(animal)
-            
-            if nuevo_animal:
+
+            ganado = Ganado.from_dict(data)
+            nuevo_ganado = GanadoService.crear_ganado(ganado)
+
+            if nuevo_ganado:
                 return jsonify({
                     'status': 'success',
-                    'message': 'Animal creado exitosamente',
-                    'data': nuevo_animal.to_dict()
+                    'message': 'Ganado creado exitosamente',
+                    'data': nuevo_ganado.to_dict()
                 }), 201
             else:
                 return jsonify({
                     'status': 'error',
-                    'message': 'Error al crear el animal'
+                    'message': 'Error al crear el ganado'
                 }), 400
-                
+
         except Exception as e:
             return jsonify({
                 'status': 'error',
@@ -36,21 +36,21 @@ class AnimalController:
             }), 500
 
     @staticmethod
-    def obtener_animal(id):
+    def obtener_ganado(id):
         try:
-            animal = AnimalService.obtener_animal(id)
-            
-            if animal:
+            ganado = GanadoService.obtener_ganado(id)
+
+            if ganado:
                 return jsonify({
                     'status': 'success',
-                    'data': animal.to_dict()
+                    'data': ganado.to_dict()
                 }), 200
             else:
                 return jsonify({
                     'status': 'error',
-                    'message': 'Animal no encontrado'
+                    'message': 'Ganado no encontrado'
                 }), 404
-                
+
         except Exception as e:
             return jsonify({
                 'status': 'error',
@@ -58,14 +58,14 @@ class AnimalController:
             }), 500
 
     @staticmethod
-    def obtener_todos_animales():
+    def obtener_todos_ganados():
         try:
-            animales = AnimalService.obtener_todos_animales()
+            ganados = GanadoService.obtener_todos_ganados()
             return jsonify({
                 'status': 'success',
-                'data': [animal.to_dict() for animal in animales]
+                'data': [ganado.to_dict() for ganado in ganados]
             }), 200
-                
+
         except Exception as e:
             return jsonify({
                 'status': 'error',
@@ -73,37 +73,37 @@ class AnimalController:
             }), 500
 
     @staticmethod
-    def actualizar_animal(id):
+    def actualizar_ganado(id):
         try:
             data = request.get_json()
-            
-            # Obtener el animal existente
-            animal_existente = AnimalService.obtener_animal(id)
-            if not animal_existente:
+
+            # Obtener el ganado existente
+            ganado_existente = GanadoService.obtener_ganado(id)
+            if not ganado_existente:
                 return jsonify({
                     'status': 'error',
-                    'message': 'Animal no encontrado'
+                    'message': 'Ganado no encontrado'
                 }), 404
-            
-            # Actualizar los campos del animal con los nuevos datos
+
+            # Actualizar los campos del ganado con los nuevos datos
             for key, value in data.items():
                 if key == 'fecha_nacimiento' and value:
                     value = datetime.strptime(value, '%Y-%m-%d').date()
-                setattr(animal_existente, key, value)
-            
+                setattr(ganado_existente, key, value)
+
             # Intentar actualizar en la base de datos
-            if AnimalService.actualizar_animal(id, animal_existente):
+            if GanadoService.actualizar_ganado(id, ganado_existente):
                 return jsonify({
                     'status': 'success',
-                    'message': 'Animal actualizado exitosamente',
-                    'data': animal_existente.to_dict()
+                    'message': 'Ganado actualizado exitosamente',
+                    'data': ganado_existente.to_dict()
                 }), 200
             else:
                 return jsonify({
                     'status': 'error',
-                    'message': 'Error al actualizar el animal'
+                    'message': 'Error al actualizar el ganado'
                 }), 400
-                
+
         except Exception as e:
             return jsonify({
                 'status': 'error',
@@ -111,19 +111,19 @@ class AnimalController:
             }), 500
 
     @staticmethod
-    def eliminar_animal(id):
+    def eliminar_ganado(id):
         try:
-            if AnimalService.eliminar_animal(id):
+            if GanadoService.eliminar_ganado(id):
                 return jsonify({
                     'status': 'success',
-                    'message': 'Animal eliminado exitosamente'
+                    'message': 'Ganado eliminado exitosamente'
                 }), 200
             else:
                 return jsonify({
                     'status': 'error',
-                    'message': 'Animal no encontrado o error al eliminar'
+                    'message': 'Ganado no encontrado o error al eliminar'
                 }), 404
-                
+
         except Exception as e:
             return jsonify({
                 'status': 'error',
@@ -131,14 +131,14 @@ class AnimalController:
             }), 500
 
     @staticmethod
-    def obtener_animales_por_potrero(potrero_id):
+    def obtener_ganados_por_potrero(potrero_id):
         try:
-            animales = AnimalService.buscar_por_potrero(potrero_id)
+            ganados = GanadoService.buscar_por_potrero(potrero_id)
             return jsonify({
                 'status': 'success',
-                'data': [animal.to_dict() for animal in animales]
+                'data': [ganado.to_dict() for ganado in ganados]
             }), 200
-                
+
         except Exception as e:
             return jsonify({
                 'status': 'error',
@@ -148,19 +148,19 @@ class AnimalController:
     @staticmethod
     def buscar_por_codigo_qr(codigo_qr):
         try:
-            animal = AnimalService.buscar_por_codigo_qr(codigo_qr)
-            
-            if animal:
+            ganado = GanadoService.buscar_por_codigo_qr(codigo_qr)
+
+            if ganado:
                 return jsonify({
                     'status': 'success',
-                    'data': animal.to_dict()
+                    'data': ganado.to_dict()
                 }), 200
             else:
                 return jsonify({
                     'status': 'error',
-                    'message': 'Animal no encontrado'
+                    'message': 'Ganado no encontrado'
                 }), 404
-                
+
         except Exception as e:
             return jsonify({
                 'status': 'error',

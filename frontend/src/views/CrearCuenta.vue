@@ -20,106 +20,70 @@
         <div class="row min-vh-100 align-items-center py-4 py-md-5">
             <div class="col-12 col-lg-10 col-xl-8 mx-auto">
                 <div class="row g-0 bg-white rounded-4 shadow-lg overflow-hidden">
-                    <!-- Left Side - Image -->
-                    <div class="col-12 col-md-6">
-                        <div class="p-3 p-sm-4 p-lg-5 h-100 d-flex flex-column justify-content-center">
-                            <div class="text-center">
-                                <img src="../assets/images/crear_cuenta.jpg" alt="Crear cuenta" class="img-fluid" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right Side - Registration Form -->
-                    <div class="col-12 col-md-6">
-                        <div class="p-3 p-sm-4 p-lg-5 h-100 d-flex align-items-center bg-form-register">
+                    <!-- Registration Form - Full Width -->
+                    <div class="col-12">
+                        <div class="p-4 p-md-5 bg-form-register">
                             <div class="w-100">
                                 <div class="text-center mb-4">
                                     <h3 class="text-white fw-bold">Crear una cuenta</h3>
-                                    <p class="text-white-50">Es rápido y fácil</p>
+                                    <p class="text-white-50">Regístrate para gestionar tu finca ganadera</p>
                                 </div>
 
-                                <form id="registerForm" class="px-0 px-sm-2 px-md-3">
+                                <form id="registerForm" class="px-0 px-sm-2 px-md-3" @submit.prevent="handleSubmit">
                                     <div class="row g-3 mb-3">
                                         <div class="col-6">
-                                            <input type="text" class="form-control" id="primerNombre" name="primerNombre" placeholder="Primer Nombre" required>
+                                            <input type="text" class="form-control" id="primerNombre" v-model="form.primerNombre" placeholder="Primer Nombre" required>
                                         </div>
                                         <div class="col-6">
-                                            <input type="text" class="form-control" id="segundoNombre" name="segundoNombre" placeholder="Segundo Nombre">
+                                            <input type="text" class="form-control" id="segundoNombre" v-model="form.segundoNombre" placeholder="Segundo Nombre">
                                         </div>
                                     </div>
 
                                     <div class="row g-3 mb-3">
                                         <div class="col-6">
-                                            <input type="text" class="form-control" id="primerApellido" name="primerApellido" placeholder="Primer Apellido" required>
+                                            <input type="text" class="form-control" id="primerApellido" v-model="form.primerApellido" placeholder="Primer Apellido" required>
                                         </div>
                                         <div class="col-6">
-                                            <input type="text" class="form-control" id="segundoApellido" name="segundoApellido" placeholder="Segundo Apellido">
+                                            <input type="text" class="form-control" id="segundoApellido" v-model="form.segundoApellido" placeholder="Segundo Apellido">
+                                        </div>
+                                    </div>
+
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-12">
+                                            <input type="tel" class="form-control" id="telefono" v-model="form.telefono" placeholder="Número de teléfono" required>
                                         </div>
                                     </div>
 
                                     <div class="row g-3 mb-3">
                                         <div class="col-6">
-                                            <input type="text" class="form-control" id="direccion" name="direccion" placeholder="Dirección" required>
+                                            <input type="email" class="form-control" id="email" v-model="form.email" placeholder="Email" required>
                                         </div>
                                         <div class="col-6">
-                                            <input type="tel" class="form-control" id="telefono" name="telefono" placeholder="Número de teléfono" required>
+                                            <input type="password" class="form-control" id="password" v-model="form.password" placeholder="Contraseña" required>
                                         </div>
                                     </div>
 
-                                    <div class="row g-3 mb-3">
-                                        <div class="col-6">
-                                            <input type="email" class="form-control" id="email" name="email" placeholder="Email" required>
-                                        </div>
-                                        <div class="col-6">
-                                            <input type="password" class="form-control" id="password" name="password" placeholder="Contraseña" required>
-                                        </div>
-                                    </div>
-
-                                    <div class="row g-3 mb-3">
-                                        <div class="col-6">
-                                            <select class="form-select" id="pais" name="pais" required>
-                                                <option value="">Seleccionar País</option>
-                                                <option value="colombia">Colombia</option>
-                                                <option value="mexico">México</option>
-                                                <option value="argentina">Argentina</option>
-                                                <option value="chile">Chile</option>
-                                                <option value="peru">Perú</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-6">
-                                            <select class="form-select" id="tipoDocumento" name="tipoDocumento" required>
-                                                <option value="">Tipo de Documento</option>
-                                                <option value="cedula">Cédula de Ciudadanía</option>
-                                                <option value="pasaporte">Pasaporte</option>
-                                                <option value="cedula_extranjeria">Cédula de Extranjería</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div class="row g-3 mb-3">
-                                        <div class="col-6">
-                                            <input type="text" class="form-control" id="numeroDocumento" name="numeroDocumento" placeholder="Número de documento" required>
-                                        </div>
-                                        <div class="col-6">
-                                            <!-- Campo de código electrónico eliminado -->
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <textarea class="form-control" id="observaciones" name="observaciones" rows="3" placeholder="Observaciones adicionales (opcional)"></textarea>
-                                    </div>
 
                                     <div class="mb-3 form-check">
-                                        <input type="checkbox" class="form-check-input" id="terminos" name="terminos" required>
+                                        <input type="checkbox" class="form-check-input" id="terminos" v-model="form.terminos" required>
                                         <label class="form-check-label text-white" for="terminos">
                                             Acepto los <a href="#" class="text-info">términos y condiciones</a> y la <a href="#" class="text-info">política de privacidad</a>
                                         </label>
                                     </div>
 
                                     <div class="d-grid">
-                                        <button type="submit" class="btn btn-success btn-lg fw-bold">
-                                            Crear Cuenta
+                                        <button type="submit" class="btn btn-success btn-lg fw-bold" :disabled="loading">
+                                            <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                            {{ loading ? 'Creando cuenta...' : 'Crear Cuenta' }}
                                         </button>
+                                    </div>
+
+                                    <!-- Mensajes de error y éxito -->
+                                    <div v-if="error" class="alert alert-danger mt-3" role="alert">
+                                        {{ error }}
+                                    </div>
+                                    <div v-if="success" class="alert alert-success mt-3" role="alert">
+                                        {{ success }}
                                     </div>
 
                                     <div class="text-center mt-3">
@@ -138,8 +102,69 @@
 </template>
 
 <script>
+import axios from 'axios';
+
 export default {
   name: 'CrearCuenta',
+  data() {
+    return {
+      form: {
+        primerNombre: '',
+        segundoNombre: '',
+        primerApellido: '',
+        segundoApellido: '',
+        telefono: '',
+        email: '',
+        password: '',
+        terminos: false
+      },
+      loading: false,
+      error: null,
+      success: null
+    };
+  },
+  methods: {
+    async handleSubmit() {
+      this.loading = true;
+      this.error = null;
+      this.success = null;
+
+      try {
+        // Validar campos requeridos
+        if (!this.form.primerNombre || !this.form.primerApellido || !this.form.email ||
+            !this.form.password || !this.form.terminos) {
+          throw new Error('Por favor complete todos los campos requeridos');
+        }
+
+        // Preparar datos para enviar
+        const userData = {
+          primer_nombre: this.form.primerNombre,
+          segundo_nombre: this.form.segundoNombre || null,
+          primer_apellido: this.form.primerApellido,
+          segundo_apellido: this.form.segundoApellido || null,
+          email: this.form.email,
+          telefono: this.form.telefono || null,
+          password: this.form.password
+        };
+
+        // Enviar datos al backend
+        const response = await axios.post('http://localhost:5000/api/usuarios/register', userData);
+
+        if (response.data.status === 'success') {
+          this.success = 'Cuenta creada exitosamente. Redirigiendo al login...';
+          setTimeout(() => {
+            this.$router.push('/login');
+          }, 2000);
+        } else {
+          throw new Error(response.data.message || 'Error al crear la cuenta');
+        }
+      } catch (error) {
+        this.error = error.response?.data?.message || error.message || 'Error al crear la cuenta';
+      } finally {
+        this.loading = false;
+      }
+    }
+  }
 };
 </script>
 

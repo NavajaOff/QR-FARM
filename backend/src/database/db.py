@@ -42,7 +42,7 @@ class ConexionBaseDatos:
                 'host': os.getenv('DB_HOST', 'localhost'),
                 'user': os.getenv('DB_USER', 'root'),
                 'password': os.getenv('DB_PASSWORD', ''),
-                'database': os.getenv('DB_NAME', 'qr_farm'),
+                'database': os.getenv('DB_NAME', 'gestion_ganadera'),
                 'port': int(os.getenv('DB_PORT', '3306')),
                 'use_unicode': True,
                 'charset': 'utf8mb4'
@@ -127,7 +127,57 @@ class ConexionBaseDatos:
 
 def init_db():
     """Inicializar la base de datos."""
-    return ConexionBaseDatos()
+    db = ConexionBaseDatos()
+    # Crear usuario admin por defecto si no existe
+    crear_usuario_admin_por_defecto()
+    return db
+
+def crear_usuario_admin_por_defecto():
+    """Crear usuario administrador por defecto si no existe."""
+    try:
+        from ..models.usuario import Usuario, Persona
+        from ..services.usuario_service import UsuarioService
+
+        # Verificar si ya existe un usuario admin
+        admin_existe = False
+        try:
+            # Buscar usuario admin (asumiendo que el primer usuario creado es admin)
+            usuarios = UsuarioService.obtener_todos_usuarios()
+            admin_existe = len(usuarios) > 0
+        except:
+            admin_existe = False
+
+        if not admin_existe:
+            # Crear persona admin
+            persona_admin = Persona(
+                primer_nombre="Admin",
+                segundo_nombre="Sistema",
+                primer_apellido="QR",
+                segundo_apellido="Farm",
+                email="admin@qrfarm.com",
+                telefono="1234567890",
+                id_rol=1  # Rol administrador
+            )
+
+            # Crear usuario admin
+            from ..models.usuario import EstadoUsuario
+            usuario_admin = Usuario(
+                contraseña="admin123",  # Contraseña por defecto
+                estado=EstadoUsuario.ACTIVO
+            )
+
+            # Crear en base de datos
+            resultado, mensaje = UsuarioService.crear_usuario(persona_admin, usuario_admin)
+
+            if resultado:
+                registrador.info("Usuario administrador creado exitosamente")
+                registrador.info("Email: admin@qrfarm.com")
+                registrador.info("Contraseña: admin123")
+            else:
+                registrador.error(f"Error al crear usuario administrador: {mensaje}")
+
+    except Exception as e:
+        registrador.error(f"Error al crear usuario administrador por defecto: {e}")
 
 def get_connection():
     """Obtener una conexión a la base de datos."""

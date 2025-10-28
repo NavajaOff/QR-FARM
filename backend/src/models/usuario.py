@@ -1,5 +1,5 @@
 # Modelo Usuario
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from enum import Enum
@@ -7,6 +7,16 @@ from enum import Enum
 class EstadoUsuario(str, Enum):
     ACTIVO = 'activo'
     INACTIVO = 'inactivo'
+
+class EstadoGanado(str, Enum):
+    ACTIVO = 'activo'
+    VENDIDO = 'vendido'
+    MUERTO = 'muerto'
+
+class SexoGanado(str, Enum):
+    MACHO = 'macho'
+    HEMBRA = 'hembra'
+    OTRO = 'otro'
 
 class Rol:
     def __init__(self,
@@ -38,9 +48,8 @@ class Persona:
                  segundo_apellido: Optional[str] = None,
                  email: str = "",
                  telefono: Optional[str] = None,
-                 created_at: Optional[datetime] = None,
-                 updated_at: Optional[datetime] = None):
-        
+                 fecha_creacion: Optional[datetime] = None):
+
         self.id = id
         self.id_rol = id_rol
         self.primer_nombre = primer_nombre
@@ -49,8 +58,7 @@ class Persona:
         self.segundo_apellido = segundo_apellido
         self.email = email
         self.telefono = telefono
-        self.created_at = created_at
-        self.updated_at = updated_at
+        self.fecha_creacion = fecha_creacion
 
     @property
     def nombre_completo(self) -> str:
@@ -76,8 +84,7 @@ class Persona:
             segundo_apellido=data.get('segundo_apellido'),
             email=data.get('email', ''),
             telefono=data.get('telefono'),
-            created_at=data.get('created_at'),
-            updated_at=data.get('updated_at')
+            fecha_creacion=data.get('fecha_creacion')
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -91,78 +98,101 @@ class Persona:
             'email': self.email,
             'telefono': self.telefono,
             'nombre_completo': self.nombre_completo,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'fecha_creacion': self.fecha_creacion.isoformat() if self.fecha_creacion else None
         }
 
 class Usuario:
     def __init__(self,
                  id: Optional[int] = None,
-                 id_persona: int = 0,
-                 id_rol: int = 0,
-                 username: Optional[str] = None,
-                 password_hash: Optional[str] = None,
+                 id_persona: Optional[int] = None,
+                 id_rol: Optional[int] = None,
+                 contraseña: Optional[str] = None,
                  estado: EstadoUsuario = EstadoUsuario.ACTIVO,
-                 last_login: Optional[datetime] = None,
-                 created_at: Optional[datetime] = None,
-                 updated_at: Optional[datetime] = None,
-                 persona: Optional[Persona] = None):
-        
+                 persona: Optional[Persona] = None,
+                 rol: Optional[Rol] = None):
+
         self.id = id
         self.id_persona = id_persona
         self.id_rol = id_rol
-        self.username = username
-        self.password_hash = password_hash
+        self.contraseña = contraseña
         self.estado = estado
-        self.last_login = last_login
-        self.created_at = created_at
-        self.updated_at = updated_at
         self.persona = persona
+        self.rol = rol
+
+        # Alias para compatibilidad
+        self.password_hash = self.contraseña
+
+    @property
+    def nombre_completo(self) -> str:
+        """Retorna el nombre completo del usuario basado en la persona asociada"""
+        if self.persona:
+            return self.persona.nombre_completo
+        return ""
 
     def set_password(self, password: str) -> None:
-        """Genera el hash de la contraseña proporcionada"""
-        self.password_hash = generate_password_hash(password)
+        """Establece la contraseña (sin hash, según nueva estructura BD)"""
+        self.contraseña = password
 
     def check_password(self, password: str) -> bool:
-        """Verifica si la contraseña proporcionada coincide con el hash almacenado"""
-        if not self.password_hash:
+        """Verifica si la contraseña proporcionada coincide"""
+        if self.contraseña is None:
             return False
-        return check_password_hash(self.password_hash, password)
+        return self.contraseña == password
 
     @staticmethod
     def from_dict(data: Dict[str, Any], include_persona: bool = True) -> 'Usuario':
         usuario = Usuario(
             id=data.get('id'),
-            id_persona=data.get('id_persona', 0),
-            id_rol=data.get('id_rol', 0),
-            username=data.get('username'),
-            password_hash=data.get('password_hash'),
-            estado=EstadoUsuario(data.get('estado', 'activo')),
-            last_login=data.get('last_login'),
-            created_at=data.get('created_at'),
-            updated_at=data.get('updated_at')
+            id_persona=data.get('id_persona'),
+            id_rol=data.get('id_rol'),
+            contraseña=data.get('contraseña'),
+            estado=EstadoUsuario(data.get('estado', 'activo'))
         )
-        
+
         if include_persona and 'persona' in data and data['persona']:
             usuario.persona = Persona.from_dict(data['persona'])
-            
+
+        if 'rol' in data and data['rol']:
+            usuario.rol = Rol.from_dict(data['rol'])
+
         return usuario
+
+    @staticmethod
+    def from_registration_data(data: Dict[str, Any]) -> Tuple['Persona', 'Usuario']:
+        """Crea Persona y Usuario desde datos de registro"""
+        # Crear persona
+        persona = Persona(
+            primer_nombre=data.get('primer_nombre', ''),
+            segundo_nombre=data.get('segundo_nombre'),
+            primer_apellido=data.get('primer_apellido', ''),
+            segundo_apellido=data.get('segundo_apellido'),
+            email=data.get('email', ''),
+            telefono=data.get('telefono'),
+            id_rol=1  # Rol por defecto (usuario normal)
+        )
+
+        # Crear usuario
+        usuario = Usuario(
+            contraseña=data.get('password', ''),
+            estado=EstadoUsuario.ACTIVO
+        )
+
+        return persona, usuario
 
     def to_dict(self, include_persona: bool = True) -> Dict[str, Any]:
         data = {
             'id': self.id,
             'id_persona': self.id_persona,
             'id_rol': self.id_rol,
-            'username': self.username,
-            'estado': self.estado.value,
-            'last_login': self.last_login.isoformat() if self.last_login else None,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'estado': self.estado.value
         }
-        
+
         if include_persona and self.persona:
             data['persona'] = self.persona.to_dict()
-            
+
+        if self.rol:
+            data['rol'] = self.rol.to_dict()
+
         return data
         
         self.id = id
