@@ -31,7 +31,7 @@ class UsuarioController:
             persona, usuario = Usuario.from_registration_data(data)
 
             # Crear el usuario en la base de datos
-            nuevo_usuario, mensaje = UsuarioService.crear_usuario(persona, usuario)
+            nuevo_usuario, mensaje = UsuarioService.registrar_usuario(persona, usuario)
 
             if nuevo_usuario:
                 return jsonify({

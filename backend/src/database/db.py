@@ -1,8 +1,4 @@
-"""Módulo de conexión a la base de                'host': os.getenv('DB_HOST', 'localhost'),
-                'user': os.getenv('DB_USER', 'root'),
-                'password': os.getenv('DB_PASSWORD', ''),
-                'database': os.getenv('DB_NAME', 'gestion_ganadera'),
-                'port': int(os.getenv('DB_PORT', '3306'),s."""
+"""Módulo de conexión a la base de datos."""
 import os
 from typing import Dict, Any, Generator, Optional
 from contextlib import contextmanager
@@ -57,26 +53,26 @@ class ConexionBaseDatos:
     def _obtener_conexion(self) -> MySQLConnection:
         """Obtener una conexión a la base de datos."""
         try:
+            # Si no hay conexión o está cerrada, se crea una nueva
             if not self._conexion or not self._conexion.is_connected():
                 self._conexion = mysql.connector.connect(**self.configuracion)
+            else:
+                # Se verifica la conexión y se reconecta automáticamente si está caída
+                try:
+                    self._conexion.ping(reconnect=True, attempts=3, delay=2)
+                except Exception as e:
+                    registrador.warning(f"Reconectando a la base de datos: {e}")
+                    self._conexion = mysql.connector.connect(**self.configuracion)
+
             return self._conexion
+
         except Error as e:
             registrador.error(f"Error al obtener la conexión a la base de datos: {e}")
             raise ErrorBaseDatos(f"Error al obtener la conexión: {e}")
 
     @contextmanager
     def obtener_cursor(self, como_diccionario: bool = True) -> Generator[MySQLCursor, None, None]:
-        """Obtener un cursor de base de datos con gestión automática de la conexión.
-
-        Args:
-            como_diccionario (bool): Si es True, devuelve los resultados como diccionarios
-
-        Yields:
-            MySQLCursor: Objeto cursor de la base de datos
-
-        Raises:
-            ErrorBaseDatos: Si hay un error en las operaciones de base de datos
-        """
+        """Obtener un cursor de base de datos con gestión automática de la conexión."""
         conexion = None
         cursor = None
         try:
@@ -94,18 +90,7 @@ class ConexionBaseDatos:
                 cursor.close()
 
     def ejecutar_consulta(self, consulta: str, parametros: Optional[tuple] = None) -> Dict[str, Any]:
-        """Ejecutar una consulta en la base de datos y devolver los resultados.
-
-        Args:
-            consulta (str): Consulta SQL a ejecutar
-            parametros (tuple, opcional): Parámetros de la consulta
-
-        Returns:
-            Dict[str, Any]: Resultados de la consulta con metadatos
-
-        Raises:
-            ErrorBaseDatos: Si hay un error en la ejecución de la consulta
-        """
+        """Ejecutar una consulta en la base de datos y devolver los resultados."""
         with self.obtener_cursor(como_diccionario=True) as cursor:
             try:
                 cursor.execute(consulta, parametros)
@@ -135,54 +120,64 @@ def init_db():
 def crear_usuario_admin_por_defecto():
     """Crear usuario administrador por defecto si no existe."""
     try:
-        from ..models.usuario import Usuario, Persona
-        from ..services.usuario_service import UsuarioService
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
 
-        # Verificar si ya existe un usuario admin
-        admin_existe = False
-        try:
-            # Buscar usuario admin (asumiendo que el primer usuario creado es admin)
-            usuarios = UsuarioService.obtener_todos_usuarios()
-            admin_existe = len(usuarios) > 0
-        except:
-            admin_existe = False
+        # Usar la base de datos gestion_ganadera
+        cursor.execute('USE gestion_ganadera')
 
-        if not admin_existe:
+        # Verificar si ya existe el usuario admin
+        cursor.execute('SELECT COUNT(*) as count FROM usuarios u JOIN personas p ON u.id_persona = p.id WHERE p.email = %s', ('admin@qrfarm.com',))
+        result = cursor.fetchone()
+
+        if result['count'] == 0:
+            # Verificar si existe el rol admin
+            cursor.execute('SELECT id FROM roles WHERE rol = %s', ('admin',))
+            rol_result = cursor.fetchone()
+
+            if not rol_result:
+                # Crear rol admin
+                cursor.execute('INSERT INTO roles (rol, descripcion) VALUES (%s, %s)', ('admin', 'Administrador del sistema'))
+                rol_id = cursor.lastrowid
+            else:
+                rol_id = rol_result['id']
+
             # Crear persona admin
-            persona_admin = Persona(
-                primer_nombre="Admin",
-                segundo_nombre="Sistema",
-                primer_apellido="QR",
-                segundo_apellido="Farm",
-                email="admin@qrfarm.com",
-                telefono="1234567890",
-                id_rol=1  # Rol administrador
-            )
+            cursor.execute('''INSERT INTO personas (id_rol, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, email, telefono, fecha_creacion)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())''',
+                         (rol_id, 'Admin', 'Sistema', 'QR', 'Farm', 'admin@qrfarm.com', '1234567890'))
+
+            persona_id = cursor.lastrowid
 
             # Crear usuario admin
-            from ..models.usuario import EstadoUsuario
-            usuario_admin = Usuario(
-                contraseña="admin123",  # Contraseña por defecto
-                estado=EstadoUsuario.ACTIVO
-            )
+            cursor.execute('''INSERT INTO usuarios (id_persona, id_rol, contrasena, estado)
+                            VALUES (%s, %s, %s, %s)''',
+                         (persona_id, rol_id, 'admin123', 'activo'))
 
-            # Crear en base de datos
-            resultado, mensaje = UsuarioService.crear_usuario(persona_admin, usuario_admin)
+            conn.commit()
 
-            if resultado:
-                registrador.info("Usuario administrador creado exitosamente")
-                registrador.info("Email: admin@qrfarm.com")
-                registrador.info("Contraseña: admin123")
-            else:
-                registrador.error(f"Error al crear usuario administrador: {mensaje}")
+            registrador.info("Usuario administrador creado exitosamente")
+            registrador.info("Email: admin@qrfarm.com")
+            registrador.info("Contraseña: admin123")
+        else:
+            registrador.info("Usuario administrador ya existe")
+
+        cursor.close()
+        conn.close()
 
     except Exception as e:
         registrador.error(f"Error al crear usuario administrador por defecto: {e}")
 
+# ✅ FUNCIÓN ACTUALIZADA
 def get_connection():
-    """Obtener una conexión a la base de datos."""
-    db = ConexionBaseDatos()
-    return db._conexion
+    """Obtener una conexión activa a la base de datos."""
+    try:
+        db = ConexionBaseDatos()
+        conexion = db._obtener_conexion()
+        return conexion
+    except Exception as e:
+        registrador.error(f"No se pudo obtener conexión a la base de datos: {e}")
+        return None
 
 # Crear instancia global
 db = ConexionBaseDatos()

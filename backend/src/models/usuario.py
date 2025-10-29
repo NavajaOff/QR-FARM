@@ -106,7 +106,7 @@ class Usuario:
                  id: Optional[int] = None,
                  id_persona: Optional[int] = None,
                  id_rol: Optional[int] = None,
-                 contraseña: Optional[str] = None,
+                 contrasena: Optional[str] = None,
                  estado: EstadoUsuario = EstadoUsuario.ACTIVO,
                  persona: Optional[Persona] = None,
                  rol: Optional[Rol] = None):
@@ -114,13 +114,13 @@ class Usuario:
         self.id = id
         self.id_persona = id_persona
         self.id_rol = id_rol
-        self.contraseña = contraseña
+        self.contrasena = contrasena
         self.estado = estado
         self.persona = persona
         self.rol = rol
 
         # Alias para compatibilidad
-        self.password_hash = self.contraseña
+        self.password_hash = self.contrasena
 
     @property
     def nombre_completo(self) -> str:
@@ -130,14 +130,14 @@ class Usuario:
         return ""
 
     def set_password(self, password: str) -> None:
-        """Establece la contraseña (sin hash, según nueva estructura BD)"""
-        self.contraseña = password
+        """Establece la contrasena (sin hash, según nueva estructura BD)"""
+        self.contrasena = password
 
     def check_password(self, password: str) -> bool:
-        """Verifica si la contraseña proporcionada coincide"""
-        if self.contraseña is None:
+        """Verifica si la contrasena proporcionada coincide"""
+        if self.contrasena is None:
             return False
-        return self.contraseña == password
+        return self.contrasena == password
 
     @staticmethod
     def from_dict(data: Dict[str, Any], include_persona: bool = True) -> 'Usuario':
@@ -145,7 +145,7 @@ class Usuario:
             id=data.get('id'),
             id_persona=data.get('id_persona'),
             id_rol=data.get('id_rol'),
-            contraseña=data.get('contraseña'),
+            contrasena=data.get('contrasena'),
             estado=EstadoUsuario(data.get('estado', 'activo'))
         )
 
@@ -173,7 +173,7 @@ class Usuario:
 
         # Crear usuario
         usuario = Usuario(
-            contraseña=data.get('password', ''),
+            contrasena=data.get('password', ''),
             estado=EstadoUsuario.ACTIVO
         )
 
@@ -193,88 +193,4 @@ class Usuario:
         if self.rol:
             data['rol'] = self.rol.to_dict()
 
-        return data
-        
-        self.id = id
-        self.primer_nombre = primer_nombre
-        self.segundo_nombre = segundo_nombre
-        self.primer_apellido = primer_apellido
-        self.segundo_apellido = segundo_apellido
-        self.direccion = direccion
-        self.telefono = telefono
-        self.email = email
-        self.password_hash = password_hash
-        self.pais = pais
-        self.tipo_documento = tipo_documento
-        self.numero_documento = numero_documento
-        self.observaciones = observaciones
-        self.fecha_registro = fecha_registro
-        self.activo = activo
-
-    def set_password(self, password: str) -> None:
-        """Genera el hash de la contraseña proporcionada"""
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password: str) -> bool:
-        """Verifica si la contraseña proporcionada coincide con el hash almacenado"""
-        return check_password_hash(self.password_hash, password)
-
-    @property
-    def nombre_completo(self) -> str:
-        """Retorna el nombre completo del usuario"""
-        nombres = [self.primer_nombre]
-        if self.segundo_nombre:
-            nombres.append(self.segundo_nombre)
-        
-        apellidos = [self.primer_apellido]
-        if self.segundo_apellido:
-            apellidos.append(self.segundo_apellido)
-            
-        return f"{' '.join(nombres)} {' '.join(apellidos)}"
-
-    @staticmethod
-    def from_dict(data: Dict[str, Any]) -> 'Usuario':
-        """Crea una instancia de Usuario desde un diccionario"""
-        usuario = Usuario(
-            id=data.get('id'),
-            primer_nombre=data.get('primer_nombre', ''),
-            segundo_nombre=data.get('segundo_nombre'),
-            primer_apellido=data.get('primer_apellido', ''),
-            segundo_apellido=data.get('segundo_apellido'),
-            direccion=data.get('direccion', ''),
-            telefono=data.get('telefono', ''),
-            email=data.get('email', ''),
-            password_hash=data.get('password_hash', ''),
-            pais=data.get('pais', ''),
-            tipo_documento=data.get('tipo_documento', ''),
-            numero_documento=data.get('numero_documento', ''),
-            observaciones=data.get('observaciones'),
-            fecha_registro=data.get('fecha_registro'),
-            activo=data.get('activo', True)
-        )
-        return usuario
-
-    def to_dict(self, include_password: bool = False) -> Dict[str, Any]:
-        """Convierte la instancia de Usuario a un diccionario"""
-        data = {
-            'id': self.id,
-            'primer_nombre': self.primer_nombre,
-            'segundo_nombre': self.segundo_nombre,
-            'primer_apellido': self.primer_apellido,
-            'segundo_apellido': self.segundo_apellido,
-            'direccion': self.direccion,
-            'telefono': self.telefono,
-            'email': self.email,
-            'pais': self.pais,
-            'tipo_documento': self.tipo_documento,
-            'numero_documento': self.numero_documento,
-            'observaciones': self.observaciones,
-            'fecha_registro': self.fecha_registro.isoformat() if self.fecha_registro else None,
-            'activo': self.activo,
-            'nombre_completo': self.nombre_completo
-        }
-        
-        if include_password:
-            data['password_hash'] = self.password_hash
-            
         return data

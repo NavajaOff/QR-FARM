@@ -63,14 +63,14 @@ class UsuarioService:
                 # Luego crear el usuario
                 sql_usuario = """
                     INSERT INTO usuarios (
-                        id_persona, id_rol, contraseña, estado
+                        id_persona, id_rol, contrasena, estado
                     ) VALUES (
                         %s, %s, %s, %s
                     )
                 """
 
                 values_usuario = (
-                    id_persona, usuario.id_rol or 1, usuario.contraseña,
+                    id_persona, usuario.id_rol or 1, usuario.contrasena,
                     usuario.estado.value
                 )
 
@@ -168,7 +168,7 @@ class UsuarioService:
                 
                 cursor.execute(sql_usuario, values_usuario)
                 
-                # Si hay nueva contraseña, actualizarla
+                # Si hay nueva contrasena, actualizarla
                 if usuario.password_hash:
                     sql_password = """
                         UPDATE usuarios SET
@@ -444,7 +444,7 @@ class UsuarioService:
             if 'conn' in locals():
                 conn.close()
     @staticmethod
-    def crear_usuario(persona: Persona, usuario: Usuario) -> Tuple[Optional[Usuario], str]:
+    def registrar_usuario(persona: Persona, usuario: Usuario) -> Tuple[Optional[Usuario], str]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
@@ -454,53 +454,62 @@ class UsuarioService:
             if cursor.fetchone():
                 return None, "El email ya está registrado"
 
-            # Insertar persona
-            sql_persona = """
-                INSERT INTO personas (
-                    id_rol, primer_nombre, segundo_nombre, primer_apellido,
-                    segundo_apellido, email, telefono, fecha_creacion
-                ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, NOW()
+            try:
+                # Iniciar transacción
+                conn.start_transaction()
+
+                # Insertar persona
+                sql_persona = """
+                    INSERT INTO personas (
+                        id_rol, primer_nombre, segundo_nombre, primer_apellido,
+                        segundo_apellido, email, telefono, fecha_creacion
+                    ) VALUES (
+                        %s, %s, %s, %s, %s, %s, %s, NOW()
+                    )
+                """
+
+                values_persona = (
+                    persona.id_rol, persona.primer_nombre, persona.segundo_nombre,
+                    persona.primer_apellido, persona.segundo_apellido,
+                    persona.email, persona.telefono
                 )
-            """
 
-            values_persona = (
-                persona.id_rol, persona.primer_nombre, persona.segundo_nombre,
-                persona.primer_apellido, persona.segundo_apellido,
-                persona.email, persona.telefono
-            )
+                cursor.execute(sql_persona, values_persona)
+                id_persona = cursor.lastrowid
 
-            cursor.execute(sql_persona, values_persona)
-            id_persona = cursor.lastrowid
+                # Luego crear el usuario
+                sql_usuario = """
+                    INSERT INTO usuarios (
+                        id_persona, id_rol, contrasena, estado
+                    ) VALUES (
+                        %s, %s, %s, %s
+                    )
+                """
 
-            # Luego crear el usuario
-            sql_usuario = """
-                INSERT INTO usuarios (
-                    id_persona, id_rol, contraseña, estado
-                ) VALUES (
-                    %s, %s, %s, %s
+                values_usuario = (
+                    id_persona, usuario.id_rol or 1, usuario.contrasena,
+                    usuario.estado.value
                 )
-            """
 
-            values_usuario = (
-                id_persona, usuario.id_rol or 1, usuario.contraseña,
-                usuario.estado.value
-            )
+                cursor.execute(sql_usuario, values_usuario)
 
-            cursor.execute(sql_usuario, values_usuario)
+                # Commit de la transacción
+                conn.commit()
 
-            # Commit de la transacción
-            conn.commit()
+                usuario.id = cursor.lastrowid
+                usuario.id_persona = id_persona
+                persona.id = id_persona
+                usuario.persona = persona
 
-            usuario.id = cursor.lastrowid
-            usuario.id_persona = id_persona
-            persona.id = id_persona
-            usuario.persona = persona
+                return usuario, "Usuario registrado exitosamente"
 
-            return usuario, "Usuario creado exitosamente"
+            except Exception as e:
+                # Rollback en caso de error
+                conn.rollback()
+                raise e
 
         except Exception as e:
-            print(f"Error al crear usuario: {e}")
+            print(f"Error al registrar usuario: {e}")
             return None, str(e)
         finally:
             if 'conn' in locals():
@@ -539,7 +548,7 @@ class UsuarioService:
                     id=result['id'],
                     id_persona=result['id_persona'],
                     id_rol=result['id_rol'],
-                    contraseña=result['contraseña'],
+                    contrasena=result['contrasena'],
                     estado=EstadoUsuario(result['estado']),
                     persona=persona
                 )
@@ -588,7 +597,7 @@ class UsuarioService:
                     id=result['id'],
                     id_persona=result['id_persona'],
                     id_rol=result['id_rol'],
-                    contraseña=result['contraseña'],
+                    contrasena=result['contrasena'],
                     estado=EstadoUsuario(result['estado']),
                     persona=persona
                 )
@@ -683,7 +692,7 @@ class UsuarioService:
                     id=result['id'],
                     id_persona=result['id_persona'],
                     id_rol=result['id_rol'],
-                    contraseña=result.get('contraseña'),
+                    contrasena=result.get('contrasena'),
                     estado=EstadoUsuario(result['estado']),
                     persona=persona
                 )
