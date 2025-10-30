@@ -330,10 +330,12 @@ class GanadoService:
             cursor.execute("SELECT id, tipo_estado FROM estado_ganado ORDER BY tipo_estado")
             results = cursor.fetchall()
 
+            print(f"Estados de ganado obtenidos: {results}")
             return results
 
         except Exception as e:
             print(f"Error al obtener estados de ganado: {e}")
+            # Retornar lista vacía si no hay datos
             return []
         finally:
             if 'conn' in locals():

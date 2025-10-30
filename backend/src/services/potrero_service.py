@@ -227,62 +227,24 @@ class PotreroService:
 
     @staticmethod
     def get_estados_potrero() -> List[Dict[str, Any]]:
-        """Get all estados de potrero desde el enum de la BD."""
+        """Get all estados de potrero desde una tabla dedicada."""
         try:
             with db.get_cursor() as cursor:
-                # Obtener los valores del enum de la columna estado
-                cursor.execute("""
-                    SELECT COLUMN_TYPE
-                    FROM INFORMATION_SCHEMA.COLUMNS
-                    WHERE TABLE_SCHEMA = 'gestion_ganadera'
-                    AND TABLE_NAME = 'potrero'
-                    AND COLUMN_NAME = 'estado'
-                """)
-                result = cursor.fetchone()
-
-                if result and result['COLUMN_TYPE']:
-                    # Extraer valores del enum, ej: enum('disponible','ocupado','limpieza')
-                    enum_str = result['COLUMN_TYPE']
-                    print(f"Enum string: {enum_str}")
-
-                    # Extraer valores entre paréntesis
-                    if '(' in enum_str and ')' in enum_str:
-                        values_str = enum_str.split('(')[1].split(')')[0]
-                        # Separar por comas y quitar comillas
-                        valores = [v.strip("'\"") for v in values_str.split(',')]
-                        print(f"Valores extraídos: {valores}")
-
-                        # Retornar como lista de diccionarios
-                        return [{'id': i+1, 'estado': valor} for i, valor in enumerate(valores)]
-                    else:
-                        print("No se encontraron paréntesis en el enum")
-                else:
-                    print("No se encontró COLUMN_TYPE")
-
-                # Fallback si no se puede obtener del enum
-                return [
-                    {'id': 1, 'estado': 'disponible'},
-                    {'id': 2, 'estado': 'ocupado'},
-                    {'id': 3, 'estado': 'limpieza'}
-                ]
+                cursor.execute("SELECT id, estado FROM estados_potrero ORDER BY id ASC")
+                results = cursor.fetchall()
+                return results
         except Exception as e:
-            print(f"Error obteniendo estados del enum: {e}")
-            import traceback
-            traceback.print_exc()
-            # Fallback
-            return [
-                {'id': 1, 'estado': 'disponible'},
-                {'id': 2, 'estado': 'ocupado'},
-                {'id': 3, 'estado': 'limpieza'}
-            ]
+            print(f"Error obteniendo estados de potrero: {e}")
+            return []
 
     @staticmethod
     def get_estados_ganado() -> List[Dict[str, Any]]:
-        """Get all estados de ganado."""
-        # Retornar estados del enum EstadoGanado
-        return [
-            {'id': 1, 'estado': 'activo'},
-            {'id': 2, 'estado': 'vendido'},
-            {'id': 3, 'estado': 'muerto'},
-            {'id': 4, 'estado': 'en_tratamiento'}
-        ]
+        """Get all estados de ganado desde la tabla estado_ganado."""
+        try:
+            with db.get_cursor() as cursor:
+                cursor.execute("SELECT id, tipo_estado FROM estado_ganado ORDER BY id ASC")
+                results = cursor.fetchall()
+                return [{'id': row['id'], 'estado': row['tipo_estado']} for row in results]
+        except Exception as e:
+            print(f"Error obteniendo estados de ganado: {e}")
+            return []

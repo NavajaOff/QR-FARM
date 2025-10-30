@@ -1,17 +1,15 @@
-# Rutas Ganado
-from flask import Blueprint
-from ..controllers.animal_controller import GanadoController
+from flask import Blueprint, jsonify
+from src.services.potrero_service import PotreroService
 
-ganado_bp = Blueprint('ganado', __name__)
+animal_bp = Blueprint('animal', __name__, url_prefix='/api/animales')
 
-# Rutas CRUD básicas
-ganado_bp.route('/', methods=['POST'])(GanadoController.crear_ganado)
-ganado_bp.route('/', methods=['GET'])(GanadoController.obtener_todos_ganados)
-ganado_bp.route('/<int:id>', methods=['GET'])(GanadoController.obtener_ganado)
-ganado_bp.route('/<int:id>', methods=['PUT'])(GanadoController.actualizar_ganado)
-ganado_bp.route('/<int:id>', methods=['DELETE'])(GanadoController.eliminar_ganado)
+@animal_bp.route('/estados', methods=['GET'])
+def get_estados_animales():
+    """Obtener los estados posibles del ganado."""
+    estados = PotreroService.get_estados_ganado()
+    return jsonify({'data': estados, 'success': True}), 200
 
-# Rutas adicionales
-ganado_bp.route('/estados', methods=['GET'])(GanadoController.obtener_estados_ganado)
-ganado_bp.route('/potrero/<int:potrero_id>', methods=['GET'])(GanadoController.obtener_ganados_por_potrero)
-ganado_bp.route('/qr/<string:codigo_qr>', methods=['GET'])(GanadoController.buscar_por_codigo_qr)
+@animal_bp.route('/', methods=['GET'])
+def get_animales():
+    """Ruta temporal para evitar error 404."""
+    return jsonify({'data': [], 'success': True}), 200

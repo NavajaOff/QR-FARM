@@ -155,9 +155,9 @@ export const editarAnimal = (id) => {
 
 export const agregarNuevoAnimal = () => {
   // Construir opciones de estado
-  let estadoOptions = '';
+  let estadoOptions = '<option value="">Seleccionar estado</option>';
   estadosGanado.value.forEach(estado => {
-    estadoOptions += `<option value="${estado.id}">${estado.tipo_estado}</option>`;
+    estadoOptions += `<option value="${estado.id}">${estado.estado}</option>`;
   });
 
   // Construir opciones de potrero

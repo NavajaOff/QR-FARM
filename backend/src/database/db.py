@@ -41,7 +41,8 @@ class ConexionBaseDatos:
                 'database': os.getenv('DB_NAME', 'gestion_ganadera'),
                 'port': int(os.getenv('DB_PORT', '3306')),
                 'use_unicode': True,
-                'charset': 'utf8mb4'
+                'charset': 'utf8mb4',
+                'ssl_disabled': True
             }
             # Probar conexión
             self._obtener_conexion()
@@ -53,17 +54,8 @@ class ConexionBaseDatos:
     def _obtener_conexion(self) -> MySQLConnection:
         """Obtener una conexión a la base de datos."""
         try:
-            # Si no hay conexión o está cerrada, se crea una nueva
-            if not self._conexion or not self._conexion.is_connected():
-                self._conexion = mysql.connector.connect(**self.configuracion)
-            else:
-                # Se verifica la conexión y se reconecta automáticamente si está caída
-                try:
-                    self._conexion.ping(reconnect=True, attempts=3, delay=2)
-                except Exception as e:
-                    registrador.warning(f"Reconectando a la base de datos: {e}")
-                    self._conexion = mysql.connector.connect(**self.configuracion)
-
+            # Siempre crear una nueva conexión para evitar problemas de estado
+            self._conexion = mysql.connector.connect(**self.configuracion)
             return self._conexion
 
         except Error as e:
