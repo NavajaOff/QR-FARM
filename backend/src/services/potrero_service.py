@@ -16,7 +16,21 @@ class PotreroService:
                 FROM potrero p
                 ORDER BY p.id DESC
             """)
-            return cursor.fetchall()
+            potreros = cursor.fetchall()
+
+            # Agregar el nombre del tipo de pasto a cada potrero
+            for potrero in potreros:
+                if potrero.get('id_tipo_pasto'):
+                    try:
+                        tipos_pasto = PotreroService.get_tipos_pasto()
+                        tipo_encontrado = next((tp for tp in tipos_pasto if tp['id'] == potrero['id_tipo_pasto']), None)
+                        potrero['tipo_pasto_nombre'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'No definido'
+                    except Exception:
+                        potrero['tipo_pasto_nombre'] = 'No definido'
+                else:
+                    potrero['tipo_pasto_nombre'] = 'No definido'
+
+            return potreros
 
     @staticmethod
     def get_by_id(potrero_id: int) -> Optional[Dict[str, Any]]:
@@ -30,6 +44,18 @@ class PotreroService:
             result = cursor.fetchone()
             if not result:
                 raise ValueError(f"Potrero with id {potrero_id} not found")
+
+            # Agregar el nombre del tipo de pasto
+            if result.get('id_tipo_pasto'):
+                try:
+                    tipos_pasto = PotreroService.get_tipos_pasto()
+                    tipo_encontrado = next((tp for tp in tipos_pasto if tp['id'] == result['id_tipo_pasto']), None)
+                    result['tipo_pasto_nombre'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'No definido'
+                except Exception:
+                    result['tipo_pasto_nombre'] = 'No definido'
+            else:
+                result['tipo_pasto_nombre'] = 'No definido'
+
             return result
 
     @staticmethod
@@ -124,7 +150,21 @@ class PotreroService:
                 WHERE p.estado = %s
                 ORDER BY p.id DESC
             """, (estado,))
-            return cursor.fetchall()
+            potreros = cursor.fetchall()
+
+            # Agregar el nombre del tipo de pasto a cada potrero
+            for potrero in potreros:
+                if potrero.get('id_tipo_pasto'):
+                    try:
+                        tipos_pasto = PotreroService.get_tipos_pasto()
+                        tipo_encontrado = next((tp for tp in tipos_pasto if tp['id'] == potrero['id_tipo_pasto']), None)
+                        potrero['tipo_pasto_nombre'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'No definido'
+                    except Exception:
+                        potrero['tipo_pasto_nombre'] = 'No definido'
+                else:
+                    potrero['tipo_pasto_nombre'] = 'No definido'
+
+            return potreros
 
     @staticmethod
     def actualizar_ocupacion(potrero_id: int, delta: int) -> Dict[str, Any]:
@@ -151,21 +191,15 @@ class PotreroService:
         try:
             with db.get_cursor() as cursor:
                 cursor.execute("""
-                    SELECT id, descripcion as nombre FROM tipo_pasto
-                    ORDER BY descripcion
+                    SELECT id, tipo_pasto FROM tipo_pasto
+                    ORDER BY tipo_pasto
                 """)
                 results = cursor.fetchall()
-                return results
+                # Convertir tuplas a diccionarios
+                return [{'id': row[0], 'tipo_pasto': row[1]} for row in results]
         except Exception as e:
-            # Fallback a hardcodeados si la tabla no existe
-            print(f"Tabla tipo_pasto no encontrada, usando valores hardcodeados: {e}")
-            return [
-                {'id': 1, 'nombre': 'Kikuyo'},
-                {'id': 2, 'nombre': 'Braquiaria'},
-                {'id': 3, 'nombre': 'Festuca'},
-                {'id': 4, 'nombre': 'Ray Grass'},
-                {'id': 5, 'nombre': 'Pastura Mixta'}
-            ]
+            print(f"Error obteniendo tipos de pasto: {e}")
+            return []
 
     @staticmethod
     def get_personas_usuario() -> List[Dict[str, Any]]:
@@ -180,14 +214,8 @@ class PotreroService:
                     ORDER BY p.primer_apellido, p.primer_nombre
                 """)
                 results = cursor.fetchall()
-                # Convertir a formato objeto para Vue
-                personas = []
-                for row in results:
-                    personas.append({
-                        'id': row['id'],  # Acceder por nombre de columna
-                        'nombre_completo': row['nombre_completo']
-                    })
-                return personas
+                # Los resultados ya son diccionarios cuando dictionary=True
+                return results
         except Exception as e:
             print(f"Error obteniendo personas usuario: {e}")
             return []
@@ -220,7 +248,7 @@ class PotreroService:
                         print(f"Valores extraídos: {valores}")
 
                         # Retornar como lista de diccionarios
-                        return [{'id': i+1, 'nombre': valor} for i, valor in enumerate(valores)]
+                        return [{'id': i+1, 'estado': valor} for i, valor in enumerate(valores)]
                     else:
                         print("No se encontraron paréntesis en el enum")
                 else:
@@ -228,9 +256,9 @@ class PotreroService:
 
                 # Fallback si no se puede obtener del enum
                 return [
-                    {'id': 1, 'nombre': 'disponible'},
-                    {'id': 2, 'nombre': 'ocupado'},
-                    {'id': 3, 'nombre': 'limpieza'}
+                    {'id': 1, 'estado': 'disponible'},
+                    {'id': 2, 'estado': 'ocupado'},
+                    {'id': 3, 'estado': 'limpieza'}
                 ]
         except Exception as e:
             print(f"Error obteniendo estados del enum: {e}")
@@ -238,9 +266,9 @@ class PotreroService:
             traceback.print_exc()
             # Fallback
             return [
-                {'id': 1, 'nombre': 'disponible'},
-                {'id': 2, 'nombre': 'ocupado'},
-                {'id': 3, 'nombre': 'limpieza'}
+                {'id': 1, 'estado': 'disponible'},
+                {'id': 2, 'estado': 'ocupado'},
+                {'id': 3, 'estado': 'limpieza'}
             ]
 
     @staticmethod
@@ -248,8 +276,8 @@ class PotreroService:
         """Get all estados de ganado."""
         # Retornar estados del enum EstadoGanado
         return [
-            {'id': 1, 'nombre': 'activo'},
-            {'id': 2, 'nombre': 'vendido'},
-            {'id': 3, 'nombre': 'muerto'},
-            {'id': 4, 'nombre': 'en_tratamiento'}
+            {'id': 1, 'estado': 'activo'},
+            {'id': 2, 'estado': 'vendido'},
+            {'id': 3, 'estado': 'muerto'},
+            {'id': 4, 'estado': 'en_tratamiento'}
         ]
