@@ -110,10 +110,37 @@
               <p class="lead text-muted">Administra y controla tus potreros de manera eficiente</p>
             </div>
 
+            <!-- Loading State -->
+            <div v-if="loading" class="text-center py-5">
+              <div class="spinner-border text-success" role="status">
+                <span class="visually-hidden">Cargando...</span>
+              </div>
+              <p class="mt-2 text-muted">Cargando potreros...</p>
+            </div>
+
+            <!-- Error State -->
+            <div v-else-if="error" class="alert alert-danger text-center">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              {{ error }}
+              <button class="btn btn-sm btn-outline-danger ms-3" @click="cargarPotreros">
+                <i class="fas fa-redo me-1"></i>Reintentar
+              </button>
+            </div>
+
+            <!-- Empty State -->
+            <div v-else-if="potreros.length === 0" class="text-center py-5">
+              <i class="fas fa-map-marked-alt fa-4x text-muted mb-3"></i>
+              <h4 class="text-muted">No hay potreros registrados</h4>
+              <p class="text-muted">Aún no se han creado potreros en el sistema.</p>
+              <button class="btn btn-success" @click="crearPotrero()">
+                <i class="fas fa-plus me-1"></i>Crear Primer Potrero
+              </button>
+            </div>
+
             <!-- Card Potrero -->
-            <div class="d-flex justify-content-center align-items-start gap-2">
-              <button class="btn btn-outline-secondary" @click="prevPotrero"><i class="fas fa-chevron-left"></i></button>
-              
+            <div v-else class="d-flex justify-content-center align-items-start gap-2">
+              <button class="btn btn-outline-secondary" @click="prevPotrero" :disabled="potreros.length <= 1"><i class="fas fa-chevron-left"></i></button>
+
               <div class="card border-0 shadow-lg" style="min-width: 350px; max-width: 600px;">
                 <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                   <h5 class="mb-0"><i class="fas fa-leaf me-2"></i>{{ potreros[currentIndex].nombre }}</h5>
@@ -124,22 +151,22 @@
                 <div class="card-body p-3 p-sm-4" v-show="accordionOpen">
                   <div class="row g-3 mb-3">
                     <div class="col-6"><strong>Estado:</strong> <span class="badge" :class="estadoClass(potreros[currentIndex].estado)">{{ potreros[currentIndex].estado }}</span></div>
-                    <div class="col-6"><strong>Capacidad:</strong> {{ potreros[currentIndex].capacidad }} Animales</div>
+                    <div class="col-6"><strong>Capacidad:</strong> {{ potreros[currentIndex].capacidad || 'No definida' }} Animales</div>
                   </div>
                   <div class="row g-3 mb-3">
                     <div class="col-6"><strong>Ocupación:</strong> {{ potreros[currentIndex].ocupacion }} Animales</div>
-                    <div class="col-6"><strong>Tipo de pasto:</strong> {{ potreros[currentIndex].pasto }}</div>
+                    <div class="col-6"><strong>Tipo de pasto:</strong> {{ potreros[currentIndex].pasto || 'No definido' }}</div>
                   </div>
                   <div class="row g-3 mb-3">
-                    <div class="col-6"><strong>Fecha de último uso:</strong> {{ potreros[currentIndex].fechaUso }}</div>
+                    <div class="col-6"><strong>Fecha de último uso:</strong> {{ potreros[currentIndex].fechaUso || 'No registrada' }}</div>
                     <div class="col-6"><strong>Responsable:</strong> {{ potreros[currentIndex].responsable }}</div>
                   </div>
                   <div class="row g-3 mb-3">
                     <div class="col-12"><strong>Próxima limpieza:</strong> <input type="date" class="form-control d-inline-block w-auto" style="min-width:150px;"></div>
                   </div>
                   <div class="row g-3 mb-3">
-                    <div class="col-6"><strong>Área:</strong> {{ potreros[currentIndex].area }} ha</div>
-                    <div class="col-6"><strong>Última limpieza:</strong> {{ potreros[currentIndex].ultimaLimpieza }}</div>
+                    <div class="col-6"><strong>Área:</strong> {{ potreros[currentIndex].area || 'No definida' }} ha</div>
+                    <div class="col-6"><strong>Última limpieza:</strong> {{ potreros[currentIndex].ultimaLimpieza || 'No registrada' }}</div>
                   </div>
                   <div class="d-flex gap-2 justify-content-center">
                     <button class="btn btn-primary" @click="editarPotrero(potreros[currentIndex].id)"><i class="fas fa-edit me-1"></i>Editar</button>
@@ -148,7 +175,7 @@
                 </div>
               </div>
 
-              <button class="btn btn-outline-secondary" @click="nextPotrero"><i class="fas fa-chevron-right"></i></button>
+              <button class="btn btn-outline-secondary" @click="nextPotrero" :disabled="potreros.length <= 1"><i class="fas fa-chevron-right"></i></button>
             </div>
 
           </div>
@@ -166,14 +193,65 @@ export default {
     return {
       currentIndex: 0,
       accordionOpen: true,
-      potreros: [
-        { id: 1, nombre: 'Potrero 1', estado: 'Disponible', capacidad: 25, ocupacion: 18, pasto: 'Kikuyo', area: 2.5, fechaUso: '10/04/2025', ultimaLimpieza: '10/04/2025', responsable: 'Juan Pérez' },
-        { id: 2, nombre: 'Potrero 2', estado: 'En uso', capacidad: 30, ocupacion: 28, pasto: 'Braquiaria', area: 3, fechaUso: '08/04/2025', ultimaLimpieza: '08/04/2025', responsable: 'María Gómez' },
-        { id: 3, nombre: 'Potrero 3', estado: 'Mantenimiento', capacidad: 20, ocupacion: 0, pasto: 'Pastura Mixta', area: 1.8, fechaUso: '05/04/2025', ultimaLimpieza: '05/04/2025', responsable: 'Carlos Ruiz' }
-      ]
+      potreros: [],
+      loading: true,
+      error: null
     };
   },
+  async mounted() {
+    await this.cargarPotreros();
+  },
   methods: {
+    async cargarPotreros() {
+      try {
+        this.loading = true;
+        this.error = null;
+        const response = await fetch('/api/potreros/');
+        if (!response.ok) {
+          throw new Error('Error al cargar potreros');
+        }
+        const data = await response.json();
+        if (data.success) {
+          this.potreros = data.data.map(potrero => ({
+            id: potrero.id,
+            nombre: potrero.nombre,
+            estado: this.mapEstado(potrero.estado),
+            capacidad: potrero.capacidad,
+            ocupacion: potrero.ocupacion,
+            pasto: potrero.tipo_pasto,
+            area: potrero.area,
+            fechaUso: potrero.fecha_ultimo_uso ? this.formatDate(potrero.fecha_ultimo_uso) : '',
+            ultimaLimpieza: potrero.ultima_limpieza ? this.formatDate(potrero.ultima_limpieza) : '',
+            responsable: potrero.responsable_persona_id ? `Persona ${potrero.responsable_persona_id}` : 'No asignado'
+          }));
+        } else {
+          throw new Error(data.message || 'Error desconocido');
+        }
+      } catch (error) {
+        this.error = error.message;
+        console.error('Error cargando potreros:', error);
+      } finally {
+        this.loading = false;
+      }
+    },
+    mapEstado(estado) {
+      const estados = {
+        'disponible': 'Disponible',
+        'en_uso': 'En uso',
+        'mantenimiento': 'Mantenimiento',
+        'inactivo': 'Inactivo'
+      };
+      return estados[estado] || estado;
+    },
+    formatDate(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    },
     estadoClass(estado) {
       if (estado === 'Disponible') return 'bg-success';
       if (estado === 'En uso') return 'bg-warning';
@@ -317,12 +395,16 @@ export default {
       });
     },
     prevPotrero() {
-      this.currentIndex = (this.currentIndex - 1 + this.potreros.length) % this.potreros.length;
-      this.accordionOpen = true;
+      if (this.potreros.length > 1) {
+        this.currentIndex = (this.currentIndex - 1 + this.potreros.length) % this.potreros.length;
+        this.accordionOpen = true;
+      }
     },
     nextPotrero() {
-      this.currentIndex = (this.currentIndex + 1) % this.potreros.length;
-      this.accordionOpen = true;
+      if (this.potreros.length > 1) {
+        this.currentIndex = (this.currentIndex + 1) % this.potreros.length;
+        this.accordionOpen = true;
+      }
     },
     toggleAccordion() {
       this.accordionOpen = !this.accordionOpen;
