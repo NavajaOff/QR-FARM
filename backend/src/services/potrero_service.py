@@ -12,9 +12,9 @@ class PotreroService:
         """Get all potreros."""
         with db.get_cursor() as cursor:
             cursor.execute("""
-                SELECT * FROM potrero 
-                WHERE deleted_at IS NULL 
-                ORDER BY created_at DESC
+                SELECT p.*
+                FROM potrero p
+                ORDER BY p.id DESC
             """)
             return cursor.fetchall()
 
@@ -23,8 +23,9 @@ class PotreroService:
         """Get potrero by ID."""
         with db.get_cursor() as cursor:
             cursor.execute("""
-                SELECT * FROM potrero 
-                WHERE id = %s AND deleted_at IS NULL
+                SELECT p.*
+                FROM potrero p
+                WHERE p.id = %s
             """, (potrero_id,))
             result = cursor.fetchone()
             if not result:
@@ -34,38 +35,39 @@ class PotreroService:
     @staticmethod
     def create(data: Dict[str, Any]) -> Dict[str, Any]:
         """Create new potrero."""
-        required_fields = ['nombre']
-        for field in required_fields:
-            if not data.get(field):
-                raise ValueError(f"Field {field} is required")
+        # Generar nombre automático si no se proporciona
+        nombre = data.get('nombre')
+        if not nombre:
+            with db.get_cursor() as cursor:
+                cursor.execute("SELECT COUNT(*) as count FROM potrero")
+                result = cursor.fetchone()
+                numero = result['count'] + 1
+                nombre = f"Potrero {numero}"
 
         with db.get_cursor() as cursor:
             sql = """
                 INSERT INTO potrero (
-                    nombre, estado, capacidad, ocupacion, tipo_pasto,
+                    id_tipo_pasto, nombre, capacidad, hectareas, ocupacion,
                     fecha_ultimo_uso, responsable_persona_id, proxima_limpieza,
-                    area, ultima_limpieza, ubicacion, descripcion,
-                    propietario_persona_id, created_at, updated_at
+                    area, ultima_limpieza, descripcion, propietario_persona_id, estado
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
             """
             values = (
-                data.get('nombre'),
-                data.get('estado', 'disponible'),
+                data.get('id_tipo_pasto'),
+                nombre,
                 data.get('capacidad'),
+                data.get('hectareas'),
                 data.get('ocupacion', 0),
-                data.get('tipo_pasto'),
                 data.get('fecha_ultimo_uso'),
                 data.get('responsable_persona_id'),
                 data.get('proxima_limpieza'),
                 data.get('area'),
                 data.get('ultima_limpieza'),
-                data.get('ubicacion'),
                 data.get('descripcion'),
                 data.get('propietario_persona_id'),
-                datetime.now(),
-                datetime.now()
+                data.get('estado', 'disponible')
             )
             cursor.execute(sql, values)
             potrero_id = cursor.lastrowid
@@ -80,7 +82,7 @@ class PotreroService:
         update_fields = []
         values = []
         for key, value in data.items():
-            if key in ['created_at', 'updated_at', 'deleted_at', 'id']:
+            if key in ['id']:
                 continue
             update_fields.append(f"{key} = %s")
             values.append(value)
@@ -88,31 +90,28 @@ class PotreroService:
         if not update_fields:
             return PotreroService.get_by_id(potrero_id)
 
-        update_fields.append("updated_at = %s")
-        values.append(datetime.now())
         values.append(potrero_id)
 
         with db.get_cursor() as cursor:
             sql = f"""
-                UPDATE potrero 
+                UPDATE potrero
                 SET {', '.join(update_fields)}
-                WHERE id = %s AND deleted_at IS NULL
+                WHERE id = %s
             """
             cursor.execute(sql, values)
             return PotreroService.get_by_id(potrero_id)
 
     @staticmethod
     def delete(potrero_id: int) -> bool:
-        """Soft delete potrero by ID."""
+        """Delete potrero by ID."""
         # First check if potrero exists
         PotreroService.get_by_id(potrero_id)
 
         with db.get_cursor() as cursor:
             cursor.execute("""
-                UPDATE potrero 
-                SET deleted_at = %s 
-                WHERE id = %s AND deleted_at IS NULL
-            """, (datetime.now(), potrero_id))
+                DELETE FROM potrero
+                WHERE id = %s
+            """, (potrero_id,))
             return True
 
     @staticmethod
@@ -120,9 +119,10 @@ class PotreroService:
         """Get potreros by estado."""
         with db.get_cursor() as cursor:
             cursor.execute("""
-                SELECT * FROM potrero 
-                WHERE estado = %s AND deleted_at IS NULL 
-                ORDER BY created_at DESC
+                SELECT p.*
+                FROM potrero p
+                WHERE p.estado = %s
+                ORDER BY p.id DESC
             """, (estado,))
             return cursor.fetchall()
 
@@ -139,8 +139,117 @@ class PotreroService:
         
         with db.get_cursor() as cursor:
             cursor.execute("""
-                UPDATE potrero 
-                SET ocupacion = %s, updated_at = %s
-                WHERE id = %s AND deleted_at IS NULL
-            """, (nueva_ocupacion, datetime.now(), potrero_id))
+                UPDATE potrero
+                SET ocupacion = %s
+                WHERE id = %s
+            """, (nueva_ocupacion, potrero_id))
             return PotreroService.get_by_id(potrero_id)
+
+    @staticmethod
+    def get_tipos_pasto() -> List[Dict[str, Any]]:
+        """Get all tipos de pasto."""
+        try:
+            with db.get_cursor() as cursor:
+                cursor.execute("""
+                    SELECT id, descripcion as nombre FROM tipo_pasto
+                    ORDER BY descripcion
+                """)
+                results = cursor.fetchall()
+                return results
+        except Exception as e:
+            # Fallback a hardcodeados si la tabla no existe
+            print(f"Tabla tipo_pasto no encontrada, usando valores hardcodeados: {e}")
+            return [
+                {'id': 1, 'nombre': 'Kikuyo'},
+                {'id': 2, 'nombre': 'Braquiaria'},
+                {'id': 3, 'nombre': 'Festuca'},
+                {'id': 4, 'nombre': 'Ray Grass'},
+                {'id': 5, 'nombre': 'Pastura Mixta'}
+            ]
+
+    @staticmethod
+    def get_personas_usuario() -> List[Dict[str, Any]]:
+        """Get all personas with rol usuario."""
+        try:
+            with db.get_cursor() as cursor:
+                cursor.execute("""
+                    SELECT p.id, CONCAT(p.primer_nombre, ' ', COALESCE(p.segundo_nombre, ''), ' ', p.primer_apellido, ' ', COALESCE(p.segundo_apellido, '')) as nombre_completo
+                    FROM personas p
+                    JOIN usuarios u ON p.id = u.id_persona
+                    WHERE u.estado = 'activo'
+                    ORDER BY p.primer_apellido, p.primer_nombre
+                """)
+                results = cursor.fetchall()
+                # Convertir a formato objeto para Vue
+                personas = []
+                for row in results:
+                    personas.append({
+                        'id': row['id'],  # Acceder por nombre de columna
+                        'nombre_completo': row['nombre_completo']
+                    })
+                return personas
+        except Exception as e:
+            print(f"Error obteniendo personas usuario: {e}")
+            return []
+
+    @staticmethod
+    def get_estados_potrero() -> List[Dict[str, Any]]:
+        """Get all estados de potrero desde el enum de la BD."""
+        try:
+            with db.get_cursor() as cursor:
+                # Obtener los valores del enum de la columna estado
+                cursor.execute("""
+                    SELECT COLUMN_TYPE
+                    FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = 'gestion_ganadera'
+                    AND TABLE_NAME = 'potrero'
+                    AND COLUMN_NAME = 'estado'
+                """)
+                result = cursor.fetchone()
+
+                if result and result[0]:
+                    # Extraer valores del enum, ej: enum('disponible','ocupado','limpieza')
+                    enum_str = result[0]
+                    print(f"Enum string: {enum_str}")
+
+                    # Extraer valores entre paréntesis
+                    if '(' in enum_str and ')' in enum_str:
+                        values_str = enum_str.split('(')[1].split(')')[0]
+                        # Separar por comas y quitar comillas
+                        valores = [v.strip("'\"") for v in values_str.split(',')]
+                        print(f"Valores extraídos: {valores}")
+
+                        # Retornar como lista de diccionarios
+                        return [{'id': i+1, 'nombre': valor} for i, valor in enumerate(valores)]
+                    else:
+                        print("No se encontraron paréntesis en el enum")
+                else:
+                    print("No se encontró COLUMN_TYPE")
+
+                # Fallback si no se puede obtener del enum
+                return [
+                    {'id': 1, 'nombre': 'disponible'},
+                    {'id': 2, 'nombre': 'ocupado'},
+                    {'id': 3, 'nombre': 'limpieza'}
+                ]
+        except Exception as e:
+            print(f"Error obteniendo estados del enum: {e}")
+            import traceback
+            traceback.print_exc()
+            # Fallback
+            return [
+                {'id': 1, 'nombre': 'disponible'},
+                {'id': 2, 'nombre': 'ocupado'},
+                {'id': 3, 'nombre': 'limpieza'}
+            ]
+
+    @staticmethod
+    def get_estados_ganado() -> List[Dict[str, Any]]:
+        """Get all estados de ganado."""
+        # Retornar estados del enum EstadoGanado
+        return [
+            {'id': 1, 'nombre': 'activo'},
+            {'id': 2, 'nombre': 'vendido'},
+            {'id': 3, 'nombre': 'muerto'},
+            {'id': 4, 'nombre': 'en_tratamiento'}
+        ]
