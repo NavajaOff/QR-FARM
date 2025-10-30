@@ -12,9 +12,8 @@ class PotreroService:
         """Get all potreros."""
         with db.get_cursor() as cursor:
             cursor.execute("""
-                SELECT * FROM potrero 
-                WHERE deleted_at IS NULL 
-                ORDER BY created_at DESC
+                SELECT * FROM potrero
+                ORDER BY id DESC
             """)
             return cursor.fetchall()
 
@@ -23,8 +22,8 @@ class PotreroService:
         """Get potrero by ID."""
         with db.get_cursor() as cursor:
             cursor.execute("""
-                SELECT * FROM potrero 
-                WHERE id = %s AND deleted_at IS NULL
+                SELECT * FROM potrero
+                WHERE id = %s
             """, (potrero_id,))
             result = cursor.fetchone()
             if not result:
@@ -94,25 +93,24 @@ class PotreroService:
 
         with db.get_cursor() as cursor:
             sql = f"""
-                UPDATE potrero 
+                UPDATE potrero
                 SET {', '.join(update_fields)}
-                WHERE id = %s AND deleted_at IS NULL
+                WHERE id = %s
             """
             cursor.execute(sql, values)
             return PotreroService.get_by_id(potrero_id)
 
     @staticmethod
     def delete(potrero_id: int) -> bool:
-        """Soft delete potrero by ID."""
+        """Delete potrero by ID."""
         # First check if potrero exists
         PotreroService.get_by_id(potrero_id)
 
         with db.get_cursor() as cursor:
             cursor.execute("""
-                UPDATE potrero 
-                SET deleted_at = %s 
-                WHERE id = %s AND deleted_at IS NULL
-            """, (datetime.now(), potrero_id))
+                DELETE FROM potrero
+                WHERE id = %s
+            """, (potrero_id,))
             return True
 
     @staticmethod
@@ -120,9 +118,9 @@ class PotreroService:
         """Get potreros by estado."""
         with db.get_cursor() as cursor:
             cursor.execute("""
-                SELECT * FROM potrero 
-                WHERE estado = %s AND deleted_at IS NULL 
-                ORDER BY created_at DESC
+                SELECT * FROM potrero
+                WHERE estado = %s
+                ORDER BY id DESC
             """, (estado,))
             return cursor.fetchall()
 
@@ -139,8 +137,8 @@ class PotreroService:
         
         with db.get_cursor() as cursor:
             cursor.execute("""
-                UPDATE potrero 
+                UPDATE potrero
                 SET ocupacion = %s, updated_at = %s
-                WHERE id = %s AND deleted_at IS NULL
+                WHERE id = %s
             """, (nueva_ocupacion, datetime.now(), potrero_id))
             return PotreroService.get_by_id(potrero_id)

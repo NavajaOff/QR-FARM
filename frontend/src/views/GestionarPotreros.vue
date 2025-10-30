@@ -206,9 +206,9 @@ export default {
       try {
         this.loading = true;
         this.error = null;
-        const response = await fetch('/api/potreros/');
+        const response = await fetch('http://localhost:5000/api/potreros/');
         if (!response.ok) {
-          throw new Error('Error al cargar potreros');
+          throw new Error(`Error HTTP: ${response.status}`);
         }
         const data = await response.json();
         if (data.success) {

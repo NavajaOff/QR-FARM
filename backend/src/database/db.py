@@ -181,3 +181,11 @@ def get_connection():
 
 # Crear instancia global
 db = ConexionBaseDatos()
+
+# Alias para mantener compatibilidad con código existente
+def get_cursor(dictionary=True):
+    """Alias para db.obtener_cursor para compatibilidad."""
+    return db.obtener_cursor(dictionary)
+
+# Agregar método get_cursor a la clase para compatibilidad
+ConexionBaseDatos.get_cursor = get_cursor
