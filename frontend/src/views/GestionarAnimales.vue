@@ -168,8 +168,35 @@
               </div>
             </div>
 
+            <!-- Loading State -->
+            <div v-if="loading" class="text-center py-5">
+              <div class="spinner-border text-success" role="status">
+                <span class="visually-hidden">Cargando...</span>
+              </div>
+              <p class="mt-2 text-muted">Cargando animales...</p>
+            </div>
+
+            <!-- Error State -->
+            <div v-else-if="error" class="alert alert-danger text-center">
+              <i class="fas fa-exclamation-triangle me-2"></i>
+              {{ error }}
+              <button class="btn btn-sm btn-outline-danger ms-3" @click="cargarAnimales">
+                <i class="fas fa-redo me-1"></i>Reintentar
+              </button>
+            </div>
+
+            <!-- Empty State -->
+            <div v-else-if="animales.length === 0" class="text-center py-5">
+              <i class="fas fa-cow fa-4x text-muted mb-3"></i>
+              <h4 class="text-muted">No hay animales registrados</h4>
+              <p class="text-muted">Aún no se han creado animales en el sistema.</p>
+              <button class="btn btn-success" @click="agregarNuevoAnimal()">
+                <i class="fas fa-plus me-1"></i>Crear Primer Animal
+              </button>
+            </div>
+
             <!-- Grid de Animales -->
-            <div class="row g-4" id="gridAnimales">
+            <div v-else class="row g-4" id="gridAnimales">
               <div class="col-12 col-sm-6 col-lg-4" v-for="animal in animalesFiltrados" :key="animal.id">
                 <div class="card border-0 shadow-sm h-100">
                   <div class="card-body text-center">
@@ -192,7 +219,7 @@
             </div>
 
             <!-- Botón Agregar -->
-            <div class="text-center mt-4 mt-md-5">
+            <div v-if="animales.length > 0" class="text-center mt-4 mt-md-5">
               <button class="btn btn-success btn-lg" @click="agregarNuevoAnimal">
                 <i class="fas fa-plus me-2"></i>Agregar Nuevo Animal
               </button>
@@ -205,110 +232,65 @@
 
 </template>
 
-<script>
-export default {
-  name: "GestionarAnimales",
-  data() {
-    return {
-      busqueda: "",
-      filtroRaza: "",
-      filtroSalud: "",
-      animales: [
-        { id: "Holstein-001", nombre: "Holstein-001", raza: "Holstein", edad: 3, estado: "Saludable" },
-        { id: "Angus-002", nombre: "Angus-002", raza: "Angus", edad: 2, estado: "En Tratamiento" },
-        { id: "Jersey-003", nombre: "Jersey-003", raza: "Jersey", edad: 4, estado: "Saludable" }
-      ]
-    };
-  },
-  computed: {
-    animalesFiltrados() {
-      return this.animales.filter(a => {
-        const matchesNombre = !this.busqueda || a.nombre.toLowerCase().includes(this.busqueda.toLowerCase());
-        const matchesRaza = !this.filtroRaza || a.raza === this.filtroRaza;
-        const matchesSalud = !this.filtroSalud || a.estado === this.filtroSalud;
-        return matchesNombre && matchesRaza && matchesSalud;
-      });
-    }
-  },
-  mounted() {
-    // cargar animales desde localStorage si existen
-    const stored = localStorage.getItem("animales");
-    if (stored) {
-      try { this.animales = JSON.parse(stored); } catch(e) { /* ignore */ }
-    }
-  },
-  methods: {
-    filtrarAnimales() {
-      // el filtrado es reactivo (computed), pero dejamos la función para compatibilidad con tu HTML original
-      // Puedes usarla para hacer una petición al backend si lo necesitas.
-      console.log("Filtrar: ", this.busqueda, this.filtroRaza, this.filtroSalud);
-    },
-    verPerfilAnimal(id) {
-      const animal = this.animales.find(a => a.id === id);
-      const SwalLib = (typeof Swal !== 'undefined') ? Swal : (window.Swal || null);
-      const html = `
+<script setup>
+import { onMounted, ref, computed } from 'vue';
+import {
+  currentIndex,
+  accordionOpen,
+  animales,
+  estadosGanado,
+  personasUsuario,
+  loading,
+  error,
+  cargarDatosIniciales,
+  estadoClass,
+  iconClass,
+  verPerfilAnimal,
+  editarAnimal,
+  agregarNuevoAnimal,
+  prevAnimal,
+  nextAnimal,
+  toggleAccordion
+} from '../assets/js/gestionar_animales.js';
+
+// Variables locales para filtros
+const busqueda = ref("");
+const filtroRaza = ref("");
+const filtroSalud = ref("");
+
+// Computed para animales filtrados
+const animalesFiltrados = computed(() => {
+  return animales.value.filter(a => {
+    const matchesNombre = !busqueda.value || a.nombre.toLowerCase().includes(busqueda.value.toLowerCase());
+    const matchesRaza = !filtroRaza.value || a.raza === filtroRaza.value;
+    const matchesSalud = !filtroSalud.value || a.estado === filtroSalud.value;
+    return matchesNombre && matchesRaza && matchesSalud;
+  });
+});
+
+// Función para mostrar notificaciones
+const mostrarNotificaciones = () => {
+  const SwalLib = (typeof Swal !== 'undefined') ? Swal : (window.Swal || null);
+  if (SwalLib && SwalLib.fire) {
+    SwalLib.fire({
+      title: '<i class="fas fa-bell"></i> Notificaciones',
+      html: `
         <div class="text-start">
-          <p><strong>Código QR:</strong> ${animal?.codigoQR || 'Sin código'}</p>
-          <p><strong>Encargado:</strong> ${animal?.propietario || 'Sin encargado'}</p>
-          <p><strong>Fecha de nacimiento:</strong> ${animal?.fechaNacimiento || 'Sin dato'}</p>
-          <p><strong>Peso actual:</strong> ${animal?.pesoActual || 'Sin dato'} kg</p>
-          <p><strong>Última vacunación:</strong> ${animal?.ultimaVacunacion || 'Sin dato'}</p>
-          <p><strong>Próxima vacunación:</strong> ${animal?.proximaVacunacion || 'Sin dato'}</p>
-          <p><strong>Potrero actual:</strong> ${animal?.potreroActual || 'Sin dato'}</p>
-          <p><strong>Historial médico:</strong> ${animal?.historialMedico || 'Sin incidencias'}</p>
+          <div class="alert alert-info"><i class="fas fa-info-circle me-2"></i><strong>Recordatorio:</strong> Vacunación programada para mañana</div>
+          <div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i><strong>Alerta:</strong> Animal #125 requiere atención médica</div>
         </div>
-      `;
-      if (SwalLib && SwalLib.fire) {
-        SwalLib.fire({ title: `Perfil de ${id}`, html, confirmButtonColor: '#00d563' });
-      } else {
-        alert(`Perfil de ${id}\n\n` + (animal ? JSON.stringify(animal, null, 2) : 'No encontrado'));
-      }
-    },
-    editarAnimal(id) {
-      const SwalLib = (typeof Swal !== 'undefined') ? Swal : (window.Swal || null);
-      if (SwalLib && SwalLib.fire) {
-        SwalLib.fire('Editar', `Aquí editarías al animal ${id}`, 'info');
-      } else {
-        alert(`Editar: ${id}`);
-      }
-    },
-    agregarNuevoAnimal() {
-      const SwalLib = (typeof Swal !== 'undefined') ? Swal : (window.Swal || null);
-      if (SwalLib && SwalLib.fire) {
-        SwalLib.fire('Nuevo Animal', 'Aquí agregarías un nuevo animal', 'success');
-      } else {
-        alert('Agregar nuevo animal');
-      }
-    },
-    mostrarNotificaciones() {
-      const SwalLib = (typeof Swal !== 'undefined') ? Swal : (window.Swal || null);
-      if (SwalLib && SwalLib.fire) {
-        SwalLib.fire({
-          title: '<i class="fas fa-bell"></i> Notificaciones',
-          html: `
-            <div class="text-start">
-              <div class="alert alert-info"><i class="fas fa-info-circle me-2"></i><strong>Recordatorio:</strong> Vacunación programada para mañana</div>
-              <div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i><strong>Alerta:</strong> Animal #125 requiere atención médica</div>
-            </div>
-          `,
-          confirmButtonColor: '#00d563'
-        });
-      } else {
-        alert('Notificaciones');
-      }
-    },
-    // Helpers para clases
-    estadoClass(estado) {
-      if (estado === 'Saludable') return 'bg-success';
-      if (estado === 'En Tratamiento' || estado === 'En Tratamiento') return 'bg-warning';
-      if (estado === 'Enfermo') return 'bg-danger';
-      return 'bg-secondary';
-    },
-    iconClass(animal) {
-      return animal.estado === 'Saludable' ? 'text-success' : (animal.estado === 'En Tratamiento' ? 'text-warning' : 'text-danger');
-    }
+      `,
+      confirmButtonColor: '#00d563'
+    });
+  } else {
+    alert('Notificaciones');
   }
 };
+
+// Lifecycle
+onMounted(() => {
+  cargarDatosIniciales();
+});
 </script>
 
 <style scoped>
