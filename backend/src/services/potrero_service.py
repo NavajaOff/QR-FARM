@@ -227,14 +227,36 @@ class PotreroService:
 
     @staticmethod
     def get_estados_potrero() -> List[Dict[str, Any]]:
-        """Get all estados de potrero desde una tabla dedicada."""
+        """Get all estados de potrero desde el enum de la columna estado."""
         try:
             with db.get_cursor() as cursor:
-                cursor.execute("SELECT id, estado FROM estados_potrero ORDER BY id ASC")
-                results = cursor.fetchall()
-                return results
+                # Obtener los valores del enum de la columna estado
+                cursor.execute("""
+                    SELECT COLUMN_TYPE
+                    FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                    AND TABLE_NAME = 'potrero'
+                    AND COLUMN_NAME = 'estado'
+                """)
+                result = cursor.fetchone()
+
+                if result and result['COLUMN_TYPE']:
+                    # Extraer valores del enum, ej: enum('disponible','ocupado','limpieza')
+                    enum_str = result['COLUMN_TYPE']
+
+                    # Extraer valores entre paréntesis
+                    if '(' in enum_str and ')' in enum_str:
+                        values_str = enum_str.split('(')[1].split(')')[0]
+                        # Separar por comas y quitar comillas
+                        valores = [v.strip("'\"") for v in values_str.split(',')]
+
+                        # Retornar como lista de diccionarios
+                        return [{'id': i+1, 'estado': valor} for i, valor in enumerate(valores)]
+
+                # Retornar lista vacía si no se puede obtener del enum
+                return []
         except Exception as e:
-            print(f"Error obteniendo estados de potrero: {e}")
+            print(f"Error obteniendo estados del enum: {e}")
             return []
 
     @staticmethod
