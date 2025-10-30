@@ -98,6 +98,7 @@ export const cargarPotreros = async () => {
         area: potrero.area,
         fechaUso: potrero.fecha_ultimo_uso ? formatDate(potrero.fecha_ultimo_uso) : '',
         ultimaLimpieza: potrero.ultima_limpieza ? formatDate(potrero.ultima_limpieza) : '',
+        proximaLimpieza: potrero.proxima_limpieza ? formatDate(potrero.proxima_limpieza) : null,
         responsable: potrero.responsable_persona_id ? (personasUsuario.value.find(p => p.id == potrero.responsable_persona_id) ? `${personasUsuario.value.find(p => p.id == potrero.responsable_persona_id).primer_nombre} ${personasUsuario.value.find(p => p.id == potrero.responsable_persona_id).primer_apellido}` : `Persona ${potrero.responsable_persona_id}`) : 'No asignado',
         descripcion: potrero.descripcion || '',
         pasto: potrero.tipo_pasto_nombre || 'No definido'
@@ -291,7 +292,7 @@ export const editarPotrero = (id) => {
             ${responsableOptions}
           </select>
         </div>
-        <div class="mb-3"><label class="form-label">Próxima limpieza:</label><input type="date" id="edit_proxima_limpieza" class="form-control"></div>
+        <div class="mb-3"><label class="form-label">Próxima limpieza:</label><input type="date" id="edit_proxima_limpieza" class="form-control" value="${potrero.proximaLimpieza ? potrero.proximaLimpieza.split('/').reverse().join('-') : ''}"></div>
         <div class="mb-3"><label class="form-label">Área (m²):</label><input type="number" id="edit_area" class="form-control" value="${potrero.area || ''}" step="0.01" min="0"></div>
         <div class="mb-3"><label class="form-label">Última limpieza:</label><input type="date" id="edit_ultima_limpieza" class="form-control" value="${potrero.ultimaLimpieza ? potrero.ultimaLimpieza.split('/').reverse().join('-') : ''}"></div>
         <div class="mb-3"><label class="form-label">Descripción:</label><textarea id="edit_descripcion" class="form-control" rows="2">${potrero.descripcion || ''}</textarea></div>
@@ -312,17 +313,23 @@ export const editarPotrero = (id) => {
       const area = document.getElementById('edit_area').value;
       const descripcion = document.getElementById('edit_descripcion').value;
 
-      return {
+      const data = {
         estado,
         capacidad: capacidad ? parseInt(capacidad) : null,
         hectareas: hectareas ? parseFloat(hectareas) : null,
         ocupacion: ocupacion ? parseInt(ocupacion) : 0,
         id_tipo_pasto: id_tipo_pasto ? parseInt(id_tipo_pasto) : null,
         responsable_persona_id: responsable_persona_id ? parseInt(responsable_persona_id) : null,
-        proxima_limpieza,
         area: area ? parseFloat(area) : null,
         descripcion
       };
+
+      // Solo incluir proxima_limpieza si tiene valor
+      if (proxima_limpieza) {
+        data.proxima_limpieza = proxima_limpieza;
+      }
+
+      return data;
     }
   }).then(async (result) => {
     if (result.isConfirmed) {
