@@ -310,6 +310,7 @@ export const editarPotrero = (id) => {
       const id_tipo_pasto = document.getElementById('edit_id_tipo_pasto').value;
       const responsable_persona_id = document.getElementById('edit_responsable_persona_id').value;
       const proxima_limpieza = document.getElementById('edit_proxima_limpieza').value;
+      const ultima_limpieza = document.getElementById('edit_ultima_limpieza').value;
       const area = document.getElementById('edit_area').value;
       const descripcion = document.getElementById('edit_descripcion').value;
 
@@ -327,6 +328,11 @@ export const editarPotrero = (id) => {
       // Solo incluir proxima_limpieza si tiene valor
       if (proxima_limpieza) {
         data.proxima_limpieza = proxima_limpieza;
+      }
+
+      // Solo incluir ultima_limpieza si tiene valor
+      if (ultima_limpieza) {
+        data.ultima_limpieza = ultima_limpieza;
       }
 
       return data;
