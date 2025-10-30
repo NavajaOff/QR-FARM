@@ -98,7 +98,7 @@ export const cargarPotreros = async () => {
         area: potrero.area,
         fechaUso: potrero.fecha_ultimo_uso ? formatDate(potrero.fecha_ultimo_uso) : '',
         ultimaLimpieza: potrero.ultima_limpieza ? formatDate(potrero.ultima_limpieza) : '',
-        responsable: potrero.responsable_persona_id ? (personasUsuario.value.find(p => p[0] == potrero.responsable_persona_id) ? `${personasUsuario.value.find(p => p[0] == potrero.responsable_persona_id)[1]} ${personasUsuario.value.find(p => p[0] == potrero.responsable_persona_id)[3]}` : `Persona ${potrero.responsable_persona_id}`) : 'No asignado',
+        responsable: potrero.responsable_persona_id ? (personasUsuario.value.find(p => p.id == potrero.responsable_persona_id) ? `${personasUsuario.value.find(p => p.id == potrero.responsable_persona_id).primer_nombre} ${personasUsuario.value.find(p => p.id == potrero.responsable_persona_id).primer_apellido}` : `Persona ${potrero.responsable_persona_id}`) : 'No asignado',
         descripcion: potrero.descripcion || '',
         pasto: potrero.tipo_pasto_nombre || 'No definido'
       }));
@@ -148,12 +148,8 @@ export const crearPotrero = () => {
   // Construir opciones de responsable
   let responsableOptions = '<option value="">Seleccionar responsable</option>';
   personasUsuario.value.forEach(persona => {
-    // Acceder como array: [id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, nombre_completo]
-    const id = persona[0];
-    const primerNombre = persona[1];
-    const primerApellido = persona[3];
-    const nombreCompleto = `${primerNombre} ${primerApellido}`.trim();
-    responsableOptions += `<option value="${id}">${nombreCompleto}</option>`;
+    const nombreCompleto = `${persona.primer_nombre} ${persona.primer_apellido}`.trim();
+    responsableOptions += `<option value="${persona.id}">${nombreCompleto}</option>`;
   });
 
   Swal.fire({
@@ -175,7 +171,6 @@ export const crearPotrero = () => {
             ${pastoOptions}
           </select>
         </div>
-        <div class="mb-3"><label class="form-label">Fecha de último uso:</label><input type="date" id="fecha_ultimo_uso" class="form-control"></div>
         <div class="mb-3">
           <label class="form-label">Responsable:</label>
           <select id="responsable_persona_id" class="form-control">
@@ -184,7 +179,6 @@ export const crearPotrero = () => {
         </div>
         <div class="mb-3"><label class="form-label">Próxima limpieza:</label><input type="date" id="proxima_limpieza" class="form-control"></div>
         <div class="mb-3"><label class="form-label">Área (m²):</label><input type="number" id="area" class="form-control" placeholder="Ej: 2500" step="0.01" min="0"></div>
-        <div class="mb-3"><label class="form-label">Última limpieza:</label><input type="date" id="ultima_limpieza" class="form-control"></div>
         <div class="mb-3"><label class="form-label">Descripción:</label><textarea id="descripcion" class="form-control" rows="2" placeholder="Descripción opcional del potrero"></textarea></div>
       </form>
     `,
@@ -198,24 +192,21 @@ export const crearPotrero = () => {
       const hectareas = document.getElementById('hectareas').value;
       const ocupacion = document.getElementById('ocupacion').value;
       const id_tipo_pasto = document.getElementById('id_tipo_pasto').value;
-      const fecha_ultimo_uso = document.getElementById('fecha_ultimo_uso').value;
       const responsable_persona_id = document.getElementById('responsable_persona_id').value;
       const proxima_limpieza = document.getElementById('proxima_limpieza').value;
       const area = document.getElementById('area').value;
-      const ultima_limpieza = document.getElementById('ultima_limpieza').value;
       const descripcion = document.getElementById('descripcion').value;
 
       return {
+        nombre: null, // El backend generará el nombre automáticamente
         estado,
         capacidad: capacidad ? parseInt(capacidad) : null,
         hectareas: hectareas ? parseFloat(hectareas) : null,
         ocupacion: ocupacion ? parseInt(ocupacion) : 0,
         id_tipo_pasto: id_tipo_pasto ? parseInt(id_tipo_pasto) : null,
-        fecha_ultimo_uso,
         responsable_persona_id: responsable_persona_id ? parseInt(responsable_persona_id) : null,
         proxima_limpieza,
         area: area ? parseFloat(area) : null,
-        ultima_limpieza,
         descripcion
       };
     }
@@ -269,13 +260,9 @@ export const editarPotrero = (id) => {
   // Construir opciones de responsable con selección
   let responsableOptions = '<option value="">Seleccionar responsable</option>';
   personasUsuario.value.forEach(persona => {
-    // Acceder como array: [id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, nombre_completo]
-    const id = persona[0];
-    const primerNombre = persona[1];
-    const primerApellido = persona[3];
-    const nombreCompleto = `${primerNombre} ${primerApellido}`.trim();
+    const nombreCompleto = `${persona.primer_nombre} ${persona.primer_apellido}`.trim();
     const selected = nombreCompleto === potrero.responsable ? 'selected' : '';
-    responsableOptions += `<option value="${id}" ${selected}>${nombreCompleto}</option>`;
+    responsableOptions += `<option value="${persona.id}" ${selected}>${nombreCompleto}</option>`;
   });
 
   Swal.fire({

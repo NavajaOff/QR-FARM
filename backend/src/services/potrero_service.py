@@ -59,15 +59,15 @@ class PotreroService:
             return result
 
     @staticmethod
-    def create(data: Dict[str, Any]) -> Dict[str, Any]:
+    def create(data):
         """Create new potrero."""
         # Generar nombre automático si no se proporciona
         nombre = data.get('nombre')
-        if not nombre:
+        if nombre is None:
             with db.get_cursor() as cursor:
-                cursor.execute("SELECT COUNT(*) as count FROM potrero")
+                cursor.execute("SELECT COUNT(*) FROM potrero")
                 result = cursor.fetchone()
-                numero = result['count'] + 1
+                numero = result['COUNT(*)'] + 1
                 nombre = f"Potrero {numero}"
 
         with db.get_cursor() as cursor:
@@ -195,8 +195,8 @@ class PotreroService:
                     ORDER BY tipo_pasto
                 """)
                 results = cursor.fetchall()
-                # Convertir tuplas a diccionarios
-                return [{'id': row[0], 'tipo_pasto': row[1]} for row in results]
+                # Los resultados ya son diccionarios
+                return results
         except Exception as e:
             print(f"Error obteniendo tipos de pasto: {e}")
             return []
@@ -236,9 +236,9 @@ class PotreroService:
                 """)
                 result = cursor.fetchone()
 
-                if result and result[0]:
+                if result and result['COLUMN_TYPE']:
                     # Extraer valores del enum, ej: enum('disponible','ocupado','limpieza')
-                    enum_str = result[0]
+                    enum_str = result['COLUMN_TYPE']
                     print(f"Enum string: {enum_str}")
 
                     # Extraer valores entre paréntesis

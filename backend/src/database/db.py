@@ -77,7 +77,7 @@ class ConexionBaseDatos:
         cursor = None
         try:
             conexion = self._obtener_conexion()
-            cursor = conexion.cursor(dictionary=como_diccionario)
+            cursor = conexion.cursor(dictionary=True)  # Siempre usar dictionary=True
             yield cursor
             conexion.commit()
         except Error as e:

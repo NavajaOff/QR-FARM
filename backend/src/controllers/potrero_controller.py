@@ -63,12 +63,7 @@ class PotreroController:
                     'success': False
                 }), 400
             
-            if not data.get('nombre'):
-                return jsonify({
-                    'error': 'Datos inválidos',
-                    'message': 'El nombre es requerido',
-                    'success': False
-                }), 400
+            # El nombre puede ser null, el servicio lo generará automáticamente
                 
             potrero = PotreroService.create(data)
             return jsonify({
