@@ -86,7 +86,8 @@ export const cargarAnimales = async () => {
         estado: animal.estado_tipo || 'No definido',
         potreroActual: animal.potrero_nombre || 'Sin asignar',
         propietario: animal.persona_nombre ? `${animal.persona_primer_nombre} ${animal.persona_primer_apellido}` : 'Sin asignar',
-        edad: animal.fecha_nacimiento ? calcularEdad(animal.fecha_nacimiento) : 'No definida'
+        edad: animal.fecha_nacimiento ? calcularEdad(animal.fecha_nacimiento) : 'No definida',
+        codigo_qr: animal.codigo_qr
       }));
     } else {
       throw new Error(data.message || 'Error desconocido');
@@ -157,8 +158,13 @@ export const agregarNuevoAnimal = () => {
   // Construir opciones de estado
   let estadoOptions = '<option value="">Seleccionar estado</option>';
   estadosGanado.value.forEach(estado => {
-    estadoOptions += `<option value="${estado.id}">${estado.estado}</option>`;
+    estadoOptions += `<option value="${estado.estado}">${estado.estado}</option>`;
   });
+
+  // Construir opciones de sexo
+  let sexoOptions = '<option value="">Seleccionar sexo</option>';
+  sexoOptions += '<option value="macho">Macho</option>';
+  sexoOptions += '<option value="hembra">Hembra</option>';
 
   // Construir opciones de potrero
   let potreroOptions = '<option value="">Seleccionar potrero</option>';
@@ -183,8 +189,14 @@ export const agregarNuevoAnimal = () => {
         <div class="mb-3"><label class="form-label">Fecha de nacimiento:</label><input type="date" id="fecha_nacimiento" class="form-control" required></div>
         <div class="mb-3">
           <label class="form-label">Estado:</label>
-          <select id="id_estado" class="form-control" required>
+          <select id="estado" class="form-control" required>
             ${estadoOptions}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Sexo:</label>
+          <select id="sexo" class="form-control" required>
+            ${sexoOptions}
           </select>
         </div>
         <div class="mb-3">
@@ -210,11 +222,12 @@ export const agregarNuevoAnimal = () => {
       const peso = document.getElementById('peso').value;
       const raza = document.getElementById('raza').value;
       const fecha_nacimiento = document.getElementById('fecha_nacimiento').value;
-      const id_estado = document.getElementById('id_estado').value;
+      const estado = document.getElementById('estado').value;
+      const sexo = document.getElementById('sexo').value;
       const id_potrero = document.getElementById('id_potrero').value;
       const id_persona = document.getElementById('id_persona').value;
 
-      if (!nombre || !raza || !fecha_nacimiento || !id_estado) {
+      if (!nombre || !raza || !fecha_nacimiento || !estado || !sexo) {
         Swal.showValidationMessage('Por favor complete todos los campos requeridos');
         return false;
       }
@@ -224,7 +237,8 @@ export const agregarNuevoAnimal = () => {
         peso: peso ? parseFloat(peso) : null,
         raza,
         fecha_nacimiento,
-        id_estado: parseInt(id_estado),
+        estado,
+        sexo,
         id_potrero: id_potrero ? parseInt(id_potrero) : null,
         id_persona: id_persona ? parseInt(id_persona) : null
       };

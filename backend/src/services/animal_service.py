@@ -13,18 +13,36 @@ class GanadoService:
             
             sql = """
                 INSERT INTO ganado (
-                    codigo_qr, nombre, raza, fecha_nacimiento, edad,
-                    sexo, peso, estado, estado_salud, id_potrero, id_persona,
-                    created_at, updated_at
+                    nombre, raza, fecha_nacimiento,
+                    sexo, peso, id_estado, id_potrero, id_persona
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW()
+                    %s, %s, %s, %s, %s, %s, %s, %s
                 )
             """
 
+            # Convertir estado a ID numérico
+            estado_id = 1  # Default: activo
+            if ganado.estado.value == 'revision':
+                estado_id = 2
+            elif ganado.estado.value == 'vendido':
+                estado_id = 3
+            elif ganado.estado.value == 'muerto':
+                estado_id = 4
+
+            # Convertir fecha_nacimiento a string si es date object
+            fecha_nac = ganado.fecha_nacimiento
+            if fecha_nac and hasattr(fecha_nac, 'isoformat'):
+                fecha_nac = fecha_nac.isoformat()
+            elif isinstance(fecha_nac, str):
+                # Si ya es string, mantenerlo
+                pass
+            else:
+                fecha_nac = None
+
             values = (
-                ganado.codigo_qr, ganado.nombre, ganado.raza,
-                ganado.fecha_nacimiento, ganado.edad, ganado.sexo.value,
-                ganado.peso, ganado.estado.value, ganado.estado_salud,
+                ganado.nombre, ganado.raza,
+                fecha_nac, ganado.sexo.value,
+                ganado.peso, estado_id,
                 ganado.id_potrero, ganado.id_persona
             )
             
@@ -208,11 +226,24 @@ class GanadoService:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
-            cursor.execute("SELECT * FROM ganado")
+            cursor.execute("""
+                SELECT g.*,
+                       eg.tipo_estado as estado_tipo,
+                       p.nombre as potrero_nombre,
+                       per.primer_nombre as persona_primer_nombre,
+                       per.primer_apellido as persona_primer_apellido,
+                       qr.codigo_qr
+                FROM ganado g
+                LEFT JOIN estado_ganado eg ON g.id_estado = eg.id
+                LEFT JOIN potrero p ON g.id_potrero = p.id
+                LEFT JOIN personas per ON g.id_persona = per.id
+                LEFT JOIN qr ON g.id = qr.id_ganado
+                ORDER BY g.id DESC
+            """)
             results = cursor.fetchall()
 
             return [Ganado.from_dict(result) for result in results]
-            
+
         except Exception as e:
             print(f"Error al obtener animales: {e}")
             return []

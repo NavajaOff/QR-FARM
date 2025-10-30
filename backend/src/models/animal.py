@@ -7,6 +7,7 @@ class EstadoGanado(str, Enum):
     ACTIVO = 'activo'
     VENDIDO = 'vendido'
     MUERTO = 'muerto'
+    REVISION = 'revision'
 
 class SexoGanado(str, Enum):
     MACHO = 'macho'
@@ -71,6 +72,13 @@ class Ganado:
         """
         Convierte la instancia de Ganado a un diccionario
         """
+        from datetime import datetime
+
+        def safe_isoformat(date_value):
+            if isinstance(date_value, datetime):
+                return date_value.isoformat()
+            return date_value
+
         return {
             'id': self.id,
             'codigo_qr': self.codigo_qr,
@@ -78,12 +86,12 @@ class Ganado:
             'id_persona': self.id_persona,
             'nombre': self.nombre,
             'raza': self.raza,
-            'fecha_nacimiento': self.fecha_nacimiento.isoformat() if self.fecha_nacimiento else None,
+            'fecha_nacimiento': safe_isoformat(self.fecha_nacimiento),
             'edad': self.edad,
             'sexo': self.sexo.value,
             'peso': self.peso,
             'estado': self.estado.value,
             'estado_salud': self.estado_salud,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'created_at': safe_isoformat(self.created_at),
+            'updated_at': safe_isoformat(self.updated_at)
         }
