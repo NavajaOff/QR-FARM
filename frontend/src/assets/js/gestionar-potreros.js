@@ -307,11 +307,9 @@ export const editarPotrero = (id) => {
       const hectareas = document.getElementById('edit_hectareas').value;
       const ocupacion = document.getElementById('edit_ocupacion').value;
       const id_tipo_pasto = document.getElementById('edit_id_tipo_pasto').value;
-      const fecha_ultimo_uso = document.getElementById('edit_fecha_ultimo_uso').value;
       const responsable_persona_id = document.getElementById('edit_responsable_persona_id').value;
       const proxima_limpieza = document.getElementById('edit_proxima_limpieza').value;
       const area = document.getElementById('edit_area').value;
-      const ultima_limpieza = document.getElementById('edit_ultima_limpieza').value;
       const descripcion = document.getElementById('edit_descripcion').value;
 
       return {
@@ -320,11 +318,9 @@ export const editarPotrero = (id) => {
         hectareas: hectareas ? parseFloat(hectareas) : null,
         ocupacion: ocupacion ? parseInt(ocupacion) : 0,
         id_tipo_pasto: id_tipo_pasto ? parseInt(id_tipo_pasto) : null,
-        fecha_ultimo_uso,
         responsable_persona_id: responsable_persona_id ? parseInt(responsable_persona_id) : null,
         proxima_limpieza,
         area: area ? parseFloat(area) : null,
-        ultima_limpieza,
         descripcion
       };
     }
