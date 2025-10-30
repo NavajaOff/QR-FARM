@@ -155,7 +155,7 @@
                   </div>
                   <div class="row g-3 mb-3">
                     <div class="col-6"><strong>Ocupación:</strong> {{ potreros[currentIndex].ocupacion }} Animales</div>
-                    <div class="col-6"><strong>Tipo de pasto:</strong> {{ potreros[currentIndex].pasto || 'No definido' }}</div>
+                    <div class="col-6"><strong>Hectáreas:</strong> {{ potreros[currentIndex].hectareas || 'No definida' }} ha</div>
                   </div>
                   <div class="row g-3 mb-3">
                     <div class="col-6"><strong>Fecha de último uso:</strong> {{ potreros[currentIndex].fechaUso || 'No registrada' }}</div>
@@ -165,8 +165,11 @@
                     <div class="col-12"><strong>Próxima limpieza:</strong> <input type="date" class="form-control d-inline-block w-auto" style="min-width:150px;"></div>
                   </div>
                   <div class="row g-3 mb-3">
-                    <div class="col-6"><strong>Área:</strong> {{ potreros[currentIndex].area || 'No definida' }} ha</div>
+                    <div class="col-6"><strong>Área:</strong> {{ potreros[currentIndex].area || 'No definida' }} m²</div>
                     <div class="col-6"><strong>Última limpieza:</strong> {{ potreros[currentIndex].ultimaLimpieza || 'No registrada' }}</div>
+                  </div>
+                  <div class="row g-3 mb-3" v-if="potreros[currentIndex].descripcion">
+                    <div class="col-12"><strong>Descripción:</strong> {{ potreros[currentIndex].descripcion }}</div>
                   </div>
                   <div class="d-flex gap-2 justify-content-center">
                     <button class="btn btn-primary" @click="editarPotrero(potreros[currentIndex].id)"><i class="fas fa-edit me-1"></i>Editar</button>
@@ -194,18 +197,115 @@ export default {
       currentIndex: 0,
       accordionOpen: true,
       potreros: [],
+      tiposPasto: [],
+      estadosPotrero: [],
+      personasUsuario: [],
       loading: true,
       error: null
     };
   },
   async mounted() {
-    await this.cargarPotreros();
+    await this.cargarDatosIniciales();
   },
   methods: {
-    async cargarPotreros() {
+    async cargarDatosIniciales() {
       try {
         this.loading = true;
         this.error = null;
+  
+        // Cargar tipos de pasto, estados y personas primero
+        await Promise.all([
+          this.cargarTiposPasto(),
+          this.cargarEstadosPotrero(),
+          this.cargarPersonasUsuario()
+        ]);
+  
+        // Luego cargar potreros
+        await this.cargarPotreros();
+      } catch (error) {
+        this.error = error.message;
+        console.error('Error cargando datos iniciales:', error);
+        this.loading = false;
+      }
+    },
+
+    async cargarTiposPasto() {
+      try {
+        const response = await fetch('http://localhost:5000/api/potreros/tipos-pasto');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data.length > 0) {
+            this.tiposPasto = data.data;
+          } else {
+            // Fallback a hardcodeados si no hay datos
+            this.tiposPasto = [
+              { id: 1, nombre: 'Kikuyo' },
+              { id: 2, nombre: 'Braquiaria' },
+              { id: 3, nombre: 'Festuca' },
+              { id: 4, nombre: 'Ray Grass' },
+              { id: 5, nombre: 'Pastura Mixta' }
+            ];
+          }
+        } else {
+          // Fallback a hardcodeados si falla la API
+          this.tiposPasto = [
+            { id: 1, nombre: 'Kikuyo' },
+            { id: 2, nombre: 'Braquiaria' },
+            { id: 3, nombre: 'Festuca' },
+            { id: 4, nombre: 'Ray Grass' },
+            { id: 5, nombre: 'Pastura Mixta' }
+          ];
+        }
+      } catch (error) {
+        console.error('Error cargando tipos de pasto:', error);
+        // Fallback a hardcodeados si hay error
+        this.tiposPasto = [
+          { id: 1, nombre: 'Kikuyo' },
+          { id: 2, nombre: 'Braquiaria' },
+          { id: 3, nombre: 'Festuca' },
+          { id: 4, nombre: 'Ray Grass' },
+          { id: 5, nombre: 'Pastura Mixta' }
+        ];
+      }
+    },
+
+    async cargarEstadosPotrero() {
+      try {
+        const response = await fetch('http://localhost:5000/api/potreros/estados');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            this.estadosPotrero = data.data;
+          }
+        }
+      } catch (error) {
+        console.error('Error cargando estados de potrero:', error);
+        // Fallback a valores hardcodeados
+        this.estadosPotrero = [
+          { id: 1, nombre: 'disponible' },
+          { id: 2, nombre: 'ocupado' },
+          { id: 3, nombre: 'limpieza' }
+        ];
+      }
+    },
+
+    async cargarPersonasUsuario() {
+      try {
+        const response = await fetch('http://localhost:5000/api/potreros/personas-usuario');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            this.personasUsuario = data.data;
+          }
+        }
+      } catch (error) {
+        console.error('Error cargando personas usuario:', error);
+        this.personasUsuario = [];
+      }
+    },
+
+    async cargarPotreros() {
+      try {
         const response = await fetch('http://localhost:5000/api/potreros/');
         if (!response.ok) {
           throw new Error(`Error HTTP: ${response.status}`);
@@ -215,14 +315,15 @@ export default {
           this.potreros = data.data.map(potrero => ({
             id: potrero.id,
             nombre: potrero.nombre,
-            estado: this.mapEstado(potrero.estado),
+            estado: potrero.estado,
             capacidad: potrero.capacidad,
             ocupacion: potrero.ocupacion,
-            pasto: potrero.tipo_pasto,
+            hectareas: potrero.hectareas,
             area: potrero.area,
             fechaUso: potrero.fecha_ultimo_uso ? this.formatDate(potrero.fecha_ultimo_uso) : '',
             ultimaLimpieza: potrero.ultima_limpieza ? this.formatDate(potrero.ultima_limpieza) : '',
-            responsable: potrero.responsable_persona_id ? `Persona ${potrero.responsable_persona_id}` : 'No asignado'
+            responsable: potrero.responsable_persona_id ? `Persona ${potrero.responsable_persona_id}` : 'No asignado',
+            descripcion: potrero.descripcion || ''
           }));
         } else {
           throw new Error(data.message || 'Error desconocido');
@@ -263,64 +364,93 @@ export default {
         title: '<i class="fas fa-plus"></i> Crear Nuevo Potrero',
         html: `
           <form class="text-start">
-            <div class="mb-3"><label class="form-label">Nombre:</label><input type="text" id="nombre" class="form-control" placeholder="Ej: Potrero 4" required></div>
             <div class="mb-3">
               <label class="form-label">Estado:</label>
               <select id="estado" class="form-control">
-                <option value="disponible">Disponible</option>
-                <option value="en_uso">En uso</option>
-                <option value="mantenimiento">Mantenimiento</option>
-                <option value="inactivo">Inactivo</option>
+                <option v-for="estado in estadosPotrero" :key="estado.id" :value="estado.nombre">{{ estado.nombre }}</option>
               </select>
             </div>
             <div class="mb-3"><label class="form-label">Capacidad:</label><input type="number" id="capacidad" class="form-control" placeholder="Ej: 25" min="0"></div>
+            <div class="mb-3"><label class="form-label">Hectáreas:</label><input type="number" id="hectareas" class="form-control" placeholder="Ej: 2.5" step="0.01" min="0"></div>
             <div class="mb-3"><label class="form-label">Ocupación:</label><input type="number" id="ocupacion" class="form-control" placeholder="Ej: 0" min="0" value="0"></div>
-            <div class="mb-3"><label class="form-label">Tipo de pasto:</label><input type="text" id="tipo_pasto" class="form-control" placeholder="Ej: Kikuyo"></div>
+            <div class="mb-3">
+              <label class="form-label">Tipo de pasto:</label>
+              <select id="id_tipo_pasto" class="form-control">
+                <option value="">Seleccionar tipo de pasto</option>
+                <option v-for="tipo in tiposPasto" :key="tipo.id" :value="tipo.id">{{ tipo.nombre }}</option>
+              </select>
+            </div>
             <div class="mb-3"><label class="form-label">Fecha de último uso:</label><input type="date" id="fecha_ultimo_uso" class="form-control"></div>
-            <div class="mb-3"><label class="form-label">Responsable:</label><input type="text" id="responsable" class="form-control" placeholder="Ej: Juan Pérez"></div>
+            <div class="mb-3">
+              <label class="form-label">Responsable:</label>
+              <select id="responsable_persona_id" class="form-control">
+                <option value="">Seleccionar responsable</option>
+                <option v-for="persona in personasUsuario" :key="persona.id" :value="persona.id">{{ persona.nombre_completo }}</option>
+              </select>
+            </div>
             <div class="mb-3"><label class="form-label">Próxima limpieza:</label><input type="date" id="proxima_limpieza" class="form-control"></div>
-            <div class="mb-3"><label class="form-label">Área:</label><input type="number" id="area" class="form-control" placeholder="Ej: 2.5" step="0.01" min="0"></div>
+            <div class="mb-3"><label class="form-label">Área (m²):</label><input type="number" id="area" class="form-control" placeholder="Ej: 2500" step="0.01" min="0"></div>
             <div class="mb-3"><label class="form-label">Última limpieza:</label><input type="date" id="ultima_limpieza" class="form-control"></div>
+            <div class="mb-3"><label class="form-label">Descripción:</label><textarea id="descripcion" class="form-control" rows="2" placeholder="Descripción opcional del potrero"></textarea></div>
           </form>
         `,
         showCancelButton: true,
         confirmButtonText: 'Agregar',
         confirmButtonColor: '#00d563',
         preConfirm: () => {
-          const nombre = document.getElementById('nombre').value;
           const estado = document.getElementById('estado').value;
           const capacidad = document.getElementById('capacidad').value;
+          const hectareas = document.getElementById('hectareas').value;
           const ocupacion = document.getElementById('ocupacion').value;
-          const tipo_pasto = document.getElementById('tipo_pasto').value;
+          const id_tipo_pasto = document.getElementById('id_tipo_pasto').value;
           const fecha_ultimo_uso = document.getElementById('fecha_ultimo_uso').value;
-          const responsable = document.getElementById('responsable').value;
+          const responsable_persona_id = document.getElementById('responsable_persona_id').value;
           const proxima_limpieza = document.getElementById('proxima_limpieza').value;
           const area = document.getElementById('area').value;
           const ultima_limpieza = document.getElementById('ultima_limpieza').value;
-
-          if (!nombre) {
-            Swal.showValidationMessage('El nombre es requerido');
-            return false;
-          }
+          const descripcion = document.getElementById('descripcion').value;
 
           return {
-            nombre,
             estado,
             capacidad: capacidad ? parseInt(capacidad) : null,
+            hectareas: hectareas ? parseFloat(hectareas) : null,
             ocupacion: ocupacion ? parseInt(ocupacion) : 0,
-            tipo_pasto,
+            id_tipo_pasto: id_tipo_pasto ? parseInt(id_tipo_pasto) : null,
             fecha_ultimo_uso,
-            responsable,
+            responsable_persona_id: responsable_persona_id ? parseInt(responsable_persona_id) : null,
             proxima_limpieza,
             area: area ? parseFloat(area) : null,
-            ultima_limpieza
+            ultima_limpieza,
+            descripcion
           };
         }
-      }).then((result) => {
+      }).then(async (result) => {
         if (result.isConfirmed) {
-          // Aquí se enviaría al backend
-          console.log('Datos del nuevo potrero:', result.value);
-          // Agregar lógica para enviar al backend
+          try {
+            const response = await fetch('http://localhost:5000/api/potreros/', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(result.value)
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              if (data.success) {
+                Swal.fire('¡Éxito!', 'Potrero creado correctamente', 'success');
+                await this.cargarPotreros(); // Recargar la lista
+              } else {
+                throw new Error(data.message || 'Error desconocido');
+              }
+            } else {
+              const errorData = await response.json();
+              throw new Error(errorData.message || `Error HTTP: ${response.status}`);
+            }
+          } catch (error) {
+            console.error('Error creando potrero:', error);
+            Swal.fire('Error', error.message, 'error');
+          }
         }
       });
     },
@@ -332,65 +462,93 @@ export default {
         title: `<i class="fas fa-edit"></i> Editar Potrero: ${potrero.nombre}`,
         html: `
           <form class="text-start">
-            <div class="mb-3"><label class="form-label">Nombre:</label><input type="text" id="edit_nombre" class="form-control" value="${potrero.nombre}" required></div>
             <div class="mb-3">
               <label class="form-label">Estado:</label>
               <select id="edit_estado" class="form-control">
-                <option value="disponible" ${potrero.estado === 'Disponible' ? 'selected' : ''}>Disponible</option>
-                <option value="en_uso" ${potrero.estado === 'En uso' ? 'selected' : ''}>En uso</option>
-                <option value="mantenimiento" ${potrero.estado === 'Mantenimiento' ? 'selected' : ''}>Mantenimiento</option>
-                <option value="inactivo" ${potrero.estado === 'Inactivo' ? 'selected' : ''}>Inactivo</option>
+                <option v-for="estado in estadosPotrero" :key="estado.id" :value="estado.nombre" :selected="estado.nombre === potrero.estado">{{ estado.nombre }}</option>
               </select>
             </div>
-            <div class="mb-3"><label class="form-label">Capacidad:</label><input type="number" id="edit_capacidad" class="form-control" value="${potrero.capacidad}" min="0"></div>
-            <div class="mb-3"><label class="form-label">Ocupación:</label><input type="number" id="edit_ocupacion" class="form-control" value="${potrero.ocupacion}" min="0"></div>
-            <div class="mb-3"><label class="form-label">Tipo de pasto:</label><input type="text" id="edit_tipo_pasto" class="form-control" value="${potrero.pasto}"></div>
+            <div class="mb-3"><label class="form-label">Capacidad:</label><input type="number" id="edit_capacidad" class="form-control" value="${potrero.capacidad || ''}" min="0"></div>
+            <div class="mb-3"><label class="form-label">Hectáreas:</label><input type="number" id="edit_hectareas" class="form-control" value="${potrero.hectareas || ''}" step="0.01" min="0"></div>
+            <div class="mb-3"><label class="form-label">Ocupación:</label><input type="number" id="edit_ocupacion" class="form-control" value="${potrero.ocupacion || 0}" min="0"></div>
+            <div class="mb-3">
+              <label class="form-label">Tipo de pasto:</label>
+              <select id="edit_id_tipo_pasto" class="form-control">
+                <option value="">Seleccionar tipo de pasto</option>
+                <option v-for="tipo in tiposPasto" :key="tipo.id" :value="tipo.id" :selected="tipo.nombre === potrero.pasto">{{ tipo.nombre }}</option>
+              </select>
+            </div>
             <div class="mb-3"><label class="form-label">Fecha de último uso:</label><input type="date" id="edit_fecha_ultimo_uso" class="form-control" value="${potrero.fechaUso ? potrero.fechaUso.split('/').reverse().join('-') : ''}"></div>
-            <div class="mb-3"><label class="form-label">Responsable:</label><input type="text" id="edit_responsable" class="form-control" value="${potrero.responsable}"></div>
+            <div class="mb-3">
+              <label class="form-label">Responsable:</label>
+              <select id="edit_responsable_persona_id" class="form-control">
+                <option value="">Seleccionar responsable</option>
+                <option v-for="persona in personasUsuario" :key="persona.id" :value="persona.id" :selected="persona.nombre_completo === potrero.responsable">{{ persona.nombre_completo }}</option>
+              </select>
+            </div>
             <div class="mb-3"><label class="form-label">Próxima limpieza:</label><input type="date" id="edit_proxima_limpieza" class="form-control"></div>
-            <div class="mb-3"><label class="form-label">Área:</label><input type="number" id="edit_area" class="form-control" value="${potrero.area}" step="0.01" min="0"></div>
+            <div class="mb-3"><label class="form-label">Área (m²):</label><input type="number" id="edit_area" class="form-control" value="${potrero.area || ''}" step="0.01" min="0"></div>
             <div class="mb-3"><label class="form-label">Última limpieza:</label><input type="date" id="edit_ultima_limpieza" class="form-control" value="${potrero.ultimaLimpieza ? potrero.ultimaLimpieza.split('/').reverse().join('-') : ''}"></div>
+            <div class="mb-3"><label class="form-label">Descripción:</label><textarea id="edit_descripcion" class="form-control" rows="2">${potrero.descripcion || ''}</textarea></div>
           </form>
         `,
         showCancelButton: true,
         confirmButtonText: 'Actualizar',
         confirmButtonColor: '#00d563',
         preConfirm: () => {
-          const nombre = document.getElementById('edit_nombre').value;
           const estado = document.getElementById('edit_estado').value;
           const capacidad = document.getElementById('edit_capacidad').value;
+          const hectareas = document.getElementById('edit_hectareas').value;
           const ocupacion = document.getElementById('edit_ocupacion').value;
-          const tipo_pasto = document.getElementById('edit_tipo_pasto').value;
+          const id_tipo_pasto = document.getElementById('edit_id_tipo_pasto').value;
           const fecha_ultimo_uso = document.getElementById('edit_fecha_ultimo_uso').value;
-          const responsable = document.getElementById('edit_responsable').value;
+          const responsable_persona_id = document.getElementById('edit_responsable_persona_id').value;
           const proxima_limpieza = document.getElementById('edit_proxima_limpieza').value;
           const area = document.getElementById('edit_area').value;
           const ultima_limpieza = document.getElementById('edit_ultima_limpieza').value;
-
-          if (!nombre) {
-            Swal.showValidationMessage('El nombre es requerido');
-            return false;
-          }
+          const descripcion = document.getElementById('edit_descripcion').value;
 
           return {
-            id,
-            nombre,
             estado,
             capacidad: capacidad ? parseInt(capacidad) : null,
+            hectareas: hectareas ? parseFloat(hectareas) : null,
             ocupacion: ocupacion ? parseInt(ocupacion) : 0,
-            tipo_pasto,
+            id_tipo_pasto: id_tipo_pasto ? parseInt(id_tipo_pasto) : null,
             fecha_ultimo_uso,
-            responsable,
+            responsable_persona_id: responsable_persona_id ? parseInt(responsable_persona_id) : null,
             proxima_limpieza,
             area: area ? parseFloat(area) : null,
-            ultima_limpieza
+            ultima_limpieza,
+            descripcion
           };
         }
-      }).then((result) => {
+      }).then(async (result) => {
         if (result.isConfirmed) {
-          // Aquí se enviaría al backend
-          console.log('Datos actualizados del potrero:', result.value);
-          // Agregar lógica para enviar al backend
+          try {
+            const response = await fetch(`http://localhost:5000/api/potreros/${id}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(result.value)
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              if (data.success) {
+                Swal.fire('¡Éxito!', 'Potrero actualizado correctamente', 'success');
+                await this.cargarPotreros(); // Recargar la lista
+              } else {
+                throw new Error(data.message || 'Error desconocido');
+              }
+            } else {
+              const errorData = await response.json();
+              throw new Error(errorData.message || `Error HTTP: ${response.status}`);
+            }
+          } catch (error) {
+            console.error('Error actualizando potrero:', error);
+            Swal.fire('Error', error.message, 'error');
+          }
         }
       });
     },

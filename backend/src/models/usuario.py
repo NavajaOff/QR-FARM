@@ -137,6 +137,7 @@ class Usuario:
         """Verifica si la contrasena proporcionada coincide"""
         if self.contrasena is None:
             return False
+        # Comparación directa sin hash (según estructura BD actual)
         return self.contrasena == password
 
     @staticmethod

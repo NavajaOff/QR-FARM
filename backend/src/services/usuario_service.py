@@ -712,6 +712,7 @@ class UsuarioService:
     @staticmethod
     def autenticar_usuario(email: str, password: str) -> Optional[Usuario]:
         try:
+            # Buscar usuario por email en la base de datos
             usuario = UsuarioService.buscar_por_email(email)
             if usuario and usuario.check_password(password) and usuario.estado == EstadoUsuario.ACTIVO:
                 return usuario

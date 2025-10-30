@@ -196,10 +196,10 @@ class PotreroController:
                     'message': 'El campo delta es requerido y debe ser un número',
                     'success': False
                 }), 400
-                
+
             delta = int(data['delta'])
             potrero = PotreroService.actualizar_ocupacion(potrero_id, delta)
-            
+
             return jsonify({
                 'data': potrero,
                 'message': 'Ocupación actualizada correctamente',
@@ -211,6 +211,82 @@ class PotreroController:
                 'message': str(e),
                 'success': False
             }), 400
+        except DatabaseError as e:
+            return jsonify({
+                'error': 'Error de base de datos',
+                'message': str(e),
+                'success': False
+            }), 500
+        except Exception as e:
+            return jsonify({
+                'error': 'Error interno del servidor',
+                'message': str(e),
+                'success': False
+            }), 500
+
+    @staticmethod
+    def get_tipos_pasto() -> Tuple[Any, int]:
+        """Get tipos de pasto endpoint."""
+        try:
+            tipos_pasto = PotreroService.get_tipos_pasto()
+            return jsonify({'data': tipos_pasto, 'success': True}), 200
+        except DatabaseError as e:
+            return jsonify({
+                'error': 'Error de base de datos',
+                'message': str(e),
+                'success': False
+            }), 500
+        except Exception as e:
+            return jsonify({
+                'error': 'Error interno del servidor',
+                'message': str(e),
+                'success': False
+            }), 500
+
+    @staticmethod
+    def get_personas_usuario() -> Tuple[Any, int]:
+        """Get personas usuario endpoint."""
+        try:
+            personas = PotreroService.get_personas_usuario()
+            return jsonify({'data': personas, 'success': True}), 200
+        except DatabaseError as e:
+            return jsonify({
+                'error': 'Error de base de datos',
+                'message': str(e),
+                'success': False
+            }), 500
+        except Exception as e:
+            return jsonify({
+                'error': 'Error interno del servidor',
+                'message': str(e),
+                'success': False
+            }), 500
+
+    @staticmethod
+    def get_estados_potrero() -> Tuple[Any, int]:
+        """Get estados de potrero endpoint."""
+        try:
+            estados = PotreroService.get_estados_potrero()
+            return jsonify({'data': estados, 'success': True}), 200
+        except DatabaseError as e:
+            return jsonify({
+                'error': 'Error de base de datos',
+                'message': str(e),
+                'success': False
+            }), 500
+        except Exception as e:
+            return jsonify({
+                'error': 'Error interno del servidor',
+                'message': str(e),
+                'success': False
+            }), 500
+
+    @staticmethod
+    def get_estados_ganado() -> Tuple[Any, int]:
+        """Get estados de ganado endpoint."""
+        try:
+            estados = PotreroService.get_estados_ganado()
+            return jsonify({'data': estados, 'success': True}), 200
         except DatabaseError as e:
             return jsonify({
                 'error': 'Error de base de datos',
