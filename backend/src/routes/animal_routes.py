@@ -12,5 +12,6 @@ ganado_bp.route('/<int:id>', methods=['PUT'])(GanadoController.actualizar_ganado
 ganado_bp.route('/<int:id>', methods=['DELETE'])(GanadoController.eliminar_ganado)
 
 # Rutas adicionales
+ganado_bp.route('/estados', methods=['GET'])(GanadoController.obtener_estados_ganado)
 ganado_bp.route('/potrero/<int:potrero_id>', methods=['GET'])(GanadoController.obtener_ganados_por_potrero)
 ganado_bp.route('/qr/<string:codigo_qr>', methods=['GET'])(GanadoController.buscar_por_codigo_qr)

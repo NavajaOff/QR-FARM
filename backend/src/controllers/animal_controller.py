@@ -73,6 +73,22 @@ class GanadoController:
             }), 500
 
     @staticmethod
+    def obtener_estados_ganado():
+        try:
+            from ..services.animal_service import GanadoService
+            estados = GanadoService.obtener_estados_ganado()
+            return jsonify({
+                'status': 'success',
+                'data': estados
+            }), 200
+
+        except Exception as e:
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
+
+    @staticmethod
     def actualizar_ganado(id):
         try:
             data = request.get_json()

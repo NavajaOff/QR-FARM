@@ -320,3 +320,21 @@ class GanadoService:
         finally:
             if 'conn' in locals():
                 conn.close()
+
+    @staticmethod
+    def obtener_estados_ganado() -> List[dict]:
+        try:
+            conn = get_connection()
+            cursor = conn.cursor(dictionary=True)
+
+            cursor.execute("SELECT id, tipo_estado FROM estado_ganado ORDER BY tipo_estado")
+            results = cursor.fetchall()
+
+            return results
+
+        except Exception as e:
+            print(f"Error al obtener estados de ganado: {e}")
+            return []
+        finally:
+            if 'conn' in locals():
+                conn.close()
