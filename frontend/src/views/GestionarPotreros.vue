@@ -185,18 +185,136 @@ export default {
         title: '<i class="fas fa-plus"></i> Crear Nuevo Potrero',
         html: `
           <form class="text-start">
-            <div class="mb-3"><label class="form-label">Nombre:</label><input type="text" class="form-control" placeholder="Ej: Potrero 4"></div>
-            <div class="mb-3"><label class="form-label">Capacidad:</label><input type="number" class="form-control" placeholder="Ej: 25"></div>
-            <div class="mb-3"><label class="form-label">Tipo de pasto:</label><input type="text" class="form-control" placeholder="Ej: Kikuyo"></div>
+            <div class="mb-3"><label class="form-label">Nombre:</label><input type="text" id="nombre" class="form-control" placeholder="Ej: Potrero 4" required></div>
+            <div class="mb-3">
+              <label class="form-label">Estado:</label>
+              <select id="estado" class="form-control">
+                <option value="disponible">Disponible</option>
+                <option value="en_uso">En uso</option>
+                <option value="mantenimiento">Mantenimiento</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </div>
+            <div class="mb-3"><label class="form-label">Capacidad:</label><input type="number" id="capacidad" class="form-control" placeholder="Ej: 25" min="0"></div>
+            <div class="mb-3"><label class="form-label">Ocupación:</label><input type="number" id="ocupacion" class="form-control" placeholder="Ej: 0" min="0" value="0"></div>
+            <div class="mb-3"><label class="form-label">Tipo de pasto:</label><input type="text" id="tipo_pasto" class="form-control" placeholder="Ej: Kikuyo"></div>
+            <div class="mb-3"><label class="form-label">Fecha de último uso:</label><input type="date" id="fecha_ultimo_uso" class="form-control"></div>
+            <div class="mb-3"><label class="form-label">Responsable:</label><input type="text" id="responsable" class="form-control" placeholder="Ej: Juan Pérez"></div>
+            <div class="mb-3"><label class="form-label">Próxima limpieza:</label><input type="date" id="proxima_limpieza" class="form-control"></div>
+            <div class="mb-3"><label class="form-label">Área:</label><input type="number" id="area" class="form-control" placeholder="Ej: 2.5" step="0.01" min="0"></div>
+            <div class="mb-3"><label class="form-label">Última limpieza:</label><input type="date" id="ultima_limpieza" class="form-control"></div>
           </form>
         `,
         showCancelButton: true,
         confirmButtonText: 'Agregar',
-        confirmButtonColor: '#00d563'
+        confirmButtonColor: '#00d563',
+        preConfirm: () => {
+          const nombre = document.getElementById('nombre').value;
+          const estado = document.getElementById('estado').value;
+          const capacidad = document.getElementById('capacidad').value;
+          const ocupacion = document.getElementById('ocupacion').value;
+          const tipo_pasto = document.getElementById('tipo_pasto').value;
+          const fecha_ultimo_uso = document.getElementById('fecha_ultimo_uso').value;
+          const responsable = document.getElementById('responsable').value;
+          const proxima_limpieza = document.getElementById('proxima_limpieza').value;
+          const area = document.getElementById('area').value;
+          const ultima_limpieza = document.getElementById('ultima_limpieza').value;
+
+          if (!nombre) {
+            Swal.showValidationMessage('El nombre es requerido');
+            return false;
+          }
+
+          return {
+            nombre,
+            estado,
+            capacidad: capacidad ? parseInt(capacidad) : null,
+            ocupacion: ocupacion ? parseInt(ocupacion) : 0,
+            tipo_pasto,
+            fecha_ultimo_uso,
+            responsable,
+            proxima_limpieza,
+            area: area ? parseFloat(area) : null,
+            ultima_limpieza
+          };
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Aquí se enviaría al backend
+          console.log('Datos del nuevo potrero:', result.value);
+          // Agregar lógica para enviar al backend
+        }
       });
     },
     editarPotrero(id) {
-      Swal.fire({ title: `<i class="fas fa-edit"></i> Editar Potrero ${id}`, html: '<p>Aquí se podría editar el potrero seleccionado</p>', icon: 'info', confirmButtonColor: '#00d563' });
+      const potrero = this.potreros.find(p => p.id === id);
+      if (!potrero) return;
+
+      Swal.fire({
+        title: `<i class="fas fa-edit"></i> Editar Potrero: ${potrero.nombre}`,
+        html: `
+          <form class="text-start">
+            <div class="mb-3"><label class="form-label">Nombre:</label><input type="text" id="edit_nombre" class="form-control" value="${potrero.nombre}" required></div>
+            <div class="mb-3">
+              <label class="form-label">Estado:</label>
+              <select id="edit_estado" class="form-control">
+                <option value="disponible" ${potrero.estado === 'Disponible' ? 'selected' : ''}>Disponible</option>
+                <option value="en_uso" ${potrero.estado === 'En uso' ? 'selected' : ''}>En uso</option>
+                <option value="mantenimiento" ${potrero.estado === 'Mantenimiento' ? 'selected' : ''}>Mantenimiento</option>
+                <option value="inactivo" ${potrero.estado === 'Inactivo' ? 'selected' : ''}>Inactivo</option>
+              </select>
+            </div>
+            <div class="mb-3"><label class="form-label">Capacidad:</label><input type="number" id="edit_capacidad" class="form-control" value="${potrero.capacidad}" min="0"></div>
+            <div class="mb-3"><label class="form-label">Ocupación:</label><input type="number" id="edit_ocupacion" class="form-control" value="${potrero.ocupacion}" min="0"></div>
+            <div class="mb-3"><label class="form-label">Tipo de pasto:</label><input type="text" id="edit_tipo_pasto" class="form-control" value="${potrero.pasto}"></div>
+            <div class="mb-3"><label class="form-label">Fecha de último uso:</label><input type="date" id="edit_fecha_ultimo_uso" class="form-control" value="${potrero.fechaUso ? potrero.fechaUso.split('/').reverse().join('-') : ''}"></div>
+            <div class="mb-3"><label class="form-label">Responsable:</label><input type="text" id="edit_responsable" class="form-control" value="${potrero.responsable}"></div>
+            <div class="mb-3"><label class="form-label">Próxima limpieza:</label><input type="date" id="edit_proxima_limpieza" class="form-control"></div>
+            <div class="mb-3"><label class="form-label">Área:</label><input type="number" id="edit_area" class="form-control" value="${potrero.area}" step="0.01" min="0"></div>
+            <div class="mb-3"><label class="form-label">Última limpieza:</label><input type="date" id="edit_ultima_limpieza" class="form-control" value="${potrero.ultimaLimpieza ? potrero.ultimaLimpieza.split('/').reverse().join('-') : ''}"></div>
+          </form>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Actualizar',
+        confirmButtonColor: '#00d563',
+        preConfirm: () => {
+          const nombre = document.getElementById('edit_nombre').value;
+          const estado = document.getElementById('edit_estado').value;
+          const capacidad = document.getElementById('edit_capacidad').value;
+          const ocupacion = document.getElementById('edit_ocupacion').value;
+          const tipo_pasto = document.getElementById('edit_tipo_pasto').value;
+          const fecha_ultimo_uso = document.getElementById('edit_fecha_ultimo_uso').value;
+          const responsable = document.getElementById('edit_responsable').value;
+          const proxima_limpieza = document.getElementById('edit_proxima_limpieza').value;
+          const area = document.getElementById('edit_area').value;
+          const ultima_limpieza = document.getElementById('edit_ultima_limpieza').value;
+
+          if (!nombre) {
+            Swal.showValidationMessage('El nombre es requerido');
+            return false;
+          }
+
+          return {
+            id,
+            nombre,
+            estado,
+            capacidad: capacidad ? parseInt(capacidad) : null,
+            ocupacion: ocupacion ? parseInt(ocupacion) : 0,
+            tipo_pasto,
+            fecha_ultimo_uso,
+            responsable,
+            proxima_limpieza,
+            area: area ? parseFloat(area) : null,
+            ultima_limpieza
+          };
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Aquí se enviaría al backend
+          console.log('Datos actualizados del potrero:', result.value);
+          // Agregar lógica para enviar al backend
+        }
+      });
     },
     prevPotrero() {
       this.currentIndex = (this.currentIndex - 1 + this.potreros.length) % this.potreros.length;
