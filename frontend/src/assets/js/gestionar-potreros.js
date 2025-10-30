@@ -20,10 +20,12 @@ export const cargarDatosIniciales = async () => {
     loading.value = true;
     error.value = null;
 
+    // Cargar personas primero para que estén disponibles al cargar potreros
+    await cargarPersonasUsuario();
+
     await Promise.all([
       cargarTiposPasto(),
-      cargarEstadosPotrero(),
-      cargarPersonasUsuario()
+      cargarEstadosPotrero()
     ]);
 
     await cargarPotreros();
@@ -96,7 +98,7 @@ export const cargarPotreros = async () => {
         area: potrero.area,
         fechaUso: potrero.fecha_ultimo_uso ? formatDate(potrero.fecha_ultimo_uso) : '',
         ultimaLimpieza: potrero.ultima_limpieza ? formatDate(potrero.ultima_limpieza) : '',
-        responsable: potrero.responsable_persona_id ? (personasUsuario.value.find(p => p.id == potrero.responsable_persona_id)?.nombre_completo || `Persona ${potrero.responsable_persona_id}`) : 'No asignado',
+        responsable: potrero.responsable_persona_id ? (personasUsuario.value.find(p => p[0] == potrero.responsable_persona_id) ? `${personasUsuario.value.find(p => p[0] == potrero.responsable_persona_id)[1]} ${personasUsuario.value.find(p => p[0] == potrero.responsable_persona_id)[3]}` : `Persona ${potrero.responsable_persona_id}`) : 'No asignado',
         descripcion: potrero.descripcion || '',
         pasto: potrero.tipo_pasto_nombre || 'No definido'
       }));
@@ -146,7 +148,12 @@ export const crearPotrero = () => {
   // Construir opciones de responsable
   let responsableOptions = '<option value="">Seleccionar responsable</option>';
   personasUsuario.value.forEach(persona => {
-    responsableOptions += `<option value="${persona.id}">${persona.nombre_completo}</option>`;
+    // Acceder como array: [id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, nombre_completo]
+    const id = persona[0];
+    const primerNombre = persona[1];
+    const primerApellido = persona[3];
+    const nombreCompleto = `${primerNombre} ${primerApellido}`.trim();
+    responsableOptions += `<option value="${id}">${nombreCompleto}</option>`;
   });
 
   Swal.fire({
@@ -181,6 +188,7 @@ export const crearPotrero = () => {
         <div class="mb-3"><label class="form-label">Descripción:</label><textarea id="descripcion" class="form-control" rows="2" placeholder="Descripción opcional del potrero"></textarea></div>
       </form>
     `,
+    width: '600px',
     showCancelButton: true,
     confirmButtonText: 'Agregar',
     confirmButtonColor: '#00d563',
@@ -261,8 +269,13 @@ export const editarPotrero = (id) => {
   // Construir opciones de responsable con selección
   let responsableOptions = '<option value="">Seleccionar responsable</option>';
   personasUsuario.value.forEach(persona => {
-    const selected = persona.nombre_completo === potrero.responsable ? 'selected' : '';
-    responsableOptions += `<option value="${persona.id}" ${selected}>${persona.nombre_completo}</option>`;
+    // Acceder como array: [id, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, nombre_completo]
+    const id = persona[0];
+    const primerNombre = persona[1];
+    const primerApellido = persona[3];
+    const nombreCompleto = `${primerNombre} ${primerApellido}`.trim();
+    const selected = nombreCompleto === potrero.responsable ? 'selected' : '';
+    responsableOptions += `<option value="${id}" ${selected}>${nombreCompleto}</option>`;
   });
 
   Swal.fire({
@@ -297,6 +310,7 @@ export const editarPotrero = (id) => {
         <div class="mb-3"><label class="form-label">Descripción:</label><textarea id="edit_descripcion" class="form-control" rows="2">${potrero.descripcion || ''}</textarea></div>
       </form>
     `,
+    width: '600px',
     showCancelButton: true,
     confirmButtonText: 'Actualizar',
     confirmButtonColor: '#00d563',

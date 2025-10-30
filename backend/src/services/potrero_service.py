@@ -207,7 +207,8 @@ class PotreroService:
         try:
             with db.get_cursor() as cursor:
                 cursor.execute("""
-                    SELECT p.id, CONCAT(p.primer_nombre, ' ', COALESCE(p.segundo_nombre, ''), ' ', p.primer_apellido, ' ', COALESCE(p.segundo_apellido, '')) as nombre_completo
+                    SELECT p.id, p.primer_nombre, p.segundo_nombre, p.primer_apellido, p.segundo_apellido,
+                           CONCAT(p.primer_nombre, ' ', p.primer_apellido) as nombre_completo
                     FROM personas p
                     JOIN usuarios u ON p.id = u.id_persona
                     WHERE u.estado = 'activo'
