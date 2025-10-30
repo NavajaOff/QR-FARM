@@ -118,6 +118,8 @@ export const cargarPotreros = async () => {
 export const formatDate = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);
+  // Ajustar por zona horaria de Colombia (UTC-5)
+  date.setHours(date.getHours() + 5);
   return date.toLocaleDateString('es-ES', {
     day: '2-digit',
     month: '2-digit',
@@ -333,6 +335,12 @@ export const editarPotrero = (id) => {
       // Solo incluir ultima_limpieza si tiene valor
       if (ultima_limpieza) {
         data.ultima_limpieza = ultima_limpieza;
+      }
+
+      // Solo incluir fecha_ultimo_uso si tiene valor
+      const fecha_ultimo_uso = document.getElementById('edit_fecha_ultimo_uso').value;
+      if (fecha_ultimo_uso) {
+        data.fecha_ultimo_uso = fecha_ultimo_uso;
       }
 
       return data;

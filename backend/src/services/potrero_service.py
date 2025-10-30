@@ -70,6 +70,10 @@ class PotreroService:
                 numero = result['COUNT(*)'] + 1
                 nombre = f"Potrero {numero}"
 
+        # Establecer fecha de último uso como la fecha actual al crear
+        from datetime import datetime
+        fecha_ultimo_uso = datetime.now().date().isoformat()
+
         with db.get_cursor() as cursor:
             sql = """
                 INSERT INTO potrero (
@@ -86,7 +90,7 @@ class PotreroService:
                 data.get('capacidad'),
                 data.get('hectareas'),
                 data.get('ocupacion', 0),
-                data.get('fecha_ultimo_uso'),
+                fecha_ultimo_uso,
                 data.get('responsable_persona_id'),
                 data.get('proxima_limpieza'),
                 data.get('area'),
