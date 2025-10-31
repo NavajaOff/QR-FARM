@@ -183,7 +183,7 @@ class PotreroService:
         update_fields = []
         values = []
 
-        # Procesar campos especiales para fechas
+        # Procesar campos especiales para fechas y enums
         for key, value in data.items():
             if key in ['id']:
                 continue
@@ -191,6 +191,27 @@ class PotreroService:
             # Convertir strings vacías a None para campos de fecha
             if key in ['proxima_limpieza', 'ultima_limpieza', 'fecha_ultimo_uso'] and value == '':
                 value = None
+            # Para campos de fecha que vienen como strings, mantener formato simple YYYY-MM-DD
+            elif key in ['proxima_limpieza', 'ultima_limpieza', 'fecha_ultimo_uso'] and isinstance(value, str) and value:
+                # Extraer solo la fecha YYYY-MM-DD, sin conversiones de zona horaria
+                if 'T' in value:
+                    value = value.split('T')[0]
+                # Asegurar que sea formato YYYY-MM-DD
+                if len(value) == 10 and value.count('-') == 2:
+                    pass  # Ya está en formato correcto
+                else:
+                    # Si hay algún problema, mantener el valor original
+                    pass
+            # Para el campo estado, asegurar que sea válido para el enum
+            elif key == 'estado':
+                # Los valores válidos del enum son: 'disponible', 'ocupado', 'limpieza'
+                valid_states = ['disponible', 'ocupado', 'limpieza']
+                if value and value not in valid_states:
+                    # Si no es válido, usar 'disponible' por defecto
+                    value = 'disponible'
+                elif not value:
+                    # Si viene vacío, usar 'disponible' por defecto
+                    value = 'disponible'
 
             update_fields.append(f"{key} = %s")
             values.append(value)

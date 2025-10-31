@@ -158,6 +158,24 @@ def obtener_potreros():
                     print(f"Error obteniendo nombre del responsable: {e}")
                     responsable_nombre = f"Persona {potrero['responsable_persona_id']}"
 
+            # Formatear fechas sin conversión de zona horaria
+            def format_date_simple(date_value):
+                if date_value:
+                    try:
+                        from datetime import datetime
+                        # Si es datetime object, extraer solo la fecha
+                        if hasattr(date_value, 'date'):
+                            return date_value.date().isoformat()
+                        # Si es string, mantener formato YYYY-MM-DD
+                        elif isinstance(date_value, str):
+                            if len(date_value) >= 10:
+                                return date_value[:10]  # Tomar solo YYYY-MM-DD
+                            else:
+                                return date_value
+                    except:
+                        return date_value
+                return date_value
+
             potreros_data.append({
                 "id": potrero.get('id'),
                 "nombre": potrero.get('nombre'),
