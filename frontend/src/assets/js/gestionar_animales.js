@@ -86,8 +86,8 @@ export const cargarAnimales = async () => {
         id_persona: animal.id_persona,
         // Campos calculados
         estado: animal.estado_tipo || 'No definido',
-        potreroActual: animal.potrero_nombre || 'Sin asignar',
-        propietario: animal.persona_nombre && animal.persona_nombre.trim() !== '' ? animal.persona_nombre.trim() : 'Sin asignar',
+        potreroActual: animal.id_potrero ? (potreros.value.find(p => p.id == animal.id_potrero)?.nombre || `Potrero ${animal.id_potrero}`) : 'Sin asignar',
+        propietario: animal.id_persona ? (personasUsuario.value.find(p => p.id == animal.id_persona) ? `${personasUsuario.value.find(p => p.id == animal.id_persona).primer_nombre} ${personasUsuario.value.find(p => p.id == animal.id_persona).primer_apellido}` : `Persona ${animal.id_persona}`) : 'Sin asignar',
         edad: animal.fecha_nacimiento ? calcularEdad(animal.fecha_nacimiento) : 'No definida',
         codigo_qr: animal.codigo_qr
       }));
@@ -115,6 +115,18 @@ export const calcularEdad = (fechaNacimiento) => {
   return edad;
 };
 
+export const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  // Ajustar por zona horaria de Colombia (UTC-5)
+  date.setHours(date.getHours() + 5);
+  return date.toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+};
+
 export const estadoClass = (estado) => {
   if (estado === 'saludable') return 'bg-success';
   if (estado === 'revision') return 'bg-warning';
@@ -127,29 +139,71 @@ export const iconClass = (animal) => {
 };
 
 // CRUD operations
-export const verPerfilAnimal = (id) => {
+export const verPerfilAnimal = async (id) => {
   const animal = animales.value.find(a => a.id === id);
   if (!animal) return;
 
-  Swal.fire({
-    title: `Perfil de ${animal.nombre}`,
-    html: `
-      <div class="text-start">
-        <p><strong>Código QR:</strong> ${animal.codigo_qr || 'Sin código'}</p>
-        <p><strong>Sexo:</strong> ${animal.sexo || 'Sin dato'}</p>
-        <p><strong>Raza:</strong> ${animal.raza || 'Sin dato'}</p>
-        <p><strong>Encargado:</strong> ${animal.propietario || 'Sin encargado'}</p>
-        <p><strong>Fecha de nacimiento:</strong> ${animal.fecha_nacimiento || 'Sin dato'}</p>
-        <p><strong>Peso actual:</strong> ${animal.peso || 'Sin dato'} kg</p>
-        <p><strong>Estado:</strong> ${animal.estado || 'Sin dato'}</p>
-        <p><strong>Potrero actual:</strong> ${animal.potreroActual || 'Sin dato'}</p>
-        <p><strong>Historial médico:</strong> Sin incidencias</p>
-        ${animal.codigo_qr ? `<div class="mt-3"><img src="/qr/${animal.codigo_qr}.png" alt="Código QR" class="img-fluid" style="max-width: 150px;"></div>` : ''}
-      </div>
-    `,
-    confirmButtonColor: '#00d563',
-    width: '600px'
-  });
+  // Obtener datos actualizados del animal desde el backend
+  try {
+    const response = await fetch(`${API_BASE}/animales/${animal.id}`);
+    if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+
+    const data = await response.json();
+    if (data.success) {
+      const animalActualizado = data.data;
+
+      Swal.fire({
+        title: `Perfil de ${animalActualizado.nombre}`,
+        html: `
+          <div class="text-start">
+            <p><strong>Código QR:</strong> ${animalActualizado.codigo_qr || 'Sin código'}</p>
+            <p><strong>Sexo:</strong> ${animalActualizado.sexo || 'Sin dato'}</p>
+            <p><strong>Raza:</strong> ${animalActualizado.raza || 'Sin dato'}</p>
+            <p><strong>Encargado:</strong> ${animalActualizado.id_persona ? (personasUsuario.value.find(p => p.id == animalActualizado.id_persona) ? `${personasUsuario.value.find(p => p.id == animalActualizado.id_persona).primer_nombre} ${personasUsuario.value.find(p => p.id == animalActualizado.id_persona).primer_apellido}` : `Persona ${animalActualizado.id_persona}`) : 'Sin encargado'}</p>
+            <p><strong>Fecha de nacimiento:</strong> ${animalActualizado.fecha_nacimiento ? formatDate(animalActualizado.fecha_nacimiento) : 'Sin dato'}</p>
+            <p><strong>Peso actual:</strong> ${animalActualizado.peso || 'Sin dato'} kg</p>
+            <p><strong>Estado:</strong> ${animalActualizado.estado_tipo || animalActualizado.estado || 'Sin dato'}</p>
+            <p><strong>Potrero actual:</strong> ${animalActualizado.id_potrero ? (potreros.value.find(p => p.id == animalActualizado.id_potrero)?.nombre || `Potrero ${animalActualizado.id_potrero}`) : 'Sin dato'}</p>
+            <p><strong>Historial médico:</strong> Sin incidencias</p>
+            ${animalActualizado.codigo_qr ? `<div class="mt-3"><img src="/qr/${animalActualizado.codigo_qr}.png" alt="Código QR" class="img-fluid" style="max-width: 150px;"></div>` : ''}
+          </div>
+        `,
+        confirmButtonColor: '#00d563',
+        width: '600px',
+        didOpen: () => {
+          // Detener cualquier reproducción de audio/video que pueda estar causando el error
+          const mediaElements = document.querySelectorAll('audio, video');
+          mediaElements.forEach(element => {
+            element.pause();
+          });
+        }
+      });
+    } else {
+      throw new Error(data.message || 'Error desconocido');
+    }
+  } catch (error) {
+    console.error('Error obteniendo perfil del animal:', error);
+    // Mostrar perfil con datos locales si falla la petición
+    Swal.fire({
+      title: `Perfil de ${animal.nombre}`,
+      html: `
+        <div class="text-start">
+          <p><strong>Código QR:</strong> ${animal.codigo_qr || 'Sin código'}</p>
+          <p><strong>Sexo:</strong> ${animal.sexo || 'Sin dato'}</p>
+          <p><strong>Raza:</strong> ${animal.raza || 'Sin dato'}</p>
+          <p><strong>Encargado:</strong> ${animal.propietario || 'Sin encargado'}</p>
+          <p><strong>Fecha de nacimiento:</strong> ${animal.fecha_nacimiento || 'Sin dato'}</p>
+          <p><strong>Peso actual:</strong> ${animal.peso || 'Sin dato'} kg</p>
+          <p><strong>Estado:</strong> ${animal.estado || 'Sin dato'}</p>
+          <p><strong>Potrero actual:</strong> ${animal.potreroActual || 'Sin dato'}</p>
+          <p><strong>Historial médico:</strong> Sin incidencias</p>
+          ${animal.codigo_qr ? `<div class="mt-3"><img src="/qr/${animal.codigo_qr}.png" alt="Código QR" class="img-fluid" style="max-width: 150px;"></div>` : ''}
+        </div>
+      `,
+      confirmButtonColor: '#00d563',
+      width: '600px'
+    });
+  }
 };
 
 export const editarAnimal = (id) => {
