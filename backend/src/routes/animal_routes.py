@@ -54,8 +54,18 @@ def update_animal(animal_id):
                 'success': False
             }), 400
 
+        # Obtener el animal actual primero
+        animal_actual = GanadoService.obtener_ganado(animal_id)
+        if not animal_actual:
+            return jsonify({
+                'error': 'Animal no encontrado',
+                'message': f'No se encontró el animal con ID {animal_id}',
+                'success': False
+            }), 404
+
         # Crear instancia del modelo con los datos actualizados
-        animal_data = data.copy()
+        animal_data = animal_actual.to_dict()  # Empezar con los datos actuales
+        animal_data.update(data)  # Actualizar solo los campos enviados
         animal_data['id'] = animal_id  # Asegurar que tenga el ID correcto
 
         animal = Ganado.from_dict(animal_data)

@@ -235,7 +235,7 @@ export const editarAnimal = (id) => {
         return false;
       }
 
-      return {
+      const updateData = {
         nombre,
         peso: peso ? parseFloat(peso) : null,
         raza: raza || null,
@@ -244,6 +244,15 @@ export const editarAnimal = (id) => {
         id_potrero: id_potrero ? parseInt(id_potrero) : null,
         id_persona: id_persona ? parseInt(id_persona) : null
       };
+
+      // Remover campos null/undefined para enviar solo los campos que se van a actualizar
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key] === null || updateData[key] === undefined) {
+          delete updateData[key];
+        }
+      });
+
+      return updateData;
     }
   }).then(async (result) => {
     if (result.isConfirmed) {
