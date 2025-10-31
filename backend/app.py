@@ -136,53 +136,21 @@ def obtener_potreros():
     try:
         print("Obteniendo lista de potreros desde la base de datos...")
 
+        # Usar el service directamente para evitar conflictos con blueprints
         potreros = PotreroService.get_all()
 
-        # Convertir a formato compatible con el frontend
-        potreros_data = []
-        for potrero in potreros:
-            # Obtener nombre del responsable si existe
-            responsable_nombre = 'No asignado'
-            if potrero.get('responsable_persona_id'):
-                try:
-                    conn_temp = get_connection()
-                    cursor_temp = conn_temp.cursor(dictionary=True)
-                    cursor_temp.execute("SELECT primer_nombre, primer_apellido FROM personas WHERE id = %s", (potrero['responsable_persona_id'],))
-                    persona_result = cursor_temp.fetchone()
-                    if persona_result:
-                        responsable_nombre = f"{persona_result['primer_nombre']} {persona_result['primer_apellido']}"
-                    cursor_temp.close()
-                    conn_temp.close()
-                except Exception as e:
-                    print(f"Error obteniendo nombre del responsable: {e}")
-                    responsable_nombre = f"Persona {potrero['responsable_persona_id']}"
-
-            potreros_data.append({
-                "id": potrero.get('id'),
-                "nombre": potrero.get('nombre'),
-                "area": float(potrero.get('area', 0)),
-                "capacidad": potrero.get('capacidad'),
-                "ocupacion": potrero.get('ocupacion', 0),
-                "hectareas": potrero.get('hectareas'),
-                "fecha_ultimo_uso": potrero.get('fecha_ultimo_uso'),
-                "ultima_limpieza": potrero.get('ultima_limpieza'),
-                "proxima_limpieza": potrero.get('proxima_limpieza'),
-                "responsable": responsable_nombre,
-                "tipo_pasto": potrero.get('tipo_pasto'),
-                "estado": potrero.get('estado'),
-                "descripcion": potrero.get('descripcion')
-            })
-
-        print(f"Enviando {len(potreros_data)} potreros desde la base de datos")
+        print(f"Enviando {len(potreros)} potreros desde la base de datos")
 
         return jsonify({
             "status": "success",
             "message": "Potreros obtenidos exitosamente",
-            "data": potreros_data
+            "data": potreros
         }), 200
 
     except Exception as e:
         print(f"Error al obtener potreros: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             "status": "error",
             "message": "Error interno del servidor"

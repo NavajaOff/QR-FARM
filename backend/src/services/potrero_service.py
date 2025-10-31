@@ -1,7 +1,7 @@
 """Service layer for Potrero operations."""
 from typing import List, Optional, Dict, Any
 from mysql.connector import Error
-from src.database.db import db
+from src.database.db import db, get_connection
 from datetime import datetime
 
 class PotreroService:
@@ -74,14 +74,19 @@ class PotreroService:
         from datetime import datetime
         fecha_ultimo_uso = datetime.now().date().isoformat()
 
-        with db.get_cursor() as cursor:
+        # Usar conexión directa para asegurar transacción
+        conn = get_connection()
+        cursor = None
+        try:
+            cursor = conn.cursor(dictionary=True)
+
             sql = """
                 INSERT INTO potrero (
                     id_tipo_pasto, nombre, capacidad, hectareas, ocupacion,
                     fecha_ultimo_uso, responsable_persona_id, proxima_limpieza,
-                    area, ultima_limpieza, descripcion, propietario_persona_id, estado
+                    area, ultima_limpieza, descripcion, estado
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
             """
             values = (
@@ -96,12 +101,58 @@ class PotreroService:
                 data.get('area'),
                 data.get('ultima_limpieza'),
                 data.get('descripcion'),
-                data.get('propietario_persona_id'),
                 data.get('estado', 'disponible')
             )
+
             cursor.execute(sql, values)
             potrero_id = cursor.lastrowid
-            return PotreroService.get_by_id(potrero_id)
+            print(f"Potrero INSERT ejecutado con ID: {potrero_id}")
+
+            # Hacer commit explícito
+            conn.commit()
+            print(f"Commit realizado para potrero ID: {potrero_id}")
+
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            print(f"Error en create potrero: {e}")
+            raise e
+        finally:
+            if cursor:
+                cursor.close()
+            if conn and conn.is_connected():
+                conn.close()
+
+        # Usar una nueva conexión para obtener el registro completo
+        try:
+            with db.get_cursor() as select_cursor:
+                select_cursor.execute("""
+                    SELECT p.* FROM potrero p WHERE p.id = %s
+                """, (potrero_id,))
+                result = select_cursor.fetchone()
+
+                if result:
+                    print(f"Potrero encontrado después del commit: {result}")
+                    # Agregar el nombre del tipo de pasto
+                    if result.get('id_tipo_pasto'):
+                        try:
+                            tipos_pasto = PotreroService.get_tipos_pasto()
+                            tipo_encontrado = next((tp for tp in tipos_pasto if tp['id'] == result['id_tipo_pasto']), None)
+                            result['tipo_pasto_nombre'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'No definido'
+                        except Exception as e:
+                            print(f"Error obteniendo tipo de pasto: {e}")
+                            result['tipo_pasto_nombre'] = 'No definido'
+                    else:
+                        result['tipo_pasto_nombre'] = 'No definido'
+
+                    return result
+                else:
+                    print(f"Potrero con ID {potrero_id} no encontrado después del commit")
+                    raise ValueError(f"Potrero with id {potrero_id} not found after commit")
+
+        except Exception as e:
+            print(f"Error obteniendo potrero después del commit: {e}")
+            raise e
 
     @staticmethod
     def update(potrero_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
