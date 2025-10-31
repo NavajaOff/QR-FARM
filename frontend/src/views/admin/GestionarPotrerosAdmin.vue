@@ -263,6 +263,22 @@ export default {
     },
 
     crearPotrero() {
+      // Construir opciones dinámicamente con datos de la BD
+      let estadoOptions = '';
+      this.estadosPotrero.forEach(estado => {
+        estadoOptions += `<option value="${estado.nombre}">${estado.nombre}</option>`;
+      });
+
+      let pastoOptions = '<option value="">Seleccionar tipo de pasto</option>';
+      this.tiposPasto.forEach(tipo => {
+        pastoOptions += `<option value="${tipo.id}">${tipo.nombre}</option>`;
+      });
+
+      let responsableOptions = '<option value="">Seleccionar responsable</option>';
+      this.personasUsuario.forEach(persona => {
+        responsableOptions += `<option value="${persona.id}">${persona.nombre_completo}</option>`;
+      });
+
       Swal.fire({
         title: '<i class="fas fa-plus"></i> Crear Nuevo Potrero',
         html: `
@@ -270,7 +286,7 @@ export default {
             <div class="mb-3">
               <label class="form-label">Estado:</label>
               <select id="estado" class="form-control">
-                <option v-for="estado in estadosPotrero" :key="estado.id" :value="estado.nombre">{{ estado.nombre }}</option>
+                ${estadoOptions}
               </select>
             </div>
             <div class="mb-3"><label class="form-label">Capacidad:</label><input type="number" id="capacidad" class="form-control" placeholder="Ej: 25" min="0"></div>
@@ -279,16 +295,14 @@ export default {
             <div class="mb-3">
               <label class="form-label">Tipo de pasto:</label>
               <select id="id_tipo_pasto" class="form-control">
-                <option value="">Seleccionar tipo de pasto</option>
-                <option v-for="tipo in tiposPasto" :key="tipo.id" :value="tipo.id">{{ tipo.nombre }}</option>
+                ${pastoOptions}
               </select>
             </div>
             <div class="mb-3"><label class="form-label">Fecha de último uso:</label><input type="date" id="fecha_ultimo_uso" class="form-control"></div>
             <div class="mb-3">
               <label class="form-label">Responsable:</label>
               <select id="responsable_persona_id" class="form-control">
-                <option value="">Seleccionar responsable</option>
-                <option v-for="persona in personasUsuario" :key="persona.id" :value="persona.id">{{ persona.nombre_completo }}</option>
+                ${responsableOptions}
               </select>
             </div>
             <div class="mb-3"><label class="form-label">Próxima limpieza:</label><input type="date" id="proxima_limpieza" class="form-control"></div>
@@ -362,6 +376,25 @@ export default {
       const potrero = this.potreros.find(p => p.id === id);
       if (!potrero) return;
 
+      // Construir opciones dinámicamente con selección automática
+      let estadoOptions = '';
+      this.estadosPotrero.forEach(estado => {
+        const selected = estado.nombre === potrero.estado ? 'selected' : '';
+        estadoOptions += `<option value="${estado.nombre}" ${selected}>${estado.nombre}</option>`;
+      });
+
+      let pastoOptions = '<option value="">Seleccionar tipo de pasto</option>';
+      this.tiposPasto.forEach(tipo => {
+        const selected = tipo.nombre === potrero.pasto ? 'selected' : '';
+        pastoOptions += `<option value="${tipo.id}" ${selected}>${tipo.nombre}</option>`;
+      });
+
+      let responsableOptions = '<option value="">Seleccionar responsable</option>';
+      this.personasUsuario.forEach(persona => {
+        const selected = persona.nombre_completo === potrero.responsable ? 'selected' : '';
+        responsableOptions += `<option value="${persona.id}" ${selected}>${persona.nombre_completo}</option>`;
+      });
+
       Swal.fire({
         title: `<i class="fas fa-edit"></i> Editar Potrero: ${potrero.nombre}`,
         html: `
@@ -369,7 +402,7 @@ export default {
             <div class="mb-3">
               <label class="form-label">Estado:</label>
               <select id="edit_estado" class="form-control">
-                <option v-for="estado in estadosPotrero" :key="estado.id" :value="estado.nombre" :selected="estado.nombre === potrero.estado">{{ estado.nombre }}</option>
+                ${estadoOptions}
               </select>
             </div>
             <div class="mb-3"><label class="form-label">Capacidad:</label><input type="number" id="edit_capacidad" class="form-control" value="${potrero.capacidad || ''}" min="0"></div>
@@ -378,16 +411,14 @@ export default {
             <div class="mb-3">
               <label class="form-label">Tipo de pasto:</label>
               <select id="edit_id_tipo_pasto" class="form-control">
-                <option value="">Seleccionar tipo de pasto</option>
-                <option v-for="tipo in tiposPasto" :key="tipo.id" :value="tipo.id" :selected="tipo.nombre === potrero.pasto">{{ tipo.nombre }}</option>
+                ${pastoOptions}
               </select>
             </div>
             <div class="mb-3"><label class="form-label">Fecha de último uso:</label><input type="date" id="edit_fecha_ultimo_uso" class="form-control" value="${potrero.fechaUso ? potrero.fechaUso.split('/').reverse().join('-') : ''}"></div>
             <div class="mb-3">
               <label class="form-label">Responsable:</label>
               <select id="edit_responsable_persona_id" class="form-control">
-                <option value="">Seleccionar responsable</option>
-                <option v-for="persona in personasUsuario" :key="persona.id" :value="persona.id" :selected="persona.nombre_completo === potrero.responsable">{{ persona.nombre_completo }}</option>
+                ${responsableOptions}
               </select>
             </div>
             <div class="mb-3"><label class="form-label">Próxima limpieza:</label><input type="date" id="edit_proxima_limpieza" class="form-control"></div>
