@@ -53,7 +53,7 @@
                 <div class="col-6"><strong>Capacidad:</strong> {{ potreros[currentIndex].capacidad || 'No definida' }} Animales</div>
               </div>
               <div class="row g-3 mb-3">
-                <div class="col-6"><strong>Ocupación:</strong> {{ potreros[currentIndex].ocupacion }} Animales</div>
+                <div class="col-6"><strong>Ocupación:</strong> {{ potreros[currentIndex].ocupacion || 0 }} Animales</div>
                 <div class="col-6"><strong>Hectáreas:</strong> {{ potreros[currentIndex].hectareas || 'No definida' }} ha</div>
               </div>
               <div class="row g-3 mb-3">
@@ -61,7 +61,7 @@
                 <div class="col-6"><strong>Responsable:</strong> {{ potreros[currentIndex].responsable }}</div>
               </div>
               <div class="row g-3 mb-3">
-                <div class="col-12"><strong>Próxima limpieza:</strong> <input type="date" class="form-control d-inline-block w-auto" style="min-width:150px;"></div>
+                <div class="col-12"><strong>Próxima limpieza:</strong> {{ potreros[currentIndex].proximaLimpieza || 'No programada' }}</div>
               </div>
               <div class="row g-3 mb-3">
                 <div class="col-6"><strong>Área:</strong> {{ potreros[currentIndex].area || 'No definida' }} m²</div>
@@ -218,8 +218,9 @@ export default {
             ocupacion: potrero.ocupacion,
             hectareas: potrero.hectareas,
             area: potrero.area,
-            fechaUso: potrero.fecha_ultimo_uso ? this.formatDate(potrero.fecha_ultimo_uso) : '',
-            ultimaLimpieza: potrero.ultima_limpieza ? this.formatDate(potrero.ultima_limpieza) : '',
+            fechaUso: potrero.fecha_ultimo_uso ? this.formatDate(potrero.fecha_ultimo_uso) : 'No registrada',
+            ultimaLimpieza: potrero.ultima_limpieza ? this.formatDate(potrero.ultima_limpieza) : 'No registrada',
+            proximaLimpieza: potrero.proxima_limpieza ? this.formatDate(potrero.proxima_limpieza) : 'No programada',
             responsable: potrero.responsable_persona_id ? `Persona ${potrero.responsable_persona_id}` : 'No asignado',
             descripcion: potrero.descripcion || ''
           }));
@@ -472,6 +473,33 @@ export default {
 
     toggleAccordion() {
       this.accordionOpen = !this.accordionOpen;
+    },
+
+    async actualizarProximaLimpieza(id, fecha) {
+      try {
+        const response = await fetch(`http://localhost:5000/api/potreros/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            proxima_limpieza: fecha
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            console.log('Próxima limpieza actualizada correctamente');
+          } else {
+            console.error('Error actualizando próxima limpieza:', data.message);
+          }
+        } else {
+          console.error('Error HTTP actualizando próxima limpieza:', response.status);
+        }
+      } catch (error) {
+        console.error('Error actualizando próxima limpieza:', error);
+      }
     }
   }
 };

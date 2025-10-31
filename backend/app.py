@@ -146,8 +146,15 @@ def obtener_potreros():
                 "nombre": potrero.get('nombre'),
                 "area": float(potrero.get('area', 0)),
                 "capacidad": potrero.get('capacidad'),
+                "ocupacion": potrero.get('ocupacion', 0),
+                "hectareas": potrero.get('hectareas'),
+                "fecha_ultimo_uso": potrero.get('fecha_ultimo_uso'),
+                "ultima_limpieza": potrero.get('ultima_limpieza'),
+                "proxima_limpieza": potrero.get('proxima_limpieza'),
+                "responsable_persona_id": potrero.get('responsable_persona_id'),
                 "tipo_pasto": potrero.get('tipo_pasto'),
-                "estado": potrero.get('estado')
+                "estado": potrero.get('estado'),
+                "descripcion": potrero.get('descripcion')
             })
 
         print(f"Enviando {len(potreros_data)} potreros desde la base de datos")
