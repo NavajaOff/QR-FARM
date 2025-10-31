@@ -144,6 +144,26 @@ class PotreroService:
                             result['tipo_pasto_nombre'] = 'No definido'
                     else:
                         result['tipo_pasto_nombre'] = 'No definido'
+    
+                    # Agregar nombre del responsable si existe
+                    if result.get('responsable_persona_id'):
+                        try:
+                            # Obtener nombre del responsable
+                            with db.get_cursor() as resp_cursor:
+                                resp_cursor.execute("""
+                                    SELECT CONCAT(primer_nombre, ' ', primer_apellido) as nombre_completo
+                                    FROM personas WHERE id = %s
+                                """, (result['responsable_persona_id'],))
+                                resp_result = resp_cursor.fetchone()
+                                if resp_result:
+                                    result['responsable_nombre'] = resp_result['nombre_completo']
+                                else:
+                                    result['responsable_nombre'] = f"Persona {result['responsable_persona_id']}"
+                        except Exception as e:
+                            print(f"Error obteniendo nombre del responsable: {e}")
+                            result['responsable_nombre'] = f"Persona {result['responsable_persona_id']}"
+                    else:
+                        result['responsable_nombre'] = 'No asignado'
 
                     return result
                 else:
@@ -207,7 +227,7 @@ class PotreroService:
             """, (estado,))
             potreros = cursor.fetchall()
 
-            # Agregar el nombre del tipo de pasto a cada potrero
+            # Agregar el nombre del tipo de pasto y responsable a cada potrero
             for potrero in potreros:
                 if potrero.get('id_tipo_pasto'):
                     try:
@@ -218,6 +238,31 @@ class PotreroService:
                         potrero['tipo_pasto_nombre'] = 'No definido'
                 else:
                     potrero['tipo_pasto_nombre'] = 'No definido'
+
+                # Agregar nombre del responsable si existe
+                if potrero.get('responsable_persona_id'):
+                    try:
+                        # Obtener nombre del responsable
+                        resp_conn = get_connection()
+                        resp_cursor = resp_conn.cursor(dictionary=True)
+                        resp_cursor.execute("""
+                            SELECT CONCAT(primer_nombre, ' ', primer_apellido) as nombre_completo
+                            FROM personas WHERE id = %s
+                        """, (potrero['responsable_persona_id'],))
+                        resp_result = resp_cursor.fetchone()
+                        if resp_result and resp_result['nombre_completo']:
+                            potrero['responsable_nombre'] = resp_result['nombre_completo']
+                        else:
+                            potrero['responsable_nombre'] = f"Persona {potrero['responsable_persona_id']}"
+                        resp_cursor.close()
+                        resp_conn.close()
+                    except Exception as e:
+                        print(f"Error obteniendo nombre del responsable para potrero {potrero['id']}: {e}")
+                        potrero['responsable_nombre'] = f"Persona {potrero['responsable_persona_id']}"
+                else:
+                    potrero['responsable_nombre'] = 'No asignado'
+
+                print(f"Potrero {potrero['id']}: responsable_id={potrero.get('responsable_persona_id')}, nombre={potrero.get('responsable_nombre')}")
 
             return potreros
 
