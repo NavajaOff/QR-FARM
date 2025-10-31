@@ -266,12 +266,12 @@ export default {
       // Construir opciones dinámicamente con datos de la BD
       let estadoOptions = '';
       this.estadosPotrero.forEach(estado => {
-        estadoOptions += `<option value="${estado.nombre}">${estado.nombre}</option>`;
+        estadoOptions += `<option value="${estado.estado || estado.nombre}">${estado.estado || estado.nombre}</option>`;
       });
 
       let pastoOptions = '<option value="">Seleccionar tipo de pasto</option>';
       this.tiposPasto.forEach(tipo => {
-        pastoOptions += `<option value="${tipo.id}">${tipo.nombre}</option>`;
+        pastoOptions += `<option value="${tipo.id}">${tipo.tipo_pasto || tipo.nombre}</option>`;
       });
 
       let responsableOptions = '<option value="">Seleccionar responsable</option>';
@@ -379,14 +379,14 @@ export default {
       // Construir opciones dinámicamente con selección automática
       let estadoOptions = '';
       this.estadosPotrero.forEach(estado => {
-        const selected = estado.nombre === potrero.estado ? 'selected' : '';
-        estadoOptions += `<option value="${estado.nombre}" ${selected}>${estado.nombre}</option>`;
+        const selected = (estado.estado || estado.nombre) === potrero.estado ? 'selected' : '';
+        estadoOptions += `<option value="${estado.estado || estado.nombre}" ${selected}>${estado.estado || estado.nombre}</option>`;
       });
 
       let pastoOptions = '<option value="">Seleccionar tipo de pasto</option>';
       this.tiposPasto.forEach(tipo => {
-        const selected = tipo.nombre === potrero.pasto ? 'selected' : '';
-        pastoOptions += `<option value="${tipo.id}" ${selected}>${tipo.nombre}</option>`;
+        const selected = (tipo.tipo_pasto || tipo.nombre) === potrero.pasto ? 'selected' : '';
+        pastoOptions += `<option value="${tipo.id}" ${selected}>${tipo.tipo_pasto || tipo.nombre}</option>`;
       });
 
       let responsableOptions = '<option value="">Seleccionar responsable</option>';
