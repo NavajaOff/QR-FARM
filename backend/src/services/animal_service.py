@@ -230,6 +230,7 @@ class GanadoService:
                 SELECT g.*,
                        eg.tipo_estado as estado_tipo,
                        p.nombre as potrero_nombre,
+                       CONCAT(per.primer_nombre, ' ', COALESCE(per.segundo_nombre, ''), ' ', per.primer_apellido, ' ', COALESCE(per.segundo_apellido, '')) as persona_nombre,
                        per.primer_nombre as persona_primer_nombre,
                        per.primer_apellido as persona_primer_apellido,
                        qr.codigo_qr
@@ -257,35 +258,49 @@ class GanadoService:
             conn = get_connection()
             cursor = conn.cursor()
 
+            # Convertir estado a ID numérico
+            estado_id = 1  # Default: activo
+            if ganado.estado.value == 'revision':
+                estado_id = 2
+            elif ganado.estado.value == 'vendido':
+                estado_id = 3
+            elif ganado.estado.value == 'muerto':
+                estado_id = 4
+
+            # Convertir fecha_nacimiento a string si es date object
+            fecha_nac = ganado.fecha_nacimiento
+            if fecha_nac and hasattr(fecha_nac, 'isoformat'):
+                fecha_nac = fecha_nac.isoformat()
+            elif isinstance(fecha_nac, str):
+                pass
+            else:
+                fecha_nac = None
+
             sql = """
                 UPDATE ganado SET
-                    codigo_qr = %s,
                     nombre = %s,
                     raza = %s,
                     fecha_nacimiento = %s,
-                    edad = %s,
                     sexo = %s,
                     peso = %s,
-                    estado = %s,
-                    estado_salud = %s,
+                    id_estado = %s,
                     id_potrero = %s,
-                    id_persona = %s,
-                    updated_at = NOW()
+                    id_persona = %s
                 WHERE id = %s
             """
 
             values = (
-                ganado.codigo_qr, ganado.nombre, ganado.raza,
-                ganado.fecha_nacimiento, ganado.edad, ganado.sexo.value,
-                ganado.peso, ganado.estado.value, ganado.estado_salud,
+                ganado.nombre, ganado.raza,
+                fecha_nac, ganado.sexo.value,
+                ganado.peso, estado_id,
                 ganado.id_potrero, ganado.id_persona, id
             )
-            
+
             cursor.execute(sql, values)
             conn.commit()
-            
+
             return cursor.rowcount > 0
-            
+
         except Exception as e:
             print(f"Error al actualizar animal: {e}")
             return False

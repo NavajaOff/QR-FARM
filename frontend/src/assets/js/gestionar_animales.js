@@ -11,7 +11,7 @@ export const loading = ref(true);
 export const error = ref(null);
 
 // Importar potreros para el select
-import { potreros } from './gestionar-potreros.js';
+import { potreros, cargarPotreros } from './gestionar-potreros.js';
 
 // API configuration
 const API_BASE = 'http://localhost:5000/api';
@@ -24,7 +24,8 @@ export const cargarDatosIniciales = async () => {
 
     await Promise.all([
       cargarEstadosGanado(),
-      cargarPersonasUsuario()
+      cargarPersonasUsuario(),
+      cargarPotreros()
     ]);
 
     await cargarAnimales();
@@ -79,13 +80,14 @@ export const cargarAnimales = async () => {
         peso: animal.peso,
         raza: animal.raza,
         fecha_nacimiento: animal.fecha_nacimiento,
+        sexo: animal.sexo,
         id_estado: animal.id_estado,
         id_potrero: animal.id_potrero,
         id_persona: animal.id_persona,
         // Campos calculados
         estado: animal.estado_tipo || 'No definido',
         potreroActual: animal.potrero_nombre || 'Sin asignar',
-        propietario: animal.persona_nombre ? `${animal.persona_primer_nombre} ${animal.persona_primer_apellido}` : 'Sin asignar',
+        propietario: animal.persona_nombre && animal.persona_nombre.trim() !== '' ? animal.persona_nombre.trim() : 'Sin asignar',
         edad: animal.fecha_nacimiento ? calcularEdad(animal.fecha_nacimiento) : 'No definida',
         codigo_qr: animal.codigo_qr
       }));
@@ -134,16 +136,19 @@ export const verPerfilAnimal = (id) => {
     html: `
       <div class="text-start">
         <p><strong>Código QR:</strong> ${animal.codigo_qr || 'Sin código'}</p>
+        <p><strong>Sexo:</strong> ${animal.sexo || 'Sin dato'}</p>
+        <p><strong>Raza:</strong> ${animal.raza || 'Sin dato'}</p>
         <p><strong>Encargado:</strong> ${animal.propietario || 'Sin encargado'}</p>
         <p><strong>Fecha de nacimiento:</strong> ${animal.fecha_nacimiento || 'Sin dato'}</p>
-        <p><strong>Peso actual:</strong> ${animal.peso_actual || 'Sin dato'} kg</p>
-        <p><strong>Última vacunación:</strong> ${animal.ultima_vacunacion || 'Sin dato'}</p>
-        <p><strong>Próxima vacunación:</strong> ${animal.proxima_vacunacion || 'Sin dato'}</p>
+        <p><strong>Peso actual:</strong> ${animal.peso || 'Sin dato'} kg</p>
+        <p><strong>Estado:</strong> ${animal.estado || 'Sin dato'}</p>
         <p><strong>Potrero actual:</strong> ${animal.potreroActual || 'Sin dato'}</p>
         <p><strong>Historial médico:</strong> Sin incidencias</p>
+        ${animal.codigo_qr ? `<div class="mt-3"><img src="/qr/${animal.codigo_qr}.png" alt="Código QR" class="img-fluid" style="max-width: 150px;"></div>` : ''}
       </div>
     `,
-    confirmButtonColor: '#00d563'
+    confirmButtonColor: '#00d563',
+    width: '600px'
   });
 };
 
@@ -151,7 +156,125 @@ export const editarAnimal = (id) => {
   const animal = animales.value.find(a => a.id === id);
   if (!animal) return;
 
-  Swal.fire('Editar', `Aquí editarías al animal ${animal.nombre}`, 'info');
+  // Construir opciones de estado
+  let estadoOptions = '<option value="">Seleccionar estado</option>';
+  estadosGanado.value.forEach(estado => {
+    const selected = estado.estado === animal.estado ? 'selected' : '';
+    estadoOptions += `<option value="${estado.estado}" ${selected}>${estado.estado}</option>`;
+  });
+
+  // Construir opciones de sexo
+  let sexoOptions = '<option value="">Seleccionar sexo</option>';
+  sexoOptions += `<option value="macho" ${animal.sexo === 'macho' ? 'selected' : ''}>Macho</option>`;
+  sexoOptions += `<option value="hembra" ${animal.sexo === 'hembra' ? 'selected' : ''}>Hembra</option>`;
+
+  // Construir opciones de potrero
+  let potreroOptions = '<option value="">Seleccionar potrero</option>';
+  potreros.value.forEach(potrero => {
+    const selected = potrero.id === animal.id_potrero ? 'selected' : '';
+    potreroOptions += `<option value="${potrero.id}" ${selected}>${potrero.nombre}</option>`;
+  });
+
+  // Construir opciones de propietario
+  let propietarioOptions = '<option value="">Seleccionar propietario</option>';
+  personasUsuario.value.forEach(persona => {
+    const nombreCompleto = `${persona.primer_nombre} ${persona.primer_apellido}`.trim();
+    const selected = persona.id === animal.id_persona ? 'selected' : '';
+    propietarioOptions += `<option value="${persona.id}" ${selected}>${nombreCompleto}</option>`;
+  });
+
+  Swal.fire({
+    title: `<i class="fas fa-edit"></i> Editar Animal: ${animal.nombre}`,
+    html: `
+      <form class="text-start">
+        <div class="mb-3"><label class="form-label">Nombre:</label><input type="text" id="edit_nombre" class="form-control" value="${animal.nombre}" required></div>
+        <div class="mb-3"><label class="form-label">Peso (kg):</label><input type="number" id="edit_peso" class="form-control" value="${animal.peso || ''}" min="0" step="0.1"></div>
+        <div class="mb-3"><label class="form-label">Raza:</label><input type="text" id="edit_raza" class="form-control" value="${animal.raza || ''}" required></div>
+        <div class="mb-3"><label class="form-label">Fecha de nacimiento:</label><input type="date" id="edit_fecha_nacimiento" class="form-control" value="${animal.fecha_nacimiento || ''}" required></div>
+        <div class="mb-3">
+          <label class="form-label">Estado:</label>
+          <select id="edit_estado" class="form-control" required>
+            ${estadoOptions}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Sexo:</label>
+          <select id="edit_sexo" class="form-control" required>
+            ${sexoOptions}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Potrero actual:</label>
+          <select id="edit_id_potrero" class="form-control">
+            ${potreroOptions}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Propietario:</label>
+          <select id="edit_id_persona" class="form-control">
+            ${propietarioOptions}
+          </select>
+        </div>
+      </form>
+    `,
+    width: '600px',
+    showCancelButton: true,
+    confirmButtonText: 'Actualizar',
+    confirmButtonColor: '#00d563',
+    preConfirm: () => {
+      const nombre = document.getElementById('edit_nombre').value;
+      const peso = document.getElementById('edit_peso').value;
+      const raza = document.getElementById('edit_raza').value;
+      const fecha_nacimiento = document.getElementById('edit_fecha_nacimiento').value;
+      const estado = document.getElementById('edit_estado').value;
+      const sexo = document.getElementById('edit_sexo').value;
+      const id_potrero = document.getElementById('edit_id_potrero').value;
+      const id_persona = document.getElementById('edit_id_persona').value;
+
+      // Solo validar campos obligatorios
+      if (!nombre) {
+        Swal.showValidationMessage('El nombre es obligatorio');
+        return false;
+      }
+
+      return {
+        nombre,
+        peso: peso ? parseFloat(peso) : null,
+        raza: raza || null,
+        fecha_nacimiento: fecha_nacimiento || null,
+        estado: estado || null,
+        sexo: sexo || null,
+        id_potrero: id_potrero ? parseInt(id_potrero) : null,
+        id_persona: id_persona ? parseInt(id_persona) : null
+      };
+    }
+  }).then(async (result) => {
+    if (result.isConfirmed) {
+      try {
+        const response = await fetch(`${API_BASE}/animales/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(result.value)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            Swal.fire('¡Éxito!', 'Animal actualizado correctamente', 'success');
+            await cargarAnimales();
+          } else {
+            throw new Error(data.message || 'Error desconocido');
+          }
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || `Error HTTP: ${response.status}`);
+        }
+      } catch (error) {
+        console.error('Error actualizando animal:', error);
+        Swal.fire('Error', error.message, 'error');
+      }
+    }
+  });
 };
 
 export const agregarNuevoAnimal = () => {
