@@ -141,6 +141,22 @@ def obtener_potreros():
         # Convertir a formato compatible con el frontend
         potreros_data = []
         for potrero in potreros:
+            # Obtener nombre del responsable si existe
+            responsable_nombre = 'No asignado'
+            if potrero.get('responsable_persona_id'):
+                try:
+                    conn_temp = get_connection()
+                    cursor_temp = conn_temp.cursor(dictionary=True)
+                    cursor_temp.execute("SELECT primer_nombre, primer_apellido FROM personas WHERE id = %s", (potrero['responsable_persona_id'],))
+                    persona_result = cursor_temp.fetchone()
+                    if persona_result:
+                        responsable_nombre = f"{persona_result['primer_nombre']} {persona_result['primer_apellido']}"
+                    cursor_temp.close()
+                    conn_temp.close()
+                except Exception as e:
+                    print(f"Error obteniendo nombre del responsable: {e}")
+                    responsable_nombre = f"Persona {potrero['responsable_persona_id']}"
+
             potreros_data.append({
                 "id": potrero.get('id'),
                 "nombre": potrero.get('nombre'),
@@ -151,7 +167,7 @@ def obtener_potreros():
                 "fecha_ultimo_uso": potrero.get('fecha_ultimo_uso'),
                 "ultima_limpieza": potrero.get('ultima_limpieza'),
                 "proxima_limpieza": potrero.get('proxima_limpieza'),
-                "responsable_persona_id": potrero.get('responsable_persona_id'),
+                "responsable": responsable_nombre,
                 "tipo_pasto": potrero.get('tipo_pasto'),
                 "estado": potrero.get('estado'),
                 "descripcion": potrero.get('descripcion')

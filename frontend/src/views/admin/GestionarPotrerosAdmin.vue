@@ -40,14 +40,14 @@
         <div v-else class="d-flex justify-content-center align-items-start gap-2">
           <button class="btn btn-outline-secondary" @click="prevPotrero" :disabled="potreros.length <= 1"><i class="fas fa-chevron-left"></i></button>
 
-          <div class="card border-0 shadow-lg" style="min-width: 350px; max-width: 600px;">
-            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+          <div class="card border-0 shadow-lg" style="min-width: 450px; max-width: 700px;">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
               <h5 class="mb-0"><i class="fas fa-leaf me-2"></i>{{ potreros[currentIndex].nombre }}</h5>
               <button class="btn btn-light btn-sm" @click="toggleAccordion">
                 <i :class="accordionOpen ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
               </button>
             </div>
-            <div class="card-body p-3 p-sm-4" v-show="accordionOpen">
+            <div class="card-body p-4 p-sm-5" v-show="accordionOpen">
               <div class="row g-3 mb-3">
                 <div class="col-6"><strong>Estado:</strong> <span class="badge" :class="estadoClass(potreros[currentIndex].estado)">{{ potreros[currentIndex].estado }}</span></div>
                 <div class="col-6"><strong>Capacidad:</strong> {{ potreros[currentIndex].capacidad || 'No definida' }} Animales</div>
@@ -221,7 +221,7 @@ export default {
             fechaUso: potrero.fecha_ultimo_uso ? this.formatDate(potrero.fecha_ultimo_uso) : 'No registrada',
             ultimaLimpieza: potrero.ultima_limpieza ? this.formatDate(potrero.ultima_limpieza) : 'No registrada',
             proximaLimpieza: potrero.proxima_limpieza ? this.formatDate(potrero.proxima_limpieza) : 'No programada',
-            responsable: potrero.responsable_persona_id ? `Persona ${potrero.responsable_persona_id}` : 'No asignado',
+            responsable: potrero.responsable || 'No asignado',
             descripcion: potrero.descripcion || ''
           }));
         } else {
