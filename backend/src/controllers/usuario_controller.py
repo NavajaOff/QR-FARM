@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 import jwt
 from flask import jsonify, request, current_app
-from ..models.usuario import Usuario
+from ..models.usuario import Usuario, EstadoUsuario
 from ..services.usuario_service import UsuarioService
 
 class UsuarioController:
@@ -11,7 +11,12 @@ class UsuarioController:
         try:
             data = request.get_json()
 
-            # Validar campos requeridos
+            if not data:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'No se recibieron datos JSON válidos'
+                }), 400
+
             required_fields = ['primer_nombre', 'primer_apellido', 'email', 'password']
             for field in required_fields:
                 if not data.get(field):
@@ -20,8 +25,25 @@ class UsuarioController:
                         'message': f'El campo {field} es requerido'
                     }), 400
 
+            # Validar formato de email básico
+            import re
+            email = data.get('email', '').strip()
+            if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
+                return jsonify({
+                    'status': 'error',
+                    'message': 'El formato del email no es válido'
+                }), 400
+
+            # Validar longitud de contraseña
+            password = data.get('password', '')
+            if len(password) < 6:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'La contraseña debe tener al menos 6 caracteres'
+                }), 400
+
             # Verificar si el email ya existe
-            if UsuarioService.buscar_por_email(data.get('email')):
+            if UsuarioService.buscar_por_email(email):
                 return jsonify({
                     'status': 'error',
                     'message': 'El email ya está registrado'
@@ -46,9 +68,12 @@ class UsuarioController:
                 }), 400
 
         except Exception as e:
+            print(f"ERROR inesperado en registro: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return jsonify({
                 'status': 'error',
-                'message': str(e)
+                'message': f'Error interno del servidor: {str(e)}'
             }), 500
 
     @staticmethod
@@ -67,10 +92,11 @@ class UsuarioController:
             usuario = UsuarioService.autenticar_usuario(email, password)
 
             if usuario:
-                # Generar token JWT
+                # Generar token JWT con información del rol
                 token = jwt.encode({
                     'user_id': usuario.id,
                     'email': usuario.persona.email if usuario.persona else email,
+                    'role': usuario.rol.rol if usuario.rol else 'usuario',
                     'exp': datetime.utcnow() + timedelta(hours=24)
                 }, current_app.config['SECRET_KEY'], algorithm='HS256')
 
@@ -109,6 +135,7 @@ class UsuarioController:
                 }), 404
 
         except Exception as e:
+            print(f"ERROR en login: {str(e)}")
             return jsonify({
                 'status': 'error',
                 'message': str(e)

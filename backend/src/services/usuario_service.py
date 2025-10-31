@@ -449,13 +449,19 @@ class UsuarioService:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
+            # DEBUG: Verificar estado de la conexión
+            print(f"DEBUG - Conexión obtenida: {conn}")
+            print(f"DEBUG - Autocommit: {conn.autocommit}")
+
             # Verificar si el email ya existe
             cursor.execute("SELECT id FROM personas WHERE email = %s", (persona.email,))
             if cursor.fetchone():
                 return None, "El email ya está registrado"
 
             try:
-                # Iniciar transacción
+                if hasattr(conn, 'in_transaction') and conn.in_transaction:
+                    conn.rollback()
+
                 conn.start_transaction()
 
                 # Insertar persona
@@ -522,14 +528,23 @@ class UsuarioService:
             cursor = conn.cursor(dictionary=True)
 
             sql = """
-                SELECT u.*, p.* FROM usuarios u
+                SELECT u.*, p.*, r.rol as rol_nombre FROM usuarios u
                 INNER JOIN personas p ON u.id_persona = p.id
+                LEFT JOIN roles r ON u.id_rol = r.id
                 WHERE u.id = %s AND u.estado = 'activo'
             """
             cursor.execute(sql, (id,))
 
             result = cursor.fetchone()
             if result:
+                # Crear rol
+                rol = None
+                if result.get('rol_nombre'):
+                    rol = Rol(
+                        id=result['id_rol'],
+                        rol=result['rol_nombre']
+                    )
+
                 # Crear persona
                 persona = Persona(
                     id=result['id_persona'],
@@ -550,7 +565,8 @@ class UsuarioService:
                     id_rol=result['id_rol'],
                     contrasena=result['contrasena'],
                     estado=EstadoUsuario(result['estado']),
-                    persona=persona
+                    persona=persona,
+                    rol=rol
                 )
 
                 return usuario
@@ -570,8 +586,10 @@ class UsuarioService:
             cursor = conn.cursor(dictionary=True)
 
             sql = """
-                SELECT u.*, p.* FROM usuarios u
+                SELECT u.*, p.*, r.rol as rol_nombre
+                FROM usuarios u
                 INNER JOIN personas p ON u.id_persona = p.id
+                LEFT JOIN roles r ON u.id_rol = r.id
                 WHERE u.estado = 'activo'
             """
             cursor.execute(sql)
@@ -579,6 +597,14 @@ class UsuarioService:
 
             usuarios = []
             for result in results:
+                # Crear rol
+                rol = None
+                if result.get('rol_nombre'):
+                    rol = Rol(
+                        id=result['id_rol'],
+                        rol=result['rol_nombre']
+                    )
+
                 # Crear persona
                 persona = Persona(
                     id=result['id_persona'],
@@ -599,7 +625,8 @@ class UsuarioService:
                     id_rol=result['id_rol'],
                     contrasena=result['contrasena'],
                     estado=EstadoUsuario(result['estado']),
-                    persona=persona
+                    persona=persona,
+                    rol=rol
                 )
 
                 usuarios.append(usuario)
@@ -666,14 +693,23 @@ class UsuarioService:
             cursor = conn.cursor(dictionary=True)
 
             sql = """
-                SELECT u.*, p.* FROM usuarios u
+                SELECT u.*, p.*, r.rol as rol_nombre FROM usuarios u
                 INNER JOIN personas p ON u.id_persona = p.id
+                LEFT JOIN roles r ON u.id_rol = r.id
                 WHERE p.email = %s AND u.estado = 'activo'
             """
             cursor.execute(sql, (email,))
 
             result = cursor.fetchone()
             if result:
+                # Crear rol
+                rol = None
+                if result.get('rol_nombre'):
+                    rol = Rol(
+                        id=result['id_rol'],
+                        rol=result['rol_nombre']
+                    )
+
                 # Crear persona
                 persona = Persona(
                     id=result['id_persona'],
@@ -694,7 +730,8 @@ class UsuarioService:
                     id_rol=result['id_rol'],
                     contrasena=result.get('contrasena'),
                     estado=EstadoUsuario(result['estado']),
-                    persona=persona
+                    persona=persona,
+                    rol=rol
                 )
 
                 return usuario
@@ -715,6 +752,10 @@ class UsuarioService:
             # Buscar usuario por email en la base de datos
             usuario = UsuarioService.buscar_por_email(email)
             if usuario and usuario.check_password(password) and usuario.estado == EstadoUsuario.ACTIVO:
+                # Cargar información del rol
+                if usuario.id_rol:
+                    rol = UsuarioService.obtener_rol(usuario.id_rol)
+                    usuario.rol = rol
                 return usuario
             return None
 

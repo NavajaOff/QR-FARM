@@ -169,13 +169,14 @@ class Usuario:
             segundo_apellido=data.get('segundo_apellido'),
             email=data.get('email', ''),
             telefono=data.get('telefono'),
-            id_rol=1  # Rol por defecto (usuario normal)
+            id_rol=2  # Rol por defecto (usuario normal) - ID 2 según la BD
         )
 
         # Crear usuario
         usuario = Usuario(
             contrasena=data.get('password', ''),
-            estado=EstadoUsuario.ACTIVO
+            estado=EstadoUsuario.ACTIVO,
+            id_rol=2  # También asignar el rol al usuario
         )
 
         return persona, usuario

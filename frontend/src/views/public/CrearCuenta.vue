@@ -1,19 +1,18 @@
 <template>
   <nav class="navbar navbar-dark bg-success">
-        <div class="container-fluid py-2 py-md-3 px-3 px-md-4">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                <i class="fas fa-home me-2"></i>Inicio
-            </a>
-            <a class="navbar-brand mx-auto d-flex align-items-center" href="{{ url_for('index') }}">
-                <span class="fw-bold fs-2">QR FARM</span>
-                <i class="fas fa-cow ms-2 logo-icon"></i>
-            </a>
-            
-            <div class="navbar-brand">
-                <i class="fas fa-cow fa-2x"></i>
-            </div>
-        </div>
-    </nav>
+    <div class="container-fluid py-2 py-md-3 px-3 px-md-4">
+      <router-link class="navbar-brand" to="/">
+        <i class="fas fa-home me-2"></i>Inicio
+      </router-link>
+      <router-link class="navbar-brand mx-auto d-flex align-items-center" to="/">
+        <span class="fw-bold fs-2">QR FARM</span>
+        <i class="fas fa-cow ms-2 logo-icon"></i>
+      </router-link>
+      <div class="navbar-brand">
+        <i class="fas fa-cow fa-2x"></i>
+      </div>
+    </div>
+  </nav>
 
     <!-- Main Content -->
     <div class="container-fluid min-vh-100 bg-light-custom">
@@ -87,7 +86,7 @@
                                     </div>
 
                                     <div class="text-center mt-3">
-                                        <p class="text-white">¿Ya tienes una cuenta? 
+                                        <p class="text-white">¿Ya tienes una cuenta?
                                             <router-link to="/login">Iniciar Sesión</router-link>
                                         </p>
                                     </div>
@@ -102,7 +101,7 @@
 </template>
 
 <script>
-import axios from 'axios';
+import { authAPI } from '../../services/api.js';
 
 export default {
   name: 'CrearCuenta',
@@ -147,8 +146,8 @@ export default {
           password: this.form.password
         };
 
-        // Enviar datos al backend
-        const response = await axios.post('http://localhost:5000/api/usuarios/register', userData);
+        // Usar el servicio de API centralizado
+        const response = await authAPI.register(userData);
 
         if (response.data.status === 'success') {
           this.success = 'Cuenta creada exitosamente. Redirigiendo al login...';
@@ -159,7 +158,15 @@ export default {
           throw new Error(response.data.message || 'Error al crear la cuenta');
         }
       } catch (error) {
-        this.error = error.response?.data?.message || error.message || 'Error al crear la cuenta';
+        let errorMessage = 'Error al crear la cuenta';
+
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+
+        this.error = errorMessage;
       } finally {
         this.loading = false;
       }
@@ -169,5 +176,7 @@ export default {
 </script>
 
 <style scoped>
-/* Tus estilos */
+.bg-form-register {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
 </style>

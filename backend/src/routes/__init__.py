@@ -21,8 +21,23 @@ def create_app(config_class=None):
     # Initialize database
     init_db()
 
-    # Enable CORS
-    CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176", "http://localhost:5177", "http://localhost:5178"], "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}}, supports_credentials=True)
+    # Enable CORS con configuración específica para desarrollo
+    from flask_cors import CORS
+
+    CORS(app, resources={r"/api/*": {
+        "origins": ["http://localhost:5173", "http://localhost:5174"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+        "supports_credentials": True
+    }})
+
+    @app.after_request
+    def after_request(response):
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5174')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
+        return response
 
     # Register blueprints
     app.register_blueprint(potrero_bp, url_prefix='/api/potreros')
@@ -35,5 +50,17 @@ def create_app(config_class=None):
     @app.route('/favicon.ico')
     def favicon():
         return '', 204
+
+    # Health check route
+    @app.route('/api/health', methods=['GET'])
+    def health_check():
+        print("INFO: Health check solicitado")
+        from datetime import datetime
+        from flask import jsonify
+        return jsonify({
+            'status': 'ok',
+            'message': 'Backend QR Farm funcionando correctamente',
+            'timestamp': datetime.now().isoformat()
+        }), 200
 
     return app

@@ -27,7 +27,7 @@
           <div class="col-12 col-md-6">
             <div class="p-3 p-sm-4 p-lg-5 h-100 d-flex flex-column justify-content-center bg-white">
               <div class="text-center mb-4">
-                <img src="../assets/images/vacas-grupo.jpg" alt="Grupo de vacas" class="img-fluid" />
+                <img src="../../assets/images/vacas-grupo.jpg" alt="Grupo de vacas" class="img-fluid" />
               </div>
               <div class="text-center px-2 px-sm-3 px-md-4">
                 <p class="text-muted mb-2">Tu aliado inteligente en la gestión ganadera.</p>
@@ -93,8 +93,8 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-
-import axios from 'axios';
+import Swal from 'sweetalert2';
+import authService from '../../services/authService.js';
 
 const email = ref('');
 const password = ref('');
@@ -112,23 +112,62 @@ async function login() {
   error.value = '';
 
   try {
-    const response = await axios.post('http://localhost:5000/api/usuarios/login', {
+    const result = await authService.login({
       email: email.value,
       password: password.value
     });
 
-    if (response.data.status === 'success') {
-      // Guardar token en localStorage
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+    if (result.success) {
+      // Mostrar mensaje de éxito
+      await Swal.fire({
+        icon: 'success',
+        title: '¡Bienvenido!',
+        text: 'Inicio de sesión exitoso',
+        timer: 1500,
+        showConfirmButton: false
+      });
 
-      // Redirigir al menú
-      router.push('/menu');
+      // Redirigir según el rol del usuario
+      const redirectPath = authService.getRedirectPath();
+      router.push(redirectPath);
     } else {
-      error.value = response.data.message || 'Error en el inicio de sesión';
+      // Mostrar error con SweetAlert2
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error de autenticación',
+        text: result.message,
+        confirmButtonText: 'Intentar de nuevo'
+      });
+      error.value = result.message;
     }
   } catch (err) {
-    error.value = err.response?.data?.message || 'Error al conectar con el servidor';
+    console.error('Error en login:', err);
+
+    let errorMessage = 'Error al conectar con el servidor';
+
+    if (err.response) {
+      // Error de respuesta del servidor
+      if (err.response.status === 401) {
+        errorMessage = 'Credenciales incorrectas';
+      } else if (err.response.status === 500) {
+        errorMessage = 'Error interno del servidor';
+      } else {
+        errorMessage = err.response.data?.message || 'Error desconocido del servidor';
+      }
+    } else if (err.request) {
+      // Error de conexión
+      errorMessage = 'No se pudo conectar al servidor. Verifica tu conexión a internet.';
+    }
+
+    // Mostrar error con SweetAlert2
+    await Swal.fire({
+      icon: 'error',
+      title: 'Error de conexión',
+      text: errorMessage,
+      confirmButtonText: 'Aceptar'
+    });
+
+    error.value = errorMessage;
   } finally {
     loading.value = false;
   }
