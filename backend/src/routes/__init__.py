@@ -22,7 +22,7 @@ def create_app(config_class=None):
     init_db()
 
     # Enable CORS
-    CORS(app)
+    CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176", "http://localhost:5177", "http://localhost:5178"], "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], "allow_headers": ["Content-Type", "Authorization"]}}, supports_credentials=True)
 
     # Register blueprints
     app.register_blueprint(potrero_bp, url_prefix='/api/potreros')

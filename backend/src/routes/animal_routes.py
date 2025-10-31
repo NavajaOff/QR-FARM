@@ -21,6 +21,71 @@ def get_animales():
         print(f"Error obteniendo animales: {e}")
         return jsonify({'data': [], 'success': True}), 200
 
+@animal_bp.route('/<int:animal_id>', methods=['GET'])
+def get_animal(animal_id):
+    """Obtener un animal por ID."""
+    try:
+        animal = GanadoService.obtener_ganado(animal_id)
+        if animal:
+            return jsonify({'data': animal.to_dict(), 'success': True}), 200
+        else:
+            return jsonify({
+                'error': 'Animal no encontrado',
+                'message': f'No se encontró el animal con ID {animal_id}',
+                'success': False
+            }), 404
+    except Exception as e:
+        print(f"Error obteniendo animal {animal_id}: {e}")
+        return jsonify({
+            'error': 'Error interno del servidor',
+            'message': str(e),
+            'success': False
+        }), 500
+
+@animal_bp.route('/<int:animal_id>', methods=['PUT'])
+def update_animal(animal_id):
+    """Actualizar un animal."""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'error': 'Datos inválidos',
+                'message': 'No se proporcionaron datos para actualizar',
+                'success': False
+            }), 400
+
+        # Crear instancia del modelo con los datos actualizados
+        animal_data = data.copy()
+        animal_data['id'] = animal_id  # Asegurar que tenga el ID correcto
+
+        animal = Ganado.from_dict(animal_data)
+
+        # Actualizar en la base de datos
+        actualizado = GanadoService.actualizar_ganado(animal_id, animal)
+
+        if actualizado:
+            # Obtener el animal actualizado
+            animal_actualizado = GanadoService.obtener_ganado(animal_id)
+            return jsonify({
+                'data': animal_actualizado.to_dict(),
+                'message': 'Animal actualizado correctamente',
+                'success': True
+            }), 200
+        else:
+            return jsonify({
+                'error': 'Error al actualizar animal',
+                'message': 'No se pudo actualizar el animal',
+                'success': False
+            }), 500
+
+    except Exception as e:
+        print(f"Error actualizando animal {animal_id}: {e}")
+        return jsonify({
+            'error': 'Error interno del servidor',
+            'message': str(e),
+            'success': False
+        }), 500
+
 @animal_bp.route('/', methods=['POST'])
 def create_animal():
     """Create a new animal."""

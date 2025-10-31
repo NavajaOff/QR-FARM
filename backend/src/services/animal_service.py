@@ -205,16 +205,29 @@ class GanadoService:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
-            sql = "SELECT * FROM ganado WHERE id = %s"
-            cursor.execute(sql, (id,))
+            cursor.execute("""
+                SELECT g.*,
+                       eg.tipo_estado as estado_tipo,
+                       p.nombre as potrero_nombre,
+                       CONCAT(per.primer_nombre, ' ', COALESCE(per.segundo_nombre, ''), ' ', per.primer_apellido, ' ', COALESCE(per.segundo_apellido, '')) as persona_nombre,
+                       per.primer_nombre as persona_primer_nombre,
+                       per.primer_apellido as persona_primer_apellido,
+                       qr.codigo_qr
+                FROM ganado g
+                LEFT JOIN estado_ganado eg ON g.id_estado = eg.id
+                LEFT JOIN potrero p ON g.id_potrero = p.id
+                LEFT JOIN personas per ON g.id_persona = per.id
+                LEFT JOIN qr ON g.id = qr.id_ganado
+                WHERE g.id = %s
+            """, (id,))
 
             result = cursor.fetchone()
             if result:
                 return Ganado.from_dict(result)
             return None
-            
+
         except Exception as e:
-            print(f"Error al obtener animal: {e}")
+            print(f"Error al obtener ganado {id}: {e}")
             return None
         finally:
             if 'conn' in locals():
@@ -258,14 +271,23 @@ class GanadoService:
             conn = get_connection()
             cursor = conn.cursor()
 
-            # Convertir estado a ID numérico
-            estado_id = 1  # Default: activo
-            if ganado.estado.value == 'revision':
-                estado_id = 2
-            elif ganado.estado.value == 'vendido':
-                estado_id = 3
-            elif ganado.estado.value == 'muerto':
-                estado_id = 4
+            # Obtener el ID del estado desde la base de datos
+            estado_id = None
+            try:
+                conn_temp = get_connection()
+                cursor_temp = conn_temp.cursor()
+                cursor_temp.execute("SELECT id FROM estado_ganado WHERE tipo_estado = %s", (ganado.estado.value,))
+                result = cursor_temp.fetchone()
+                if result:
+                    estado_id = result[0]
+                cursor_temp.close()
+                conn_temp.close()
+            except Exception as e:
+                print(f"Error obteniendo ID de estado: {e}")
+
+            # Si no se encontró el estado, usar default
+            if estado_id is None:
+                estado_id = 1  # Default: activo
 
             # Convertir fecha_nacimiento a string si es date object
             fecha_nac = ganado.fecha_nacimiento
@@ -381,7 +403,7 @@ class GanadoService:
 
         except Exception as e:
             print(f"Error al obtener estados de ganado: {e}")
-            # Retornar lista vacía si no hay datos
+            # Retornar lista vacía si hay error
             return []
         finally:
             if 'conn' in locals():

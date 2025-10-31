@@ -190,7 +190,6 @@ export const editarAnimal = (id) => {
         <div class="mb-3"><label class="form-label">Nombre:</label><input type="text" id="edit_nombre" class="form-control" value="${animal.nombre}" required></div>
         <div class="mb-3"><label class="form-label">Peso (kg):</label><input type="number" id="edit_peso" class="form-control" value="${animal.peso || ''}" min="0" step="0.1"></div>
         <div class="mb-3"><label class="form-label">Raza:</label><input type="text" id="edit_raza" class="form-control" value="${animal.raza || ''}" required></div>
-        <div class="mb-3"><label class="form-label">Fecha de nacimiento:</label><input type="date" id="edit_fecha_nacimiento" class="form-control" value="${animal.fecha_nacimiento || ''}" required></div>
         <div class="mb-3">
           <label class="form-label">Estado:</label>
           <select id="edit_estado" class="form-control" required>
@@ -225,7 +224,6 @@ export const editarAnimal = (id) => {
       const nombre = document.getElementById('edit_nombre').value;
       const peso = document.getElementById('edit_peso').value;
       const raza = document.getElementById('edit_raza').value;
-      const fecha_nacimiento = document.getElementById('edit_fecha_nacimiento').value;
       const estado = document.getElementById('edit_estado').value;
       const sexo = document.getElementById('edit_sexo').value;
       const id_potrero = document.getElementById('edit_id_potrero').value;
@@ -241,7 +239,6 @@ export const editarAnimal = (id) => {
         nombre,
         peso: peso ? parseFloat(peso) : null,
         raza: raza || null,
-        fecha_nacimiento: fecha_nacimiento || null,
         estado: estado || null,
         sexo: sexo || null,
         id_potrero: id_potrero ? parseInt(id_potrero) : null,

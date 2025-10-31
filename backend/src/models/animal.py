@@ -6,13 +6,12 @@ from enum import Enum
 class EstadoGanado(str, Enum):
     ACTIVO = 'activo'
     VENDIDO = 'vendido'
-    MUERTO = 'muerto'
     REVISION = 'revision'
+    ENFERMO = 'enfermo'
 
 class SexoGanado(str, Enum):
     MACHO = 'macho'
     HEMBRA = 'hembra'
-    OTRO = 'otro'
 
 class Ganado:
     def __init__(self,
