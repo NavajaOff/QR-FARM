@@ -23,7 +23,7 @@ app.config['SECRET_KEY'] = 'qr-farm-secret-key-2024'
 # Configuración CORS completa para permitir peticiones desde el frontend
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:5173", "http://localhost:5174"],
+        "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
         "supports_credentials": True
@@ -274,4 +274,4 @@ if __name__ == '__main__':
     print("\nVerificacion automatica se ejecutara despues de iniciar el servidor\n")
 
     # Iniciar el servidor Flask
-    app.run(host='localhost', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

@@ -281,7 +281,7 @@ def start_frontend():
 
         # Verificar si el proceso sigue vivo
         if process.poll() is None:
-            print(f"{Colors.GREEN}[OK] Frontend iniciado correctamente en http://localhost:5174{Colors.END}")
+            print(f"{Colors.GREEN}[OK] Frontend iniciado correctamente en http://localhost:5173{Colors.END}")
             return process
         else:
             print(f"{Colors.RED}[ERROR] Error iniciando frontend{Colors.END}")
@@ -315,7 +315,7 @@ def monitor_processes(backend_process, frontend_process):
     signal.signal(signal.SIGTERM, signal_handler)
 
     print(f"\n{Colors.BOLD}{Colors.GREEN}[SUCCESS] Proyecto QR Farm iniciado exitosamente!{Colors.END}")
-    print(f"{Colors.BLUE}[URL] Frontend: http://localhost:5174{Colors.END}")
+    print(f"{Colors.BLUE}[URL] Frontend: http://localhost:5173{Colors.END}")
     print(f"{Colors.BLUE}[URL] Backend:  http://localhost:5000{Colors.END}")
     print(f"{Colors.BLUE}[URL] API Docs:  http://localhost:5000/api{Colors.END}")
     print(f"{Colors.YELLOW}[INFO] Presiona Ctrl+C para detener todos los servicios{Colors.END}")

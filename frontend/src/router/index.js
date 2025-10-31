@@ -66,6 +66,16 @@ const routes = [
         path: 'vacunacion',
         name: 'RegistroVacunacionAdmin',
         component: () => import('../views/admin/RegistroVacunacionAdmin.vue')
+      },
+      {
+        path: 'perfil',
+        name: 'PerfilAdmin',
+        component: () => import('../views/admin/PerfilAdmin.vue')
+      },
+      {
+        path: 'escanear-qr',
+        name: 'EscanearQRAdmin',
+        component: () => import('../views/admin/EscanearQRAdmin.vue')
       }
     ]
   },

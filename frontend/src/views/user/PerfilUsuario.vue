@@ -1,65 +1,15 @@
 <template>
-  <div class="user-layout">
-    <!-- Header -->
-    <nav class="navbar navbar-dark bg-success">
-      <div class="container-fluid">
-        <div class="d-flex align-items-center w-100">
-          <button
-            class="btn btn-outline-light d-md-none me-2"
-            type="button"
-            data-bs-toggle="offcanvas"
-            data-bs-target="#userSidebar"
-            aria-controls="userSidebar"
-          >
-            <i class="fas fa-bars"></i>
-          </button>
-          <i class="fas fa-user fa-lg me-2"></i>
-          <span class="fw-bold">{{ userName }}</span>
-          <span class="badge bg-info ms-2">Usuario</span>
-          <router-link class="navbar-brand mx-auto d-flex align-items-center" to="/user/dashboard">
-            <span class="fw-bold fs-2">QR FARM</span>
-            <i class="fas fa-cow ms-2 logo-icon"></i>
-          </router-link>
-          <button class="btn btn-outline-light" @click="logout">
-            <i class="fas fa-sign-out-alt me-1"></i>Salir
-          </button>
+  <div class="container-fluid py-4">
+    <div class="row">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2 class="mb-0">
+            <i class="fas fa-user-edit me-2 text-success"></i>Mi Perfil
+          </h2>
         </div>
-      </div>
-    </nav>
 
-    <!-- Sidebar -->
-    <div class="d-none d-md-block user-sidebar">
-      <nav class="nav flex-column">
-        <router-link class="nav-link" to="/user/dashboard">
-          <i class="fas fa-home me-2"></i>Inicio
-        </router-link>
-        <router-link class="nav-link" to="/user/mi-ganado">
-          <i class="fas fa-cow me-2"></i>Mi Ganado
-        </router-link>
-        <router-link class="nav-link" to="/user/vacunacion">
-          <i class="fas fa-syringe me-2"></i>Vacunación
-        </router-link>
-        <router-link class="nav-link active" to="/user/perfil">
-          <i class="fas fa-user-edit me-2"></i>Mi Perfil
-        </router-link>
-        <router-link class="nav-link" to="/user/inventario">
-          <i class="fas fa-boxes me-2"></i>Inventario
-        </router-link>
-        <router-link class="nav-link" to="/user/escanear-qr">
-          <i class="fas fa-qrcode me-2"></i>Escanear QR
-        </router-link>
-      </nav>
-    </div>
-
-    <!-- Main Content -->
-    <div class="user-main-content">
-      <div class="container-fluid py-4">
-        <div class="row">
-          <div class="col-12">
-            <h2 class="mb-4">Mi Perfil</h2>
-
-            <div class="row">
-              <div class="col-md-8">
+       <div class="row">
+         <div class="col-md-8">
                 <div class="card">
                   <div class="card-header">
                     <h5 class="mb-0">Información Personal</h5>
@@ -155,8 +105,6 @@
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -203,6 +151,15 @@ export default {
     this.userName = this.user?.persona?.primer_nombre || 'Usuario';
 
     this.loadProfile();
+  },
+
+  watch: {
+    '$route'(to, from) {
+      // Forzar recarga cuando se navega a esta ruta
+      if (to.name === 'PerfilUsuario') {
+        this.loadProfile();
+      }
+    }
   },
   methods: {
     loadProfile() {
@@ -276,52 +233,82 @@ export default {
 </script>
 
 <style scoped>
-.user-layout {
-  min-height: 100vh;
+.card {
+  border: none;
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow);
+  background: white;
 }
 
-.user-sidebar {
-  position: fixed;
-  top: 70px;
-  left: 0;
-  width: 250px;
-  height: calc(100vh - 70px);
-  background-color: #28a745;
-  padding: 1rem;
-  overflow-y: auto;
+.card-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 1px solid #dee2e6;
+  font-weight: 600;
+  color: #495057;
+  border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0 !important;
 }
 
-.user-sidebar .nav-link {
-  color: rgba(255, 255, 255, 0.9);
-  padding: 0.75rem 1rem;
-  margin-bottom: 0.25rem;
-  border-radius: 0.375rem;
-  transition: all 0.3s ease;
+.form-label {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.5rem;
 }
 
-.user-sidebar .nav-link:hover {
-  color: #fff;
-  background-color: rgba(255, 255, 255, 0.2);
+.form-control {
+  border: 2px solid #e9ecef;
+  border-radius: var(--border-radius);
+  padding: 0.75rem;
+  transition: var(--transition);
 }
 
-.user-sidebar .nav-link.active {
-  color: #fff;
-  background-color: rgba(255, 255, 255, 0.3);
-  font-weight: bold;
+.form-control:focus {
+  border-color: #28a745;
+  box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
 }
 
-.user-main-content {
-  margin-left: 250px;
-  padding-top: 2rem;
+.btn-primary {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  border: none;
+  font-weight: 600;
 }
 
-@media (max-width: 767px) {
-  .user-sidebar {
-    display: none !important;
+.btn-warning {
+  background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+  border: none;
+  font-weight: 600;
+}
+
+.badge {
+  font-size: 0.75rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius-sm);
+  font-weight: 600;
+}
+
+.alert {
+  border: none;
+  border-radius: var(--border-radius);
+  font-weight: 500;
+}
+
+.spinner-border {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .col-md-8, .col-md-4 {
+    margin-bottom: 1.5rem;
   }
 
-  .user-main-content {
-    margin-left: 0 !important;
+  .card-body {
+    padding: 1.5rem;
+  }
+
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
   }
 }
 </style>

@@ -42,7 +42,7 @@
         <router-link class="nav-link" to="/user/registro-vacunacion">
           <i class="fas fa-syringe me-2"></i>Vacunación
         </router-link>
-        <router-link class="nav-link" to="/user/perfil">
+        <router-link class="nav-link active" to="/user/perfil">
           <i class="fas fa-user-edit me-2"></i>Perfil
         </router-link>
         <router-link class="nav-link" to="/user/qr">
@@ -117,7 +117,8 @@ export default {
 
 .user-sidebar .nav-link.router-link-active {
   color: #fff;
-  background-color: #28a745;
+  background-color: rgba(255, 255, 255, 0.2);
+  font-weight: 600;
 }
 
 .user-main-content {

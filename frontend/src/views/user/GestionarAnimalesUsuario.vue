@@ -1,137 +1,12 @@
 <template>
-  <div>
-    <!-- Header -->
-    <nav class="navbar navbar-dark bg-success">
-      <div class="container-fluid">
-        <div class="d-flex align-items-center w-100">
-          <button
-            class="btn btn-outline-light d-md-none me-2"
-            type="button"
-            data-bs-toggle="offcanvas"
-            data-bs-target="#sidebarMenu"
-            aria-controls="sidebarMenu"
-            style="margin-right: 16px;"
-          >
-            <i class="fas fa-bars"></i>
-          </button>
-          <i class="fas fa-user-circle fa-lg me-2"></i>
-          <span class="fw-bold">Usuario</span>
-          <router-link class="navbar-brand mx-auto d-flex align-items-center" to="/">
-            <span class="fw-bold fs-2">QR FARM</span>
-            <i class="fas fa-cow ms-2 logo-icon"></i>
-          </router-link>
-          <div class="navbar-brand ms-auto">
-            <i class="fas fa-cow fa-2x"></i>
-          </div>
+  <div class="container-fluid py-4">
+    <div class="row">
+      <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2 class="mb-0">
+            <i class="fas fa-cow me-2 text-success"></i>Gestionar Animales
+          </h2>
         </div>
-      </div>
-    </nav>
-
-    <!-- Notification Icon -->
-    <div class="notification-icon" style="position: fixed; top: 70px; right: 20px; z-index: 1000;">
-      <button class="btn btn-light rounded-circle shadow" @click="mostrarNotificaciones">
-        <i class="fas fa-bell fa-lg"></i>
-        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">3</span>
-      </button>
-    </div>
-
-    <!-- Offcanvas Sidebar (móvil) -->
-    <div class="offcanvas offcanvas-start d-md-none" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel">
-      <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="sidebarMenuLabel">Menú</h5>
-        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-      </div>
-      <div class="offcanvas-body">
-        <nav class="nav flex-column">
-          <router-link class="nav-link" to="/inventario">
-            <i class="fas fa-boxes me-2"></i>Inventario
-          </router-link>
-
-          <!-- Submenú Gestión (colapsable) -->
-          <a
-            class="nav-link d-flex justify-content-between align-items-center"
-            data-bs-toggle="collapse"
-            href="#gestionMenuMobile"
-            role="button"
-            aria-expanded="false"
-            aria-controls="gestionMenuMobile"
-          >
-            <span><i class="fas fa-tasks me-2"></i>Gestión</span>
-            <i class="fas fa-chevron-down"></i>
-          </a>
-          <div class="collapse ps-3" id="gestionMenuMobile">
-            <router-link class="nav-link" to="/gestionar_animales">
-              <i class="fas fa-cow me-2"></i>Animales
-            </router-link>
-            <router-link class="nav-link" to="/gestionar_potreros">
-              <i class="fas fa-map-marked-alt me-2"></i>Potreros
-            </router-link>
-            <router-link class="nav-link" to="/registro_vacunacion">
-              <i class="fas fa-syringe me-2"></i>Vacunación
-            </router-link>
-          </div>
-
-          <router-link class="nav-link" to="/escanear_qr">
-            <i class="fas fa-qrcode me-2"></i>Escanear QR
-          </router-link>
-          <router-link class="nav-link" to="/login">
-            <i class="fas fa-sign-out-alt me-2"></i>Salir
-          </router-link>
-        </nav>
-      </div>
-    </div>
-
-    <!-- Sidebar fijo en desktop -->
-    <div class="d-none d-md-block sidebar">
-      <nav class="nav flex-column">
-        <router-link class="nav-link" to="/inventario">
-          <i class="fas fa-boxes me-2"></i>Inventario
-        </router-link>
-
-        <!-- Submenú Gestión (colapsable en desktop) -->
-        <a
-          class="nav-link d-flex justify-content-between align-items-center"
-          data-bs-toggle="collapse"
-          href="#gestionMenuDesktop"
-          role="button"
-          aria-expanded="false"
-          aria-controls="gestionMenuDesktop"
-        >
-          <span><i class="fas fa-tasks me-2"></i>Gestión</span>
-          <i class="fas fa-chevron-down"></i>
-        </a>
-        <div class="collapse ps-3" id="gestionMenuDesktop">
-          <router-link class="nav-link" to="/gestionar_animales">
-            <i class="fas fa-cow me-2"></i>Animales
-          </router-link>
-          <router-link class="nav-link" to="/gestionar_potreros">
-            <i class="fas fa-map-marked-alt me-2"></i>Potreros
-          </router-link>
-          <router-link class="nav-link" to="/registro_vacunacion">
-            <i class="fas fa-syringe me-2"></i>Vacunación
-          </router-link>
-        </div>
-
-        <router-link class="nav-link" to="/escanear_qr">
-          <i class="fas fa-qrcode me-2"></i>Escanear QR
-        </router-link>
-        <router-link class="nav-link" to="/login">
-          <i class="fas fa-sign-out-alt me-2"></i>Salir
-        </router-link>
-      </nav>
-    </div>
-
-    <!-- Main Content -->
-    <div class="main-content d-flex align-items-center justify-content-center">
-      <div class="container-fluid py-4 py-md-5">
-        <div class="row justify-content-center g-4">
-          <div class="col-12">
-            <!-- Título -->
-            <div class="mb-4">
-              <h2 class="fw-bold text-dark mb-2 mb-md-3">
-                <i class="fas fa-cow me-2 text-success"></i>Gestionar Animales
-              </h2>
-            </div>
 
             <!-- Filtros -->
             <div class="card border-0 shadow-lg mb-4">
@@ -226,101 +101,265 @@
               <button class="btn btn-success btn-lg" @click="agregarNuevoAnimal">
                 <i class="fas fa-plus me-2"></i>Agregar Nuevo Animal
               </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
   </div>
-
 </template>
 
-<script setup>
-import { onMounted, ref, computed } from 'vue';
-import {
-  currentIndex,
-  accordionOpen,
-  animales,
-  estadosGanado,
-  personasUsuario,
-  loading,
-  error,
-  cargarDatosIniciales,
-  estadoClass,
-  iconClass,
-  verPerfilAnimal,
-  editarAnimal,
-  agregarNuevoAnimal,
-  prevAnimal,
-  nextAnimal,
-  toggleAccordion
-} from '../assets/js/gestionar_animales.js';
+<script>
+import authService from '../../services/authService.js';
 
-// Variables locales para filtros
-const busqueda = ref("");
-const filtroRaza = ref("");
-const filtroSalud = ref("");
+export default {
+  name: 'GestionarAnimalesUsuario',
+  data() {
+    return {
+      userName: 'Usuario',
+      busqueda: '',
+      filtroRaza: '',
+      filtroSalud: '',
+      loading: false,
+      error: null,
+      animales: [
+        { id: 1, nombre: 'Rosita', raza: 'Brahman', edad: 2, estado: 'Saludable', potrero: 'Potrero 1', codigo_qr: 'QR_1_rosita' },
+        { id: 2, nombre: 'Luna', raza: 'Brahman', edad: 1, estado: 'En tratamiento', potrero: 'Potrero 2', codigo_qr: 'QR_2_rosita' },
+        { id: 3, nombre: 'Bella', raza: 'Holstein', edad: 3, estado: 'Saludable', potrero: 'Potrero 1', codigo_qr: 'QR_3_rosita' },
+        { id: 4, nombre: 'Max', raza: 'Angus', edad: 4, estado: 'Saludable', potrero: 'Potrero 2', codigo_qr: 'QR_4_rosita' }
+      ]
+    };
+  },
+  mounted() {
+    if (!authService.isAuthenticated() || !authService.isUser()) {
+      this.$router.push('/login');
+      return;
+    }
 
-// Computed para animales filtrados
-const animalesFiltrados = computed(() => {
-  return animales.value.filter(a => {
-    const matchesNombre = !busqueda.value || a.nombre.toLowerCase().includes(busqueda.value.toLowerCase());
-    const matchesRaza = !filtroRaza.value || a.raza === filtroRaza.value;
-    const matchesSalud = !filtroSalud.value || a.estado === filtroSalud.value;
-    return matchesNombre && matchesRaza && matchesSalud;
-  });
-});
+    const user = authService.getUser();
+    this.userName = user?.persona?.primer_nombre || 'Usuario';
+  },
+  computed: {
+    animalesFiltrados() {
+      return this.animales.filter(a => {
+        const matchesNombre = !this.busqueda || a.nombre.toLowerCase().includes(this.busqueda.toLowerCase());
+        const matchesRaza = !this.filtroRaza || a.raza === this.filtroRaza;
+        const matchesSalud = !this.filtroSalud || a.estado === this.filtroSalud;
+        return matchesNombre && matchesRaza && matchesSalud;
+      });
+    }
+  },
+  methods: {
+    filtrarAnimales() {
+      // Los filtros se aplican automáticamente en el computed
+    },
 
-// Función para mostrar notificaciones
-const mostrarNotificaciones = () => {
-  const SwalLib = (typeof Swal !== 'undefined') ? Swal : (window.Swal || null);
-  if (SwalLib && SwalLib.fire) {
-    SwalLib.fire({
-      title: '<i class="fas fa-bell"></i> Notificaciones',
-      html: `
-        <div class="text-start">
-          <div class="alert alert-info"><i class="fas fa-info-circle me-2"></i><strong>Recordatorio:</strong> Vacunación programada para mañana</div>
-          <div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i><strong>Alerta:</strong> Animal #125 requiere atención médica</div>
-        </div>
-      `,
-      confirmButtonColor: '#00d563'
-    });
-  } else {
-    alert('Notificaciones');
+    verPerfilAnimal(id) {
+      const animal = this.animales.find(a => a.id === id);
+      if (animal) {
+        const html = `
+          <div class="text-start">
+            <p><strong>ID:</strong> ${animal.id}</p>
+            <p><strong>Nombre:</strong> ${animal.nombre}</p>
+            <p><strong>Raza:</strong> ${animal.raza}</p>
+            <p><strong>Edad:</strong> ${animal.edad} años</p>
+            <p><strong>Estado:</strong> ${animal.estado}</p>
+            <p><strong>Potrero:</strong> ${animal.potrero}</p>
+          </div>
+        `;
+        if (window.Swal) {
+          window.Swal.fire({
+            title: `Perfil de ${animal.nombre}`,
+            html,
+            confirmButtonColor: '#28a745'
+          });
+        } else {
+          alert(`Perfil de ${animal.nombre}\n\nID: ${animal.id}\nNombre: ${animal.nombre}\nRaza: ${animal.raza}\nEdad: ${animal.edad} años\nEstado: ${animal.estado}\nPotrero: ${animal.potrero}`);
+        }
+      }
+    },
+
+    editarAnimal(id) {
+      if (window.Swal) {
+        window.Swal.fire('Editar Animal', `Funcionalidad para editar animal ${id} próximamente`, 'info');
+      } else {
+        alert(`Editar animal ${id}`);
+      }
+    },
+
+    agregarNuevoAnimal() {
+      if (window.Swal) {
+        window.Swal.fire('Agregar Animal', 'Funcionalidad para agregar nuevo animal próximamente', 'info');
+      } else {
+        alert('Agregar nuevo animal');
+      }
+    },
+
+    estadoClass(estado) {
+      if (estado === 'Saludable') return 'bg-success';
+      if (estado === 'En tratamiento') return 'bg-warning';
+      if (estado === 'Enfermo') return 'bg-danger';
+      return 'bg-secondary';
+    },
+
+    iconClass(animal) {
+      if (animal.estado === 'Saludable') return 'text-success';
+      if (animal.estado === 'En tratamiento') return 'text-warning';
+      if (animal.estado === 'Enfermo') return 'text-danger';
+      return 'text-secondary';
+    }
   }
 };
-
-// Lifecycle
-onMounted(() => {
-  cargarDatosIniciales();
-});
 </script>
 
 <style scoped>
-.sidebar {
-  min-width: 250px;
-  max-width: 250px;
-  position: fixed;
-  top: 80px;
-  left: 0;
-  height: calc(100vh - 80px);
-  background-color: #6c757d;
-  z-index: 1020;
-  padding: 1rem;
-  overflow-y: auto;
+.card {
+  border: none;
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow);
+  background: white;
 }
-@media (max-width: 767px) {
-  .sidebar {
-    display: none !important;
+
+.card-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 1px solid #dee2e6;
+  font-weight: 600;
+  color: #495057;
+}
+
+.form-label {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.5rem;
+}
+
+.form-control, .form-select {
+  border: 2px solid #e9ecef;
+  border-radius: var(--border-radius);
+  padding: 0.75rem;
+  transition: var(--transition);
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: #28a745;
+  box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  border: none;
+  font-weight: 600;
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+  border: none;
+  font-weight: 600;
+}
+
+.btn-outline-primary {
+  border-color: #007bff;
+  color: #007bff;
+  transition: var(--transition);
+}
+
+.btn-outline-primary:hover {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  border-color: #007bff;
+  color: white;
+}
+
+.btn-outline-warning {
+  border-color: #ffc107;
+  color: #ffc107;
+  transition: var(--transition);
+}
+
+.btn-outline-warning:hover {
+  background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+  border-color: #ffc107;
+  color: white;
+}
+
+.spinner-border {
+  width: 3rem;
+  height: 3rem;
+}
+
+.alert {
+  border: none;
+  border-radius: var(--border-radius);
+  font-weight: 500;
+}
+
+.badge {
+  font-size: 0.75rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius-sm);
+  font-weight: 600;
+}
+
+.table {
+  margin-bottom: 0;
+}
+
+.table thead th {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  font-weight: 600;
+  border: none;
+  padding: 1rem 0.75rem;
+}
+
+.table tbody tr {
+  transition: var(--transition);
+}
+
+.table tbody tr:hover {
+  background-color: #f8f9fa;
+  transform: scale(1.01);
+}
+
+.table td {
+  padding: 1rem 0.75rem;
+  vertical-align: middle;
+  border: none;
+}
+
+.btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .container-fluid {
+    padding: 1rem;
   }
-}
-.main-content {
-  margin-left: 250px;
-  margin-top: 0;
-}
-@media (max-width: 767px) {
-  .main-content {
-    margin-left: 0 !important;
+
+  .row.g-3 {
+    --bs-gutter-x: 1rem;
+    --bs-gutter-y: 1rem;
+  }
+
+  .col-md-4, .col-md-3, .col-md-2 {
+    margin-bottom: 1rem;
+  }
+
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  .table-responsive {
+    border-radius: var(--border-radius);
+    overflow: hidden;
+  }
+
+  .table td, .table th {
+    padding: 0.5rem;
+    font-size: 0.875rem;
   }
 }
 </style>

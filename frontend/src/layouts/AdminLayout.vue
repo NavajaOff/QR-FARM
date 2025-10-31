@@ -93,25 +93,16 @@
           </div>
         </router-link>
 
-        <!-- Reportes (separador visual) -->
-        <hr class="my-3 opacity-25">
-        <div class="nav-link text-muted small fw-bold text-uppercase px-3 mb-2">
-          <i class="fas fa-chart-line me-2"></i>Reportes
-        </div>
+        <!-- Escanear QR -->
+        <router-link class="nav-link mb-2" to="/admin/escanear-qr">
+          <div class="d-flex align-items-center">
+            <i class="fas fa-qrcode me-3 fa-lg"></i>
+            <span class="fw-medium">Escanear QR</span>
+          </div>
+        </router-link>
 
-        <!-- Espaciador para empujar logout abajo -->
+        <!-- Espaciador para empujar elementos abajo -->
         <div class="flex-grow-1"></div>
-
-        <!-- Logout -->
-        <div class="mt-4 pt-3 border-top border-secondary">
-          <button class="nav-link w-100 text-start border-0 bg-transparent text-danger"
-                  @click="logout">
-            <div class="d-flex align-items-center">
-              <i class="fas fa-sign-out-alt me-3 fa-lg"></i>
-              <span class="fw-medium">Cerrar Sesión</span>
-            </div>
-          </button>
-        </div>
       </nav>
     </div>
 
@@ -324,6 +315,7 @@ export default {
   padding: 2rem;
   min-height: calc(100vh - 76px);
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding-top: 2rem;
 }
 
 /* Animaciones */
@@ -366,6 +358,7 @@ export default {
   width: 20px;
   text-align: center;
 }
+
 
 /* Gradiente para el fondo */
 .admin-layout::before {
