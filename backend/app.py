@@ -4,10 +4,11 @@ Backend Flask para QR Farm
 Servidor REST API con autenticación JWT
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import jwt
 import datetime
+import os
 from src.database.db import get_connection
 from src.services.usuario_service import UsuarioService
 from src.services.animal_service import GanadoService
@@ -301,6 +302,27 @@ def usuarios_login():
             "status": "error",
             "message": "Error interno del servidor"
         }), 500
+
+# Endpoint para servir imágenes QR
+@app.route('/api/qr/<filename>', methods=['GET'])
+def get_qr_image(filename):
+    """Endpoint para servir imágenes QR"""
+    try:
+        # Ruta relativa al directorio del script (backend)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        qr_path = os.path.join(script_dir, 'qr', filename)
+
+        print(f"Buscando imagen QR en: {qr_path}")
+        print(f"¿Existe el archivo?: {os.path.exists(qr_path)}")
+
+        if os.path.exists(qr_path):
+            return send_file(qr_path, mimetype='image/png')
+        else:
+            print(f"Imagen QR no encontrada: {qr_path}")
+            return jsonify({"error": "Imagen QR no encontrada"}), 404
+    except Exception as e:
+        print(f"Error sirviendo imagen QR: {e}")
+        return jsonify({"error": "Error interno del servidor"}), 500
 
 # Registrar blueprints
 app.register_blueprint(potrero_bp, url_prefix='/api/potreros')

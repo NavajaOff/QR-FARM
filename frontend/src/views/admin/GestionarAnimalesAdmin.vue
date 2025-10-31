@@ -38,6 +38,9 @@
                       </span>
                     </td>
                     <td>
+                      <button class="btn btn-sm btn-outline-info me-2" @click="viewQR(animal)" title="Ver QR">
+                        <i class="fas fa-qrcode"></i>
+                      </button>
                       <button class="btn btn-sm btn-outline-primary me-2" @click="editAnimal(animal)">
                         <i class="fas fa-edit"></i>
                       </button>
@@ -53,6 +56,30 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal para ver QR -->
+    <div class="modal fade" id="qrModal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="qrModalLabel">Código QR - {{ selectedAnimal?.nombre }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center">
+            <div v-if="qrImageUrl" class="qr-container">
+              <img :src="qrImageUrl" alt="Código QR" class="img-fluid qr-image" />
+            </div>
+            <div v-else class="text-muted">
+              <i class="fas fa-spinner fa-spin fa-2x"></i>
+              <p class="mt-2">Cargando código QR...</p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -64,7 +91,9 @@ export default {
   data() {
     return {
       ganado: [],
-      showAddAnimalModal: false
+      showAddAnimalModal: false,
+      selectedAnimal: null,
+      qrImageUrl: null
     };
   },
   mounted() {
@@ -86,8 +115,28 @@ export default {
       console.log('Editar animal:', animal);
     },
 
+    viewQR(animal) {
+      this.selectedAnimal = animal;
+      this.qrImageUrl = null;
+
+      // Construir la URL del QR desde el backend usando el patrón correcto
+      // Los archivos son: QR_1_rosita.png, QR_2_rosita.png, etc.
+      const qrFilename = `QR_${animal.id}_rosita.png`;
+      this.qrImageUrl = `http://localhost:5000/api/qr/${qrFilename}`;
+
+      // Mostrar el modal
+      const modal = new bootstrap.Modal(document.getElementById('qrModal'));
+      modal.show();
+    },
+
+    editAnimal(animal) {
+      console.log('Editar animal:', animal);
+      // TODO: Implementar modal de edición
+    },
+
     deleteAnimal(animal) {
       console.log('Eliminar animal:', animal);
+      // TODO: Implementar confirmación y eliminación
     }
   }
 };
@@ -188,6 +237,33 @@ h2 {
 .btn-outline-danger:hover {
   background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
   border-color: #dc3545;
+  color: white;
+}
+
+.qr-container {
+  padding: 2rem;
+  background: #f8f9fa;
+  border-radius: 10px;
+  margin: 1rem 0;
+}
+
+.qr-image {
+  max-width: 300px;
+  max-height: 300px;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.btn-outline-info {
+  border-color: #17a2b8;
+  color: #17a2b8;
+  transition: var(--transition);
+}
+
+.btn-outline-info:hover {
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+  border-color: #17a2b8;
   color: white;
 }
 
