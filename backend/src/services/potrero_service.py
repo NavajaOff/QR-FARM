@@ -182,9 +182,16 @@ class PotreroService:
 
         update_fields = []
         values = []
+
+        # Procesar campos especiales para fechas
         for key, value in data.items():
             if key in ['id']:
                 continue
+
+            # Convertir strings vacías a None para campos de fecha
+            if key in ['proxima_limpieza', 'ultima_limpieza', 'fecha_ultimo_uso'] and value == '':
+                value = None
+
             update_fields.append(f"{key} = %s")
             values.append(value)
 
