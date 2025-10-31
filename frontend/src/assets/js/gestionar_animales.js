@@ -165,7 +165,7 @@ export const verPerfilAnimal = async (id) => {
             <p><strong>Estado:</strong> ${animalActualizado.estado_tipo || animalActualizado.estado || 'Sin dato'}</p>
             <p><strong>Potrero actual:</strong> ${animalActualizado.id_potrero ? (potreros.value.find(p => p.id == animalActualizado.id_potrero)?.nombre || `Potrero ${animalActualizado.id_potrero}`) : 'Sin dato'}</p>
             <p><strong>Historial médico:</strong> Sin incidencias</p>
-            ${animalActualizado.codigo_qr ? `<div class="mt-3"><img src="/qr/${animalActualizado.codigo_qr}.png" alt="Código QR" class="img-fluid" style="max-width: 150px;"></div>` : ''}
+            ${animalActualizado.codigo_qr ? `<div class="mt-3"><img src="http://localhost:5000/api/animales/qr/${animalActualizado.codigo_qr}.png" alt="Código QR" class="img-fluid" style="max-width: 300px;"></div>` : ''}
           </div>
         `,
         confirmButtonColor: '#00d563',
@@ -197,7 +197,7 @@ export const verPerfilAnimal = async (id) => {
           <p><strong>Estado:</strong> ${animal.estado || 'Sin dato'}</p>
           <p><strong>Potrero actual:</strong> ${animal.potreroActual || 'Sin dato'}</p>
           <p><strong>Historial médico:</strong> Sin incidencias</p>
-          ${animal.codigo_qr ? `<div class="mt-3"><img src="/qr/${animal.codigo_qr}.png" alt="Código QR" class="img-fluid" style="max-width: 150px;"></div>` : ''}
+          ${animal.codigo_qr ? `<div class="mt-3"><img src="http://localhost:5000/api/animales/qr/${animal.codigo_qr}.png" alt="Código QR" class="img-fluid" style="max-width: 300px;"></div>` : ''}
         </div>
       `,
       confirmButtonColor: '#00d563',

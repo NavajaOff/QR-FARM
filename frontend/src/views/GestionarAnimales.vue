@@ -213,8 +213,8 @@
                         <i class="fas fa-edit me-1"></i>Editar
                       </button>
                       <div v-if="animal.codigo_qr" class="mt-2">
-                        <img :src="'/qr/' + animal.codigo_qr + '.png'" alt="Código QR" class="img-fluid rounded" style="max-width: 80px; max-height: 80px;">
-                      </div>
+                          <img :src="'http://localhost:5000/api/animales/qr/' + animal.codigo_qr + '.png'" alt="Código QR" class="img-fluid rounded" style="max-width: 200px; max-height: 200px;">
+                        </div>
                     </div>
                   </div>
                 </div>

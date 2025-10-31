@@ -1,7 +1,8 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_from_directory
 from src.services.potrero_service import PotreroService
 from src.services.animal_service import GanadoService
 from src.models.animal import Ganado
+import os
 
 animal_bp = Blueprint('animal', __name__, url_prefix='/api/animales')
 
@@ -41,6 +42,20 @@ def get_animal(animal_id):
             'message': str(e),
             'success': False
         }), 500
+
+@animal_bp.route('/qr/<codigo_qr>.png', methods=['GET'])
+def get_qr_image(codigo_qr):
+    """Servir imágenes QR."""
+    try:
+        qr_dir = os.path.join(os.getcwd(), 'qr')
+        return send_from_directory(qr_dir, f"{codigo_qr}.png")
+    except Exception as e:
+        print(f"Error sirviendo QR {codigo_qr}: {e}")
+        return jsonify({
+            'error': 'Imagen no encontrada',
+            'message': f'No se encontró la imagen QR {codigo_qr}',
+            'success': False
+        }), 404
 
 @animal_bp.route('/<int:animal_id>', methods=['PUT'])
 def update_animal(animal_id):
