@@ -1,9 +1,10 @@
 # Ignorar archivos de entorno
 .env
 .env.*
+*.env
 
 # Python cache
-_pycache_/
+__pycache__/
 *.py[cod]
 *$py.class
 *.so
@@ -35,7 +36,7 @@ htmlcov/
 .nox/
 .coverage
 .coverage.*
-.cache
+.cache/
 nosetests.xml
 coverage.xml
 *.cover
@@ -43,7 +44,7 @@ coverage.xml
 .pytest_cache/
 
 # Jupyter Notebook
-.ipynb_checkpoints
+.ipynb_checkpoints/
 
 # IPython
 profile_default/
@@ -56,7 +57,7 @@ ipython_config.py
 Pipfile.lock
 
 # PEP 582
-_pypackages_/
+__pypackages__/
 
 # Celery stuff
 celerybeat-schedule
@@ -65,9 +66,9 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
-# Environments
-.env
-.venv
+# Entornos virtuales
+.env/
+.venv/
 env/
 venv/
 ENV/
@@ -79,20 +80,32 @@ venv.bak/
 .spyproject
 
 # Rope project settings
-.ropeproject
+.ropeproject/
 
 # mkdocs documentation
-/site
+/site/
 
 # mypy
 .mypy_cache/
 .dmypy.json
 dmypy.json
 
-#  Extra: asegurarse de ignorar cache Python residual
-**/_pycache_/
+# Cache residual de Python
+**/__pycache__/
 *.pyc
 *.pyo
 
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
 # Node.js dependencies
 node_modules/
+
+# Carpeta de códigos QR (no subir imágenes QR generadas)
+backend/qr/
+backend/qr/*
+
+# Logs
+*.log
+logs/
