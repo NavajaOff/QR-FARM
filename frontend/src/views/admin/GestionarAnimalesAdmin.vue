@@ -21,6 +21,7 @@
                     <th>Raza</th>
                     <th>Edad</th>
                     <th>Peso (kg)</th>
+                    <th>Potrero</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                   </tr>
@@ -32,8 +33,9 @@
                     <td>{{ animal.raza }}</td>
                     <td>{{ animal.edad }} años</td>
                     <td>{{ animal.peso }}</td>
+                    <td>{{ animal.potreroActual }}</td>
                     <td>
-                      <span class="badge" :class="animal.estado === 'activo' ? 'bg-success' : 'bg-secondary'">
+                      <span class="badge" :class="animal.estado === 'saludable' ? 'bg-success' : animal.estado === 'revision' ? 'bg-warning' : animal.estado === 'enfermo' ? 'bg-danger' : 'bg-secondary'">
                         {{ animal.estado }}
                       </span>
                     </td>

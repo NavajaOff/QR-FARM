@@ -11,7 +11,7 @@ export const loading = ref(true);
 export const error = ref(null);
 
 // Importar potreros para el select
-import { potreros, cargarPotreros } from './gestionar-potreros.js';
+import { potreros, cargarPotreros, cargarDatosIniciales as cargarDatosInicialesPotreros } from './gestionar-potreros.js';
 
 // API configuration
 const API_BASE = 'http://localhost:5000/api';
@@ -29,8 +29,8 @@ export const cargarDatosIniciales = async () => {
     loading.value = true;
     error.value = null;
 
-    // Cargar potreros primero para que estén disponibles
-    await cargarPotreros();
+    // Cargar datos iniciales de potreros para que estén disponibles
+    await cargarDatosInicialesPotreros();
 
     await Promise.all([
       cargarEstadosGanado(),
@@ -94,7 +94,7 @@ export const cargarAnimales = async () => {
         id_potrero: animal.id_potrero,
         id_persona: animal.id_persona,
         // Campos calculados
-        estado: animal.estado_tipo || 'No definido',
+        estado: animal.estado_tipo || animal.estado || 'No definido',
         potreroActual: animal.id_potrero ? (potreros.value.find(p => p.id == animal.id_potrero)?.nombre || `Potrero ${animal.id_potrero}`) : 'Sin asignar',
         propietario: animal.id_persona ? (personasUsuario.value.find(p => p.id == animal.id_persona) ? `${personasUsuario.value.find(p => p.id == animal.id_persona).primer_nombre} ${personasUsuario.value.find(p => p.id == animal.id_persona).primer_apellido}` : `Persona ${animal.id_persona}`) : 'Sin asignar',
         edad: animal.fecha_nacimiento ? calcularEdad(animal.fecha_nacimiento) : 'No definida',
