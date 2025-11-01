@@ -83,11 +83,20 @@ export const cargarPersonasUsuario = async () => {
 
 export const cargarPotreros = async () => {
   try {
+    console.log('Cargando potreros desde API...');
     const response = await fetch(`${API_BASE}/potreros/`);
-    if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+    console.log('Respuesta HTTP:', response.status);
+
+    if (!response.ok) {
+      throw new Error(`Error HTTP: ${response.status}`);
+    }
 
     const data = await response.json();
-    if (data.success) {
+    console.log('Respuesta completa del backend:', data);
+
+    // Validar si la respuesta contiene un array dentro de data.data
+    if (data.data && Array.isArray(data.data)) {
+      console.log('Procesando array de potreros desde data.data');
       potreros.value = data.data.map(potrero => ({
         id: potrero.id,
         nombre: potrero.nombre,
@@ -103,9 +112,10 @@ export const cargarPotreros = async () => {
         descripcion: potrero.descripcion || '',
         pasto: potrero.tipo_pasto_nombre || 'No definido'
       }));
-    } else {
-      console.log('Respuesta de potreros:', data);
-      // Si no hay data.success, asumir que la respuesta es directamente el array
+      console.log('Potreros cargados exitosamente:', potreros.value.length, 'potreros');
+    } else if (Array.isArray(data)) {
+      // Fallback: si la respuesta es directamente un array
+      console.log('Procesando array de potreros directamente desde data');
       potreros.value = data.map(potrero => ({
         id: potrero.id,
         nombre: potrero.nombre,
@@ -121,10 +131,15 @@ export const cargarPotreros = async () => {
         descripcion: potrero.descripcion || '',
         pasto: potrero.tipo_pasto || 'No definido'
       }));
+      console.log('Potreros cargados exitosamente (fallback):', potreros.value.length, 'potreros');
+    } else {
+      console.warn('La respuesta no contiene un array válido de potreros');
+      potreros.value = [];
     }
   } catch (error) {
-    error.value = error.message;
     console.error('Error cargando potreros:', error);
+    error.value = error.message;
+    potreros.value = [];
   } finally {
     loading.value = false;
   }

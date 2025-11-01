@@ -100,8 +100,8 @@ export const cargarAnimales = async () => {
         id_persona: animal.id_persona,
         // Campos calculados
         estado: animal.estado_tipo || animal.estado || 'No definido',
-        potreroActual: animal.id_potrero ? (potreros.value.find(p => p.id == animal.id_potrero)?.nombre || `Potrero ${animal.id_potrero}`) : 'Sin asignar',
-        propietario: animal.id_persona ? (personasUsuario.value.find(p => p.id == animal.id_persona) ? `${personasUsuario.value.find(p => p.id == animal.id_persona).primer_nombre} ${personasUsuario.value.find(p => p.id == animal.id_persona).primer_apellido}` : `Persona ${animal.id_persona}`) : 'Sin asignar',
+        potreroActual: animal.potrero_nombre || (animal.id_potrero ? (potreros.value.find(p => p.id == animal.id_potrero)?.nombre || `Potrero ${animal.id_potrero}`) : 'Sin asignar'),
+        propietario: animal.persona_nombre || (animal.id_persona ? (personasUsuario.value.find(p => p.id == animal.id_persona) ? `${personasUsuario.value.find(p => p.id == animal.id_persona).primer_nombre} ${personasUsuario.value.find(p => p.id == animal.id_persona).primer_apellido}` : `Persona ${animal.id_persona}`) : 'Sin asignar'),
         edad: animal.fecha_nacimiento ? calcularEdad(animal.fecha_nacimiento) : 'No definida',
         codigo_qr: animal.codigo_qr
       }));
