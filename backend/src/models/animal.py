@@ -5,6 +5,7 @@ from enum import Enum
 
 class EstadoGanado(str, Enum):
     ACTIVO = 'activo'
+    SALUDABLE = 'saludable'
     VENDIDO = 'vendido'
     REVISION = 'revision'
     ENFERMO = 'enfermo'
