@@ -4,7 +4,7 @@
       <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h2 class="mb-0">Gestión de Ganado</h2>
-          <button class="btn btn-success" @click="showAddAnimalModal = true">
+          <button class="btn btn-success" @click="addAnimal">
             <i class="fas fa-plus me-2"></i>Agregar Animal
           </button>
         </div>
@@ -85,6 +85,16 @@
 
 <script>
 import { ganadoAPI } from '../../services/api.js';
+import {
+  cargarDatosIniciales,
+  animales,
+  loading,
+  error,
+  editarAnimal,
+  agregarNuevoAnimal,
+  verPerfilAnimal,
+  setUpdateCallback
+} from '../../assets/js/gestionar_animales.js';
 
 export default {
   name: 'GestionarAnimalesAdmin',
@@ -92,51 +102,54 @@ export default {
     return {
       ganado: [],
       showAddAnimalModal: false,
+      showEditAnimalModal: false,
       selectedAnimal: null,
-      qrImageUrl: null
+      qrImageUrl: null,
+      editingAnimal: null
     };
   },
   mounted() {
     this.cargarGanado();
+    // Configurar callback para actualizar la lista desde el JS
+    setUpdateCallback(this.actualizarLista);
   },
   methods: {
     async cargarGanado() {
       try {
-        const response = await ganadoAPI.getAll();
-        if (response.data?.status === 'success') {
-          this.ganado = response.data.data;
-        }
+        // Usar la función del archivo JS existente
+        await cargarDatosIniciales();
+        // Copiar los datos a la variable local para compatibilidad
+        this.ganado = [...animales.value];
       } catch (error) {
         console.error('Error cargando ganado:', error);
       }
     },
 
-    editAnimal(animal) {
-      console.log('Editar animal:', animal);
+    // Método para actualizar la lista después de cambios
+    actualizarLista() {
+      this.ganado = [...animales.value];
     },
 
     viewQR(animal) {
-      this.selectedAnimal = animal;
-      this.qrImageUrl = null;
-
-      // Construir la URL del QR desde el backend usando el patrón correcto
-      // Los archivos son: QR_1_rosita.png, QR_2_rosita.png, etc.
-      const qrFilename = `QR_${animal.id}_rosita.png`;
-      this.qrImageUrl = `http://localhost:5000/api/qr/${qrFilename}`;
-
-      // Mostrar el modal
-      const modal = new bootstrap.Modal(document.getElementById('qrModal'));
-      modal.show();
+      // Usar la función del archivo JS existente para ver perfil con QR
+      verPerfilAnimal(animal.id);
     },
 
     editAnimal(animal) {
-      console.log('Editar animal:', animal);
-      // TODO: Implementar modal de edición
+      // Usar la función del archivo JS existente
+      editarAnimal(animal.id);
     },
 
     deleteAnimal(animal) {
-      console.log('Eliminar animal:', animal);
-      // TODO: Implementar confirmación y eliminación
+      if (confirm(`¿Estás seguro de que deseas eliminar al animal "${animal.nombre}"?`)) {
+        console.log('Eliminando animal:', animal);
+        alert('Funcionalidad de eliminar animal próximamente disponible');
+      }
+    },
+
+    addAnimal() {
+      // Usar la función del archivo JS existente
+      agregarNuevoAnimal();
     }
   }
 };

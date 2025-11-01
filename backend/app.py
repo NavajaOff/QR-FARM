@@ -107,13 +107,36 @@ def obtener_ganados():
                 today = date.today()
                 edad = today.year - ganado.fecha_nacimiento.year - ((today.month, today.day) < (ganado.fecha_nacimiento.month, ganado.fecha_nacimiento.day))
 
+            # Obtener estado desde la tabla estado_ganado
+            estado_tipo = getattr(ganado, 'estado_tipo', None)
+            if not estado_tipo and ganado.id_estado:
+                # Buscar el estado en la tabla estado_ganado si no está en el objeto
+                try:
+                    conn_temp = get_connection()
+                    cursor_temp = conn_temp.cursor(dictionary=True)
+                    cursor_temp.execute("SELECT tipo_estado FROM estado_ganado WHERE id = %s", (ganado.id_estado,))
+                    estado_result = cursor_temp.fetchone()
+                    if estado_result:
+                        estado_tipo = estado_result['tipo_estado']
+                    cursor_temp.close()
+                    conn_temp.close()
+                except Exception as e:
+                    print(f"Error obteniendo estado del ganado: {e}")
+
             ganados_data.append({
                 "id": ganado.id,
                 "nombre": ganado.nombre,
                 "raza": ganado.raza,
                 "edad": edad,
                 "peso": float(ganado.peso) if ganado.peso else None,
-                "estado": ganado.estado
+                "estado": ganado.estado,
+                "estado_tipo": getattr(ganado, 'estado_tipo', estado_tipo),
+                "id_estado": ganado.id_estado,
+                "id_potrero": ganado.id_potrero,
+                "id_persona": ganado.id_persona,
+                "codigo_qr": ganado.codigo_qr,
+                "fecha_nacimiento": ganado.fecha_nacimiento.isoformat() if ganado.fecha_nacimiento else None,
+                "sexo": ganado.sexo.value if hasattr(ganado.sexo, 'value') else str(ganado.sexo)
             })
 
         print(f"Enviando {len(ganados_data)} animales desde la base de datos")
@@ -126,6 +149,8 @@ def obtener_ganados():
 
     except Exception as e:
         print(f"Error al obtener ganado: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             "status": "error",
             "message": "Error interno del servidor"

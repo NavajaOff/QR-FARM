@@ -27,6 +27,7 @@ class Ganado:
                  peso: Optional[float] = None,
                  estado: EstadoGanado = EstadoGanado.ACTIVO,
                  estado_salud: Optional[str] = None,
+                 estado_tipo: Optional[str] = None,
                  created_at: Optional[date] = None,
                  updated_at: Optional[date] = None):
 
@@ -42,6 +43,7 @@ class Ganado:
         self.peso = peso
         self.estado = estado
         self.estado_salud = estado_salud
+        self.estado_tipo = estado_tipo
         self.created_at = created_at
         self.updated_at = updated_at
 
@@ -63,6 +65,7 @@ class Ganado:
             peso=float(data.get('peso')) if data.get('peso') is not None else None,
             estado=EstadoGanado(data.get('estado', 'activo')),
             estado_salud=data.get('estado_salud'),
+            estado_tipo=data.get('estado_tipo'),
             created_at=data.get('created_at'),
             updated_at=data.get('updated_at')
         )

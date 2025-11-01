@@ -16,16 +16,25 @@ import { potreros, cargarPotreros } from './gestionar-potreros.js';
 // API configuration
 const API_BASE = 'http://localhost:5000/api';
 
+// Función para actualizar la lista en el componente Vue
+let updateCallback = null;
+
+export const setUpdateCallback = (callback) => {
+  updateCallback = callback;
+};
+
 // API calls
 export const cargarDatosIniciales = async () => {
   try {
     loading.value = true;
     error.value = null;
 
+    // Cargar potreros primero para que estén disponibles
+    await cargarPotreros();
+
     await Promise.all([
       cargarEstadosGanado(),
-      cargarPersonasUsuario(),
-      cargarPotreros()
+      cargarPersonasUsuario()
     ]);
 
     await cargarAnimales();
@@ -322,6 +331,10 @@ export const editarAnimal = (id) => {
           if (data.success) {
             Swal.fire('¡Éxito!', 'Animal actualizado correctamente', 'success');
             await cargarAnimales();
+            // Notificar al componente Vue que actualice la lista
+            if (updateCallback) {
+              updateCallback();
+            }
           } else {
             throw new Error(data.message || 'Error desconocido');
           }
@@ -440,6 +453,10 @@ export const agregarNuevoAnimal = () => {
           if (data.success) {
             Swal.fire('¡Éxito!', 'Animal agregado correctamente', 'success');
             await cargarAnimales();
+            // Notificar al componente Vue que actualice la lista
+            if (updateCallback) {
+              updateCallback();
+            }
           } else {
             throw new Error(data.message || 'Error desconocido');
           }
