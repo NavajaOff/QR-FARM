@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import Swal from 'sweetalert2';
+import axios from 'axios';
 
 // Variables reactivas
 export const currentIndex = ref(0);
@@ -9,6 +10,9 @@ export const estadosGanado = ref([]);
 export const personasUsuario = ref([]);
 export const loading = ref(true);
 export const error = ref(null);
+
+// Control de cancelación con Axios
+let cancelTokenSource = null;
 
 // Importar potreros para el select
 import { potreros, cargarPotreros, cargarDatosIniciales as cargarDatosInicialesPotreros } from './gestionar-potreros.js';
@@ -23,22 +27,57 @@ export const setUpdateCallback = (callback) => {
   updateCallback = callback;
 };
 
+// Función para cancelar peticiones pendientes
+export const cancelPendingRequests = () => {
+  if (cancelTokenSource) {
+    console.log('Cancelando peticiones pendientes de animales...');
+    cancelTokenSource.cancel('Navegación cancelada por el usuario');
+    cancelTokenSource = null;
+  }
+};
+
 // API calls
 export const cargarDatosIniciales = async () => {
   try {
+    // Cancelar peticiones anteriores si existen
+    cancelPendingRequests();
+
+    // Crear nuevo cancel token para esta carga
+    cancelTokenSource = axios.CancelToken.source();
+
     loading.value = true;
     error.value = null;
 
+    console.log('Iniciando carga de datos iniciales de animales...');
+
     // Cargar datos iniciales de potreros para que estén disponibles
     await cargarDatosInicialesPotreros();
+
+    // Verificar si fue cancelado
+    if (cancelTokenSource.token.reason) {
+      console.log('Carga de datos iniciales cancelada después de potreros');
+      return;
+    }
 
     await Promise.all([
       cargarEstadosGanado(),
       cargarPersonasUsuario()
     ]);
 
+    // Verificar si fue cancelado
+    if (cancelTokenSource.token.reason) {
+      console.log('Carga de datos iniciales cancelada después de estados/personas');
+      return;
+    }
+
     await cargarAnimales();
+
+    console.log('Carga de datos iniciales de animales completada');
   } catch (error) {
+    if (axios.isCancel(error)) {
+      console.log('Carga de datos iniciales cancelada por navegación');
+      return;
+    }
     error.value = error.message;
     console.error('Error cargando datos iniciales:', error);
     loading.value = false;
@@ -48,47 +87,55 @@ export const cargarDatosIniciales = async () => {
 export const cargarEstadosGanado = async () => {
   try {
     console.log('Cargando estados de ganado...');
-    const response = await fetch(`${API_BASE}/animales/estados`);
+    const response = await axios.get(`${API_BASE}/animales/estados-ganado`, {
+      cancelToken: cancelTokenSource.token,
+      timeout: 10000
+    });
     console.log('Respuesta estados ganado:', response.status);
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Datos estados ganado:', data);
-      estadosGanado.value = data.success ? data.data : [];
-      console.log('Estados ganado cargados:', estadosGanado.value);
-    } else {
-      console.error('Error HTTP estados ganado:', response.status);
-      estadosGanado.value = [];
-    }
+    estadosGanado.value = response.data.success ? response.data.data : [];
+    console.log('Estados ganado cargados:', estadosGanado.value);
   } catch (error) {
-    console.error('Error cargando estados de ganado:', error);
+    if (axios.isCancel(error)) {
+      console.log('Carga de estados ganado cancelada');
+      return;
+    }
+    console.error('Error cargando estados de ganado:', error.message);
     estadosGanado.value = [];
   }
 };
 
 export const cargarPersonasUsuario = async () => {
   try {
-    const response = await fetch(`${API_BASE}/potreros/personas-usuario`);
-    if (response.ok) {
-      const data = await response.json();
-      // Usar el mismo array que en potreros
-      personasUsuario.value = data.success ? data.data : [];
-    } else {
-      personasUsuario.value = [];
-    }
+    console.log('Cargando personas usuario...');
+    const response = await axios.get(`${API_BASE}/potreros/personas-usuario`, {
+      cancelToken: cancelTokenSource.token,
+      timeout: 10000
+    });
+    console.log('Respuesta personas usuario:', response.status);
+    // Usar el mismo array que en potreros
+    personasUsuario.value = response.data.success ? response.data.data : [];
+    console.log('Personas usuario cargadas:', personasUsuario.value.length);
   } catch (error) {
-    console.error('Error cargando personas usuario:', error);
+    if (axios.isCancel(error)) {
+      console.log('Carga de personas usuario cancelada');
+      return;
+    }
+    console.error('Error cargando personas usuario:', error.message);
     personasUsuario.value = [];
   }
 };
 
 export const cargarAnimales = async () => {
   try {
-    const response = await fetch(`${API_BASE}/animales/`);
-    if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+    console.log('Cargando animales desde API...');
+    const response = await axios.get(`${API_BASE}/ganados/`, {
+      cancelToken: cancelTokenSource.token,
+      timeout: 15000  // Timeout más largo para listas grandes
+    });
+    console.log('Respuesta HTTP ganado:', response.status);
 
-    const data = await response.json();
-    if (data.success) {
-      animales.value = data.data.map(animal => ({
+    if (response.data.status === 'success' && response.data.data) {
+      animales.value = response.data.data.map(animal => ({
         id: animal.id,
         nombre: animal.nombre,
         peso: animal.peso,
@@ -105,12 +152,17 @@ export const cargarAnimales = async () => {
         edad: animal.fecha_nacimiento ? calcularEdad(animal.fecha_nacimiento) : 'No definida',
         codigo_qr: animal.codigo_qr
       }));
+      console.log('Animales cargados exitosamente:', animales.value.length, 'animales');
     } else {
-      throw new Error(data.message || 'Error desconocido');
+      throw new Error(response.data.message || 'Error desconocido');
     }
   } catch (error) {
+    if (axios.isCancel(error)) {
+      console.log('Carga de animales cancelada');
+      return;
+    }
     error.value = error.message;
-    console.error('Error cargando animales:', error);
+    console.error('Error cargando animales:', error.message);
   } finally {
     loading.value = false;
   }
@@ -481,6 +533,18 @@ export const agregarNuevoAnimal = () => {
       }
     }
   });
+};
+
+// Función para limpiar estado al cambiar de ruta
+export const resetEstado = () => {
+  console.log('Reseteando estado de animales...');
+  cancelPendingRequests();
+  loading.value = true;
+  error.value = null;
+  // Limpiamos arrays para forzar recarga fresca
+  animales.value = [];
+  estadosGanado.value = [];
+  personasUsuario.value = [];
 };
 
 // Navigation

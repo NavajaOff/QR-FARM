@@ -9,8 +9,16 @@
           </button>
         </div>
 
+        <!-- Loader mientras carga -->
+        <div v-if="isLoading" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+          <p class="mt-2 text-muted">Cargando ganado...</p>
+        </div>
+
         <!-- Tabla de ganado -->
-        <div class="card">
+        <div v-else class="card">
           <div class="card-body">
             <div class="table-responsive">
               <table class="table table-striped">
@@ -95,7 +103,9 @@ import {
   editarAnimal,
   agregarNuevoAnimal,
   verPerfilAnimal,
-  setUpdateCallback
+  setUpdateCallback,
+  cancelPendingRequests,
+  resetEstado
 } from '../../assets/js/gestionar_animales.js';
 
 export default {
@@ -107,7 +117,8 @@ export default {
       showEditAnimalModal: false,
       selectedAnimal: null,
       qrImageUrl: null,
-      editingAnimal: null
+      editingAnimal: null,
+      isLoading: true
     };
   },
   mounted() {
@@ -115,15 +126,38 @@ export default {
     // Configurar callback para actualizar la lista desde el JS
     setUpdateCallback(this.actualizarLista);
   },
+  beforeUnmount() {
+    // Cancelar peticiones pendientes cuando el componente se desmonte
+    cancelPendingRequests();
+  },
+  beforeRouteLeave(to, from, next) {
+    // Cancelar peticiones y resetear estado antes de cambiar de ruta
+    console.log('Saliendo de vista animales, cancelando peticiones y reseteando estado...');
+    cancelPendingRequests();
+    resetEstado();
+    next();
+  },
   methods: {
     async cargarGanado() {
       try {
+        this.isLoading = true;
         // Usar la función del archivo JS existente
         await cargarDatosIniciales();
         // Copiar los datos a la variable local para compatibilidad
         this.ganado = [...animales.value];
       } catch (error) {
         console.error('Error cargando ganado:', error);
+        // Mostrar mensaje de error al usuario
+        this.$nextTick(() => {
+          // Pequeño delay para asegurar que el DOM esté listo
+          setTimeout(() => {
+            if (this.ganado.length === 0) {
+              console.warn('No se pudieron cargar los datos del ganado');
+            }
+          }, 100);
+        });
+      } finally {
+        this.isLoading = false;
       }
     },
 

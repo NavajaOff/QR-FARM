@@ -72,6 +72,15 @@ export default {
   mounted() {
     this.cargarUsuarios();
   },
+  beforeUnmount() {
+    // Cancelar cualquier petición pendiente al desmontar
+    console.log('GestionarUsuarios desmontándose...');
+  },
+  beforeRouteLeave(to, from, next) {
+    // Cancelar peticiones antes de cambiar de ruta
+    console.log('Saliendo de vista usuarios, cancelando peticiones...');
+    next();
+  },
   methods: {
     async cargarUsuarios() {
       try {

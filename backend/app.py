@@ -331,6 +331,24 @@ app.register_blueprint(potrero_bp, url_prefix='/api/potreros')
 app.register_blueprint(usuario_bp, url_prefix='/api/usuarios')
 app.register_blueprint(animal_bp, url_prefix='/api/animales')
 
+# Endpoint adicional para estados de ganado
+@app.route('/api/animales/estados-ganado', methods=['GET'])
+def obtener_estados_ganado():
+    """Endpoint para obtener estados de ganado"""
+    try:
+        from src.services.animal_service import GanadoService
+        estados = GanadoService.obtener_estados_ganado()
+        return jsonify({
+            "success": True,
+            "data": estados
+        }), 200
+    except Exception as e:
+        print(f"Error obteniendo estados de ganado: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": "Error interno del servidor"
+        }), 500
+
 if __name__ == '__main__':
     print("Iniciando servidor QR Farm Backend...")
     print("URL: http://localhost:5000")

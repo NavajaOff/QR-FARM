@@ -105,6 +105,15 @@ export default {
   async mounted() {
     await this.cargarDatosIniciales();
   },
+  beforeUnmount() {
+    // Cancelar cualquier petición pendiente al desmontar
+    console.log('GestionarPotrerosAdmin desmontándose...');
+  },
+  beforeRouteLeave(to, from, next) {
+    // Cancelar peticiones antes de cambiar de ruta
+    console.log('Saliendo de vista potreros, cancelando peticiones...');
+    next();
+  },
   methods: {
     async cargarDatosIniciales() {
       try {
