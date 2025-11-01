@@ -209,7 +209,9 @@ export default {
           throw new Error(`Error HTTP: ${response.status}`);
         }
         const data = await response.json();
-        if (data.status === "success") {
+
+        // Verificar si la respuesta tiene el formato correcto
+        if (data.data && Array.isArray(data.data)) {
           this.potreros = data.data.map(potrero => ({
             id: potrero.id,
             nombre: potrero.nombre,
@@ -222,10 +224,12 @@ export default {
             ultimaLimpieza: potrero.ultima_limpieza ? this.formatDate(potrero.ultima_limpieza) : 'No registrada',
             proximaLimpieza: potrero.proxima_limpieza ? this.formatDate(potrero.proxima_limpieza) : 'No programada',
             responsable: potrero.responsable || 'No asignado',
-            descripcion: potrero.descripcion || ''
+            descripcion: potrero.descripcion || '',
+            pasto: potrero.tipo_pasto || 'No definido'
           }));
+          console.log(`Cargados ${this.potreros.length} potreros correctamente`);
         } else {
-          throw new Error(data.message || 'Error desconocido');
+          throw new Error('Formato de respuesta inválido: no se encontró data.data');
         }
       } catch (error) {
         this.error = error.message;

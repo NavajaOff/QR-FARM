@@ -162,74 +162,55 @@ def obtener_potreros():
     try:
         print("Obteniendo lista de potreros desde la base de datos...")
 
-        # Usar el service directamente para evitar conflictos con blueprints
-        potreros = PotreroService.get_all()
+        # Realizar consulta directa a la base de datos
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
 
-        # Convertir a formato compatible con el frontend
-        potreros_data = []
-        for potrero in potreros:
-            # Obtener nombre del responsable si existe
-            responsable_nombre = 'No asignado'
-            if potrero.get('responsable_persona_id'):
-                try:
-                    conn_temp = get_connection()
-                    cursor_temp = conn_temp.cursor(dictionary=True)
-                    cursor_temp.execute("SELECT primer_nombre, primer_apellido FROM personas WHERE id = %s", (potrero['responsable_persona_id'],))
-                    persona_result = cursor_temp.fetchone()
-                    if persona_result:
-                        responsable_nombre = f"{persona_result['primer_nombre']} {persona_result['primer_apellido']}"
-                    cursor_temp.close()
-                    conn_temp.close()
-                except Exception as e:
-                    print(f"Error obteniendo nombre del responsable: {e}")
-                    responsable_nombre = f"Persona {potrero['responsable_persona_id']}"
+        # Consulta para obtener potreros con información del responsable
+        query = """
+            SELECT
+                p.id,
+                p.nombre,
+                p.area,
+                p.capacidad,
+                p.ocupacion,
+                p.hectareas,
+                p.estado,
+                p.fecha_ultimo_uso,
+                p.ultima_limpieza,
+                p.proxima_limpieza,
+                p.descripcion,
+                p.id_tipo_pasto,
+                p.responsable_persona_id,
+                tp.tipo_pasto,
+                CONCAT(per.primer_nombre, ' ', COALESCE(per.segundo_nombre, ''), ' ', per.primer_apellido, ' ', COALESCE(per.segundo_apellido, '')) as responsable
+            FROM potrero p
+            LEFT JOIN tipo_pasto tp ON p.id_tipo_pasto = tp.id
+            LEFT JOIN personas per ON p.responsable_persona_id = per.id
+            ORDER BY p.id DESC
+        """
 
-            # Formatear fechas sin conversión de zona horaria
-            def format_date_simple(date_value):
-                if date_value:
-                    try:
-                        from datetime import datetime
-                        # Si es datetime object, extraer solo la fecha
-                        if hasattr(date_value, 'date'):
-                            return date_value.date().isoformat()
-                        # Si es string, mantener formato YYYY-MM-DD
-                        elif isinstance(date_value, str):
-                            if len(date_value) >= 10:
-                                return date_value[:10]  # Tomar solo YYYY-MM-DD
-                            else:
-                                return date_value
-                    except:
-                        return date_value
-                return date_value
+        cursor.execute(query)
+        potreros = cursor.fetchall()
 
-            potreros_data.append({
-                "id": potrero.get('id'),
-                "nombre": potrero.get('nombre'),
-                "area": float(potrero.get('area', 0)),
-                "capacidad": potrero.get('capacidad'),
-                "ocupacion": potrero.get('ocupacion', 0),
-                "hectareas": potrero.get('hectareas'),
-                "fecha_ultimo_uso": potrero.get('fecha_ultimo_uso'),
-                "ultima_limpieza": potrero.get('ultima_limpieza'),
-                "proxima_limpieza": potrero.get('proxima_limpieza'),
-                "responsable": responsable_nombre,
-                "tipo_pasto": potrero.get('tipo_pasto'),
-                "estado": potrero.get('estado'),
-                "descripcion": potrero.get('descripcion')
-            })
+        print(f"Enviando {len(potreros)} potreros desde la base de datos")
 
-        print(f"Enviando {len(potreros_data)} potreros desde la base de datos")
-
-        return jsonify(potreros_data), 200
+        return jsonify({
+            "message": "Potreros obtenidos exitosamente",
+            "data": potreros
+        }), 200
 
     except Exception as e:
         print(f"Error al obtener potreros: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return jsonify({
             "status": "error",
             "message": "Error interno del servidor"
         }), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
 
 @app.route('/api/usuarios/login', methods=['POST'])
 def usuarios_login():
