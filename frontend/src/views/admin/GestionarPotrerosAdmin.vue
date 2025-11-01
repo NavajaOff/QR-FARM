@@ -447,19 +447,23 @@ export default {
           const ultima_limpieza = document.getElementById('edit_ultima_limpieza').value;
           const descripcion = document.getElementById('edit_descripcion').value;
 
-          return {
-            estado,
-            capacidad: capacidad ? parseInt(capacidad) : null,
-            hectareas: hectareas ? parseFloat(hectareas) : null,
-            ocupacion: ocupacion ? parseInt(ocupacion) : 0,
-            id_tipo_pasto: id_tipo_pasto ? parseInt(id_tipo_pasto) : null,
-            fecha_ultimo_uso,
-            responsable_persona_id: responsable_persona_id ? parseInt(responsable_persona_id) : null,
-            proxima_limpieza,
-            area: area ? parseFloat(area) : null,
-            ultima_limpieza,
-            descripcion
-          };
+          // Solo enviar campos que han cambiado o que tienen valores
+          const updateData = {};
+
+          if (estado) updateData.estado = estado;
+          if (capacidad !== '' && capacidad !== null) updateData.capacidad = parseInt(capacidad);
+          if (hectareas !== '' && hectareas !== null) updateData.hectareas = parseFloat(hectareas);
+          if (ocupacion !== '' && ocupacion !== null) updateData.ocupacion = parseInt(ocupacion);
+          if (id_tipo_pasto) updateData.id_tipo_pasto = parseInt(id_tipo_pasto);
+          if (fecha_ultimo_uso) updateData.fecha_ultimo_uso = fecha_ultimo_uso;
+          if (responsable_persona_id) updateData.responsable_persona_id = parseInt(responsable_persona_id);
+          if (proxima_limpieza) updateData.proxima_limpieza = proxima_limpieza;
+          if (area !== '' && area !== null) updateData.area = parseFloat(area);
+          if (ultima_limpieza) updateData.ultima_limpieza = ultima_limpieza;
+          if (descripcion !== undefined) updateData.descripcion = descripcion;
+
+          console.log('Datos a enviar para actualización:', updateData);
+          return updateData;
         }
       }).then(async (result) => {
         if (result.isConfirmed) {

@@ -221,6 +221,9 @@ class PotreroService:
 
         values.append(potrero_id)
 
+        print(f"Actualizando potrero {potrero_id} con campos: {update_fields}")
+        print(f"Valores: {values[:-1]}")  # No mostrar el ID al final
+
         with db.get_cursor() as cursor:
             sql = f"""
                 UPDATE potrero
@@ -228,7 +231,36 @@ class PotreroService:
                 WHERE id = %s
             """
             cursor.execute(sql, values)
-            return PotreroService.get_by_id(potrero_id)
+            print(f"SQL ejecutado: {sql}")
+            print(f"Filas afectadas: {cursor.rowcount}")
+
+            # Obtener el registro actualizado con JOIN para incluir el nombre del responsable
+            cursor.execute("""
+                SELECT p.*,
+                       CONCAT(per.primer_nombre, ' ', COALESCE(per.segundo_nombre, ''), ' ', per.primer_apellido, ' ', COALESCE(per.segundo_apellido, '')) as responsable
+                FROM potrero p
+                LEFT JOIN personas per ON p.responsable_persona_id = per.id
+                WHERE p.id = %s
+            """, (potrero_id,))
+
+            result = cursor.fetchone()
+            if result:
+                # Agregar el nombre del tipo de pasto si existe
+                if result.get('id_tipo_pasto'):
+                    try:
+                        tipos_pasto = PotreroService.get_tipos_pasto()
+                        tipo_encontrado = next((tp for tp in tipos_pasto if tp['id'] == result['id_tipo_pasto']), None)
+                        result['tipo_pasto'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'No definido'
+                    except Exception as e:
+                        print(f"Error obteniendo tipo de pasto: {e}")
+                        result['tipo_pasto'] = 'No definido'
+                else:
+                    result['tipo_pasto'] = 'No definido'
+
+                print(f"Potrero actualizado exitosamente: {result}")
+                return result
+            else:
+                raise ValueError(f"Potrero with id {potrero_id} not found after update")
 
     @staticmethod
     def delete(potrero_id: int) -> bool:
