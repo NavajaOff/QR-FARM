@@ -47,11 +47,16 @@ export const cargarDatosIniciales = async () => {
 
 export const cargarEstadosGanado = async () => {
   try {
+    console.log('Cargando estados de ganado...');
     const response = await fetch(`${API_BASE}/animales/estados`);
+    console.log('Respuesta estados ganado:', response.status);
     if (response.ok) {
       const data = await response.json();
+      console.log('Datos estados ganado:', data);
       estadosGanado.value = data.success ? data.data : [];
+      console.log('Estados ganado cargados:', estadosGanado.value);
     } else {
+      console.error('Error HTTP estados ganado:', response.status);
       estadosGanado.value = [];
     }
   } catch (error) {
@@ -233,10 +238,14 @@ export const editarAnimal = (id) => {
 
   // Construir opciones de potrero
   let potreroOptions = '<option value="">Seleccionar potrero</option>';
+  console.log('Potreros disponibles para select:', potreros.value);
+  console.log('Animal id_potrero:', animal.id_potrero);
   potreros.value.forEach(potrero => {
     const selected = potrero.id === animal.id_potrero ? 'selected' : '';
+    console.log(`Comparando potrero ${potrero.id} (${potrero.nombre}) con animal.id_potrero ${animal.id_potrero}: ${selected}`);
     potreroOptions += `<option value="${potrero.id}" ${selected}>${potrero.nombre}</option>`;
   });
+  console.log('Opciones potrero generadas:', potreroOptions);
 
   // Construir opciones de propietario
   let propietarioOptions = '<option value="">Seleccionar propietario</option>';
@@ -364,9 +373,11 @@ export const agregarNuevoAnimal = () => {
 
   // Construir opciones de potrero
   let potreroOptions = '<option value="">Seleccionar potrero</option>';
+  console.log('Potreros disponibles para agregar:', potreros.value);
   potreros.value.forEach(potrero => {
     potreroOptions += `<option value="${potrero.id}">${potrero.nombre}</option>`;
   });
+  console.log('Opciones potrero agregar generadas:', potreroOptions);
 
   // Construir opciones de propietario
   let propietarioOptions = '<option value="">Seleccionar propietario</option>';

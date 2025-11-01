@@ -220,11 +220,7 @@ def obtener_potreros():
 
         print(f"Enviando {len(potreros_data)} potreros desde la base de datos")
 
-        return jsonify({
-            "status": "success",
-            "message": "Potreros obtenidos exitosamente",
-            "data": potreros_data
-        }), 200
+        return jsonify(potreros_data), 200
 
     except Exception as e:
         print(f"Error al obtener potreros: {str(e)}")

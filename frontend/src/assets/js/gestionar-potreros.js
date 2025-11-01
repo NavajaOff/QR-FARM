@@ -104,7 +104,23 @@ export const cargarPotreros = async () => {
         pasto: potrero.tipo_pasto_nombre || 'No definido'
       }));
     } else {
-      throw new Error(data.message || 'Error desconocido');
+      console.log('Respuesta de potreros:', data);
+      // Si no hay data.success, asumir que la respuesta es directamente el array
+      potreros.value = data.map(potrero => ({
+        id: potrero.id,
+        nombre: potrero.nombre,
+        estado: potrero.estado,
+        capacidad: potrero.capacidad,
+        ocupacion: potrero.ocupacion,
+        hectareas: potrero.hectareas,
+        area: potrero.area,
+        fechaUso: potrero.fecha_ultimo_uso ? formatDate(potrero.fecha_ultimo_uso) : '',
+        ultimaLimpieza: potrero.ultima_limpieza ? formatDate(potrero.ultima_limpieza) : '',
+        proximaLimpieza: potrero.proxima_limpieza ? formatDate(potrero.proxima_limpieza) : null,
+        responsable: potrero.responsable || 'No asignado',
+        descripcion: potrero.descripcion || '',
+        pasto: potrero.tipo_pasto || 'No definido'
+      }));
     }
   } catch (error) {
     error.value = error.message;
@@ -228,6 +244,7 @@ export const crearPotrero = () => {
             Swal.fire('¡Éxito!', 'Potrero creado correctamente', 'success');
             await cargarPotreros();
           } else {
+            console.log('Respuesta de potreros:', data);
             throw new Error(data.message || 'Error desconocido');
           }
         } else {
