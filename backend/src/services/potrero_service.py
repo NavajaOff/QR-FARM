@@ -375,8 +375,21 @@ class PotreroService:
                     ORDER BY p.primer_apellido, p.primer_nombre
                 """)
                 results = cursor.fetchall()
-                # Los resultados ya son diccionarios cuando dictionary=True
-                return results
+
+                # Transformar la estructura para que coincida con lo que espera el frontend
+                personas_transformadas = []
+                for result in results:
+                    personas_transformadas.append({
+                        'id': result['id'],
+                        'primer_nombre': result['primer_nombre'],
+                        'segundo_nombre': result['segundo_nombre'],
+                        'primer_apellido': result['primer_apellido'],
+                        'segundo_apellido': result['segundo_apellido'],
+                        'nombre_completo': result['nombre_completo'],
+                        'nombre_persona': result['nombre_completo']  # Campo adicional para compatibilidad
+                    })
+
+                return personas_transformadas
         except Exception as e:
             print(f"Error obteniendo personas usuario: {e}")
             return []
@@ -406,8 +419,8 @@ class PotreroService:
                         # Separar por comas y quitar comillas
                         valores = [v.strip("'\"") for v in values_str.split(',')]
 
-                        # Retornar como lista de diccionarios
-                        return [{'id': i+1, 'estado': valor} for i, valor in enumerate(valores)]
+                        # Retornar como lista de diccionarios con campos compatibles con frontend
+                        return [{'id': i+1, 'estado': valor, 'nombre_estado': valor} for i, valor in enumerate(valores)]
 
                 # Retornar lista vacía si no se puede obtener del enum
                 return []
