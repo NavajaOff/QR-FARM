@@ -62,28 +62,36 @@ class PotreroController:
                     'message': 'No se proporcionaron datos',
                     'success': False
                 }), 400
-            
+
+            print(f"Datos recibidos en controller: {data}")
+
             # El nombre puede ser null, el servicio lo generará automáticamente
-                
+
             potrero = PotreroService.create(data)
+            print(f"Potrero creado exitosamente: {potrero}")
             return jsonify({
                 'data': potrero,
                 'message': 'Potrero creado correctamente',
                 'success': True
             }), 201
         except ValueError as e:
+            print(f"Error de validación: {str(e)}")
             return jsonify({
                 'error': 'Datos inválidos',
                 'message': str(e),
                 'success': False
             }), 400
         except DatabaseError as e:
+            print(f"Error de base de datos: {str(e)}")
             return jsonify({
                 'error': 'Error de base de datos',
                 'message': str(e),
                 'success': False
             }), 500
         except Exception as e:
+            print(f"Error interno del servidor: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return jsonify({
                 'error': 'Error interno del servidor',
                 'message': str(e),

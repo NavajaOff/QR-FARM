@@ -256,7 +256,16 @@ class GanadoService:
             """)
             results = cursor.fetchall()
 
-            return [Ganado.from_dict(result) for result in results]
+            # Crear objetos Ganado con el estado_tipo incluido
+            ganados = []
+            for result in results:
+                # Agregar estado_tipo al diccionario antes de crear el objeto
+                result_copy = result.copy()
+                result_copy['estado_tipo'] = result.get('estado_tipo')
+                ganado = Ganado.from_dict(result_copy)
+                ganados.append(ganado)
+
+            return ganados
 
         except Exception as e:
             print(f"Error al obtener animales: {e}")

@@ -40,20 +40,20 @@
         <div v-else class="d-flex justify-content-center align-items-start gap-2">
           <button class="btn btn-outline-secondary" @click="prevPotrero" :disabled="potreros.length <= 1"><i class="fas fa-chevron-left"></i></button>
 
-          <div class="card border-0 shadow-lg" style="min-width: 350px; max-width: 600px;">
-            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+          <div class="card border-0 shadow-lg" style="min-width: 450px; max-width: 700px;">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
               <h5 class="mb-0"><i class="fas fa-leaf me-2"></i>{{ potreros[currentIndex].nombre }}</h5>
               <button class="btn btn-light btn-sm" @click="toggleAccordion">
                 <i :class="accordionOpen ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
               </button>
             </div>
-            <div class="card-body p-3 p-sm-4" v-show="accordionOpen">
+            <div class="card-body p-4 p-sm-5" v-show="accordionOpen">
               <div class="row g-3 mb-3">
                 <div class="col-6"><strong>Estado:</strong> <span class="badge" :class="estadoClass(potreros[currentIndex].estado)">{{ potreros[currentIndex].estado }}</span></div>
                 <div class="col-6"><strong>Capacidad:</strong> {{ potreros[currentIndex].capacidad || 'No definida' }} Animales</div>
               </div>
               <div class="row g-3 mb-3">
-                <div class="col-6"><strong>Ocupación:</strong> {{ potreros[currentIndex].ocupacion }} Animales</div>
+                <div class="col-6"><strong>Ocupación:</strong> {{ potreros[currentIndex].ocupacion || 0 }} Animales</div>
                 <div class="col-6"><strong>Hectáreas:</strong> {{ potreros[currentIndex].hectareas || 'No definida' }} ha</div>
               </div>
               <div class="row g-3 mb-3">
@@ -61,7 +61,7 @@
                 <div class="col-6"><strong>Responsable:</strong> {{ potreros[currentIndex].responsable }}</div>
               </div>
               <div class="row g-3 mb-3">
-                <div class="col-12"><strong>Próxima limpieza:</strong> <input type="date" class="form-control d-inline-block w-auto" style="min-width:150px;"></div>
+                <div class="col-12"><strong>Próxima limpieza:</strong> {{ potreros[currentIndex].proximaLimpieza || 'No programada' }}</div>
               </div>
               <div class="row g-3 mb-3">
                 <div class="col-6"><strong>Área:</strong> {{ potreros[currentIndex].area || 'No definida' }} m²</div>
@@ -209,7 +209,9 @@ export default {
           throw new Error(`Error HTTP: ${response.status}`);
         }
         const data = await response.json();
-        if (data.status === "success") {
+
+        // Verificar si la respuesta tiene el formato correcto
+        if (data.data && Array.isArray(data.data)) {
           this.potreros = data.data.map(potrero => ({
             id: potrero.id,
             nombre: potrero.nombre,
@@ -218,13 +220,16 @@ export default {
             ocupacion: potrero.ocupacion,
             hectareas: potrero.hectareas,
             area: potrero.area,
-            fechaUso: potrero.fecha_ultimo_uso ? this.formatDate(potrero.fecha_ultimo_uso) : '',
-            ultimaLimpieza: potrero.ultima_limpieza ? this.formatDate(potrero.ultima_limpieza) : '',
-            responsable: potrero.responsable_persona_id ? `Persona ${potrero.responsable_persona_id}` : 'No asignado',
-            descripcion: potrero.descripcion || ''
+            fechaUso: potrero.fecha_ultimo_uso ? this.formatDate(potrero.fecha_ultimo_uso) : 'No registrada',
+            ultimaLimpieza: potrero.ultima_limpieza ? this.formatDate(potrero.ultima_limpieza) : 'No registrada',
+            proximaLimpieza: potrero.proxima_limpieza ? this.formatDate(potrero.proxima_limpieza) : 'No programada',
+            responsable: potrero.responsable || 'No asignado',
+            descripcion: potrero.descripcion || '',
+            pasto: potrero.tipo_pasto || 'No definido'
           }));
+          console.log(`Cargados ${this.potreros.length} potreros correctamente`);
         } else {
-          throw new Error(data.message || 'Error desconocido');
+          throw new Error('Formato de respuesta inválido: no se encontró data.data');
         }
       } catch (error) {
         this.error = error.message;
@@ -262,6 +267,22 @@ export default {
     },
 
     crearPotrero() {
+      // Construir opciones dinámicamente con datos de la BD
+      let estadoOptions = '';
+      this.estadosPotrero.forEach(estado => {
+        estadoOptions += `<option value="${estado.estado || estado.nombre}">${estado.estado || estado.nombre}</option>`;
+      });
+
+      let pastoOptions = '<option value="">Seleccionar tipo de pasto</option>';
+      this.tiposPasto.forEach(tipo => {
+        pastoOptions += `<option value="${tipo.id}">${tipo.tipo_pasto || tipo.nombre}</option>`;
+      });
+
+      let responsableOptions = '<option value="">Seleccionar responsable</option>';
+      this.personasUsuario.forEach(persona => {
+        responsableOptions += `<option value="${persona.id}">${persona.nombre_completo}</option>`;
+      });
+
       Swal.fire({
         title: '<i class="fas fa-plus"></i> Crear Nuevo Potrero',
         html: `
@@ -269,7 +290,7 @@ export default {
             <div class="mb-3">
               <label class="form-label">Estado:</label>
               <select id="estado" class="form-control">
-                <option v-for="estado in estadosPotrero" :key="estado.id" :value="estado.nombre">{{ estado.nombre }}</option>
+                ${estadoOptions}
               </select>
             </div>
             <div class="mb-3"><label class="form-label">Capacidad:</label><input type="number" id="capacidad" class="form-control" placeholder="Ej: 25" min="0"></div>
@@ -278,16 +299,14 @@ export default {
             <div class="mb-3">
               <label class="form-label">Tipo de pasto:</label>
               <select id="id_tipo_pasto" class="form-control">
-                <option value="">Seleccionar tipo de pasto</option>
-                <option v-for="tipo in tiposPasto" :key="tipo.id" :value="tipo.id">{{ tipo.nombre }}</option>
+                ${pastoOptions}
               </select>
             </div>
             <div class="mb-3"><label class="form-label">Fecha de último uso:</label><input type="date" id="fecha_ultimo_uso" class="form-control"></div>
             <div class="mb-3">
               <label class="form-label">Responsable:</label>
               <select id="responsable_persona_id" class="form-control">
-                <option value="">Seleccionar responsable</option>
-                <option v-for="persona in personasUsuario" :key="persona.id" :value="persona.id">{{ persona.nombre_completo }}</option>
+                ${responsableOptions}
               </select>
             </div>
             <div class="mb-3"><label class="form-label">Próxima limpieza:</label><input type="date" id="proxima_limpieza" class="form-control"></div>
@@ -361,6 +380,25 @@ export default {
       const potrero = this.potreros.find(p => p.id === id);
       if (!potrero) return;
 
+      // Construir opciones dinámicamente con selección automática
+      let estadoOptions = '';
+      this.estadosPotrero.forEach(estado => {
+        const selected = (estado.estado || estado.nombre) === potrero.estado ? 'selected' : '';
+        estadoOptions += `<option value="${estado.estado || estado.nombre}" ${selected}>${estado.estado || estado.nombre}</option>`;
+      });
+
+      let pastoOptions = '<option value="">Seleccionar tipo de pasto</option>';
+      this.tiposPasto.forEach(tipo => {
+        const selected = (tipo.tipo_pasto || tipo.nombre) === potrero.pasto ? 'selected' : '';
+        pastoOptions += `<option value="${tipo.id}" ${selected}>${tipo.tipo_pasto || tipo.nombre}</option>`;
+      });
+
+      let responsableOptions = '<option value="">Seleccionar responsable</option>';
+      this.personasUsuario.forEach(persona => {
+        const selected = persona.nombre_completo === potrero.responsable ? 'selected' : '';
+        responsableOptions += `<option value="${persona.id}" ${selected}>${persona.nombre_completo}</option>`;
+      });
+
       Swal.fire({
         title: `<i class="fas fa-edit"></i> Editar Potrero: ${potrero.nombre}`,
         html: `
@@ -368,7 +406,7 @@ export default {
             <div class="mb-3">
               <label class="form-label">Estado:</label>
               <select id="edit_estado" class="form-control">
-                <option v-for="estado in estadosPotrero" :key="estado.id" :value="estado.nombre" :selected="estado.nombre === potrero.estado">{{ estado.nombre }}</option>
+                ${estadoOptions}
               </select>
             </div>
             <div class="mb-3"><label class="form-label">Capacidad:</label><input type="number" id="edit_capacidad" class="form-control" value="${potrero.capacidad || ''}" min="0"></div>
@@ -377,16 +415,14 @@ export default {
             <div class="mb-3">
               <label class="form-label">Tipo de pasto:</label>
               <select id="edit_id_tipo_pasto" class="form-control">
-                <option value="">Seleccionar tipo de pasto</option>
-                <option v-for="tipo in tiposPasto" :key="tipo.id" :value="tipo.id" :selected="tipo.nombre === potrero.pasto">{{ tipo.nombre }}</option>
+                ${pastoOptions}
               </select>
             </div>
             <div class="mb-3"><label class="form-label">Fecha de último uso:</label><input type="date" id="edit_fecha_ultimo_uso" class="form-control" value="${potrero.fechaUso ? potrero.fechaUso.split('/').reverse().join('-') : ''}"></div>
             <div class="mb-3">
               <label class="form-label">Responsable:</label>
               <select id="edit_responsable_persona_id" class="form-control">
-                <option value="">Seleccionar responsable</option>
-                <option v-for="persona in personasUsuario" :key="persona.id" :value="persona.id" :selected="persona.nombre_completo === potrero.responsable">{{ persona.nombre_completo }}</option>
+                ${responsableOptions}
               </select>
             </div>
             <div class="mb-3"><label class="form-label">Próxima limpieza:</label><input type="date" id="edit_proxima_limpieza" class="form-control"></div>
@@ -411,19 +447,23 @@ export default {
           const ultima_limpieza = document.getElementById('edit_ultima_limpieza').value;
           const descripcion = document.getElementById('edit_descripcion').value;
 
-          return {
-            estado,
-            capacidad: capacidad ? parseInt(capacidad) : null,
-            hectareas: hectareas ? parseFloat(hectareas) : null,
-            ocupacion: ocupacion ? parseInt(ocupacion) : 0,
-            id_tipo_pasto: id_tipo_pasto ? parseInt(id_tipo_pasto) : null,
-            fecha_ultimo_uso,
-            responsable_persona_id: responsable_persona_id ? parseInt(responsable_persona_id) : null,
-            proxima_limpieza,
-            area: area ? parseFloat(area) : null,
-            ultima_limpieza,
-            descripcion
-          };
+          // Solo enviar campos que han cambiado o que tienen valores
+          const updateData = {};
+
+          if (estado) updateData.estado = estado;
+          if (capacidad !== '' && capacidad !== null) updateData.capacidad = parseInt(capacidad);
+          if (hectareas !== '' && hectareas !== null) updateData.hectareas = parseFloat(hectareas);
+          if (ocupacion !== '' && ocupacion !== null) updateData.ocupacion = parseInt(ocupacion);
+          if (id_tipo_pasto) updateData.id_tipo_pasto = parseInt(id_tipo_pasto);
+          if (fecha_ultimo_uso) updateData.fecha_ultimo_uso = fecha_ultimo_uso;
+          if (responsable_persona_id) updateData.responsable_persona_id = parseInt(responsable_persona_id);
+          if (proxima_limpieza) updateData.proxima_limpieza = proxima_limpieza;
+          if (area !== '' && area !== null) updateData.area = parseFloat(area);
+          if (ultima_limpieza) updateData.ultima_limpieza = ultima_limpieza;
+          if (descripcion !== undefined) updateData.descripcion = descripcion;
+
+          console.log('Datos a enviar para actualización:', updateData);
+          return updateData;
         }
       }).then(async (result) => {
         if (result.isConfirmed) {
@@ -472,6 +512,33 @@ export default {
 
     toggleAccordion() {
       this.accordionOpen = !this.accordionOpen;
+    },
+
+    async actualizarProximaLimpieza(id, fecha) {
+      try {
+        const response = await fetch(`http://localhost:5000/api/potreros/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            proxima_limpieza: fecha
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            console.log('Próxima limpieza actualizada correctamente');
+          } else {
+            console.error('Error actualizando próxima limpieza:', data.message);
+          }
+        } else {
+          console.error('Error HTTP actualizando próxima limpieza:', response.status);
+        }
+      } catch (error) {
+        console.error('Error actualizando próxima limpieza:', error);
+      }
     }
   }
 };

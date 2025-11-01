@@ -1,7 +1,7 @@
 """Service layer for Potrero operations."""
 from typing import List, Optional, Dict, Any
 from mysql.connector import Error
-from src.database.db import db
+from src.database.db import db, get_connection
 from datetime import datetime
 
 class PotreroService:
@@ -74,14 +74,19 @@ class PotreroService:
         from datetime import datetime
         fecha_ultimo_uso = datetime.now().date().isoformat()
 
-        with db.get_cursor() as cursor:
+        # Usar conexión directa para asegurar transacción
+        conn = get_connection()
+        cursor = None
+        try:
+            cursor = conn.cursor(dictionary=True)
+
             sql = """
                 INSERT INTO potrero (
                     id_tipo_pasto, nombre, capacidad, hectareas, ocupacion,
                     fecha_ultimo_uso, responsable_persona_id, proxima_limpieza,
-                    area, ultima_limpieza, descripcion, propietario_persona_id, estado
+                    area, ultima_limpieza, descripcion, estado
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
             """
             values = (
@@ -96,12 +101,78 @@ class PotreroService:
                 data.get('area'),
                 data.get('ultima_limpieza'),
                 data.get('descripcion'),
-                data.get('propietario_persona_id'),
                 data.get('estado', 'disponible')
             )
+
             cursor.execute(sql, values)
             potrero_id = cursor.lastrowid
-            return PotreroService.get_by_id(potrero_id)
+            print(f"Potrero INSERT ejecutado con ID: {potrero_id}")
+
+            # Hacer commit explícito
+            conn.commit()
+            print(f"Commit realizado para potrero ID: {potrero_id}")
+
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            print(f"Error en create potrero: {e}")
+            raise e
+        finally:
+            if cursor:
+                cursor.close()
+            if conn and conn.is_connected():
+                conn.close()
+
+        # Usar una nueva conexión para obtener el registro completo
+        try:
+            with db.get_cursor() as select_cursor:
+                select_cursor.execute("""
+                    SELECT p.* FROM potrero p WHERE p.id = %s
+                """, (potrero_id,))
+                result = select_cursor.fetchone()
+
+                if result:
+                    print(f"Potrero encontrado después del commit: {result}")
+                    # Agregar el nombre del tipo de pasto
+                    if result.get('id_tipo_pasto'):
+                        try:
+                            tipos_pasto = PotreroService.get_tipos_pasto()
+                            tipo_encontrado = next((tp for tp in tipos_pasto if tp['id'] == result['id_tipo_pasto']), None)
+                            result['tipo_pasto_nombre'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'No definido'
+                        except Exception as e:
+                            print(f"Error obteniendo tipo de pasto: {e}")
+                            result['tipo_pasto_nombre'] = 'No definido'
+                    else:
+                        result['tipo_pasto_nombre'] = 'No definido'
+    
+                    # Agregar nombre del responsable si existe
+                    if result.get('responsable_persona_id'):
+                        try:
+                            # Obtener nombre del responsable
+                            with db.get_cursor() as resp_cursor:
+                                resp_cursor.execute("""
+                                    SELECT CONCAT(primer_nombre, ' ', primer_apellido) as nombre_completo
+                                    FROM personas WHERE id = %s
+                                """, (result['responsable_persona_id'],))
+                                resp_result = resp_cursor.fetchone()
+                                if resp_result:
+                                    result['responsable_nombre'] = resp_result['nombre_completo']
+                                else:
+                                    result['responsable_nombre'] = f"Persona {result['responsable_persona_id']}"
+                        except Exception as e:
+                            print(f"Error obteniendo nombre del responsable: {e}")
+                            result['responsable_nombre'] = f"Persona {result['responsable_persona_id']}"
+                    else:
+                        result['responsable_nombre'] = 'No asignado'
+
+                    return result
+                else:
+                    print(f"Potrero con ID {potrero_id} no encontrado después del commit")
+                    raise ValueError(f"Potrero with id {potrero_id} not found after commit")
+
+        except Exception as e:
+            print(f"Error obteniendo potrero después del commit: {e}")
+            raise e
 
     @staticmethod
     def update(potrero_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -111,9 +182,37 @@ class PotreroService:
 
         update_fields = []
         values = []
+
+        # Procesar campos especiales para fechas y enums
         for key, value in data.items():
             if key in ['id']:
                 continue
+
+            # Convertir strings vacías a None para campos de fecha
+            if key in ['proxima_limpieza', 'ultima_limpieza', 'fecha_ultimo_uso'] and value == '':
+                value = None
+            # Para campos de fecha que vienen como strings, mantener formato simple YYYY-MM-DD
+            elif key in ['proxima_limpieza', 'ultima_limpieza', 'fecha_ultimo_uso'] and isinstance(value, str) and value:
+                # Extraer solo la fecha YYYY-MM-DD, sin conversiones de zona horaria
+                if 'T' in value:
+                    value = value.split('T')[0]
+                # Asegurar que sea formato YYYY-MM-DD
+                if len(value) == 10 and value.count('-') == 2:
+                    pass  # Ya está en formato correcto
+                else:
+                    # Si hay algún problema, mantener el valor original
+                    pass
+            # Para el campo estado, asegurar que sea válido para el enum
+            elif key == 'estado':
+                # Los valores válidos del enum son: 'disponible', 'ocupado', 'limpieza'
+                valid_states = ['disponible', 'ocupado', 'limpieza']
+                if value and value not in valid_states:
+                    # Si no es válido, usar 'disponible' por defecto
+                    value = 'disponible'
+                elif not value:
+                    # Si viene vacío, usar 'disponible' por defecto
+                    value = 'disponible'
+
             update_fields.append(f"{key} = %s")
             values.append(value)
 
@@ -122,6 +221,9 @@ class PotreroService:
 
         values.append(potrero_id)
 
+        print(f"Actualizando potrero {potrero_id} con campos: {update_fields}")
+        print(f"Valores: {values[:-1]}")  # No mostrar el ID al final
+
         with db.get_cursor() as cursor:
             sql = f"""
                 UPDATE potrero
@@ -129,7 +231,36 @@ class PotreroService:
                 WHERE id = %s
             """
             cursor.execute(sql, values)
-            return PotreroService.get_by_id(potrero_id)
+            print(f"SQL ejecutado: {sql}")
+            print(f"Filas afectadas: {cursor.rowcount}")
+
+            # Obtener el registro actualizado con JOIN para incluir el nombre del responsable
+            cursor.execute("""
+                SELECT p.*,
+                       CONCAT(per.primer_nombre, ' ', COALESCE(per.segundo_nombre, ''), ' ', per.primer_apellido, ' ', COALESCE(per.segundo_apellido, '')) as responsable
+                FROM potrero p
+                LEFT JOIN personas per ON p.responsable_persona_id = per.id
+                WHERE p.id = %s
+            """, (potrero_id,))
+
+            result = cursor.fetchone()
+            if result:
+                # Agregar el nombre del tipo de pasto si existe
+                if result.get('id_tipo_pasto'):
+                    try:
+                        tipos_pasto = PotreroService.get_tipos_pasto()
+                        tipo_encontrado = next((tp for tp in tipos_pasto if tp['id'] == result['id_tipo_pasto']), None)
+                        result['tipo_pasto'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'No definido'
+                    except Exception as e:
+                        print(f"Error obteniendo tipo de pasto: {e}")
+                        result['tipo_pasto'] = 'No definido'
+                else:
+                    result['tipo_pasto'] = 'No definido'
+
+                print(f"Potrero actualizado exitosamente: {result}")
+                return result
+            else:
+                raise ValueError(f"Potrero with id {potrero_id} not found after update")
 
     @staticmethod
     def delete(potrero_id: int) -> bool:
@@ -156,7 +287,7 @@ class PotreroService:
             """, (estado,))
             potreros = cursor.fetchall()
 
-            # Agregar el nombre del tipo de pasto a cada potrero
+            # Agregar el nombre del tipo de pasto y responsable a cada potrero
             for potrero in potreros:
                 if potrero.get('id_tipo_pasto'):
                     try:
@@ -167,6 +298,31 @@ class PotreroService:
                         potrero['tipo_pasto_nombre'] = 'No definido'
                 else:
                     potrero['tipo_pasto_nombre'] = 'No definido'
+
+                # Agregar nombre del responsable si existe
+                if potrero.get('responsable_persona_id'):
+                    try:
+                        # Obtener nombre del responsable
+                        resp_conn = get_connection()
+                        resp_cursor = resp_conn.cursor(dictionary=True)
+                        resp_cursor.execute("""
+                            SELECT CONCAT(primer_nombre, ' ', primer_apellido) as nombre_completo
+                            FROM personas WHERE id = %s
+                        """, (potrero['responsable_persona_id'],))
+                        resp_result = resp_cursor.fetchone()
+                        if resp_result and resp_result['nombre_completo']:
+                            potrero['responsable_nombre'] = resp_result['nombre_completo']
+                        else:
+                            potrero['responsable_nombre'] = f"Persona {potrero['responsable_persona_id']}"
+                        resp_cursor.close()
+                        resp_conn.close()
+                    except Exception as e:
+                        print(f"Error obteniendo nombre del responsable para potrero {potrero['id']}: {e}")
+                        potrero['responsable_nombre'] = f"Persona {potrero['responsable_persona_id']}"
+                else:
+                    potrero['responsable_nombre'] = 'No asignado'
+
+                print(f"Potrero {potrero['id']}: responsable_id={potrero.get('responsable_persona_id')}, nombre={potrero.get('responsable_nombre')}")
 
             return potreros
 

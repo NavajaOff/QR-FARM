@@ -4,10 +4,11 @@ Backend Flask para QR Farm
 Servidor REST API con autenticación JWT
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import jwt
 import datetime
+import os
 from src.database.db import get_connection
 from src.services.usuario_service import UsuarioService
 from src.services.animal_service import GanadoService
@@ -106,13 +107,36 @@ def obtener_ganados():
                 today = date.today()
                 edad = today.year - ganado.fecha_nacimiento.year - ((today.month, today.day) < (ganado.fecha_nacimiento.month, ganado.fecha_nacimiento.day))
 
+            # Obtener estado desde la tabla estado_ganado
+            estado_tipo = getattr(ganado, 'estado_tipo', None)
+            if not estado_tipo and ganado.id_estado:
+                # Buscar el estado en la tabla estado_ganado si no está en el objeto
+                try:
+                    conn_temp = get_connection()
+                    cursor_temp = conn_temp.cursor(dictionary=True)
+                    cursor_temp.execute("SELECT tipo_estado FROM estado_ganado WHERE id = %s", (ganado.id_estado,))
+                    estado_result = cursor_temp.fetchone()
+                    if estado_result:
+                        estado_tipo = estado_result['tipo_estado']
+                    cursor_temp.close()
+                    conn_temp.close()
+                except Exception as e:
+                    print(f"Error obteniendo estado del ganado: {e}")
+
             ganados_data.append({
                 "id": ganado.id,
                 "nombre": ganado.nombre,
                 "raza": ganado.raza,
                 "edad": edad,
                 "peso": float(ganado.peso) if ganado.peso else None,
-                "estado": ganado.estado
+                "estado": estado_tipo or ganado.estado.value if hasattr(ganado.estado, 'value') else str(ganado.estado),
+                "estado_tipo": estado_tipo,
+                "id_estado": getattr(ganado, 'id_estado', None) or ganado.id_estado if hasattr(ganado, 'id_estado') else None,
+                "id_potrero": ganado.id_potrero,
+                "id_persona": ganado.id_persona,
+                "codigo_qr": ganado.codigo_qr,
+                "fecha_nacimiento": ganado.fecha_nacimiento.isoformat() if ganado.fecha_nacimiento else None,
+                "sexo": ganado.sexo.value if hasattr(ganado.sexo, 'value') else str(ganado.sexo)
             })
 
         print(f"Enviando {len(ganados_data)} animales desde la base de datos")
@@ -125,6 +149,8 @@ def obtener_ganados():
 
     except Exception as e:
         print(f"Error al obtener ganado: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             "status": "error",
             "message": "Error interno del servidor"
@@ -136,26 +162,42 @@ def obtener_potreros():
     try:
         print("Obteniendo lista de potreros desde la base de datos...")
 
-        potreros = PotreroService.get_all()
+        # Realizar consulta directa a la base de datos
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
 
-        # Convertir a formato compatible con el frontend
-        potreros_data = []
-        for potrero in potreros:
-            potreros_data.append({
-                "id": potrero.get('id'),
-                "nombre": potrero.get('nombre'),
-                "area": float(potrero.get('area', 0)),
-                "capacidad": potrero.get('capacidad'),
-                "tipo_pasto": potrero.get('tipo_pasto'),
-                "estado": potrero.get('estado')
-            })
+        # Consulta para obtener potreros con información del responsable
+        query = """
+            SELECT
+                p.id,
+                p.nombre,
+                p.area,
+                p.capacidad,
+                p.ocupacion,
+                p.hectareas,
+                p.estado,
+                p.fecha_ultimo_uso,
+                p.ultima_limpieza,
+                p.proxima_limpieza,
+                p.descripcion,
+                p.id_tipo_pasto,
+                p.responsable_persona_id,
+                tp.tipo_pasto,
+                CONCAT(per.primer_nombre, ' ', COALESCE(per.segundo_nombre, ''), ' ', per.primer_apellido, ' ', COALESCE(per.segundo_apellido, '')) as responsable
+            FROM potrero p
+            LEFT JOIN tipo_pasto tp ON p.id_tipo_pasto = tp.id
+            LEFT JOIN personas per ON p.responsable_persona_id = per.id
+            ORDER BY p.id DESC
+        """
 
-        print(f"Enviando {len(potreros_data)} potreros desde la base de datos")
+        cursor.execute(query)
+        potreros = cursor.fetchall()
+
+        print(f"Enviando {len(potreros)} potreros desde la base de datos")
 
         return jsonify({
-            "status": "success",
             "message": "Potreros obtenidos exitosamente",
-            "data": potreros_data
+            "data": potreros
         }), 200
 
     except Exception as e:
@@ -164,6 +206,11 @@ def obtener_potreros():
             "status": "error",
             "message": "Error interno del servidor"
         }), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals() and conn.is_connected():
+            conn.close()
 
 @app.route('/api/usuarios/login', methods=['POST'])
 def usuarios_login():
@@ -257,6 +304,27 @@ def usuarios_login():
             "status": "error",
             "message": "Error interno del servidor"
         }), 500
+
+# Endpoint para servir imágenes QR
+@app.route('/api/qr/<filename>', methods=['GET'])
+def get_qr_image(filename):
+    """Endpoint para servir imágenes QR"""
+    try:
+        # Ruta relativa al directorio del script (backend)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        qr_path = os.path.join(script_dir, 'qr', filename)
+
+        print(f"Buscando imagen QR en: {qr_path}")
+        print(f"¿Existe el archivo?: {os.path.exists(qr_path)}")
+
+        if os.path.exists(qr_path):
+            return send_file(qr_path, mimetype='image/png')
+        else:
+            print(f"Imagen QR no encontrada: {qr_path}")
+            return jsonify({"error": "Imagen QR no encontrada"}), 404
+    except Exception as e:
+        print(f"Error sirviendo imagen QR: {e}")
+        return jsonify({"error": "Error interno del servidor"}), 500
 
 # Registrar blueprints
 app.register_blueprint(potrero_bp, url_prefix='/api/potreros')

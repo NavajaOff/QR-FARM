@@ -4,7 +4,7 @@
       <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h2 class="mb-0">Gestión de Ganado</h2>
-          <button class="btn btn-success" @click="showAddAnimalModal = true">
+          <button class="btn btn-success" @click="addAnimal">
             <i class="fas fa-plus me-2"></i>Agregar Animal
           </button>
         </div>
@@ -21,6 +21,7 @@
                     <th>Raza</th>
                     <th>Edad</th>
                     <th>Peso (kg)</th>
+                    <th>Potrero</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                   </tr>
@@ -32,12 +33,16 @@
                     <td>{{ animal.raza }}</td>
                     <td>{{ animal.edad }} años</td>
                     <td>{{ animal.peso }}</td>
+                    <td>{{ animal.potreroActual }}</td>
                     <td>
-                      <span class="badge" :class="animal.estado === 'activo' ? 'bg-success' : 'bg-secondary'">
+                      <span class="badge" :class="animal.estado === 'saludable' ? 'bg-success' : animal.estado === 'revision' ? 'bg-warning' : animal.estado === 'enfermo' ? 'bg-danger' : 'bg-secondary'">
                         {{ animal.estado }}
                       </span>
                     </td>
                     <td>
+                      <button class="btn btn-sm btn-outline-info me-2" @click="viewQR(animal)" title="Ver QR">
+                        <i class="fas fa-qrcode"></i>
+                      </button>
                       <button class="btn btn-sm btn-outline-primary me-2" @click="editAnimal(animal)">
                         <i class="fas fa-edit"></i>
                       </button>
@@ -53,41 +58,100 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal para ver QR -->
+    <div class="modal fade" id="qrModal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="qrModalLabel">Código QR - {{ selectedAnimal?.nombre }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center">
+            <div v-if="qrImageUrl" class="qr-container">
+              <img :src="qrImageUrl" alt="Código QR" class="img-fluid qr-image" />
+            </div>
+            <div v-else class="text-muted">
+              <i class="fas fa-spinner fa-spin fa-2x"></i>
+              <p class="mt-2">Cargando código QR...</p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import { ganadoAPI } from '../../services/api.js';
+import {
+  cargarDatosIniciales,
+  animales,
+  loading,
+  error,
+  editarAnimal,
+  agregarNuevoAnimal,
+  verPerfilAnimal,
+  setUpdateCallback
+} from '../../assets/js/gestionar_animales.js';
 
 export default {
   name: 'GestionarAnimalesAdmin',
   data() {
     return {
       ganado: [],
-      showAddAnimalModal: false
+      showAddAnimalModal: false,
+      showEditAnimalModal: false,
+      selectedAnimal: null,
+      qrImageUrl: null,
+      editingAnimal: null
     };
   },
   mounted() {
     this.cargarGanado();
+    // Configurar callback para actualizar la lista desde el JS
+    setUpdateCallback(this.actualizarLista);
   },
   methods: {
     async cargarGanado() {
       try {
-        const response = await ganadoAPI.getAll();
-        if (response.data?.status === 'success') {
-          this.ganado = response.data.data;
-        }
+        // Usar la función del archivo JS existente
+        await cargarDatosIniciales();
+        // Copiar los datos a la variable local para compatibilidad
+        this.ganado = [...animales.value];
       } catch (error) {
         console.error('Error cargando ganado:', error);
       }
     },
 
+    // Método para actualizar la lista después de cambios
+    actualizarLista() {
+      this.ganado = [...animales.value];
+    },
+
+    viewQR(animal) {
+      // Usar la función del archivo JS existente para ver perfil con QR
+      verPerfilAnimal(animal.id);
+    },
+
     editAnimal(animal) {
-      console.log('Editar animal:', animal);
+      // Usar la función del archivo JS existente
+      editarAnimal(animal.id);
     },
 
     deleteAnimal(animal) {
-      console.log('Eliminar animal:', animal);
+      if (confirm(`¿Estás seguro de que deseas eliminar al animal "${animal.nombre}"?`)) {
+        console.log('Eliminando animal:', animal);
+        alert('Funcionalidad de eliminar animal próximamente disponible');
+      }
+    },
+
+    addAnimal() {
+      // Usar la función del archivo JS existente
+      agregarNuevoAnimal();
     }
   }
 };
@@ -188,6 +252,33 @@ h2 {
 .btn-outline-danger:hover {
   background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
   border-color: #dc3545;
+  color: white;
+}
+
+.qr-container {
+  padding: 2rem;
+  background: #f8f9fa;
+  border-radius: 10px;
+  margin: 1rem 0;
+}
+
+.qr-image {
+  max-width: 300px;
+  max-height: 300px;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.btn-outline-info {
+  border-color: #17a2b8;
+  color: #17a2b8;
+  transition: var(--transition);
+}
+
+.btn-outline-info:hover {
+  background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+  border-color: #17a2b8;
   color: white;
 }
 

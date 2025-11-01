@@ -83,11 +83,20 @@ export const cargarPersonasUsuario = async () => {
 
 export const cargarPotreros = async () => {
   try {
+    console.log('Cargando potreros desde API...');
     const response = await fetch(`${API_BASE}/potreros/`);
-    if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+    console.log('Respuesta HTTP:', response.status);
+
+    if (!response.ok) {
+      throw new Error(`Error HTTP: ${response.status}`);
+    }
 
     const data = await response.json();
-    if (data.success) {
+    console.log('Respuesta completa del backend:', data);
+
+    // Validar si la respuesta contiene un array dentro de data.data
+    if (data.data && Array.isArray(data.data)) {
+      console.log('Procesando array de potreros desde data.data');
       potreros.value = data.data.map(potrero => ({
         id: potrero.id,
         nombre: potrero.nombre,
@@ -103,12 +112,34 @@ export const cargarPotreros = async () => {
         descripcion: potrero.descripcion || '',
         pasto: potrero.tipo_pasto_nombre || 'No definido'
       }));
+      console.log('Potreros cargados exitosamente:', potreros.value.length, 'potreros');
+    } else if (Array.isArray(data)) {
+      // Fallback: si la respuesta es directamente un array
+      console.log('Procesando array de potreros directamente desde data');
+      potreros.value = data.map(potrero => ({
+        id: potrero.id,
+        nombre: potrero.nombre,
+        estado: potrero.estado,
+        capacidad: potrero.capacidad,
+        ocupacion: potrero.ocupacion,
+        hectareas: potrero.hectareas,
+        area: potrero.area,
+        fechaUso: potrero.fecha_ultimo_uso ? formatDate(potrero.fecha_ultimo_uso) : '',
+        ultimaLimpieza: potrero.ultima_limpieza ? formatDate(potrero.ultima_limpieza) : '',
+        proximaLimpieza: potrero.proxima_limpieza ? formatDate(potrero.proxima_limpieza) : null,
+        responsable: potrero.responsable || 'No asignado',
+        descripcion: potrero.descripcion || '',
+        pasto: potrero.tipo_pasto || 'No definido'
+      }));
+      console.log('Potreros cargados exitosamente (fallback):', potreros.value.length, 'potreros');
     } else {
-      throw new Error(data.message || 'Error desconocido');
+      console.warn('La respuesta no contiene un array válido de potreros');
+      potreros.value = [];
     }
   } catch (error) {
-    error.value = error.message;
     console.error('Error cargando potreros:', error);
+    error.value = error.message;
+    potreros.value = [];
   } finally {
     loading.value = false;
   }
@@ -228,6 +259,7 @@ export const crearPotrero = () => {
             Swal.fire('¡Éxito!', 'Potrero creado correctamente', 'success');
             await cargarPotreros();
           } else {
+            console.log('Respuesta de potreros:', data);
             throw new Error(data.message || 'Error desconocido');
           }
         } else {

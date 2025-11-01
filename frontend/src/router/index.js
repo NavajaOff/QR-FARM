@@ -53,6 +53,11 @@ const routes = [
         component: () => import('../views/admin/GestionarAnimalesAdmin.vue')
       },
       {
+        path: 'gestionar-ganados',
+        name: 'GestionarGanadosAdmin',
+        component: () => import('../views/admin/GestionarAnimalesAdmin.vue')
+      },
+      {
         path: 'gestionar-potreros',
         name: 'GestionarPotrerosAdmin',
         component: () => import('../views/admin/GestionarPotrerosAdmin.vue')
