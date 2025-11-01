@@ -171,6 +171,12 @@ export default {
 
 /* Header con gradiente profesional */
 .navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 76px;
+  z-index: 1030;
   background: linear-gradient(135deg, #2c3e50 0%, #3498db 50%, #2980b9 100%) !important;
   backdrop-filter: blur(10px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -200,6 +206,7 @@ export default {
   box-shadow: 2px 0 20px rgba(0, 0, 0, 0.1);
   overflow-y: auto;
   overflow-x: hidden;
+  z-index: 1020;
 }
 
 .admin-sidebar::-webkit-scrollbar {
@@ -315,7 +322,8 @@ export default {
   padding: 2rem;
   min-height: calc(100vh - 76px);
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  padding-top: 2rem;
+  padding-top: calc(2rem + 76px);
+  margin-top: 0;
 }
 
 /* Animaciones */
