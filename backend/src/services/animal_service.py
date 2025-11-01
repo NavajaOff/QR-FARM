@@ -2,7 +2,7 @@
 from typing import List, Optional
 from datetime import datetime
 from ..database.db import get_connection
-from ..models.animal import Ganado
+from ..models.animal import Ganado, EstadoGanado
 
 class GanadoService:
     @staticmethod
@@ -10,7 +10,7 @@ class GanadoService:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
-            
+
             sql = """
                 INSERT INTO ganado (
                     nombre, raza, fecha_nacimiento,
@@ -20,14 +20,21 @@ class GanadoService:
                 )
             """
 
-            # Convertir estado a ID numérico
-            estado_id = 1  # Default: activo
-            if ganado.estado.value == 'revision':
+            # Convertir estado a ID numérico basado en el enum EstadoGanado
+            estado_id = None
+            if ganado.estado == EstadoGanado.ACTIVO:
+                estado_id = 1
+            elif ganado.estado == EstadoGanado.SALUDABLE:
                 estado_id = 2
-            elif ganado.estado.value == 'vendido':
+            elif ganado.estado == EstadoGanado.REVISION:
                 estado_id = 3
-            elif ganado.estado.value == 'muerto':
+            elif ganado.estado == EstadoGanado.VENDIDO:
                 estado_id = 4
+            elif ganado.estado == EstadoGanado.ENFERMO:
+                estado_id = 5
+            else:
+                # Si no coincide, usar default
+                estado_id = 1
 
             # Convertir fecha_nacimiento a string si es date object
             fecha_nac = ganado.fecha_nacimiento
@@ -45,13 +52,13 @@ class GanadoService:
                 ganado.peso, estado_id,
                 ganado.id_potrero, ganado.id_persona
             )
-            
+
             cursor.execute(sql, values)
             conn.commit()
-            
+
             ganado.id = cursor.lastrowid
             return ganado
-            
+
         except Exception as e:
             print(f"Error al crear animal: {e}")
             return None
@@ -296,7 +303,19 @@ class GanadoService:
 
             # Si no se encontró el estado, usar default
             if estado_id is None:
-                estado_id = 1  # Default: activo
+                # Mapear los valores del enum EstadoGanado a IDs de base de datos
+                if ganado.estado == EstadoGanado.ACTIVO:
+                    estado_id = 1
+                elif ganado.estado == EstadoGanado.SALUDABLE:
+                    estado_id = 2
+                elif ganado.estado == EstadoGanado.REVISION:
+                    estado_id = 3
+                elif ganado.estado == EstadoGanado.VENDIDO:
+                    estado_id = 4
+                elif ganado.estado == EstadoGanado.ENFERMO:
+                    estado_id = 5
+                else:
+                    estado_id = 1  # Default: activo
 
             # Convertir fecha_nacimiento a string si es date object
             fecha_nac = ganado.fecha_nacimiento
@@ -407,8 +426,17 @@ class GanadoService:
             cursor.execute("SELECT id, tipo_estado FROM estado_ganado ORDER BY tipo_estado")
             results = cursor.fetchall()
 
-            print(f"Estados de ganado obtenidos: {results}")
-            return results
+            # Transformar la estructura para que coincida con lo que espera el frontend
+            estados_transformados = []
+            for result in results:
+                estados_transformados.append({
+                    'id': result['id'],
+                    'estado': result['tipo_estado'],  # Cambiar 'tipo_estado' a 'estado'
+                    'nombre_estado': result['tipo_estado']  # Agregar campo adicional
+                })
+
+            print(f"Estados de ganado obtenidos y transformados: {estados_transformados}")
+            return estados_transformados
 
         except Exception as e:
             print(f"Error al obtener estados de ganado: {e}")
