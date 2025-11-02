@@ -210,24 +210,69 @@ class UsuarioController:
                     'message': 'Usuario no encontrado'
                 }), 404
 
-            # Si se está actualizando el email, verificar que no exista
-            if 'email' in data and data['email'] != usuario_existente.persona.email:
-                if UsuarioService.buscar_por_email(data['email']):
+            # Validar campos requeridos
+            required_fields = ['primer_nombre', 'primer_apellido', 'email']
+            for field in required_fields:
+                if field in data and not data[field]:
                     return jsonify({
                         'status': 'error',
-                        'message': 'El email ya está registrado'
+                        'message': f'El campo {field} es requerido'
                     }), 400
 
-            # Actualizar la contraseña si se proporciona una nueva
+            # Validar formato de email si se proporciona
+            if 'email' in data:
+                import re
+                email = data['email'].strip()
+                if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
+                    return jsonify({
+                        'status': 'error',
+                        'message': 'El formato del email no es válido'
+                    }), 400
+
+                # Verificar que el email no exista para otro usuario
+                if email != usuario_existente.persona.email:
+                    if UsuarioService.buscar_por_email(email):
+                        return jsonify({
+                            'status': 'error',
+                            'message': 'El email ya está registrado'
+                        }), 400
+
+            # Validar contraseña si se proporciona
+            if 'password' in data:
+                password = data['password']
+                if len(password) < 6:
+                    return jsonify({
+                        'status': 'error',
+                        'message': 'La contraseña debe tener al menos 6 caracteres'
+                    }), 400
+
+            # Actualizar datos de la persona
+            if 'primer_nombre' in data:
+                usuario_existente.persona.primer_nombre = data['primer_nombre']
+            if 'segundo_nombre' in data:
+                usuario_existente.persona.segundo_nombre = data['segundo_nombre']
+            if 'primer_apellido' in data:
+                usuario_existente.persona.primer_apellido = data['primer_apellido']
+            if 'segundo_apellido' in data:
+                usuario_existente.persona.segundo_apellido = data['segundo_apellido']
+            if 'email' in data:
+                usuario_existente.persona.email = data['email']
+            if 'telefono' in data:
+                usuario_existente.persona.telefono = data['telefono']
+
+            # Actualizar datos del usuario
             if 'password' in data:
                 usuario_existente.set_password(data['password'])
-
-            # Actualizar estado si se proporciona
             if 'estado' in data:
                 usuario_existente.estado = EstadoUsuario(data['estado'])
+            if 'id_rol' in data:
+                usuario_existente.id_rol = data['id_rol']
+                # También actualizar el rol en la persona si existe
+                if usuario_existente.persona:
+                    usuario_existente.persona.id_rol = data['id_rol']
 
             # Intentar actualizar en la base de datos
-            if UsuarioService.actualizar_usuario(id, usuario_existente):
+            if UsuarioService.actualizar_usuario_completo(id, usuario_existente):
                 return jsonify({
                     'status': 'success',
                     'message': 'Usuario actualizado exitosamente',

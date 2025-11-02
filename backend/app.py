@@ -24,10 +24,12 @@ app.config['SECRET_KEY'] = 'qr-farm-secret-key-2024'
 # Configuración CORS completa para permitir peticiones desde el frontend
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
-        "supports_credentials": True
+        "origins": ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+        "supports_credentials": True,
+        "expose_headers": ["Content-Type", "Authorization"],
+        "allow_credentials": True
     }
 })
 

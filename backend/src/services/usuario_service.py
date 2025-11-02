@@ -667,6 +667,89 @@ class UsuarioService:
                 conn.close()
 
     @staticmethod
+    def actualizar_usuario_completo(id: int, usuario: Usuario) -> bool:
+        try:
+            conn = get_connection()
+            cursor = conn.cursor(dictionary=True)
+
+            # Verificar que el usuario existe y obtener id_persona
+            cursor.execute("SELECT id_persona FROM usuarios WHERE id = %s", (id,))
+            result = cursor.fetchone()
+            if not result:
+                return False
+
+            id_persona = result['id_persona']
+
+            try:
+                # Iniciar transacción
+                conn.start_transaction()
+
+                # Actualizar persona
+                sql_persona = """
+                    UPDATE personas SET
+                        id_rol = %s,
+                        primer_nombre = %s,
+                        segundo_nombre = %s,
+                        primer_apellido = %s,
+                        segundo_apellido = %s,
+                        email = %s,
+                        telefono = %s,
+                        updated_at = NOW()
+                    WHERE id = %s
+                """
+
+                values_persona = (
+                    usuario.persona.id_rol,
+                    usuario.persona.primer_nombre,
+                    usuario.persona.segundo_nombre,
+                    usuario.persona.primer_apellido,
+                    usuario.persona.segundo_apellido,
+                    usuario.persona.email,
+                    usuario.persona.telefono,
+                    id_persona
+                )
+
+                cursor.execute(sql_persona, values_persona)
+
+                # Actualizar usuario
+                sql_usuario = """
+                    UPDATE usuarios SET
+                        id_rol = %s,
+                        estado = %s,
+                        updated_at = NOW()
+                    WHERE id = %s
+                """
+
+                values_usuario = (usuario.id_rol, usuario.estado.value, id)
+                cursor.execute(sql_usuario, values_usuario)
+
+                # Si hay nueva contraseña, actualizarla
+                if usuario.contrasena:
+                    sql_password = """
+                        UPDATE usuarios SET
+                            contrasena = %s
+                        WHERE id = %s
+                    """
+                    cursor.execute(sql_password, (usuario.contrasena, id))
+
+                # Commit de la transacción
+                conn.commit()
+
+                return True
+
+            except Exception as e:
+                # Rollback en caso de error
+                conn.rollback()
+                raise e
+
+        except Exception as e:
+            print(f"Error al actualizar usuario completo: {e}")
+            return False
+        finally:
+            if 'conn' in locals():
+                conn.close()
+
+    @staticmethod
     def eliminar_usuario(id: int) -> bool:
         try:
             conn = get_connection()
