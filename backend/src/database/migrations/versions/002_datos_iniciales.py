@@ -50,9 +50,11 @@ def upgrade() -> None:
             sa.column('tipo_estado', sa.String)
         ),
         [
-            {'id': 1, 'tipo_estado': 'saludable'},
-            {'id': 2, 'tipo_estado': 'revision'},
-            {'id': 3, 'tipo_estado': 'enfermo'}
+            {'id': 1, 'tipo_estado': 'activo'},
+            {'id': 2, 'tipo_estado': 'saludable'},
+            {'id': 3, 'tipo_estado': 'revision'},
+            {'id': 4, 'tipo_estado': 'enfermo'},
+            {'id': 5, 'tipo_estado': 'vendido'}
         ]
     )
 
@@ -65,7 +67,9 @@ def upgrade() -> None:
         [
             {'id': 1, 'nombre_vacuna': 'Brucella'},
             {'id': 2, 'nombre_vacuna': 'Aftosa'},
-            {'id': 3, 'nombre_vacuna': 'Clostridiales'}
+            {'id': 3, 'nombre_vacuna': 'Clostridiales'},
+            {'id': 4, 'nombre_vacuna': 'Rabia'},
+            {'id': 5, 'nombre_vacuna': 'Leptospirosis'}
         ]
     )
 
@@ -123,7 +127,7 @@ def downgrade() -> None:
     # Eliminar datos iniciales
     op.execute("DELETE FROM usuarios WHERE id_persona = 1")
     op.execute("DELETE FROM personas WHERE email = 'admin@qrfarm.com'")
-    op.execute("DELETE FROM tipo_vacuna WHERE id IN (1, 2, 3)")
-    op.execute("DELETE FROM estado_ganado WHERE id IN (1, 2, 3)")
+    op.execute("DELETE FROM tipo_vacuna WHERE id IN (1, 2, 3, 4, 5)")
+    op.execute("DELETE FROM estado_ganado WHERE id IN (1, 2, 3, 4, 5)")
     op.execute("DELETE FROM tipo_pasto WHERE id IN (1, 2, 3)")
     op.execute("DELETE FROM roles WHERE id IN (1, 2)")

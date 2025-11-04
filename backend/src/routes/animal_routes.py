@@ -6,11 +6,15 @@ import os
 
 animal_bp = Blueprint('animal', __name__, url_prefix='/api/animales')
 
-@animal_bp.route('/estados', methods=['GET'])
-def get_estados_animales():
+@animal_bp.route('/estados-ganado', methods=['GET'])
+def get_estados_ganado():
     """Obtener los estados posibles del ganado."""
-    estados = PotreroService.get_estados_ganado()
-    return jsonify({'data': estados, 'success': True}), 200
+    try:
+        estados = GanadoService.obtener_estados_ganado()
+        return jsonify({'data': estados, 'success': True}), 200
+    except Exception as e:
+        print(f"Error obteniendo estados de ganado: {e}")
+        return jsonify({'data': [], 'success': False, 'message': 'Error interno del servidor'}), 500
 
 @animal_bp.route('/', methods=['GET'])
 def get_animales():
