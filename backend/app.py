@@ -13,9 +13,11 @@ from src.database.db import get_connection
 from src.services.usuario_service import UsuarioService
 from src.services.animal_service import GanadoService
 from src.services.potrero_service import PotreroService
+from src.services.vacunacion_service import VacunacionService
 from src.routes.potrero_routes import potrero_bp
 from src.routes.usuario_routes import usuario_bp
 from src.routes.animal_routes import animal_bp
+from src.routes.vacunacion_routes import vacunacion_bp
 
 # Configuración de la aplicación Flask
 app = Flask(__name__)
@@ -332,6 +334,7 @@ def get_qr_image(filename):
 app.register_blueprint(potrero_bp, url_prefix='/api/potreros')
 app.register_blueprint(usuario_bp, url_prefix='/api/usuarios')
 app.register_blueprint(animal_bp, url_prefix='/api/animales')
+app.register_blueprint(vacunacion_bp, url_prefix='/api/vacunaciones')
 
 # Endpoint adicional para estados de ganado
 @app.route('/api/animales/estados-ganado', methods=['GET'])
