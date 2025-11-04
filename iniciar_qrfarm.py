@@ -107,7 +107,7 @@ def setup_environment():
     print(f"{Colors.BLUE}[INFO] Configurando entorno...{Colors.END}")
 
     # Crear .env para backend si no existe
-    backend_env = Path("backend/.env")0
+    backend_env = Path("backend/.env")
     if not backend_env.exists():
         print(f"{Colors.YELLOW}[WARN] Creando archivo backend/.env...{Colors.END}")
         env_content = """# Configuración de la base de datos
