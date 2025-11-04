@@ -55,6 +55,7 @@ class VacunacionService:
     def obtener_vacunacion_por_id(id: int) -> Optional[Vacunacion]:
         """Obtener una vacunación por ID"""
         try:
+            print(f"Service: Buscando vacunación con ID: {id}")
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
@@ -71,7 +72,7 @@ class VacunacionService:
                     CONCAT(p.primer_nombre, ' ', COALESCE(p.segundo_nombre, ''), ' ', p.primer_apellido, ' ', COALESCE(p.segundo_apellido, '')) as nombre_responsable,
                     v.estado,
                     v.id_tipo_vacuna,
-                    tv.nombre as nombre_tipo_vacuna
+                    tv.nombre_vacuna as nombre_tipo_vacuna
                 FROM vacunacion v
                 LEFT JOIN ganado g ON v.id_animal = g.id
                 LEFT JOIN personas p ON v.responsable = p.id
@@ -79,15 +80,21 @@ class VacunacionService:
                 WHERE v.id = %s
             """
 
+            print(f"Service: Ejecutando query para obtener vacunación: {query} con ID: {id}")
             cursor.execute(query, (id,))
             row = cursor.fetchone()
+            print(f"Service: Resultado de la query: {row}")
 
             if row:
+                print(f"Service: Vacunación encontrada: {row}")
                 return Vacunacion.from_dict(row)
+            print(f"Service: No se encontró vacunación con ID: {id}")
             return None
 
         except Exception as e:
-            print(f"Error obteniendo vacunación por ID: {str(e)}")
+            print(f"Service: Error obteniendo vacunación por ID: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return None
         finally:
             if 'cursor' in locals():
@@ -184,17 +191,25 @@ class VacunacionService:
     def eliminar_vacunacion(id: int) -> bool:
         """Eliminar una vacunación"""
         try:
+            print(f"Service: Intentando eliminar vacunación con ID: {id}")
             conn = get_connection()
             cursor = conn.cursor()
+            print(f"Service: Conexión a BD obtenida")
 
             query = "DELETE FROM vacunacion WHERE id = %s"
+            print(f"Service: Ejecutando query: {query} con ID: {id}")
             cursor.execute(query, (id,))
             conn.commit()
+            print(f"Service: Query ejecutada, rowcount: {cursor.rowcount}")
 
-            return cursor.rowcount > 0
+            result = cursor.rowcount > 0
+            print(f"Service: Resultado de eliminación: {result}")
+            return result
 
         except Exception as e:
-            print(f"Error eliminando vacunación: {str(e)}")
+            print(f"Service: Error eliminando vacunación: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return False
         finally:
             if 'cursor' in locals():

@@ -65,17 +65,18 @@
                     <td>{{ v.idAnimal }}</td>
                     <td>{{ v.nombre }}</td>
                     <td>{{ v.tipoVacuna }}</td>
-                    <td>{{ v.fechaAplicacion }}</td>
-                    <td>{{ v.proximaDosis }}</td>
+                    <td>{{ formatDate(v.fechaAplicacion) }}</td>
+                    <td>{{ formatDate(v.proximaDosis) }}</td>
                     <td>{{ v.responsable }}</td>
                     <td><span :class="['badge', estadoClass(v.estado)]">{{ v.estado }}</span></td>
                     <td>
                       <button class="btn btn-sm btn-outline-primary me-1" @click="verVacunacion(v.id)"><i class="fas fa-eye"></i></button>
-                      <button class="btn btn-sm btn-outline-warning" @click="editarVacunacion(v.id)"><i class="fas fa-edit"></i></button>
+                      <button class="btn btn-sm btn-outline-warning me-1" @click="editarVacunacion(v.id)"><i class="fas fa-edit"></i></button>
+                      <button class="btn btn-sm btn-outline-danger" @click="eliminarVacunacion(v.id)"><i class="fas fa-trash"></i></button>
                     </td>
                   </tr>
                   <tr v-if="loading">
-                    <td colspan="8" class="text-center">
+                    <td colspan="9" class="text-center">
                       <div class="spinner-border spinner-border-sm" role="status">
                         <span class="visually-hidden">Cargando...</span>
                       </div>
@@ -83,7 +84,7 @@
                     </td>
                   </tr>
                   <tr v-else-if="vacunaciones.length === 0">
-                    <td colspan="8" class="text-center">No hay registros de vacunación.</td>
+                    <td colspan="9" class="text-center">No hay registros de vacunación.</td>
                   </tr>
                 </tbody>
               </table>
@@ -151,6 +152,12 @@ export default {
       if (estado === 'aplicada') return 'bg-success';
       if (estado === 'pendiente') return 'bg-warning';
       return 'bg-secondary';
+    },
+
+    formatDate(dateString) {
+      if (!dateString) return 'No definida';
+      // Remove the time part (everything after 'T') and return just the date
+      return dateString.split('T')[0];
     },
 
     async registrarVacunacion() {
@@ -310,6 +317,34 @@ export default {
         } catch (error) {
           console.error('Error actualizando vacunación:', error);
           Swal.fire('Error', 'No se pudo actualizar la vacunación', 'error');
+        }
+      }
+    },
+
+    async eliminarVacunacion(id) {
+      console.log('Frontend: Intentando eliminar vacunación con ID:', id);
+      const result = await Swal.fire({
+        title: '¿Estás seguro?',
+        text: 'Esta acción no se puede deshacer',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (result.isConfirmed) {
+        try {
+          console.log('Frontend: Llamando a vacunacionAPI.delete con ID:', id);
+          const response = await vacunacionAPI.delete(id);
+          console.log('Frontend: Respuesta de delete:', response);
+          await this.cargarDatos();
+          Swal.fire('Eliminado', 'La vacunación ha sido eliminada correctamente', 'success');
+        } catch (error) {
+          console.error('Frontend: Error eliminando vacunación:', error);
+          console.error('Frontend: Detalles del error:', error.response);
+          Swal.fire('Error', 'No se pudo eliminar la vacunación', 'error');
         }
       }
     }

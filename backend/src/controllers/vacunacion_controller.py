@@ -164,30 +164,39 @@ class VacunacionController:
     def eliminar_vacunacion(vacunacion_id: int) -> Tuple[Any, int]:
         """Eliminar una vacunación"""
         try:
+            print(f"Controller: Intentando eliminar vacunación con ID: {vacunacion_id}")
             # Verificar que la vacunación existe
             existing_vacunacion = VacunacionService.obtener_vacunacion_por_id(vacunacion_id)
+            print(f"Controller: Vacunación encontrada: {existing_vacunacion is not None}")
             if not existing_vacunacion:
+                print(f"Controller: Vacunación con ID {vacunacion_id} no encontrada")
                 return jsonify({
                     "status": "error",
                     "message": "Vacunación no encontrada"
                 }), 404
 
             # Eliminar de la base de datos
+            print(f"Controller: Llamando a VacunacionService.eliminar_vacunacion con ID: {vacunacion_id}")
             success = VacunacionService.eliminar_vacunacion(vacunacion_id)
+            print(f"Controller: Resultado de eliminar_vacunacion: {success}")
 
             if success:
+                print(f"Controller: Vacunación {vacunacion_id} eliminada exitosamente")
                 return jsonify({
                     "status": "success",
                     "message": "Vacunación eliminada exitosamente"
                 }), 200
             else:
+                print(f"Controller: Error al eliminar vacunación {vacunacion_id}")
                 return jsonify({
                     "status": "error",
                     "message": "Error al eliminar la vacunación"
                 }), 500
 
         except Exception as e:
-            print(f"Error eliminando vacunación: {str(e)}")
+            print(f"Controller: Error eliminando vacunación: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return jsonify({
                 "status": "error",
                 "message": "Error interno del servidor"
