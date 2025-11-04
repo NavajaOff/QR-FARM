@@ -65,8 +65,8 @@
                     <td>{{ v.idAnimal }}</td>
                     <td>{{ v.nombre }}</td>
                     <td>{{ v.tipoVacuna }}</td>
-                    <td>{{ v.fechaAplicacion }}</td>
-                    <td>{{ v.proximaDosis }}</td>
+                    <td>{{ formatDate(v.fechaAplicacion) }}</td>
+                    <td>{{ formatDate(v.proximaDosis) }}</td>
                     <td>{{ v.responsable }}</td>
                     <td><span :class="['badge', estadoClass(v.estado)]">{{ v.estado }}</span></td>
                     <td>
@@ -152,6 +152,12 @@ export default {
       if (estado === 'aplicada') return 'bg-success';
       if (estado === 'pendiente') return 'bg-warning';
       return 'bg-secondary';
+    },
+
+    formatDate(dateString) {
+      if (!dateString) return 'No definida';
+      // Remove the time part (everything after 'T') and return just the date
+      return dateString.split('T')[0];
     },
 
     async registrarVacunacion() {
@@ -278,11 +284,11 @@ export default {
             </div>
             <div class="col-6">
               <label class="form-label">Fecha Aplicación</label>
-              <input id="fechaAplicacion" type="date" class="form-control" value="${v.fechaAplicacion || ''}">
+              <input id="fechaAplicacion" type="date" class="form-control" value="${v.fechaAplicacion ? v.fechaAplicacion.split('T')[0] : ''}">
             </div>
             <div class="col-6">
               <label class="form-label">Próxima Dosis</label>
-              <input id="proximaDosis" type="date" class="form-control" value="${v.proximaDosis || ''}">
+              <input id="proximaDosis" type="date" class="form-control" value="${v.proximaDosis ? v.proximaDosis.split('T')[0] : ''}">
             </div>
           </div>
         `,
@@ -316,6 +322,7 @@ export default {
     },
 
     async eliminarVacunacion(id) {
+      console.log('Frontend Usuario: Intentando eliminar vacunación con ID:', id);
       const result = await Swal.fire({
         title: '¿Estás seguro?',
         text: 'Esta acción no se puede deshacer',
@@ -329,11 +336,14 @@ export default {
 
       if (result.isConfirmed) {
         try {
-          await vacunacionAPI.delete(id);
+          console.log('Frontend Usuario: Llamando a vacunacionAPI.delete con ID:', id);
+          const response = await vacunacionAPI.delete(id);
+          console.log('Frontend Usuario: Respuesta de delete:', response);
           await this.cargarDatos();
           Swal.fire('Eliminado', 'La vacunación ha sido eliminada correctamente', 'success');
         } catch (error) {
-          console.error('Error eliminando vacunación:', error);
+          console.error('Frontend Usuario: Error eliminando vacunación:', error);
+          console.error('Frontend Usuario: Detalles del error:', error.response);
           Swal.fire('Error', 'No se pudo eliminar la vacunación', 'error');
         }
       }

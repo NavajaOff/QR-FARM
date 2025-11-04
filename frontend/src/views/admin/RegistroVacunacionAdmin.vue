@@ -276,19 +276,38 @@ export default {
         html: `
           <div class="row g-3">
             <div class="col-12">
+              <label class="form-label">Animal</label>
+              <select id="animal" class="form-select">
+                ${this.animales.map(a => `<option value="${a.id}" ${v.idAnimal == a.id ? 'selected' : ''}>${a.nombre} (ID: ${a.id})</option>`).join('')}
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Tipo de Vacuna</label>
+              <select id="tipoVacuna" class="form-select">
+                <option value="">Sin especificar</option>
+                ${this.tiposVacuna.map(t => `<option value="${t.id}" ${v.idTipoVacuna == t.id ? 'selected' : ''}>${t.nombre}</option>`).join('')}
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Fecha Aplicación</label>
+              <input id="fechaAplicacion" type="date" class="form-control" value="${v.fechaAplicacion ? v.fechaAplicacion.split('T')[0] : ''}">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Próxima Dosis</label>
+              <input id="proximaDosis" type="date" class="form-control" value="${v.proximaDosis ? v.proximaDosis.split('T')[0] : ''}">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Responsable</label>
+              <select id="responsable" class="form-select">
+                ${this.personas.map(p => `<option value="${p.id}" ${v.responsableId == p.id ? 'selected' : ''}>${p.nombre}</option>`).join('')}
+              </select>
+            </div>
+            <div class="col-12">
               <label class="form-label">Estado</label>
               <select id="estado" class="form-select">
                 <option value="pendiente" ${v.estado === 'pendiente' ? 'selected' : ''}>Pendiente</option>
                 <option value="aplicada" ${v.estado === 'aplicada' ? 'selected' : ''}>Aplicada</option>
               </select>
-            </div>
-            <div class="col-6">
-              <label class="form-label">Fecha Aplicación</label>
-              <input id="fechaAplicacion" type="date" class="form-control" value="${v.fechaAplicacion || ''}">
-            </div>
-            <div class="col-6">
-              <label class="form-label">Próxima Dosis</label>
-              <input id="proximaDosis" type="date" class="form-control" value="${v.proximaDosis || ''}">
             </div>
           </div>
         `,
@@ -297,14 +316,25 @@ export default {
         confirmButtonText: 'Actualizar',
         cancelButtonText: 'Cancelar',
         preConfirm: () => {
-          const estado = document.getElementById('estado').value;
+          const animal = document.getElementById('animal').value;
+          const tipoVacuna = document.getElementById('tipoVacuna').value;
           const fechaAplicacion = document.getElementById('fechaAplicacion').value;
           const proximaDosis = document.getElementById('proximaDosis').value;
+          const responsable = document.getElementById('responsable').value;
+          const estado = document.getElementById('estado').value;
+
+          if (!animal || !responsable) {
+            Swal.showValidationMessage('Por favor complete los campos requeridos: Animal y Responsable');
+            return false;
+          }
 
           return {
-            estado: estado,
+            id_animal: parseInt(animal),
+            id_tipo_vacuna: tipoVacuna ? parseInt(tipoVacuna) : null,
             fecha_aplicacion: fechaAplicacion || null,
-            proxima_dosis: proximaDosis || null
+            proxima_dosis: proximaDosis || null,
+            responsable: parseInt(responsable),
+            estado: estado
           };
         }
       });
