@@ -87,7 +87,7 @@ export const cargarDatosIniciales = async () => {
 export const cargarEstadosGanado = async () => {
   try {
     console.log('Cargando estados de ganado...');
-    const response = await axios.get(`${API_BASE}/animales/estados-ganado`, {
+    const response = await axios.get(`${API_BASE}/potreros/estados-ganado`, {
       cancelToken: cancelTokenSource.token,
       timeout: 10000
     });
@@ -128,7 +128,7 @@ export const cargarPersonasUsuario = async () => {
 export const cargarAnimales = async () => {
   try {
     console.log('Cargando animales desde API...');
-    const response = await axios.get(`${API_BASE}/ganados/`, {
+    const response = await axios.get(`${API_BASE}/animales/`, {
       cancelToken: cancelTokenSource.token,
       timeout: 15000  // Timeout más largo para listas grandes
     });

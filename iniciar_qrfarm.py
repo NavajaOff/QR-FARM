@@ -223,8 +223,8 @@ def start_backend():
         # Cambiar al directorio backend
         os.chdir('backend')
 
-        # Iniciar el servidor Flask
-        process = subprocess.Popen([sys.executable, 'app.py'],
+        # Iniciar el servidor Flask con el comando correcto
+        process = subprocess.Popen([sys.executable, '-m', 'flask', '--app', 'app', 'run', '--host=0.0.0.0', '--port=5000'],
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.STDOUT,
                                  text=True,
@@ -232,7 +232,7 @@ def start_backend():
                                  universal_newlines=True)
 
         # Esperar a que el servidor esté listo
-        time.sleep(3)
+        time.sleep(5)
 
         # Verificar si el proceso sigue vivo
         if process.poll() is None:

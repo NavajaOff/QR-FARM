@@ -229,6 +229,9 @@ app.register_blueprint(usuario_bp, url_prefix='/api/usuarios')
 app.register_blueprint(animal_bp, url_prefix='/api/animales')
 app.register_blueprint(vacunacion_bp, url_prefix='/api/vacunaciones')
 
+# Blueprint adicional para ganado (alias de animales para compatibilidad con frontend)
+app.register_blueprint(animal_bp, url_prefix='/api/ganados')
+
 
 if __name__ == '__main__':
     print("Iniciando servidor QR Farm Backend...")

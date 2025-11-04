@@ -13,13 +13,10 @@ class PotreroController:
         try:
             potreros = PotreroService.get_all()
             return jsonify({'data': potreros, 'success': True}), 200
-        except DatabaseError as e:
-            return jsonify({
-                'error': 'Error de base de datos',
-                'message': str(e),
-                'success': False
-            }), 500
         except Exception as e:
+            print(f"Error en get_all potreros controller: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return jsonify({
                 'error': 'Error interno del servidor',
                 'message': str(e),
