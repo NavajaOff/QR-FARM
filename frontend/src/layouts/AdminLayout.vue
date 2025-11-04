@@ -47,11 +47,11 @@
     <!-- Sidebar -->
     <div class="d-none d-md-block admin-sidebar">
       <nav class="nav flex-column py-3">
-        <!-- Dashboard -->
+        <!-- Inicio -->
         <router-link class="nav-link mb-2" to="/admin/dashboard">
           <div class="d-flex align-items-center">
-            <i class="fas fa-tachometer-alt me-3 fa-lg"></i>
-            <span class="fw-medium">Dashboard</span>
+            <i class="fas fa-home me-3 fa-lg"></i>
+            <span class="fw-medium">Inicio</span>
           </div>
         </router-link>
 
@@ -82,24 +82,15 @@
             <router-link class="nav-link mb-1 small" to="/admin/vacunacion">
               <i class="fas fa-syringe me-2"></i>Vacunación
             </router-link>
+            <router-link class="nav-link mb-1 small" to="/admin/inventario">
+              <i class="fas fa-chart-bar me-2"></i>Reportes
+            </router-link>
+            <router-link class="nav-link mb-1 small" to="/admin/escanear-qr">
+              <i class="fas fa-qrcode me-2"></i>Escanear QR
+            </router-link>
           </div>
         </div>
 
-        <!-- Inventario -->
-        <router-link class="nav-link mb-2" to="/admin/inventario">
-          <div class="d-flex align-items-center">
-            <i class="fas fa-boxes me-3 fa-lg"></i>
-            <span class="fw-medium">Inventario</span>
-          </div>
-        </router-link>
-
-        <!-- Escanear QR -->
-        <router-link class="nav-link mb-2" to="/admin/escanear-qr">
-          <div class="d-flex align-items-center">
-            <i class="fas fa-qrcode me-3 fa-lg"></i>
-            <span class="fw-medium">Escanear QR</span>
-          </div>
-        </router-link>
 
         <!-- Espaciador para empujar elementos abajo -->
         <div class="flex-grow-1"></div>

@@ -4,9 +4,6 @@
       <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h2 class="mb-0">Gestión de Usuarios</h2>
-          <button class="btn btn-success" @click="showAddUserModal = true">
-            <i class="fas fa-plus me-2"></i>Agregar Usuario
-          </button>
         </div>
 
         <!-- Tabla de usuarios -->
