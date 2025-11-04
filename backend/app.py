@@ -6,6 +6,7 @@ Servidor REST API con autenticación JWT
 
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
+from flask_migrate import Migrate
 import jwt
 import datetime
 import os
@@ -22,6 +23,19 @@ from src.routes.vacunacion_routes import vacunacion_bp
 # Configuración de la aplicación Flask
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'qr-farm-secret-key-2024'
+
+# Configuración de Flask-Migrate
+from src.database.db import ConexionBaseDatos
+# Para Flask-Migrate necesitamos SQLAlchemy, pero como usamos MySQL Connector,
+# crearemos una configuración básica
+app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+mysqlconnector://{os.getenv('DB_USER', 'root')}:{os.getenv('DB_PASSWORD', '')}@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '3306')}/{os.getenv('DB_NAME', 'gestion_ganadera')}"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Inicializar Flask-Migrate (aunque no usaremos SQLAlchemy directamente)
+migrate = Migrate(app, directory='src/database/migrations')
+
+# Importar comandos de Flask-Migrate para que estén disponibles en la CLI
+from flask_migrate import init, migrate, upgrade, revision
 
 # Configuración CORS completa para permitir peticiones desde el frontend
 CORS(app, resources={
