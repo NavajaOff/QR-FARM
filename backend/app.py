@@ -36,7 +36,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 migrate = Migrate(app, directory='src/database/migrations')
 
 # Inicializar SocketIO para actualizaciones en tiempo real
-socketio = SocketIO(app, cors_allowed_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"])
+socketio = SocketIO(app, cors_allowed_origins=["http://localhost:*", "http://127.0.0.1:*", "http://localhost:3000"])
 
 # Importar comandos de Flask-Migrate para que estén disponibles en la CLI
 from flask_migrate import init, migrate, upgrade, revision
@@ -44,7 +44,7 @@ from flask_migrate import init, migrate, upgrade, revision
 # Configuración CORS completa para permitir peticiones desde el frontend
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"],
+        "origins": ["http://localhost:*", "http://127.0.0.1:*", "http://localhost:3000"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
         "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
         "supports_credentials": True,
@@ -261,4 +261,4 @@ if __name__ == '__main__':
     print("\nVerificacion automatica se ejecutara despues de iniciar el servidor\n")
 
     # Iniciar el servidor Flask con SocketIO
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False)

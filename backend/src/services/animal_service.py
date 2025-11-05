@@ -263,6 +263,7 @@ class GanadoService:
                 LEFT JOIN personas per ON g.id_persona = per.id
                 LEFT JOIN qr ON g.id = qr.id_ganado
                 ORDER BY g.id DESC
+                LIMIT 50
             """)
             results = cursor.fetchall()
 

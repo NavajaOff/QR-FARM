@@ -102,8 +102,8 @@ export default {
       error: null
     };
   },
-  async mounted() {
-    await this.cargarDatosIniciales();
+  mounted() {
+    this.cargarDatosIniciales();
   },
   beforeUnmount() {
     // Cancelar cualquier petición pendiente al desmontar
