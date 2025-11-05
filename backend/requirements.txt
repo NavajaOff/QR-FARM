@@ -1,11 +1,29 @@
+# Dependencias del Backend QR-FARM
+# Sistema de gestión ganadera con Flask y MySQL
+
+# Base de datos
 mysql-connector-python==8.1.0
+
+# Configuración
 python-dotenv==1.0.0
+
+# Framework web
 Flask==3.0.0
-PyJWT==2.8.0
 Werkzeug==3.0.1
+
+# Autenticación
+PyJWT==2.8.0
+
+# CORS para frontend
 Flask-Cors==4.0.0
+
+# Migraciones de base de datos
 Flask-Migrate==4.0.5
 Flask-SQLAlchemy==3.1.1
+
+# WebSockets para actualizaciones en tiempo real
 Flask-SocketIO==5.3.6
 python-socketio==5.10.0
+
+# Generación de códigos QR
 qrcode[pil]

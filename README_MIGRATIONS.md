@@ -32,9 +32,35 @@ pip install -r requirements.txt
 python setup_database.py
 ```
 
+## ✅ **Estado Actual del Sistema**
+
+### Migraciones Aplicadas
+- ✅ **001_migracion_inicial.py**: Estructura base de tablas
+- ✅ **002_datos_iniciales.py**: Datos iniciales completos (roles, tipos de pasto, estados de ganado, tipos de vacuna, usuario admin)
+
+### Datos Iniciales Incluidos
+- **Roles**: admin, usuario
+- **Tipos de pasto**: Brachiaria humidicola, Brachiaria decumbens, Pasto mombazaa
+- **Estados de ganado**: activo, saludable, revision, enfermo, vendido
+- **Tipos de vacuna**: Brucella, Aftosa, Clostridiales, Rabia, Leptospirosis
+- **Usuario administrador**: admin@qrfarm.com / admin123
+
 ## 🛠️ Comandos de Gestión de Migraciones
 
-### Usando el script de gestión
+### Comando Principal para Equipo
+
+```bash
+cd backend
+
+# ✅ PARA NUEVOS MIEMBROS DEL EQUIPO: Aplicar todas las migraciones
+python setup_database.py
+
+# Esto ejecutará automáticamente:
+# - python manage_db.py upgrade (aplica todas las migraciones)
+# - Inserta datos iniciales si no existen
+```
+
+### Comandos Avanzados (para desarrollo)
 
 ```bash
 cd backend
@@ -142,18 +168,26 @@ python manage_db.py upgrade
 
 ## ⚠️ Consideraciones Importantes
 
+### ✅ Para nuevos miembros del equipo
+```bash
+# Después de clonar el repositorio:
+cd backend
+python setup_database.py  # ✅ Esto es TODO lo que necesitan
+```
+
 ### Para bases de datos existentes
 - Las migraciones están marcadas como aplicadas para evitar recrear tablas existentes
 - Los datos iniciales ya están insertados
-
-### Para nuevos miembros del equipo
-- Siempre ejecutar `python setup_database.py` después de clonar
-- Esto aplicará todas las migraciones y configurará la base de datos
 
 ### Versionado de migraciones
 - Cada migración tiene un ID único y secuencial
 - No modificar migraciones ya aplicadas en producción
 - Crear nuevas migraciones para cambios adicionales
+
+### 🔐 Credenciales de Acceso Inicial
+- **Usuario**: admin@qrfarm.com
+- **Contraseña**: admin123
+- **Rol**: Administrador
 
 ## 🐛 Solución de Problemas
 
