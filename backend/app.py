@@ -6,6 +6,8 @@ Servidor REST API con autenticación JWT
 
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
+from flask_migrate import Migrate
+from flask_socketio import SocketIO, emit
 import jwt
 import datetime
 import os
@@ -22,6 +24,22 @@ from src.routes.vacunacion_routes import vacunacion_bp
 # Configuración de la aplicación Flask
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'qr-farm-secret-key-2024'
+
+# Configuración de Flask-Migrate
+from src.database.db import ConexionBaseDatos
+# Para Flask-Migrate necesitamos SQLAlchemy, pero como usamos MySQL Connector,
+# crearemos una configuración básica
+app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+mysqlconnector://{os.getenv('DB_USER', 'root')}:{os.getenv('DB_PASSWORD', '')}@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '3306')}/{os.getenv('DB_NAME', 'gestion_ganadera')}"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Inicializar Flask-Migrate (aunque no usaremos SQLAlchemy directamente)
+migrate = Migrate(app, directory='src/database/migrations')
+
+# Inicializar SocketIO para actualizaciones en tiempo real
+socketio = SocketIO(app, cors_allowed_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"])
+
+# Importar comandos de Flask-Migrate para que estén disponibles en la CLI
+from flask_migrate import init, migrate, upgrade, revision
 
 # Configuración CORS completa para permitir peticiones desde el frontend
 CORS(app, resources={
@@ -93,128 +111,7 @@ def obtener_usuarios():
             "message": "Error interno del servidor"
         }), 500
 
-@app.route('/api/ganados/', methods=['GET'])
-def obtener_ganados():
-    """Endpoint para obtener lista de ganado desde la base de datos"""
-    try:
-        print("Obteniendo lista de ganado desde la base de datos...")
 
-        ganados = GanadoService.obtener_todos_ganados()
-
-        # Convertir a formato compatible con el frontend
-        ganados_data = []
-        for ganado in ganados:
-            # Calcular edad aproximada si hay fecha de nacimiento
-            edad = None
-            if ganado.fecha_nacimiento:
-                from datetime import date
-                today = date.today()
-                edad = today.year - ganado.fecha_nacimiento.year - ((today.month, today.day) < (ganado.fecha_nacimiento.month, ganado.fecha_nacimiento.day))
-
-            # Obtener estado desde la tabla estado_ganado
-            estado_tipo = getattr(ganado, 'estado_tipo', None)
-            if not estado_tipo and ganado.id_estado:
-                # Buscar el estado en la tabla estado_ganado si no está en el objeto
-                try:
-                    conn_temp = get_connection()
-                    cursor_temp = conn_temp.cursor(dictionary=True)
-                    cursor_temp.execute("SELECT tipo_estado FROM estado_ganado WHERE id = %s", (ganado.id_estado,))
-                    estado_result = cursor_temp.fetchone()
-                    if estado_result:
-                        estado_tipo = estado_result['tipo_estado']
-                    cursor_temp.close()
-                    conn_temp.close()
-                except Exception as e:
-                    print(f"Error obteniendo estado del ganado: {e}")
-
-            ganados_data.append({
-                "id": ganado.id,
-                "nombre": ganado.nombre,
-                "raza": ganado.raza,
-                "edad": edad,
-                "peso": float(ganado.peso) if ganado.peso else None,
-                "estado": estado_tipo or ganado.estado.value if hasattr(ganado.estado, 'value') else str(ganado.estado),
-                "estado_tipo": estado_tipo,
-                "id_estado": getattr(ganado, 'id_estado', None) or ganado.id_estado if hasattr(ganado, 'id_estado') else None,
-                "id_potrero": ganado.id_potrero,
-                "id_persona": ganado.id_persona,
-                "codigo_qr": ganado.codigo_qr,
-                "fecha_nacimiento": ganado.fecha_nacimiento.isoformat() if ganado.fecha_nacimiento else None,
-                "sexo": ganado.sexo.value if hasattr(ganado.sexo, 'value') else str(ganado.sexo)
-            })
-
-        print(f"Enviando {len(ganados_data)} animales desde la base de datos")
-
-        return jsonify({
-            "status": "success",
-            "message": "Ganado obtenido exitosamente",
-            "data": ganados_data
-        }), 200
-
-    except Exception as e:
-        print(f"Error al obtener ganado: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({
-            "status": "error",
-            "message": "Error interno del servidor"
-        }), 500
-
-@app.route('/api/potreros/', methods=['GET'])
-def obtener_potreros():
-    """Endpoint para obtener lista de potreros desde la base de datos"""
-    try:
-        print("Obteniendo lista de potreros desde la base de datos...")
-
-        # Realizar consulta directa a la base de datos
-        conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
-
-        # Consulta para obtener potreros con información del responsable
-        query = """
-            SELECT
-                p.id,
-                p.nombre,
-                p.area,
-                p.capacidad,
-                p.ocupacion,
-                p.hectareas,
-                p.estado,
-                p.fecha_ultimo_uso,
-                p.ultima_limpieza,
-                p.proxima_limpieza,
-                p.descripcion,
-                p.id_tipo_pasto,
-                p.responsable_persona_id,
-                tp.tipo_pasto,
-                CONCAT(per.primer_nombre, ' ', COALESCE(per.segundo_nombre, ''), ' ', per.primer_apellido, ' ', COALESCE(per.segundo_apellido, '')) as responsable
-            FROM potrero p
-            LEFT JOIN tipo_pasto tp ON p.id_tipo_pasto = tp.id
-            LEFT JOIN personas per ON p.responsable_persona_id = per.id
-            ORDER BY p.id DESC
-        """
-
-        cursor.execute(query)
-        potreros = cursor.fetchall()
-
-        print(f"Enviando {len(potreros)} potreros desde la base de datos")
-
-        return jsonify({
-            "message": "Potreros obtenidos exitosamente",
-            "data": potreros
-        }), 200
-
-    except Exception as e:
-        print(f"Error al obtener potreros: {str(e)}")
-        return jsonify({
-            "status": "error",
-            "message": "Error interno del servidor"
-        }), 500
-    finally:
-        if 'cursor' in locals():
-            cursor.close()
-        if 'conn' in locals() and conn.is_connected():
-            conn.close()
 
 @app.route('/api/usuarios/login', methods=['POST'])
 def usuarios_login():
@@ -336,33 +233,32 @@ app.register_blueprint(usuario_bp, url_prefix='/api/usuarios')
 app.register_blueprint(animal_bp, url_prefix='/api/animales')
 app.register_blueprint(vacunacion_bp, url_prefix='/api/vacunaciones')
 
-# Endpoint adicional para estados de ganado
-@app.route('/api/animales/estados-ganado', methods=['GET'])
-def obtener_estados_ganado():
-    """Endpoint para obtener estados de ganado"""
-    try:
-        from src.services.animal_service import GanadoService
-        estados = GanadoService.obtener_estados_ganado()
-        return jsonify({
-            "success": True,
-            "data": estados
-        }), 200
-    except Exception as e:
-        print(f"Error obteniendo estados de ganado: {str(e)}")
-        return jsonify({
-            "success": False,
-            "message": "Error interno del servidor"
-        }), 500
+
+# Eventos SocketIO para actualizaciones en tiempo real
+@socketio.on('connect')
+def handle_connect():
+    print('Cliente conectado para actualizaciones en tiempo real')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('Cliente desconectado')
+
+# Función para emitir actualizaciones a todos los clientes conectados
+def emit_update(event_type, data):
+    """Emite actualizaciones en tiempo real a todos los clientes conectados."""
+    socketio.emit(event_type, data)
+    print(f"Actualización emitida: {event_type}")
 
 if __name__ == '__main__':
-    print("Iniciando servidor QR Farm Backend...")
+    print("Iniciando servidor QR Farm Backend con WebSockets...")
     print("URL: http://localhost:5000")
     print("Health check: http://localhost:5000/api/health")
     print("Login: http://localhost:5000/api/login")
+    print("WebSocket: ws://localhost:5000/socket.io")
     print("Presiona Ctrl+C para detener")
 
     # Ejecutar verificación automática después de iniciar el servidor
     print("\nVerificacion automatica se ejecutara despues de iniciar el servidor\n")
 
-    # Iniciar el servidor Flask
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Iniciar el servidor Flask con SocketIO
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)

@@ -164,20 +164,29 @@ def crear_usuario_admin_por_defecto():
 def get_connection():
     """Obtener una conexión activa a la base de datos."""
     try:
-        db = ConexionBaseDatos()
+        if db is None:
+            print("Advertencia: Base de datos no disponible, retornando None")
+            return None
         conexion = db._obtener_conexion()
         return conexion
     except Exception as e:
-        registrador.error(f"No se pudo obtener conexión a la base de datos: {e}")
+        print(f"Advertencia: Base de datos no disponible, retornando None: {e}")
         return None
 
-# Crear instancia global
-db = ConexionBaseDatos()
+# Crear instancia global (solo si no hay errores de conexión)
+try:
+    db = ConexionBaseDatos()
+except ErrorBaseDatos:
+    print("Advertencia: No se pudo conectar a la base de datos. El sistema funcionará en modo limitado.")
+    db = None
 
 # Alias para mantener compatibilidad con código existente
 def get_cursor(dictionary=True):
     """Alias para db.obtener_cursor para compatibilidad."""
+    if db is None:
+        raise ErrorBaseDatos("Base de datos no disponible")
     return db.obtener_cursor(dictionary)
 
 # Agregar método get_cursor a la clase para compatibilidad
-ConexionBaseDatos.get_cursor = get_cursor
+if db is not None:
+    ConexionBaseDatos.get_cursor = get_cursor

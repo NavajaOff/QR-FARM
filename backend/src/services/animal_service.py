@@ -237,8 +237,11 @@ class GanadoService:
             print(f"Error al obtener ganado {id}: {e}")
             return None
         finally:
-            if 'conn' in locals():
-                conn.close()
+            if 'conn' in locals() and conn is not None:
+                try:
+                    conn.close()
+                except:
+                    pass
 
     @staticmethod
     def obtener_todos_ganados() -> List[Ganado]:
@@ -421,6 +424,9 @@ class GanadoService:
     def obtener_estados_ganado() -> List[dict]:
         try:
             conn = get_connection()
+            if conn is None:
+                print("Advertencia: Base de datos no disponible, retornando lista vacía")
+                return []
             cursor = conn.cursor(dictionary=True)
 
             cursor.execute("SELECT id, tipo_estado FROM estado_ganado ORDER BY tipo_estado")

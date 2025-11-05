@@ -1,6 +1,12 @@
 """Routes for Potrero endpoints."""
-from flask import Blueprint
+from flask import Blueprint, jsonify
 from src.controllers.potrero_controller import PotreroController
+
+try:
+    from ...app import emit_update
+except ImportError:
+    def emit_update(event, data):
+        print(f"WebSocket no disponible, evento omitido: {event}")
 
 # Create blueprint
 potrero_bp = Blueprint('potrero', __name__, url_prefix='/api/potreros')
@@ -16,4 +22,3 @@ potrero_bp.route('/<int:potrero_id>/ocupacion', methods=['PATCH'])(PotreroContro
 potrero_bp.route('/tipos-pasto', methods=['GET'])(PotreroController.get_tipos_pasto)
 potrero_bp.route('/personas-usuario', methods=['GET'])(PotreroController.get_personas_usuario)
 potrero_bp.route('/estados', methods=['GET'])(PotreroController.get_estados_potrero)
-potrero_bp.route('/estados-ganado', methods=['GET'])(PotreroController.get_estados_ganado)

@@ -11,18 +11,22 @@ Sistema completo de gestión ganadera con frontend en Vue.js y backend en Flask.
 
 ## 🚀 Inicio Rápido
 
-### Opción 1: Inicio automático (Recomendado)
+### Para nuevos miembros del equipo
 
 ```bash
-# Clonar el repositorio
+# 1. Clonar el repositorio
 git clone <url-del-repositorio>
-cd qr-farm
+cd QR-FARM
 
-# Ejecutar el script de inicio automático
+# 2. Configurar base de datos automáticamente
+cd backend
+python setup_database.py
+
+# 3. Iniciar la aplicación
 python iniciar_qrfarm.py
 ```
 
-### Opción 2: Inicio manual
+### Inicio manual (desarrollo)
 
 ```bash
 # Backend
@@ -40,6 +44,12 @@ npm run dev
 
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:5000
+
+## 🔐 Credenciales de Acceso Inicial
+
+- **Usuario**: admin@qrfarm.com
+- **Contraseña**: admin123
+- **Rol**: Administrador
 
 ## ⚙️ Configuración
 

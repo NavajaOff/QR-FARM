@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import io from 'socket.io-client';
 
 // Variables reactivas
 export const currentIndex = ref(0);
@@ -20,11 +21,64 @@ import { potreros, cargarPotreros, cargarDatosIniciales as cargarDatosInicialesP
 // API configuration
 const API_BASE = 'http://localhost:5000/api';
 
+// WebSocket configuration
+const socket = io('http://localhost:5000');
+
 // Función para actualizar la lista en el componente Vue
 let updateCallback = null;
 
 export const setUpdateCallback = (callback) => {
-  updateCallback = callback;
+   updateCallback = callback;
+
+   // Configurar listeners de WebSocket para actualizaciones en tiempo real
+   socket.on('animal_created', (data) => {
+       console.log('Nuevo animal creado:', data);
+       if (updateCallback) {
+           updateCallback();
+       }
+   });
+
+   socket.on('animal_updated', (data) => {
+       console.log('Animal actualizado:', data);
+       if (updateCallback) {
+           updateCallback();
+       }
+   });
+
+   socket.on('potrero_created', (data) => {
+       console.log('Nuevo potrero creado:', data);
+       if (updateCallback) {
+           updateCallback();
+       }
+   });
+
+   socket.on('potrero_updated', (data) => {
+       console.log('Potrero actualizado:', data);
+       if (updateCallback) {
+           updateCallback();
+       }
+   });
+
+   socket.on('potrero_deleted', (data) => {
+       console.log('Potrero eliminado:', data);
+       if (updateCallback) {
+           updateCallback();
+       }
+   });
+
+   socket.on('usuario_updated', (data) => {
+       console.log('Usuario actualizado:', data);
+       if (updateCallback) {
+           updateCallback();
+       }
+   });
+
+   socket.on('usuario_deleted', (data) => {
+       console.log('Usuario eliminado:', data);
+       if (updateCallback) {
+           updateCallback();
+       }
+   });
 };
 
 // Función para cancelar peticiones pendientes
@@ -86,7 +140,7 @@ export const cargarDatosIniciales = async () => {
 
 export const cargarEstadosGanado = async () => {
   try {
-    console.log('Cargando estados de ganado...');
+    console.log('Cargando estados de ganado desde endpoint corregido...');
     const response = await axios.get(`${API_BASE}/animales/estados-ganado`, {
       cancelToken: cancelTokenSource.token,
       timeout: 10000
@@ -106,7 +160,7 @@ export const cargarEstadosGanado = async () => {
 
 export const cargarPersonasUsuario = async () => {
   try {
-    console.log('Cargando personas usuario...');
+    console.log('Cargando personas usuario desde endpoint corregido...');
     const response = await axios.get(`${API_BASE}/potreros/personas-usuario`, {
       cancelToken: cancelTokenSource.token,
       timeout: 10000
@@ -128,13 +182,13 @@ export const cargarPersonasUsuario = async () => {
 export const cargarAnimales = async () => {
   try {
     console.log('Cargando animales desde API...');
-    const response = await axios.get(`${API_BASE}/ganados/`, {
+    const response = await axios.get(`${API_BASE}/animales/`, {
       cancelToken: cancelTokenSource.token,
       timeout: 15000  // Timeout más largo para listas grandes
     });
     console.log('Respuesta HTTP ganado:', response.status);
 
-    if (response.data.status === 'success' && response.data.data) {
+    if (response.data.success && response.data.data) {
       animales.value = response.data.data.map(animal => ({
         id: animal.id,
         nombre: animal.nombre,
@@ -154,7 +208,9 @@ export const cargarAnimales = async () => {
       }));
       console.log('Animales cargados exitosamente:', animales.value.length, 'animales');
     } else {
-      throw new Error(response.data.message || 'Error desconocido');
+      // Si no hay datos, mostrar lista vacía (modo sin BD)
+      animales.value = [];
+      console.log('No hay animales en la base de datos (modo sin BD)');
     }
   } catch (error) {
     if (axios.isCancel(error)) {

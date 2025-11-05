@@ -13,13 +13,10 @@ class PotreroController:
         try:
             potreros = PotreroService.get_all()
             return jsonify({'data': potreros, 'success': True}), 200
-        except DatabaseError as e:
-            return jsonify({
-                'error': 'Error de base de datos',
-                'message': str(e),
-                'success': False
-            }), 500
         except Exception as e:
+            print(f"Error en get_all potreros controller: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return jsonify({
                 'error': 'Error interno del servidor',
                 'message': str(e),
@@ -69,6 +66,14 @@ class PotreroController:
 
             potrero = PotreroService.create(data)
             print(f"Potrero creado exitosamente: {potrero}")
+            # Emitir actualización en tiempo real para nuevo potrero
+            try:
+                from ...app import emit_update
+                emit_update('potrero_created', {
+                    'data': potrero
+                })
+            except ImportError:
+                print("WebSocket no disponible, omitiendo emisión")
             return jsonify({
                 'data': potrero,
                 'message': 'Potrero creado correctamente',
@@ -111,6 +116,15 @@ class PotreroController:
                 }), 400
             
             potrero = PotreroService.update(potrero_id, data)
+            # Emitir actualización en tiempo real para potrero actualizado
+            try:
+                from ...app import emit_update
+                emit_update('potrero_updated', {
+                    'id': potrero_id,
+                    'data': potrero
+                })
+            except ImportError:
+                print("WebSocket no disponible, omitiendo emisión")
             return jsonify({
                 'data': potrero,
                 'message': 'Potrero actualizado correctamente',
@@ -140,6 +154,14 @@ class PotreroController:
         """Delete potrero endpoint."""
         try:
             PotreroService.delete(potrero_id)
+            # Emitir actualización en tiempo real para potrero eliminado
+            try:
+                from ...app import emit_update
+                emit_update('potrero_deleted', {
+                    'id': potrero_id
+                })
+            except ImportError:
+                print("WebSocket no disponible, omitiendo emisión")
             return jsonify({
                 'message': 'Potrero eliminado correctamente',
                 'success': True
@@ -284,21 +306,4 @@ class PotreroController:
                 'success': False
             }), 500
 
-    @staticmethod
-    def get_estados_ganado() -> Tuple[Any, int]:
-        """Get estados de ganado endpoint."""
-        try:
-            estados = PotreroService.get_estados_ganado()
-            return jsonify({'data': estados, 'success': True}), 200
-        except DatabaseError as e:
-            return jsonify({
-                'error': 'Error de base de datos',
-                'message': str(e),
-                'success': False
-            }), 500
-        except Exception as e:
-            return jsonify({
-                'error': 'Error interno del servidor',
-                'message': str(e),
-                'success': False
-            }), 500
+    # Método get_estados_ganado eliminado porque pertenece a animal_routes

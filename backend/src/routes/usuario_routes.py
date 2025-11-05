@@ -3,6 +3,12 @@ from flask import Blueprint
 from ..controllers.usuario_controller import UsuarioController
 from ..utils.auth import token_required
 
+try:
+    from ...app import emit_update
+except ImportError:
+    def emit_update(event, data):
+        print(f"WebSocket no disponible, evento omitido: {event}")
+
 usuario_bp = Blueprint('usuario', __name__)
 
 # Rutas públicas

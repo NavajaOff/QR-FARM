@@ -10,7 +10,14 @@ class PotreroService:
     @staticmethod
     def get_all() -> List[Dict[str, Any]]:
         """Get all potreros."""
-        with db.get_cursor() as cursor:
+        conn = None
+        cursor = None
+        try:
+            conn = get_connection()
+            if conn is None:
+                print("Advertencia: Base de datos no disponible, retornando lista vacía")
+                return []
+            cursor = conn.cursor(dictionary=True)
             cursor.execute("""
                 SELECT p.*
                 FROM potrero p
@@ -31,6 +38,16 @@ class PotreroService:
                     potrero['tipo_pasto_nombre'] = 'No definido'
 
             return potreros
+        except Exception as e:
+            print(f"Error en get_all potreros service: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            raise e
+        finally:
+            if cursor:
+                cursor.close()
+            if conn and conn.is_connected():
+                conn.close()
 
     @staticmethod
     def get_by_id(potrero_id: int) -> Optional[Dict[str, Any]]:
@@ -119,9 +136,16 @@ class PotreroService:
             raise e
         finally:
             if cursor:
-                cursor.close()
-            if conn and conn.is_connected():
-                conn.close()
+                try:
+                    cursor.close()
+                except:
+                    pass
+            if conn and conn is not None:
+                try:
+                    if conn.is_connected():
+                        conn.close()
+                except:
+                    pass
 
         # Usar una nueva conexión para obtener el registro completo
         try:
@@ -348,18 +372,26 @@ class PotreroService:
     @staticmethod
     def get_tipos_pasto() -> List[Dict[str, Any]]:
         """Get all tipos de pasto."""
+        conn = None
+        cursor = None
         try:
-            with db.get_cursor() as cursor:
-                cursor.execute("""
-                    SELECT id, tipo_pasto FROM tipo_pasto
-                    ORDER BY tipo_pasto
-                """)
-                results = cursor.fetchall()
-                # Los resultados ya son diccionarios
-                return results
+            conn = get_connection()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT id, tipo_pasto FROM tipo_pasto
+                ORDER BY tipo_pasto
+            """)
+            results = cursor.fetchall()
+            # Los resultados ya son diccionarios
+            return results
         except Exception as e:
             print(f"Error obteniendo tipos de pasto: {e}")
             return []
+        finally:
+            if cursor:
+                cursor.close()
+            if conn and conn.is_connected():
+                conn.close()
 
     @staticmethod
     def get_personas_usuario() -> List[Dict[str, Any]]:
@@ -428,14 +460,4 @@ class PotreroService:
             print(f"Error obteniendo estados del enum: {e}")
             return []
 
-    @staticmethod
-    def get_estados_ganado() -> List[Dict[str, Any]]:
-        """Get all estados de ganado desde la tabla estado_ganado."""
-        try:
-            with db.get_cursor() as cursor:
-                cursor.execute("SELECT id, tipo_estado FROM estado_ganado ORDER BY id ASC")
-                results = cursor.fetchall()
-                return [{'id': row['id'], 'estado': row['tipo_estado']} for row in results]
-        except Exception as e:
-            print(f"Error obteniendo estados de ganado: {e}")
-            return []
+    # Método get_estados_ganado eliminado porque pertenece a GanadoService
