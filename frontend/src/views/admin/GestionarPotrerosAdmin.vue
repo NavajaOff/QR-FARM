@@ -232,7 +232,7 @@ export default {
             fechaUso: potrero.fecha_ultimo_uso ? this.formatDate(potrero.fecha_ultimo_uso) : 'No registrada',
             ultimaLimpieza: potrero.ultima_limpieza ? this.formatDate(potrero.ultima_limpieza) : 'No registrada',
             proximaLimpieza: potrero.proxima_limpieza ? this.formatDate(potrero.proxima_limpieza) : 'No programada',
-            responsable: potrero.responsable || 'No asignado',
+            responsable: potrero.responsable_persona_id ? (this.personasUsuario.find(p => p.id == potrero.responsable_persona_id)?.nombre_completo || `Persona ${potrero.responsable_persona_id}`) : 'No asignado',
             descripcion: potrero.descripcion || '',
             pasto: potrero.tipo_pasto || 'No definido'
           }));
