@@ -7,9 +7,6 @@
             <i class="fas fa-map-marked-alt me-2 text-success"></i>Gestionar Potreros
           </h2>
           <p class="lead text-muted">Administra y controla tus potreros de manera eficiente</p>
-          <button class="btn btn-success" @click="cargarDatosIniciales">
-            <i class="fas fa-sync-alt me-2"></i>Cargar Potreros
-          </button>
         </div>
 
         <!-- Loading State -->
@@ -106,7 +103,7 @@ export default {
     };
   },
   mounted() {
-    // No cargar automáticamente, esperar acción del usuario
+    this.cargarDatosIniciales();
   },
   beforeUnmount() {
     // Cancelar cualquier petición pendiente al desmontar

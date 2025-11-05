@@ -4,9 +4,6 @@
       <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h2 class="mb-0">Gestión de Usuarios</h2>
-          <button class="btn btn-primary" @click="cargarUsuarios">
-            <i class="fas fa-sync-alt me-2"></i>Cargar Usuarios
-          </button>
         </div>
 
         <!-- Tabla de usuarios -->
@@ -185,17 +182,34 @@
 </template>
 
 <script>
-import { userAPI } from '../../services/api.js';
+import { useUsuarios } from '../../composables/useUsuarios.js';
 import authService from '../../services/authService.js';
 
 export default {
   name: 'GestionarUsuarios',
+  setup() {
+    const {
+      usuarios,
+      loading,
+      error,
+      cargarUsuarios,
+      actualizarUsuario,
+      cambiarEstadoUsuario
+    } = useUsuarios();
+
+    return {
+      usuarios,
+      loading,
+      error,
+      cargarUsuarios,
+      actualizarUsuario,
+      cambiarEstadoUsuario
+    };
+  },
   data() {
     return {
-      usuarios: [],
       showAddUserModal: false,
       showEditModal: false,
-      loading: false,
       editForm: {
         primer_nombre: '',
         segundo_nombre: '',
@@ -216,31 +230,17 @@ export default {
     }
   },
   mounted() {
-    // No cargar automáticamente, esperar acción del usuario
+    this.cargarUsuarios();
   },
   beforeUnmount() {
-    // Cancelar cualquier petición pendiente al desmontar
     console.log('GestionarUsuarios desmontándose...');
   },
   beforeRouteLeave(to, from, next) {
-    // Cancelar peticiones antes de cambiar de ruta
     console.log('Saliendo de vista usuarios, cancelando peticiones...');
     next();
   },
   methods: {
-    async cargarUsuarios() {
-      try {
-        const response = await userAPI.getAll();
-        if (response.data?.status === 'success') {
-          this.usuarios = response.data.data;
-        }
-      } catch (error) {
-        console.error('Error cargando usuarios:', error);
-      }
-    },
-
     editUser(usuario) {
-      // Llenar el formulario con los datos del usuario
       this.editForm = {
         primer_nombre: usuario.persona?.primer_nombre || '',
         segundo_nombre: usuario.persona?.segundo_nombre || '',
@@ -248,7 +248,7 @@ export default {
         segundo_apellido: usuario.persona?.segundo_apellido || '',
         email: usuario.persona?.email || '',
         telefono: usuario.persona?.telefono || '',
-        password: '', // No mostrar la contraseña actual
+        password: '',
         estado: usuario.estado || 'activo',
         id_rol: usuario.id_rol || 2
       };
@@ -275,7 +275,6 @@ export default {
     async updateUser() {
       if (!this.editingUserId) return;
 
-      // Validaciones del frontend
       if (!this.editForm.primer_nombre.trim()) {
         alert('El primer nombre es requerido');
         return;
@@ -289,58 +288,41 @@ export default {
         return;
       }
 
-      // Validar formato de email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(this.editForm.email)) {
         alert('El formato del email no es válido');
         return;
       }
 
-      // Validar contraseña si se proporciona
       if (this.editForm.password && this.editForm.password.length < 6) {
         alert('La contraseña debe tener al menos 6 caracteres');
         return;
       }
 
-      this.loading = true;
-      try {
-        // Preparar los datos para enviar
-        const updateData = {
-          primer_nombre: this.editForm.primer_nombre.trim(),
-          segundo_nombre: this.editForm.segundo_nombre.trim(),
-          primer_apellido: this.editForm.primer_apellido.trim(),
-          segundo_apellido: this.editForm.segundo_apellido.trim(),
-          email: this.editForm.email.trim(),
-          telefono: this.editForm.telefono.trim(),
-          estado: this.editForm.estado
-        };
+      const updateData = {
+        primer_nombre: this.editForm.primer_nombre.trim(),
+        segundo_nombre: this.editForm.segundo_nombre.trim(),
+        primer_apellido: this.editForm.primer_apellido.trim(),
+        segundo_apellido: this.editForm.segundo_apellido.trim(),
+        email: this.editForm.email.trim(),
+        telefono: this.editForm.telefono.trim(),
+        estado: this.editForm.estado
+      };
 
-        // Solo incluir contraseña si se proporcionó una nueva
-        if (this.editForm.password.trim()) {
-          updateData.password = this.editForm.password;
-        }
+      if (this.editForm.password.trim()) {
+        updateData.password = this.editForm.password;
+      }
 
-        // Incluir rol solo si el usuario actual es admin
-        if (this.isCurrentUserAdmin) {
-          updateData.id_rol = this.editForm.id_rol;
-        }
+      if (this.isCurrentUserAdmin) {
+        updateData.id_rol = this.editForm.id_rol;
+      }
 
-        const response = await userAPI.update(this.editingUserId, updateData);
-
-        if (response.data?.status === 'success') {
-          // Actualizar la lista de usuarios
-          await this.cargarUsuarios();
-          this.closeEditModal();
-          // Mostrar mensaje de éxito
-          alert('Usuario actualizado exitosamente');
-        } else {
-          alert('Error al actualizar usuario: ' + (response.data?.message || 'Error desconocido'));
-        }
-      } catch (error) {
-        console.error('Error actualizando usuario:', error);
-        alert('Error al actualizar usuario: ' + (error.response?.data?.message || error.message));
-      } finally {
-        this.loading = false;
+      const result = await this.actualizarUsuario(this.editingUserId, updateData);
+      if (result.success) {
+        this.closeEditModal();
+        alert('Usuario actualizado exitosamente');
+      } else {
+        alert('Error al actualizar usuario: ' + result.message);
       }
     },
 
@@ -355,19 +337,13 @@ export default {
 
       if (!confirmacion) return;
 
-      try {
-        const nuevoEstado = usuario.estado === 'activo' ? 'inactivo' : 'activo';
-        const response = await userAPI.changeStatus(usuario.id, nuevoEstado);
+      const nuevoEstado = usuario.estado === 'activo' ? 'inactivo' : 'activo';
+      const result = await this.cambiarEstadoUsuario(usuario.id, nuevoEstado);
 
-        if (response.data?.status === 'success') {
-          usuario.estado = nuevoEstado;
-          alert(`Usuario ${accion}do exitosamente`);
-        } else {
-          alert('Error al cambiar el estado del usuario: ' + (response.data?.message || 'Error desconocido'));
-        }
-      } catch (error) {
-        console.error('Error cambiando estado:', error);
-        alert('Error al cambiar el estado del usuario: ' + (error.response?.data?.message || error.message));
+      if (result.success) {
+        alert(`Usuario ${accion}do exitosamente`);
+      } else {
+        alert('Error al cambiar el estado del usuario: ' + result.message);
       }
     }
   }
