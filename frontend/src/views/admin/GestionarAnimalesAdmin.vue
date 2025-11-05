@@ -4,9 +4,14 @@
       <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h2 class="mb-0">Gestión de Ganado</h2>
-          <button class="btn btn-success" @click="addAnimal">
-            <i class="fas fa-plus me-2"></i>Agregar Animal
-          </button>
+          <div>
+            <button class="btn btn-primary me-2" @click="cargarGanado">
+              <i class="fas fa-sync-alt me-2"></i>Cargar Ganado
+            </button>
+            <button class="btn btn-success" @click="addAnimal">
+              <i class="fas fa-plus me-2"></i>Agregar Animal
+            </button>
+          </div>
         </div>
 
         <!-- Loader mientras carga -->
@@ -122,7 +127,7 @@ export default {
     };
   },
   mounted() {
-    this.cargarGanado();
+    // No cargar automáticamente, esperar acción del usuario
     // Configurar callback para actualizar la lista desde el JS
     setUpdateCallback(this.actualizarLista);
   },

@@ -4,6 +4,9 @@
       <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h2 class="mb-0">Gestión de Usuarios</h2>
+          <button class="btn btn-primary" @click="cargarUsuarios">
+            <i class="fas fa-sync-alt me-2"></i>Cargar Usuarios
+          </button>
         </div>
 
         <!-- Tabla de usuarios -->
@@ -213,7 +216,7 @@ export default {
     }
   },
   mounted() {
-    this.cargarUsuarios();
+    // No cargar automáticamente, esperar acción del usuario
   },
   beforeUnmount() {
     // Cancelar cualquier petición pendiente al desmontar

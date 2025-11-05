@@ -261,4 +261,4 @@ if __name__ == '__main__':
     print("\nVerificacion automatica se ejecutara despues de iniciar el servidor\n")
 
     # Iniciar el servidor Flask con SocketIO
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
