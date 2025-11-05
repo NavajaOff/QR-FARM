@@ -64,7 +64,7 @@ class Ganado:
             edad=data.get('edad'),
             sexo=SexoGanado(data.get('sexo', 'macho')),
             peso=float(data.get('peso')) if data.get('peso') is not None else None,
-            estado=EstadoGanado(data.get('estado', 'activo')),
+            estado=EstadoGanado(data.get('estado_tipo') or data.get('estado') or 'activo'),
             estado_salud=data.get('estado_salud'),
             estado_tipo=data.get('estado_tipo'),
             created_at=data.get('created_at'),
