@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import Swal from 'sweetalert2';
+import io from 'socket.io-client';
 
 // Variables reactivas
 export const currentIndex = ref(0);
@@ -13,6 +14,9 @@ export const error = ref(null);
 
 // API configuration
 const API_BASE = 'http://localhost:5000/api';
+
+// WebSocket configuration
+const socket = io('http://localhost:5000');
 
 // API calls
 export const cargarDatosIniciales = async () => {
@@ -95,7 +99,7 @@ export const cargarPotreros = async () => {
     console.log('Respuesta completa del backend:', data);
 
     // Validar si la respuesta contiene un array dentro de data.data
-    if (data.data && Array.isArray(data.data)) {
+    if (data.success && data.data && Array.isArray(data.data)) {
       console.log('Procesando array de potreros desde data.data');
       potreros.value = data.data.map(potrero => ({
         id: potrero.id,
@@ -113,28 +117,10 @@ export const cargarPotreros = async () => {
         pasto: potrero.tipo_pasto_nombre || 'No definido'
       }));
       console.log('Potreros cargados exitosamente:', potreros.value.length, 'potreros');
-    } else if (Array.isArray(data)) {
-      // Fallback: si la respuesta es directamente un array
-      console.log('Procesando array de potreros directamente desde data');
-      potreros.value = data.map(potrero => ({
-        id: potrero.id,
-        nombre: potrero.nombre,
-        estado: potrero.estado,
-        capacidad: potrero.capacidad,
-        ocupacion: potrero.ocupacion,
-        hectareas: potrero.hectareas,
-        area: potrero.area,
-        fechaUso: potrero.fecha_ultimo_uso ? formatDate(potrero.fecha_ultimo_uso) : '',
-        ultimaLimpieza: potrero.ultima_limpieza ? formatDate(potrero.ultima_limpieza) : '',
-        proximaLimpieza: potrero.proxima_limpieza ? formatDate(potrero.proxima_limpieza) : null,
-        responsable: potrero.responsable || 'No asignado',
-        descripcion: potrero.descripcion || '',
-        pasto: potrero.tipo_pasto || 'No definido'
-      }));
-      console.log('Potreros cargados exitosamente (fallback):', potreros.value.length, 'potreros');
     } else {
-      console.warn('La respuesta no contiene un array válido de potreros');
+      // Si no hay datos, mostrar lista vacía (modo sin BD)
       potreros.value = [];
+      console.log('No hay potreros en la base de datos (modo sin BD)');
     }
   } catch (error) {
     console.error('Error cargando potreros:', error);
@@ -421,6 +407,44 @@ export const nextPotrero = () => {
   }
 };
 
+// Función para configurar WebSocket listeners para potreros
+export const configurarWebSocketPotreros = (callback) => {
+   socket.on('potrero_created', (data) => {
+       console.log('Nuevo potrero creado:', data);
+       if (callback) callback();
+   });
+
+   socket.on('potrero_updated', (data) => {
+       console.log('Potrero actualizado:', data);
+       if (callback) callback();
+   });
+
+   socket.on('potrero_deleted', (data) => {
+       console.log('Potrero eliminado:', data);
+       if (callback) callback();
+   });
+
+   socket.on('animal_created', (data) => {
+       console.log('Nuevo animal creado:', data);
+       if (callback) callback();
+   });
+
+   socket.on('animal_updated', (data) => {
+       console.log('Animal actualizado:', data);
+       if (callback) callback();
+   });
+
+   socket.on('usuario_updated', (data) => {
+       console.log('Usuario actualizado:', data);
+       if (callback) callback();
+   });
+
+   socket.on('usuario_deleted', (data) => {
+       console.log('Usuario eliminado:', data);
+       if (callback) callback();
+   });
+};
+
 export const toggleAccordion = () => {
-  accordionOpen.value = !accordionOpen.value;
+   accordionOpen.value = !accordionOpen.value;
 };

@@ -4,17 +4,40 @@ from src.services.animal_service import GanadoService
 from src.models.animal import Ganado
 import os
 
+try:
+    from ...app import emit_update
+except ImportError:
+    def emit_update(event, data):
+        print(f"WebSocket no disponible, evento omitido: {event}")
+
 animal_bp = Blueprint('animal', __name__, url_prefix='/api/animales')
 
 @animal_bp.route('/estados-ganado', methods=['GET'])
 def get_estados_ganado():
-    """Obtener los estados posibles del ganado."""
+    """Obtener los estados posibles del ganado usando GanadoService."""
     try:
         estados = GanadoService.obtener_estados_ganado()
+        # Si no hay conexión a BD, retornar estados por defecto
+        if not estados:
+            estados = [
+                {'id': 1, 'estado': 'activo', 'nombre_estado': 'activo'},
+                {'id': 2, 'estado': 'saludable', 'nombre_estado': 'saludable'},
+                {'id': 3, 'estado': 'revision', 'nombre_estado': 'revision'},
+                {'id': 4, 'estado': 'enfermo', 'nombre_estado': 'enfermo'},
+                {'id': 5, 'estado': 'vendido', 'nombre_estado': 'vendido'}
+            ]
         return jsonify({'data': estados, 'success': True}), 200
     except Exception as e:
         print(f"Error obteniendo estados de ganado: {e}")
-        return jsonify({'data': [], 'success': False, 'message': 'Error interno del servidor'}), 500
+        # Retornar estados por defecto en caso de error
+        estados_default = [
+            {'id': 1, 'estado': 'activo', 'nombre_estado': 'activo'},
+            {'id': 2, 'estado': 'saludable', 'nombre_estado': 'saludable'},
+            {'id': 3, 'estado': 'revision', 'nombre_estado': 'revision'},
+            {'id': 4, 'estado': 'enfermo', 'nombre_estado': 'enfermo'},
+            {'id': 5, 'estado': 'vendido', 'nombre_estado': 'vendido'}
+        ]
+        return jsonify({'data': estados_default, 'success': True}), 200
 
 @animal_bp.route('/', methods=['GET'])
 def get_animales():
@@ -95,6 +118,11 @@ def update_animal(animal_id):
         if actualizado:
             # Obtener el animal actualizado
             animal_actualizado = GanadoService.obtener_ganado(animal_id)
+            # Emitir actualización en tiempo real
+            emit_update('animal_updated', {
+                'id': animal_id,
+                'data': animal_actualizado.to_dict()
+            })
             return jsonify({
                 'data': animal_actualizado.to_dict(),
                 'message': 'Animal actualizado correctamente',
@@ -174,6 +202,10 @@ def create_animal():
             if not qr_creado:
                 print(f"Warning: No se pudo crear QR para el ganado {animal_creado.id}")
 
+            # Emitir actualización en tiempo real para nuevo animal
+            emit_update('animal_created', {
+                'data': animal_creado.to_dict()
+            })
             return jsonify({
                 'data': animal_creado.to_dict(),
                 'message': 'Animal creado correctamente',

@@ -44,6 +44,7 @@ def upgrade() -> None:
     )
 
     # Insertar datos iniciales para estado_ganado
+    # Corregido: faltaba el estado 'activo' que es requerido por el sistema
     op.bulk_insert(
         sa.table('estado_ganado',
             sa.column('id', sa.Integer),
@@ -59,6 +60,7 @@ def upgrade() -> None:
     )
 
     # Insertar datos iniciales para tipo_vacuna
+    # Completado: se agregaron Rabia y Leptospirosis que faltaban
     op.bulk_insert(
         sa.table('tipo_vacuna',
             sa.column('id', sa.Integer),

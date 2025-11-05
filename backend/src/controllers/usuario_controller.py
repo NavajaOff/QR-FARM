@@ -4,6 +4,15 @@ import jwt
 from flask import jsonify, request, current_app
 from ..models.usuario import Usuario, EstadoUsuario
 from ..services.usuario_service import UsuarioService
+try:
+    try:
+        from ...app import emit_update
+    except ImportError:
+        def emit_update(event, data):
+            print(f"WebSocket no disponible, evento omitido: {event}")
+except ImportError:
+    def emit_update(event, data):
+        print(f"WebSocket no disponible, evento omitido: {event}")
 
 class UsuarioController:
     @staticmethod
@@ -273,6 +282,14 @@ class UsuarioController:
 
             # Intentar actualizar en la base de datos
             if UsuarioService.actualizar_usuario_completo(id, usuario_existente):
+                # Emitir actualización en tiempo real para usuario actualizado
+                try:
+                    emit_update('usuario_updated', {
+                        'id': id,
+                        'data': usuario_existente.to_dict()
+                    })
+                except NameError:
+                    print("WebSocket no disponible, omitiendo emisión")
                 return jsonify({
                     'status': 'success',
                     'message': 'Usuario actualizado exitosamente',
@@ -294,6 +311,13 @@ class UsuarioController:
     def eliminar_usuario(id):
         try:
             if UsuarioService.eliminar_usuario(id):
+                # Emitir actualización en tiempo real para usuario eliminado
+                try:
+                    emit_update('usuario_deleted', {
+                        'id': id
+                    })
+                except NameError:
+                    print("WebSocket no disponible, omitiendo emisión")
                 return jsonify({
                     'status': 'success',
                     'message': 'Usuario eliminado exitosamente'

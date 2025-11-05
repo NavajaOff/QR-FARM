@@ -623,7 +623,7 @@ class UsuarioService:
                     id=result['id'],
                     id_persona=result['id_persona'],
                     id_rol=result['id_rol'],
-                    contrasena=result['contrasena'],
+                    contrasena=result.get('contrasena'),
                     estado=EstadoUsuario(result['estado']),
                     persona=persona,
                     rol=rol
@@ -635,10 +635,14 @@ class UsuarioService:
 
         except Exception as e:
             print(f"Error al obtener usuarios: {e}")
+            # En caso de error de BD, retornar lista vacía (modo sin BD)
             return []
         finally:
             if 'conn' in locals():
-                conn.close()
+                try:
+                    conn.close()
+                except:
+                    pass
 
     @staticmethod
     def actualizar_usuario(id: int, usuario: Usuario) -> bool:

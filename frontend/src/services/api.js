@@ -38,11 +38,11 @@ export const userAPI = {
 };
 
 export const ganadoAPI = {
-  getAll: () => api.get('/ganados/'),
-  getById: (id) => api.get(`/ganados/${id}`),
-  create: (data) => api.post('/ganados/', data),
-  update: (id, data) => api.put(`/ganados/${id}`, data),
-  delete: (id) => api.delete(`/ganados/${id}`),
+  getAll: () => api.get('/animales/'),
+  getById: (id) => api.get(`/animales/${id}`),
+  create: (data) => api.post('/animales/', data),
+  update: (id, data) => api.put(`/animales/${id}`, data),
+  delete: (id) => api.delete(`/animales/${id}`),
 };
 
 export const potreroAPI = {

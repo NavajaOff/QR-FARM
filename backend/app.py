@@ -7,6 +7,7 @@ Servidor REST API con autenticación JWT
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from flask_migrate import Migrate
+from flask_socketio import SocketIO, emit
 import jwt
 import datetime
 import os
@@ -33,6 +34,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Inicializar Flask-Migrate (aunque no usaremos SQLAlchemy directamente)
 migrate = Migrate(app, directory='src/database/migrations')
+
+# Inicializar SocketIO para actualizaciones en tiempo real
+socketio = SocketIO(app, cors_allowed_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"])
 
 # Importar comandos de Flask-Migrate para que estén disponibles en la CLI
 from flask_migrate import init, migrate, upgrade, revision
@@ -229,19 +233,32 @@ app.register_blueprint(usuario_bp, url_prefix='/api/usuarios')
 app.register_blueprint(animal_bp, url_prefix='/api/animales')
 app.register_blueprint(vacunacion_bp, url_prefix='/api/vacunaciones')
 
-# Blueprint adicional para ganado (alias de animales para compatibilidad con frontend)
-app.register_blueprint(animal_bp, url_prefix='/api/ganados')
 
+# Eventos SocketIO para actualizaciones en tiempo real
+@socketio.on('connect')
+def handle_connect():
+    print('Cliente conectado para actualizaciones en tiempo real')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('Cliente desconectado')
+
+# Función para emitir actualizaciones a todos los clientes conectados
+def emit_update(event_type, data):
+    """Emite actualizaciones en tiempo real a todos los clientes conectados."""
+    socketio.emit(event_type, data)
+    print(f"Actualización emitida: {event_type}")
 
 if __name__ == '__main__':
-    print("Iniciando servidor QR Farm Backend...")
+    print("Iniciando servidor QR Farm Backend con WebSockets...")
     print("URL: http://localhost:5000")
     print("Health check: http://localhost:5000/api/health")
     print("Login: http://localhost:5000/api/login")
+    print("WebSocket: ws://localhost:5000/socket.io")
     print("Presiona Ctrl+C para detener")
 
     # Ejecutar verificación automática después de iniciar el servidor
     print("\nVerificacion automatica se ejecutara despues de iniciar el servidor\n")
 
-    # Iniciar el servidor Flask
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Iniciar el servidor Flask con SocketIO
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
