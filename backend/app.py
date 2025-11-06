@@ -331,6 +331,48 @@ def crear_usuario_admin(app):
             if conn and conn.is_connected():
                 conn.close()
 
+import click
+from flask.cli import with_appcontext
+import secrets
+
+@app.cli.command("generate-secret-key")
+@with_appcontext
+def generate_secret_key():
+    """Genera una SECRET_KEY aleatoria y la guarda en el archivo .env"""
+    key = secrets.token_hex(32)
+    env_file = Path(__file__).parent.parent / '.env'
+
+    if not env_file.exists():
+        print("[ERROR] No se encontró el archivo .env")
+        return
+
+    # Leer contenido actual del .env
+    with open(env_file, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    # Reemplazar o agregar la línea de SECRET_KEY
+    new_lines = []
+    found = False
+    for line in lines:
+        if line.strip().startswith("SECRET_KEY="):
+            new_lines.append(f"SECRET_KEY={key}\n")
+            found = True
+        else:
+            new_lines.append(line)
+
+    if not found:
+        new_lines.append(f"\nSECRET_KEY={key}\n")
+
+    # Escribir los cambios
+    with open(env_file, "w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+
+    print(f"[OK] Nueva SECRET_KEY generada y guardada en .env:")
+    print(key)
+
+
+
+
 if __name__ == '__main__':
     print("=" * 60)
     print("INICIANDO SERVIDOR QR FARM BACKEND CON WEBSOCKETS...")
