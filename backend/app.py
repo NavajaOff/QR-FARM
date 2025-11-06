@@ -11,6 +11,8 @@ from flask_socketio import SocketIO, emit
 import jwt
 import datetime
 import os
+from dotenv import load_dotenv
+from passlib.hash import bcrypt
 from src.database.db import get_connection
 from src.services.usuario_service import UsuarioService
 from src.services.animal_service import GanadoService
@@ -21,15 +23,26 @@ from src.routes.usuario_routes import usuario_bp
 from src.routes.animal_routes import animal_bp
 from src.routes.vacunacion_routes import vacunacion_bp
 
+# Cargar variables de entorno desde la raíz del proyecto
+import os
+from pathlib import Path
+
+# Buscar el archivo .env en la raíz del proyecto
+env_path = Path(__file__).parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
+
 # Configuración de la aplicación Flask
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'qr-farm-secret-key-2024'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'qr-farm-secret-key-2024')
+app.config['FLASK_ENV'] = os.getenv('FLASK_ENV', 'development')
+app.config['DEBUG'] = os.getenv('DEBUG', 'False').lower() == 'true'
 
 # Configuración de Flask-Migrate
 from src.database.db import ConexionBaseDatos
 # Para Flask-Migrate necesitamos SQLAlchemy, pero como usamos MySQL Connector,
 # crearemos una configuración básica
-app.config['SQLALCHEMY_DATABASE_URI'] = f"mysql+mysqlconnector://{os.getenv('DB_USER', 'root')}:{os.getenv('DB_PASSWORD', '')}@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '3306')}/{os.getenv('DB_NAME', 'gestion_ganadera')}"
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL',
+    f"mysql+mysqlconnector://{os.getenv('DB_USER', 'root')}:{os.getenv('DB_PASSWORD', '')}@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '3306')}/{os.getenv('DB_NAME', 'gestion_ganadera')}")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Inicializar Flask-Migrate (aunque no usaremos SQLAlchemy directamente)
@@ -48,8 +61,7 @@ CORS(app, resources={
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
         "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
         "supports_credentials": True,
-        "expose_headers": ["Content-Type", "Authorization"],
-        "allow_credentials": True
+        "expose_headers": ["Content-Type", "Authorization"]
     }
 })
 
@@ -166,7 +178,17 @@ def usuarios_login():
             cursor.execute(query, (email,))
             result = cursor.fetchone()
 
-            if result and result['contrasena'] == password:
+            # Verificar contraseña con hash o sin hash (para compatibilidad)
+            password_valid = False
+            if result:
+                # Primero intentar verificar como hash
+                try:
+                    password_valid = bcrypt.verify(password, result['contrasena'])
+                except:
+                    # Si falla, comparar directamente (para usuarios antiguos)
+                    password_valid = (result['contrasena'] == password)
+
+            if result and password_valid:
                 print(f"Usuario encontrado: {result['email']} - Rol: {result['rol']}")
 
                 # Generar token JWT
@@ -249,16 +271,89 @@ def emit_update(event_type, data):
     socketio.emit(event_type, data)
     print(f"Actualización emitida: {event_type}")
 
-if __name__ == '__main__':
-    print("Iniciando servidor QR Farm Backend con WebSockets...")
-    print("URL: http://localhost:5000")
-    print("Health check: http://localhost:5000/api/health")
-    print("Login: http://localhost:5000/api/login")
-    print("WebSocket: ws://localhost:5000/socket.io")
-    print("Presiona Ctrl+C para detener")
+def crear_usuario_admin(app):
+    """Crea el usuario administrador desde las variables de entorno"""
+    with app.app_context():
+        admin_email = os.getenv("ADMIN_EMAIL")
+        admin_password = os.getenv("ADMIN_PASSWORD")
 
-    # Ejecutar verificación automática después de iniciar el servidor
-    print("\nVerificacion automatica se ejecutara despues de iniciar el servidor\n")
+        if not admin_email or not admin_password:
+            print("ADVERTENCIA: Faltan ADMIN_EMAIL o ADMIN_PASSWORD en .env")
+            return
+
+        conn = None
+        cursor = None
+        try:
+            conn = get_connection()
+            cursor = conn.cursor(dictionary=True)
+
+            # Verificar si ya existe un usuario admin
+            query_check = """
+                SELECT p.id, p.email
+                FROM personas p
+                INNER JOIN usuarios u ON u.id_persona = p.id
+                WHERE u.id_rol = 1
+                LIMIT 1
+            """
+            cursor.execute(query_check)
+            admin_existente = cursor.fetchone()
+
+            if not admin_existente:
+                # Crear persona para el admin
+                insert_persona = """
+                    INSERT INTO personas (id_rol, primer_nombre, primer_apellido, email, fecha_creacion)
+                    VALUES (1, 'Administrador', 'Sistema', %s, NOW())
+                """
+                cursor.execute(insert_persona, (admin_email,))
+                persona_id = cursor.lastrowid
+
+                # Crear usuario admin con contraseña hasheada
+                password_hash = bcrypt.hash(admin_password)
+                insert_usuario = """
+                    INSERT INTO usuarios (id_persona, id_rol, contrasena, estado)
+                    VALUES (%s, 1, %s, 'activo')
+                """
+                cursor.execute(insert_usuario, (persona_id, password_hash))
+                
+                conn.commit()
+                print(f"[OK] Usuario admin creado correctamente: {admin_email}")
+                print(f"     Contrasena: {admin_password} (desde .env)")
+            else:
+                print(f"[INFO] Usuario admin ya existe: {admin_existente['email']}")
+
+        except Exception as e:
+            print(f"[ERROR] Error al crear usuario admin: {str(e)}")
+            if conn:
+                conn.rollback()
+        finally:
+            if cursor:
+                cursor.close()
+            if conn and conn.is_connected():
+                conn.close()
+
+if __name__ == '__main__':
+    print("=" * 60)
+    print("INICIANDO SERVIDOR QR FARM BACKEND CON WEBSOCKETS...")
+    print("=" * 60)
+    
+    # Verificar archivo .env
+    env_file = Path(__file__).parent.parent / '.env'
+    if env_file.exists():
+        print(f"[OK] Archivo .env encontrado en: {env_file}")
+    else:
+        print(f"[ADVERTENCIA] No se encontro archivo .env en: {env_file}")
+        print("              Usando valores por defecto")
+    
+    # Crear usuario admin si no existe
+    crear_usuario_admin(app)
+    
+    print("\nURLs disponibles:")
+    print("  - URL: http://localhost:5000")
+    print("  - Health check: http://localhost:5000/api/health")
+    print("  - Login: http://localhost:5000/api/usuarios/login")
+    print("  - WebSocket: ws://localhost:5000/socket.io")
+    print("\nPresiona Ctrl+C para detener")
+    print("=" * 60)
 
     # Iniciar el servidor Flask con SocketIO
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=app.config['DEBUG'])

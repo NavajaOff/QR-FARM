@@ -1,259 +1,318 @@
-# 🗄️ Guía de Migraciones de Base de Datos - QR Farm
+# 📚 Guía de Migraciones y Seeders - QR-FARM
 
-## 📋 Descripción
+## 🔄 Sistema de Migraciones
 
-Este proyecto utiliza **Alembic** con **Flask-Migrate** para gestionar las migraciones de base de datos. Las migraciones permiten versionar los cambios en el esquema de la base de datos y compartirlos con el equipo de desarrollo.
+QR-FARM utiliza **Flask-Migrate** (basado en Alembic) para gestionar los cambios en la estructura de la base de datos de manera controlada y versionada.
 
-## 🚀 Configuración Inicial
+## 📋 Conceptos Clave
 
-### Para el líder del proyecto (primera vez)
+### Migraciones
+- **Definición**: Scripts que documentan cambios en la estructura de la base de datos
+- **Propósito**: Mantener sincronizada la estructura de BD entre diferentes entornos
+- **Contenido**: Solo estructura (tablas, columnas, índices), NO datos
 
+### Seeders
+- **Definición**: Scripts que insertan datos iniciales necesarios
+- **Propósito**: Poblar la BD con datos base para el funcionamiento
+- **Contenido**: Datos maestros (roles, tipos, configuraciones), NO datos de prueba
+
+## 🛠️ Comandos de Migraciones
+
+### Inicializar migraciones (solo primera vez)
 ```bash
-# 1. Instalar dependencias
-cd backend
-pip install -r requirements.txt
-
-# 2. Configurar la base de datos desde cero
-python setup_database.py
+flask --app backend/app.py db init -d backend/src/database/migrations
 ```
 
-### Para miembros del equipo
-
+### Crear nueva migración
 ```bash
-# 1. Clonar el repositorio
-git clone <url-del-repositorio>
-cd QR-FARM
+# Cuando modifiques modelos o estructura de BD
+flask --app backend/app.py db migrate -m "Descripción del cambio" -d backend/src/database/migrations
 
-# 2. Instalar dependencias
-cd backend
-pip install -r requirements.txt
-
-# 3. Aplicar todas las migraciones (incluyendo datos reales)
-python setup_database.py
+# Ejemplos:
+flask --app backend/app.py db migrate -m "Agregar campo telefono a usuarios"
+flask --app backend/app.py db migrate -m "Crear tabla historial_medico"
+flask --app backend/app.py db migrate -m "Agregar índice en campo codigo_qr"
 ```
 
-## ✅ **Estado Actual del Sistema**
-
-### Migraciones Aplicadas
-- ✅ **001_migracion_inicial.py**: Estructura base de tablas
-- ✅ **002_datos_iniciales.py**: Datos iniciales completos (roles, tipos de pasto, estados de ganado, tipos de vacuna, usuario admin)
-- ✅ **75b46c2713f7_datos_reales_actuales.py**: Datos reales actuales (personas, usuarios, potreros, ganado)
-
-### Datos Iniciales Incluidos
-- **Roles**: admin, usuario
-- **Tipos de pasto**: Brachiaria humidicola, Brachiaria decumbens, Pasto mombazaa
-- **Estados de ganado**: activo, saludable, revision, enfermo, vendido
-- **Tipos de vacuna**: Brucella, Aftosa, Clostridiales, Rabia, Leptospirosis
-- **Usuario administrador**: admin@qrfarm.com / admin123
-
-### Datos Reales Actuales
-- **Personas**: 4 usuarios registrados (incluyendo admin)
-- **Usuarios**: 4 cuentas de usuario activas
-- **Potreros**: 15 potreros configurados con diferentes tipos de pasto y capacidades
-- **Ganado**: 9 animales registrados con códigos QR, razas y estados de salud
-
-## 🛠️ Comandos de Gestión de Migraciones
-
-### Comando Principal para Equipo
-
+### Aplicar migraciones pendientes
 ```bash
-cd backend
+# Aplica todas las migraciones pendientes
+flask --app backend/app.py db upgrade -d backend/src/database/migrations
 
-# ✅ PARA NUEVOS MIEMBROS DEL EQUIPO: Aplicar todas las migraciones
-python setup_database.py
-
-# Esto ejecutará automáticamente:
-# - python manage_db.py upgrade (aplica todas las migraciones)
-# - Inserta datos iniciales si no existen
+# Aplicar hasta una migración específica
+flask --app backend/app.py db upgrade <revision_id> -d backend/src/database/migrations
 ```
 
-### Comandos Avanzados (para desarrollo)
-
+### Revertir migraciones
 ```bash
-cd backend
+# Revertir la última migración
+flask --app backend/app.py db downgrade -d backend/src/database/migrations
 
+# Revertir hasta una migración específica
+flask --app backend/app.py db downgrade <revision_id> -d backend/src/database/migrations
+
+# Revertir todas las migraciones
+flask --app backend/app.py db downgrade base -d backend/src/database/migrations
+```
+
+### Ver estado actual
+```bash
 # Ver migración actual
-python manage_db.py current
+flask --app backend/app.py db current -d backend/src/database/migrations
 
 # Ver historial de migraciones
-python manage_db.py history
+flask --app backend/app.py db history -d backend/src/database/migrations
 
-# Crear nueva migración (después de cambiar modelos)
-python manage_db.py migrate "descripción del cambio"
-
-# Aplicar migraciones pendientes
-python manage_db.py upgrade
-
-# Revertir última migración
-python manage_db.py downgrade
-
-# Marcar una migración específica como aplicada
-python manage_db.py stamp <revision_id>
+# Ver migraciones pendientes
+flask --app backend/app.py db show -d backend/src/database/migrations
 ```
 
-### Usando Alembic directamente
+## 🌱 Sistema de Seeders
+
+### Estructura de Seeders
+
+```
+backend/src/database/
+├── seeders/
+│   ├── __init__.py
+│   ├── seeder_manager.py      # Gestor principal de seeders
+│   └── seeder_config.json     # Configuración de seeders
+```
+
+### Ejecutar Seeders
 
 ```bash
-cd backend/src/database/migrations
+# Ejecutar todos los seeders
+python backend/src/database/seeders/seeder_manager.py
 
-# Ver estado actual
-alembic current
-
-# Ver historial
-alembic history
-
-# Crear nueva migración
-alembic revision --autogenerate -m "descripción del cambio"
-
-# Aplicar migraciones
-alembic upgrade head
-
-# Revertir migración
-alembic downgrade -1
+# Resetear y volver a ejecutar seeders
+python backend/src/database/seeders/seeder_manager.py --reset
 ```
 
-## 📁 Estructura de Migraciones
+### Seeders Disponibles
 
+1. **Roles** (`seed_roles`)
+   - admin: Administrador del sistema
+   - user: Usuario regular
+   - veterinario: Veterinario con acceso médico
+   - supervisor: Supervisor con acceso a reportes
+
+2. **Tipos de Pasto** (`seed_tipos_pasto`)
+   - Brachiaria
+   - Estrella
+   - Guinea
+   - Kikuyo
+   - Angleton
+
+3. **Tipos de Vacunas** (`seed_tipos_vacuna`)
+   - Fiebre Aftosa
+   - Carbunco
+   - Brucelosis
+   - Rabia
+   - Leptospirosis
+   - IBR
+   - DVB
+   - Clostridiales
+
+4. **Estados del Ganado** (`seed_estados_ganado`)
+   - Sano
+   - Enfermo
+   - En tratamiento
+   - En cuarentena
+   - Recuperación
+   - Preñada
+
+## 📝 Flujo de Trabajo Recomendado
+
+### Para nuevas características
+
+1. **Modificar modelos** en `backend/src/models/`
+2. **Crear migración**:
+   ```bash
+   flask --app backend/app.py db migrate -m "Descripción clara del cambio"
+   ```
+3. **Revisar migración** generada en `backend/src/database/migrations/versions/`
+4. **Aplicar migración**:
+   ```bash
+   flask --app backend/app.py db upgrade -d backend/src/database/migrations
+   ```
+5. **Si requiere datos iniciales**, actualizar seeders
+
+### Para sincronizar con el equipo
+
+1. **Obtener cambios** del repositorio:
+   ```bash
+   git pull origin main
+   ```
+2. **Aplicar migraciones nuevas**:
+   ```bash
+   flask --app backend/app.py db upgrade -d backend/src/database/migrations
+   ```
+3. **Ejecutar seeders** si hay cambios:
+   ```bash
+   python backend/src/database/seeders/seeder_manager.py
+   ```
+
+## ⚠️ Mejores Prácticas
+
+### ✅ DO (Hacer)
+
+- **Siempre revisar** la migración generada antes de aplicarla
+- **Crear migraciones pequeñas** y específicas
+- **Usar nombres descriptivos** para las migraciones
+- **Probar migraciones** en entorno de desarrollo primero
+- **Documentar cambios** significativos en el commit
+- **Mantener seeders idempotentes** (ejecutables múltiples veces)
+
+### ❌ DON'T (No hacer)
+
+- **No editar** migraciones ya aplicadas en producción
+- **No incluir datos** de prueba en migraciones
+- **No eliminar** migraciones del historial
+- **No mezclar** cambios de estructura con datos en migraciones
+- **No aplicar** migraciones sin backup en producción
+
+## 🔧 Solución de Problemas
+
+### Error: "Target database is not up to date"
+```bash
+# Actualizar a la última migración
+flask --app backend/app.py db upgrade -d backend/src/database/migrations
 ```
-backend/
-├── src/database/migrations/
-│   ├── alembic.ini              # Configuración de Alembic
-│   ├── env.py                   # Entorno de migraciones
-│   ├── script.py.mako           # Plantilla para migraciones
-│   └── versions/                # Archivos de migraciones
-│       ├── 001_migracion_inicial.py
-│       └── 002_datos_iniciales.py
-├── manage_db.py                 # Script de gestión simplificado
-└── setup_database.py            # Configuración inicial
+
+### Error: "Can't locate revision identified by..."
+```bash
+# Verificar estado actual
+flask --app backend/app.py db current -d backend/src/database/migrations
+
+# Si es necesario, marcar como actualizado
+flask --app backend/app.py db stamp head -d backend/src/database/migrations
 ```
 
-## 🔄 Flujo de Trabajo
+### Error al crear migración automática
+```bash
+# Crear migración manual
+flask --app backend/app.py db revision -m "Descripción" -d backend/src/database/migrations
+# Luego editar el archivo generado manualmente
+```
 
-### 1. Desarrollador hace cambios en el esquema
+### Conflictos de migración en equipo
+```bash
+# 1. Identificar las migraciones en conflicto
+flask --app backend/app.py db heads -d backend/src/database/migrations
+
+# 2. Crear migración de merge
+flask --app backend/app.py db merge -m "Merge migrations" -d backend/src/database/migrations
+
+# 3. Aplicar la migración de merge
+flask --app backend/app.py db upgrade -d backend/src/database/migrations
+```
+
+## 📊 Estructura de Archivos de Migración
 
 ```python
-# Ejemplo: Agregar nueva tabla o columna
-# En tus modelos o directamente en SQL
+"""Descripción de la migración
+
+Revision ID: 75b46c2713f7
+Revises: 002
+Create Date: 2025-11-05 16:39:32.681619
+"""
+
+from alembic import op
+import sqlalchemy as sa
+
+# Identificadores de revisión
+revision = '75b46c2713f7'
+down_revision = '002'
+
+def upgrade():
+    """Aplicar cambios a la BD"""
+    # Crear tabla
+    op.create_table('nueva_tabla',
+        sa.Column('id', sa.Integer(), primary_key=True),
+        sa.Column('nombre', sa.String(100), nullable=False)
+    )
+    
+    # Agregar columna
+    op.add_column('tabla_existente', 
+        sa.Column('nueva_columna', sa.String(50))
+    )
+    
+    # Crear índice
+    op.create_index('idx_nombre', 'tabla', ['columna'])
+
+def downgrade():
+    """Revertir cambios de la BD"""
+    # Eliminar índice
+    op.drop_index('idx_nombre', 'tabla')
+    
+    # Eliminar columna
+    op.drop_column('tabla_existente', 'nueva_columna')
+    
+    # Eliminar tabla
+    op.drop_table('nueva_tabla')
 ```
 
-### 2. Crear migración
+## 🔄 Ciclo de Vida de la Base de Datos
 
-```bash
-cd backend
-python manage_db.py migrate "agregar tabla vacunaciones"
+```mermaid
+graph LR
+    A[Modelos Python] --> B[Crear Migración]
+    B --> C[Revisar Migración]
+    C --> D[Aplicar Migración]
+    D --> E[BD Actualizada]
+    E --> F[Ejecutar Seeders]
+    F --> G[BD Lista]
 ```
 
-### 3. Revisar y ajustar la migración generada
-
-Edita el archivo generado en `backend/src/database/migrations/versions/` si es necesario.
-
-### 4. Probar la migración
+## 📌 Comandos Rápidos para Desarrollo
 
 ```bash
-# Aplicar
-python manage_db.py upgrade
+# Resetear BD completamente (CUIDADO: Borra todos los datos)
+flask --app backend/app.py db downgrade base -d backend/src/database/migrations
+flask --app backend/app.py db upgrade -d backend/src/database/migrations
+python backend/src/database/seeders/seeder_manager.py
 
-# Si hay errores, revertir y corregir
-python manage_db.py downgrade
-```
-
-### 5. Commit y push
-
-```bash
-git add .
-git commit -m "feat: agregar migración para nueva tabla"
-git push
-```
-
-### 6. Equipo actualiza
-
-```bash
+# Actualizar BD con últimos cambios
 git pull
-cd backend
-python manage_db.py upgrade
+flask --app backend/app.py db upgrade -d backend/src/database/migrations
+python backend/src/database/seeders/seeder_manager.py
+
+# Crear backup antes de migración
+mysqldump -u root -p gestion_ganadera > backup_$(date +%Y%m%d_%H%M%S).sql
 ```
 
-## ⚠️ Consideraciones Importantes
+## 🎯 Casos de Uso Comunes
 
-### ✅ Para nuevos miembros del equipo
+### Agregar nuevo campo a tabla existente
 ```bash
-# Después de clonar el repositorio:
-cd backend
-python setup_database.py  # ✅ Esto aplica TODAS las migraciones incluyendo datos reales
+# 1. Modificar el modelo en backend/src/models/
+# 2. Crear migración
+flask --app backend/app.py db migrate -m "Agregar campo fecha_nacimiento a ganado"
+# 3. Aplicar
+flask --app backend/app.py db upgrade -d backend/src/database/migrations
 ```
 
-### Para bases de datos existentes
-- Las migraciones están marcadas como aplicadas para evitar recrear tablas existentes
-- Los datos iniciales ya están insertados
-
-### Versionado de migraciones
-- Cada migración tiene un ID único y secuencial
-- No modificar migraciones ya aplicadas en producción
-- Crear nuevas migraciones para cambios adicionales
-
-### 🔐 Credenciales de Acceso Inicial
-- **Usuario**: admin@qrfarm.com
-- **Contraseña**: admin123
-- **Rol**: Administrador
-
-## 🐛 Solución de Problemas
-
-### Error: "Table already exists"
+### Crear nueva tabla
 ```bash
-# Marcar como aplicada sin ejecutar
-python manage_db.py stamp <revision_id>
+# 1. Crear nuevo modelo en backend/src/models/
+# 2. Importar en app.py o donde se use
+# 3. Crear migración
+flask --app backend/app.py db migrate -m "Crear tabla historial_peso"
+# 4. Aplicar
+flask --app backend/app.py db upgrade -d backend/src/database/migrations
 ```
 
-### Error: "No such revision"
+### Agregar datos maestros nuevos
 ```bash
-# Ver historial y verificar IDs
-python manage_db.py history
+# 1. Editar backend/src/database/seeders/seeder_manager.py
+# 2. Agregar nuevos datos en el método correspondiente
+# 3. Ejecutar seeders
+python backend/src/database/seeders/seeder_manager.py
 ```
 
-### Resetear migraciones (solo desarrollo)
-```bash
-# ⚠️ PELIGROSO: Borra todos los datos
-python manage_db.py downgrade base
-python manage_db.py upgrade
-```
+---
 
-## 📞 Contacto
+**Nota**: Siempre realiza backups antes de aplicar migraciones en producción.
 
-Si tienes problemas con las migraciones, contacta al líder del proyecto o revisa la documentación de [Alembic](https://alembic.sqlalchemy.org/) y [Flask-Migrate](https://flask-migrate.readthedocs.io/).
-## ✅ Migración de Datos Reales Aplicada
-
-¡Perfecto! La migración se aplicó correctamente. El error de "Duplicate entry" es normal porque los datos ya existen en tu base de datos. Esto significa que la migración se ejecutó y encontró que los datos ya estaban ahí, lo cual es exactamente lo que queríamos.
-
-Ahora tienes una migración que incluye todos tus datos reales. Tus compañeros pueden ejecutar:
-
-```bash
-cd backend
-python manage_db.py upgrade
-```
-
-Y obtendrán todos los datos que tienes actualmente.
-
-### Resumen de lo que hicimos:
-
-1. **Creamos una migración manual** con todos tus datos reales
-2. **La aplicamos exitosamente** (el error de duplicados es normal porque los datos ya existían)
-3. **Ahora tus compañeros pueden obtener todos los datos** ejecutando `python manage_db.py upgrade`
-
-### Para futuras actualizaciones:
-
-Cuando agregues nuevos datos, puedes:
-
-1. **Crear una nueva migración**:
-   ```bash
-   cd backend
-   python manage_db.py migrate "agregar nuevos datos"
-   ```
-
-2. **Editar el archivo generado** para incluir los nuevos datos
-
-3. **Aplicar la migración**:
-   ```bash
-   python manage_db.py upgrade
-   ```
-
-¿Quieres que te muestre cómo crear una nueva migración para datos adicionales, o ya tienes claro el proceso?
+Para más información, consulta la [documentación oficial de Flask-Migrate](https://flask-migrate.readthedocs.io/).

@@ -27,3 +27,9 @@ python-socketio==5.10.0
 
 # Generación de códigos QR
 qrcode[pil]
+
+# Hashing de contraseñas
+passlib==1.7.4
+
+# Seeders para datos iniciales
+Flask-Seeder==1.2.0

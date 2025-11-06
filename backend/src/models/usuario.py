@@ -1,7 +1,7 @@
 # Modelo Usuario
 from typing import Optional, Dict, Any, Tuple
 from datetime import datetime
-from werkzeug.security import generate_password_hash, check_password_hash
+from passlib.hash import bcrypt
 from enum import Enum
 
 class EstadoUsuario(str, Enum):
@@ -130,15 +130,22 @@ class Usuario:
         return ""
 
     def set_password(self, password: str) -> None:
-        """Establece la contrasena (sin hash, según nueva estructura BD)"""
-        self.contrasena = password
+        """Establece la contraseña con hash bcrypt"""
+        self.contrasena = bcrypt.hash(password)
+        self.password_hash = self.contrasena
 
     def check_password(self, password: str) -> bool:
-        """Verifica si la contrasena proporcionada coincide"""
+        """Verifica si la contraseña proporcionada coincide"""
         if self.contrasena is None:
             return False
-        # Comparación directa sin hash (según estructura BD actual)
-        return self.contrasena == password
+        
+        # Intentar verificar como hash primero
+        try:
+            return bcrypt.verify(password, self.contrasena)
+        except:
+            # Si falla, comparar directamente (para usuarios antiguos sin hash)
+            # Esto permite compatibilidad con usuarios existentes
+            return self.contrasena == password
 
     @staticmethod
     def from_dict(data: Dict[str, Any], include_persona: bool = True) -> 'Usuario':
@@ -172,12 +179,13 @@ class Usuario:
             id_rol=2  # Rol por defecto (usuario normal) - ID 2 según la BD
         )
 
-        # Crear usuario
+        # Crear usuario con contraseña hasheada
         usuario = Usuario(
-            contrasena=data.get('password', ''),
             estado=EstadoUsuario.ACTIVO,
             id_rol=2  # También asignar el rol al usuario
         )
+        # Usar set_password para hashear la contraseña
+        usuario.set_password(data.get('password', ''))
 
         return persona, usuario
 

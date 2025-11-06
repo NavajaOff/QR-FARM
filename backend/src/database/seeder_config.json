@@ -1,0 +1,29 @@
+{
+  "seeders": {
+    "roles": {
+      "enabled": true,
+      "order": 1,
+      "description": "Roles del sistema"
+    },
+    "tipo_pasto": {
+      "enabled": true,
+      "order": 2,
+      "description": "Tipos de pasto disponibles"
+    },
+    "tipo_vacuna": {
+      "enabled": true,
+      "order": 3,
+      "description": "Tipos de vacunas para el ganado"
+    },
+    "estado_ganado": {
+      "enabled": true,
+      "order": 4,
+      "description": "Estados posibles del ganado"
+    }
+  },
+  "settings": {
+    "auto_run_on_empty": true,
+    "verbose": true,
+    "stop_on_error": false
+  }
+}

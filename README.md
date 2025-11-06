@@ -1,203 +1,318 @@
-# 🚀 QR Farm - Sistema de Gestión Ganadera
+# 🐄 QR-FARM - Sistema de Gestión Ganadera
 
-Sistema completo de gestión ganadera con frontend en Vue.js y backend en Flask.
+Sistema integral de gestión ganadera basado en códigos QR para el seguimiento y control del ganado.
 
-## 📋 Requisitos
+## 📋 Descripción
 
-- **Python 3.8+**
-- **Node.js 16+**
-- **MySQL/MariaDB**
-- **Git**
-
-## 🚀 Inicio Rápido
-
-### Para nuevos miembros del equipo
-
-```bash
-# 1. Clonar el repositorio
-git clone <url-del-repositorio>
-cd QR-FARM
-
-# 2. Configurar base de datos automáticamente
-cd backend
-python setup_database.py
-
-# 3. Iniciar la aplicación
-python iniciar_qrfarm.py
-```
-
-### Inicio manual (desarrollo)
-
-```bash
-# Backend
-cd backend
-pip install -r requirements.txt
-python app.py
-
-# Frontend (en otra terminal)
-cd frontend
-npm install
-npm run dev
-```
-
-## 🌐 Acceder a la aplicación
-
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:5000
-
-## 🔐 Credenciales de Acceso Inicial
-
-- **Usuario**: admin@qrfarm.com
-- **Contraseña**: admin123
-- **Rol**: Administrador
-
-## ⚙️ Configuración
-
-### Variables de entorno
-
-#### Backend (.env)
-```env
-# Base de datos
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=tu_password
-DB_NAME=gestion_ganadera
-
-# JWT
-SECRET_KEY=tu_clave_secreta
-
-# Servidor
-HOST=0.0.0.0
-PORT=5000
-DEBUG=True
-
-# CORS
-CORS_ORIGINS=http://localhost:5173
-```
-
-#### Frontend (.env)
-```env
-VUE_APP_API_BASE_URL=http://localhost:5000/api
-VUE_APP_APP_NAME=QR Farm
-VUE_APP_DEBUG=true
-```
-
-### Archivo de configuración global (frontend/public/config.js)
-
-```javascript
-window.config = {
-  API_BASE_URL: 'http://localhost:5000/api',
-  APP_NAME: 'QR Farm',
-  VERSION: '1.0.0',
-  DEBUG: true,
-  TIMEOUT: 10000
-};
-```
+QR-FARM es una aplicación web moderna que permite gestionar de manera eficiente una granja ganadera mediante el uso de códigos QR. Cada animal tiene un código QR único que permite acceder rápidamente a toda su información.
 
 ## 🏗️ Arquitectura
 
-### Backend (Flask)
-- **Puerto**: 5000
-- **Base de datos**: MySQL
-- **Autenticación**: JWT
-- **CORS**: Configurado para desarrollo
+- **Backend**: Flask (Python) - API REST con autenticación JWT
+- **Frontend**: Vue.js 3 con Vite - SPA reactiva
+- **Base de Datos**: MySQL
+- **Comunicación en tiempo real**: Socket.IO
+- **Arquitectura**: MVC (Model-View-Controller)
 
-### Frontend (Vue.js + Vite)
-- **Puerto**: 5173
-- **Framework**: Vue 3
-- **Build tool**: Vite
-- **UI**: Bootstrap 5
+## ✨ Características Principales
 
-## 🔐 Roles de usuario
+- 🔐 **Autenticación segura** con JWT y contraseñas hasheadas (bcrypt)
+- 👥 **Gestión de usuarios** con roles (admin, user, veterinario, supervisor)
+- 🐮 **Gestión de ganado** con códigos QR únicos
+- 🌾 **Gestión de potreros** y tipos de pasto
+- 💉 **Control de vacunación** y salud del ganado
+- 📊 **Dashboard** con estadísticas en tiempo real
+- 🔄 **Actualizaciones en tiempo real** con WebSockets
+- 📱 **Diseño responsive** para móviles y tablets
 
-- **Administrador**: Acceso completo a todas las funcionalidades
-- **Usuario**: Acceso limitado a funciones básicas
+## 🚀 Instalación Rápida
 
-## 📚 API Endpoints
+### Prerrequisitos
+
+- Python 3.8+
+- Node.js 16+
+- MySQL 5.7+
+- Git
+
+### Paso 1: Clonar el repositorio
+
+```bash
+git clone https://github.com/tu-usuario/QR-FARM.git
+cd QR-FARM
+```
+
+### Paso 2: Configurar el archivo .env
+
+Copia el archivo de ejemplo y configura tus variables:
+
+```bash
+cp .env.example .env
+```
+
+Edita el archivo `.env` con tus configuraciones:
+
+```env
+# Configuración del entorno Flask
+FLASK_ENV=development
+SECRET_KEY=tu_clave_secreta_aqui
+DATABASE_URL=mysql+pymysql://usuario:contraseña@localhost/qr_farm
+
+# Configuración de la base de datos MySQL
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=gestion_ganadera
+DB_USER=root
+DB_PASSWORD=tu_contraseña_mysql
+
+# Credenciales para el usuario admin (se crean automáticamente)
+ADMIN_EMAIL=admin@qrfarm.com
+ADMIN_PASSWORD=admin123
+```
+
+### Paso 3: Instalar dependencias
+
+#### Backend (Python)
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+#### Frontend (Node.js)
+```bash
+cd frontend
+npm install
+```
+
+### Paso 4: Configurar la base de datos
+
+#### Crear la base de datos
+```sql
+CREATE DATABASE gestion_ganadera CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+#### Ejecutar migraciones
+```bash
+# Desde la raíz del proyecto
+flask --app backend/app.py db upgrade -d backend/src/database/migrations
+```
+
+#### Cargar datos iniciales (seeders)
+```bash
+python backend/src/database/seeders/seeder_manager.py
+```
+
+### Paso 5: Ejecutar el proyecto
+
+#### Opción 1: Ejecutar todo junto (Recomendado)
+```bash
+python backend/run_all.py
+```
+
+#### Opción 2: Ejecutar por separado
+
+Terminal 1 - Backend:
+```bash
+cd backend
+python app.py
+```
+
+Terminal 2 - Frontend:
+```bash
+cd frontend
+npm run dev
+```
+
+## 🌐 Acceso al Sistema
+
+- **Frontend**: http://localhost:5173 (o el puerto que se asigne)
+- **Backend API**: http://localhost:5000
+- **Health Check**: http://localhost:5000/api/health
+
+### Credenciales por defecto
+
+```
+Email: admin@qrfarm.com
+Contraseña: admin123
+```
+
+## 📁 Estructura del Proyecto
+
+```
+QR-FARM/
+│
+├── backend/                    # Servidor Flask
+│   ├── app.py                 # Aplicación principal
+│   ├── run_all.py            # Script para ejecutar todo
+│   ├── requirements.txt      # Dependencias Python
+│   └── src/
+│       ├── controllers/      # Controladores MVC
+│       ├── models/           # Modelos de datos
+│       ├── services/         # Lógica de negocio
+│       ├── routes/           # Rutas de la API
+│       ├── database/         # Configuración BD
+│       │   ├── migrations/   # Migraciones de BD
+│       │   └── seeders/      # Datos iniciales
+│       └── utils/            # Utilidades
+│
+├── frontend/                  # Cliente Vue.js
+│   ├── src/
+│   │   ├── views/           # Vistas/Páginas
+│   │   ├── components/      # Componentes
+│   │   ├── composables/     # Composables Vue
+│   │   ├── services/        # Servicios API
+│   │   ├── router/          # Rutas Vue
+│   │   └── assets/          # Recursos estáticos
+│   ├── package.json         # Dependencias Node
+│   └── vite.config.js       # Configuración Vite
+│
+├── .env                     # Variables de entorno (no subir)
+├── .env.example            # Ejemplo de variables
+├── README.md               # Este archivo
+└── README_MIGRATIONS.md    # Guía de migraciones
+```
+
+## 🛠️ Comandos Útiles
+
+### Backend
+
+```bash
+# Crear nueva migración
+flask --app backend/app.py db migrate -m "Descripción del cambio"
+
+# Aplicar migraciones
+flask --app backend/app.py db upgrade -d backend/src/database/migrations
+
+# Revertir última migración
+flask --app backend/app.py db downgrade -d backend/src/database/migrations
+
+# Ejecutar seeders
+python backend/src/database/seeders/seeder_manager.py
+
+# Resetear y recargar seeders
+python backend/src/database/seeders/seeder_manager.py --reset
+```
+
+### Frontend
+
+```bash
+# Desarrollo
+npm run dev
+
+# Compilar para producción
+npm run build
+
+# Vista previa de producción
+npm run preview
+
+# Linter
+npm run lint
+```
+
+## 🔧 Configuración Avanzada
+
+### Migraciones de Base de Datos
+
+Las migraciones se gestionan con Flask-Migrate (Alembic). Ver [README_MIGRATIONS.md](README_MIGRATIONS.md) para más detalles.
+
+### Seeders
+
+Los seeders cargan datos iniciales necesarios para el funcionamiento del sistema:
+- Roles de usuario
+- Tipos de pasto
+- Tipos de vacunas
+- Estados del ganado
+
+### Sistema de Autenticación
+
+- Contraseñas hasheadas con bcrypt
+- Tokens JWT con expiración de 24 horas
+- Middleware de autenticación en rutas protegidas
+- Roles y permisos por usuario
+
+## 📊 API Endpoints Principales
 
 ### Autenticación
-- `POST /api/usuarios/register` - Registro de usuarios
-- `POST /api/usuarios/login` - Inicio de sesión
+- `POST /api/usuarios/login` - Iniciar sesión
+- `POST /api/usuarios/register` - Registrar usuario
 
-### Usuarios (Admin)
+### Usuarios
 - `GET /api/usuarios/` - Listar usuarios
-- `PUT /api/usuarios/{id}/estado` - Cambiar estado de usuario
+- `GET /api/usuarios/:id` - Obtener usuario
+- `PUT /api/usuarios/:id` - Actualizar usuario
+- `DELETE /api/usuarios/:id` - Eliminar usuario
 
 ### Ganado
-- `GET /api/ganados/` - Listar ganado
-- `POST /api/ganados/` - Crear ganado
+- `GET /api/animales/` - Listar animales
+- `POST /api/animales/` - Crear animal
+- `GET /api/animales/:id` - Obtener animal
+- `PUT /api/animales/:id` - Actualizar animal
+- `DELETE /api/animales/:id` - Eliminar animal
 
 ### Potreros
 - `GET /api/potreros/` - Listar potreros
 - `POST /api/potreros/` - Crear potrero
+- `GET /api/potreros/:id` - Obtener potrero
+- `PUT /api/potreros/:id` - Actualizar potrero
+- `DELETE /api/potreros/:id` - Eliminar potrero
 
-## 🛠️ Desarrollo
+### Vacunación
+- `GET /api/vacunaciones/` - Listar vacunaciones
+- `POST /api/vacunaciones/` - Registrar vacunación
+- `GET /api/vacunaciones/animal/:id` - Historial por animal
 
-### Instalación de dependencias
+## 🐛 Solución de Problemas
 
+### Error de conexión a MySQL
 ```bash
-# Backend
+# Verificar que MySQL esté ejecutándose
+mysql -u root -p
+
+# Verificar credenciales en .env
+```
+
+### Error de módulos Python
+```bash
+# Reinstalar dependencias
 pip install -r backend/requirements.txt
-
-# Frontend
-cd frontend && npm install
 ```
 
-### Ejecución en modo desarrollo
-
+### Error de módulos Node
 ```bash
-# Opción automática (recomendado)
-python iniciar_qrfarm.py
-
-# O manualmente:
-# Terminal 1 - Backend
-cd backend && python app.py
-
-# Terminal 2 - Frontend
-cd frontend && npm run dev
+# Limpiar caché y reinstalar
+cd frontend
+rm -rf node_modules package-lock.json
+npm install
 ```
 
-## 🚀 Despliegue
+### Puerto en uso
+```bash
+# El sistema busca automáticamente puertos libres
+# O puedes especificar manualmente en .env
+```
 
-### Producción
-
-1. **Configurar variables de entorno**:
-   ```env
-   # Backend
-   DEBUG=False
-   SECRET_KEY=tu_clave_produccion_segura
-
-   # Frontend
-   VUE_APP_API_BASE_URL=https://tu-api.com/api
-   VUE_APP_DEBUG=false
-   ```
-
-2. **Construir frontend**:
-   ```bash
-   cd frontend
-   npm run build
-   ```
-
-3. **Desplegar backend** con WSGI (Gunicorn, uWSGI)
-
-4. **Servir frontend** con Nginx o Apache
-
-## 🤝 Contribución
+## 🤝 Contribuir
 
 1. Fork el proyecto
-2. Crea una rama para tu feature (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit tus cambios (`git commit -am 'Agrega nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
+2. Crea tu rama de características (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
 5. Abre un Pull Request
 
 ## 📝 Licencia
 
-Este proyecto está bajo la Licencia MIT.
+Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+
+## 👥 Equipo
+
+- **Desarrollo Backend**: Equipo Flask
+- **Desarrollo Frontend**: Equipo Vue.js
+- **Base de Datos**: Equipo MySQL
+- **DevOps**: Equipo de Infraestructura
 
 ## 📞 Soporte
 
-Para soporte técnico, contacta al equipo de desarrollo.
+Para soporte, envía un email a soporte@qrfarm.com o abre un issue en GitHub.
 
 ---
 
-**Desarrollado con ❤️ por el equipo QR Farm**
+**QR-FARM** - *Transformando la gestión ganadera con tecnología* 🐄🚀
