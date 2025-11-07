@@ -28,6 +28,9 @@ python-socketio==5.10.0
 # Generación de códigos QR
 qrcode[pil]
 
+# Reportes PDF
+reportlab==4.0.4
+
 # Hashing y seguridad
 passlib==1.7.4
 bcrypt==4.0.1
