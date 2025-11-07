@@ -522,7 +522,7 @@ class UsuarioService:
                 conn.close()
 
     @staticmethod
-    def obtener_usuario(id: int) -> Optional[Usuario]:
+    def obtener_usuario(id: int, incluir_inactivos: bool = False) -> Optional[Usuario]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
@@ -531,9 +531,14 @@ class UsuarioService:
                 SELECT u.*, p.*, r.rol as rol_nombre FROM usuarios u
                 INNER JOIN personas p ON u.id_persona = p.id
                 LEFT JOIN roles r ON u.id_rol = r.id
-                WHERE u.id = %s AND u.estado = 'activo'
+                WHERE u.id = %s
             """
-            cursor.execute(sql, (id,))
+            params = (id,)
+
+            if not incluir_inactivos:
+                sql += " AND u.estado = 'activo'"
+
+            cursor.execute(sql, params)
 
             result = cursor.fetchone()
             if result:
@@ -580,7 +585,7 @@ class UsuarioService:
                 conn.close()
 
     @staticmethod
-    def obtener_todos_usuarios() -> List[Usuario]:
+    def obtener_todos_usuarios(incluir_inactivos: bool = False) -> List[Usuario]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
@@ -590,8 +595,11 @@ class UsuarioService:
                 FROM usuarios u
                 INNER JOIN personas p ON u.id_persona = p.id
                 LEFT JOIN roles r ON u.id_rol = r.id
-                WHERE u.estado = 'activo'
             """
+
+            if not incluir_inactivos:
+                sql += " WHERE u.estado = 'activo'"
+
             cursor.execute(sql)
             results = cursor.fetchall()
 

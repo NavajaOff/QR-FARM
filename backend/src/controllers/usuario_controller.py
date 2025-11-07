@@ -1,7 +1,7 @@
 # Controlador Usuario
 from datetime import datetime, timedelta
 import jwt
-from flask import jsonify, request, current_app
+from flask import jsonify, request, current_app, g
 from ..models.usuario import Usuario, EstadoUsuario
 from ..services.usuario_service import UsuarioService
 try:
@@ -153,7 +153,7 @@ class UsuarioController:
     @staticmethod
     def obtener_todos_usuarios():
         try:
-            usuarios = UsuarioService.obtener_todos_usuarios()
+            usuarios = UsuarioService.obtener_todos_usuarios(incluir_inactivos=True)
             return jsonify({
                 'status': 'success',
                 'data': [usuario.to_dict() for usuario in usuarios]
@@ -171,6 +171,9 @@ class UsuarioController:
             data = request.get_json()
             nuevo_estado = data.get('estado')
 
+            current_user = getattr(g, 'current_user', None)
+            print(f"[USUARIO] Petición cambio estado realizada por user_id={getattr(current_user, 'id', None)}")
+
             if nuevo_estado not in ['activo', 'inactivo']:
                 return jsonify({
                     'status': 'error',
@@ -178,7 +181,7 @@ class UsuarioController:
                 }), 400
 
             # Verificar que el usuario existe
-            usuario_existente = UsuarioService.obtener_usuario(id)
+            usuario_existente = UsuarioService.obtener_usuario(id, incluir_inactivos=True)
             if not usuario_existente:
                 return jsonify({
                     'status': 'error',
@@ -212,7 +215,7 @@ class UsuarioController:
             data = request.get_json()
 
             # Verificar si el usuario existe
-            usuario_existente = UsuarioService.obtener_usuario(id)
+            usuario_existente = UsuarioService.obtener_usuario(id, incluir_inactivos=True)
             if not usuario_existente:
                 return jsonify({
                     'status': 'error',
