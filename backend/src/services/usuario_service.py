@@ -38,6 +38,8 @@ class UsuarioService:
                 return None, "El email ya está registrado"
 
             try:
+                if hasattr(conn, 'in_transaction') and conn.in_transaction:
+                    conn.rollback()
                 # Iniciar transacción
                 conn.start_transaction()
 
@@ -126,8 +128,11 @@ class UsuarioService:
                     return None, "El nombre de usuario ya está registrado"
 
             try:
-                # Iniciar transacción
-                conn.start_transaction()
+                original_autocommit = getattr(conn, 'autocommit', True)
+                if original_autocommit:
+                    conn.autocommit = False
+                elif hasattr(conn, 'in_transaction') and conn.in_transaction:
+                    conn.rollback()
 
                 # Actualizar persona
                 sql_persona = """
@@ -138,8 +143,7 @@ class UsuarioService:
                         primer_apellido = %s,
                         segundo_apellido = %s,
                         email = %s,
-                        telefono = %s,
-                        updated_at = NOW()
+                        telefono = %s
                     WHERE id = %s
                 """
                 
@@ -522,7 +526,7 @@ class UsuarioService:
                 conn.close()
 
     @staticmethod
-    def obtener_usuario(id: int) -> Optional[Usuario]:
+    def obtener_usuario(id: int, incluir_inactivos: bool = False) -> Optional[Usuario]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
@@ -531,9 +535,14 @@ class UsuarioService:
                 SELECT u.*, p.*, r.rol as rol_nombre FROM usuarios u
                 INNER JOIN personas p ON u.id_persona = p.id
                 LEFT JOIN roles r ON u.id_rol = r.id
-                WHERE u.id = %s AND u.estado = 'activo'
+                WHERE u.id = %s
             """
-            cursor.execute(sql, (id,))
+            params = (id,)
+
+            if not incluir_inactivos:
+                sql += " AND u.estado = 'activo'"
+
+            cursor.execute(sql, params)
 
             result = cursor.fetchone()
             if result:
@@ -580,7 +589,7 @@ class UsuarioService:
                 conn.close()
 
     @staticmethod
-    def obtener_todos_usuarios() -> List[Usuario]:
+    def obtener_todos_usuarios(incluir_inactivos: bool = False) -> List[Usuario]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
@@ -590,8 +599,11 @@ class UsuarioService:
                 FROM usuarios u
                 INNER JOIN personas p ON u.id_persona = p.id
                 LEFT JOIN roles r ON u.id_rol = r.id
-                WHERE u.estado = 'activo'
             """
+
+            if not incluir_inactivos:
+                sql += " WHERE u.estado = 'activo'"
+
             cursor.execute(sql)
             results = cursor.fetchall()
 
@@ -685,6 +697,13 @@ class UsuarioService:
             id_persona = result['id_persona']
 
             try:
+                original_autocommit = getattr(conn, 'autocommit', None)
+                if original_autocommit is not None and original_autocommit:
+                    conn.autocommit = False
+
+                if hasattr(conn, 'in_transaction') and conn.in_transaction:
+                    conn.rollback()
+
                 # Iniciar transacción
                 conn.start_transaction()
 
@@ -697,8 +716,7 @@ class UsuarioService:
                         primer_apellido = %s,
                         segundo_apellido = %s,
                         email = %s,
-                        telefono = %s,
-                        updated_at = NOW()
+                        telefono = %s
                     WHERE id = %s
                 """
 
@@ -719,8 +737,7 @@ class UsuarioService:
                 sql_usuario = """
                     UPDATE usuarios SET
                         id_rol = %s,
-                        estado = %s,
-                        updated_at = NOW()
+                        estado = %s
                     WHERE id = %s
                 """
 
@@ -745,6 +762,12 @@ class UsuarioService:
                 # Rollback en caso de error
                 conn.rollback()
                 raise e
+            finally:
+                if 'original_autocommit' in locals() and original_autocommit is not None:
+                    try:
+                        conn.autocommit = original_autocommit
+                    except:
+                        pass
 
         except Exception as e:
             print(f"Error al actualizar usuario completo: {e}")

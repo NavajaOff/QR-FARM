@@ -1,7 +1,7 @@
 # Controlador Usuario
 from datetime import datetime, timedelta
 import jwt
-from flask import jsonify, request, current_app
+from flask import jsonify, request, current_app, g
 from ..models.usuario import Usuario, EstadoUsuario
 from ..services.usuario_service import UsuarioService
 try:
@@ -153,7 +153,7 @@ class UsuarioController:
     @staticmethod
     def obtener_todos_usuarios():
         try:
-            usuarios = UsuarioService.obtener_todos_usuarios()
+            usuarios = UsuarioService.obtener_todos_usuarios(incluir_inactivos=True)
             return jsonify({
                 'status': 'success',
                 'data': [usuario.to_dict() for usuario in usuarios]
@@ -171,6 +171,9 @@ class UsuarioController:
             data = request.get_json()
             nuevo_estado = data.get('estado')
 
+            current_user = getattr(g, 'current_user', None)
+            print(f"[USUARIO] Petición cambio estado realizada por user_id={getattr(current_user, 'id', None)}")
+
             if nuevo_estado not in ['activo', 'inactivo']:
                 return jsonify({
                     'status': 'error',
@@ -178,7 +181,7 @@ class UsuarioController:
                 }), 400
 
             # Verificar que el usuario existe
-            usuario_existente = UsuarioService.obtener_usuario(id)
+            usuario_existente = UsuarioService.obtener_usuario(id, incluir_inactivos=True)
             if not usuario_existente:
                 return jsonify({
                     'status': 'error',
@@ -210,9 +213,16 @@ class UsuarioController:
     def actualizar_usuario(id):
         try:
             data = request.get_json()
+            print(f"[USUARIO][PUT] Datos recibidos para id={id}: {data}")
+
+            if not data:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'No se recibieron datos para actualizar'
+                }), 400
 
             # Verificar si el usuario existe
-            usuario_existente = UsuarioService.obtener_usuario(id)
+            usuario_existente = UsuarioService.obtener_usuario(id, incluir_inactivos=True)
             if not usuario_existente:
                 return jsonify({
                     'status': 'error',
@@ -259,15 +269,15 @@ class UsuarioController:
             if 'primer_nombre' in data:
                 usuario_existente.persona.primer_nombre = data['primer_nombre']
             if 'segundo_nombre' in data:
-                usuario_existente.persona.segundo_nombre = data['segundo_nombre']
+                usuario_existente.persona.segundo_nombre = data['segundo_nombre'] or None
             if 'primer_apellido' in data:
                 usuario_existente.persona.primer_apellido = data['primer_apellido']
             if 'segundo_apellido' in data:
-                usuario_existente.persona.segundo_apellido = data['segundo_apellido']
+                usuario_existente.persona.segundo_apellido = data['segundo_apellido'] or None
             if 'email' in data:
                 usuario_existente.persona.email = data['email']
             if 'telefono' in data:
-                usuario_existente.persona.telefono = data['telefono']
+                usuario_existente.persona.telefono = data['telefono'] or None
 
             # Actualizar datos del usuario
             if 'password' in data:
@@ -275,10 +285,17 @@ class UsuarioController:
             if 'estado' in data:
                 usuario_existente.estado = EstadoUsuario(data['estado'])
             if 'id_rol' in data:
-                usuario_existente.id_rol = data['id_rol']
+                try:
+                    nuevo_rol = int(data['id_rol'])
+                except (TypeError, ValueError):
+                    return jsonify({
+                        'status': 'error',
+                        'message': 'El id_rol debe ser numérico'
+                    }), 400
+                usuario_existente.id_rol = nuevo_rol
                 # También actualizar el rol en la persona si existe
                 if usuario_existente.persona:
-                    usuario_existente.persona.id_rol = data['id_rol']
+                    usuario_existente.persona.id_rol = nuevo_rol
 
             # Intentar actualizar en la base de datos
             if UsuarioService.actualizar_usuario_completo(id, usuario_existente):
@@ -298,10 +315,11 @@ class UsuarioController:
             else:
                 return jsonify({
                     'status': 'error',
-                    'message': 'Error al actualizar el usuario'
+                    'message': 'No se pudo actualizar el usuario. Verificar datos enviados.'
                 }), 400
 
         except Exception as e:
+            print(f"[USUARIO][PUT] Error inesperado: {e}")
             return jsonify({
                 'status': 'error',
                 'message': str(e)

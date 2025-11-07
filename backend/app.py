@@ -49,7 +49,12 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 migrate = Migrate(app, directory='src/database/migrations')
 
 # Inicializar SocketIO para actualizaciones en tiempo real
-socketio = SocketIO(app, cors_allowed_origins=["http://localhost:*", "http://127.0.0.1:*", "http://localhost:3000"])
+ALLOWED_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173"
+]
+
+socketio = SocketIO(app, cors_allowed_origins=ALLOWED_CORS_ORIGINS)
 
 # Importar comandos de Flask-Migrate para que estén disponibles en la CLI
 from flask_migrate import init, migrate, upgrade, revision
@@ -57,7 +62,7 @@ from flask_migrate import init, migrate, upgrade, revision
 # Configuración CORS completa para permitir peticiones desde el frontend
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:*", "http://127.0.0.1:*", "http://localhost:3000"],
+        "origins": ALLOWED_CORS_ORIGINS,
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
         "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
         "supports_credentials": True,
@@ -70,10 +75,11 @@ CORS(app, resources={
 def log_request_info():
     print(f"PETICION: {request.method} {request.url}")
 
-def generate_token(email, role):
+def generate_token(user_id, email, role):
     """Genera un token JWT para el usuario"""
     import datetime
     payload = {
+        'user_id': user_id,
         'email': email,
         'role': role,
         'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=24)
@@ -95,7 +101,7 @@ def obtener_usuarios():
     try:
         print("Obteniendo lista de usuarios desde la base de datos...")
 
-        usuarios = UsuarioService.obtener_todos_usuarios()
+        usuarios = UsuarioService.obtener_todos_usuarios(incluir_inactivos=True)
 
         # Convertir a formato compatible con el frontend
         usuarios_data = []
@@ -192,7 +198,7 @@ def usuarios_login():
                 print(f"Usuario encontrado: {result['email']} - Rol: {result['rol']}")
 
                 # Generar token JWT
-                token = generate_token(result['email'], result['rol'])
+                token = generate_token(result['usuario_id'], result['email'], result['rol'])
 
                 print("Login exitoso - Token generado")
 
