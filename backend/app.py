@@ -22,6 +22,7 @@ from src.routes.potrero_routes import potrero_bp
 from src.routes.usuario_routes import usuario_bp
 from src.routes.animal_routes import animal_bp
 from src.routes.vacunacion_routes import vacunacion_bp
+from src.routes.reporte_routes import reporte_bp
 
 # Cargar variables de entorno desde la raíz del proyecto
 import os
@@ -260,6 +261,7 @@ app.register_blueprint(potrero_bp, url_prefix='/api/potreros')
 app.register_blueprint(usuario_bp, url_prefix='/api/usuarios')
 app.register_blueprint(animal_bp, url_prefix='/api/animales')
 app.register_blueprint(vacunacion_bp, url_prefix='/api/vacunaciones')
+app.register_blueprint(reporte_bp, url_prefix='/api/reportes')
 
 
 # Eventos SocketIO para actualizaciones en tiempo real

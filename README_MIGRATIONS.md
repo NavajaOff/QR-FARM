@@ -58,6 +58,15 @@ alembic -c alembic.ini upgrade head
 python app.py
 
 
+# despues inicia el frontend:
+
+cd frontend
+
+# y instala el vite
+
+npm install
+
+
 # si al ejecutar el backend dice que no se puede crear el usuario admin ejecuta este comando:
 
 pip install bcrypt==4.0.1 passlib==1.7.4 --force-reinstall

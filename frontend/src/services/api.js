@@ -61,5 +61,10 @@ export const vacunacionAPI = {
   delete: (id) => api.delete(`/vacunaciones/${id}`),
 };
 
+export const reportAPI = {
+  getSummary: () => api.get('/reportes/resumen'),
+  downloadSummaryPdf: () => api.get('/reportes/resumen/pdf', { responseType: 'blob' }),
+};
+
 // Exportar instancia por defecto para uso general
 export default api;

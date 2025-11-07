@@ -2,8 +2,11 @@
   <div class="container-fluid py-4">
     <div class="row">
       <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
           <h2 class="mb-0">Gestión de Usuarios</h2>
+          <button class="btn btn-primary" @click="openAddModal">
+            <i class="fas fa-user-plus me-2"></i>Agregar usuario
+          </button>
         </div>
 
         <!-- Tabla de usuarios -->
@@ -59,6 +62,117 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de creación de usuario -->
+    <div class="modal fade" :class="{ 'show d-block': showAddUserModal }" tabindex="-1" role="dialog">
+      <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Agregar Usuario</h5>
+            <button type="button" class="btn-close" @click="closeAddModal"></button>
+          </div>
+          <div class="modal-body">
+            <form @submit.prevent="createUser">
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="add_primer_nombre" class="form-label">Primer Nombre *</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="add_primer_nombre"
+                    v-model="addForm.primer_nombre"
+                    required
+                  >
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="add_segundo_nombre" class="form-label">Segundo Nombre</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="add_segundo_nombre"
+                    v-model="addForm.segundo_nombre"
+                  >
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="add_primer_apellido" class="form-label">Primer Apellido *</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="add_primer_apellido"
+                    v-model="addForm.primer_apellido"
+                    required
+                  >
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="add_segundo_apellido" class="form-label">Segundo Apellido</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="add_segundo_apellido"
+                    v-model="addForm.segundo_apellido"
+                  >
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="add_email" class="form-label">Email *</label>
+                  <input
+                    type="email"
+                    class="form-control"
+                    id="add_email"
+                    v-model="addForm.email"
+                    required
+                  >
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="add_telefono" class="form-label">Teléfono</label>
+                  <input
+                    type="tel"
+                    class="form-control"
+                    id="add_telefono"
+                    v-model="addForm.telefono"
+                  >
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="add_password" class="form-label">Contraseña *</label>
+                  <input
+                    type="password"
+                    class="form-control"
+                    id="add_password"
+                    v-model="addForm.password"
+                    required
+                  >
+                  <div class="form-text">Mínimo 6 caracteres</div>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="add_confirm_password" class="form-label">Confirmar Contraseña *</label>
+                  <input
+                    type="password"
+                    class="form-control"
+                    id="add_confirm_password"
+                    v-model="addForm.confirm_password"
+                    required
+                  >
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="closeAddModal">Cancelar</button>
+            <button type="button" class="btn btn-primary" @click="createUser" :disabled="creatingUser">
+              <span v-if="creatingUser" class="spinner-border spinner-border-sm me-2"></span>
+              Guardar usuario
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showAddUserModal" class="modal-backdrop fade show" @click="closeAddModal"></div>
 
     <!-- Modal de edición de usuario -->
     <div class="modal fade" :class="{ 'show d-block': showEditModal }" tabindex="-1" role="dialog">
@@ -184,6 +298,7 @@
 <script>
 import { useUsuarios } from '../../composables/useUsuarios.js';
 import authService from '../../services/authService.js';
+import { authAPI } from '../../services/api.js';
 
 export default {
   name: 'GestionarUsuarios',
@@ -210,6 +325,17 @@ export default {
     return {
       showAddUserModal: false,
       showEditModal: false,
+      creatingUser: false,
+      addForm: {
+        primer_nombre: '',
+        segundo_nombre: '',
+        primer_apellido: '',
+        segundo_apellido: '',
+        email: '',
+        telefono: '',
+        password: '',
+        confirm_password: ''
+      },
       editForm: {
         primer_nombre: '',
         segundo_nombre: '',
@@ -240,6 +366,88 @@ export default {
     next();
   },
   methods: {
+    openAddModal() {
+      this.resetAddForm();
+      this.showAddUserModal = true;
+    },
+
+    closeAddModal() {
+      this.showAddUserModal = false;
+      this.resetAddForm();
+    },
+
+    resetAddForm() {
+      this.addForm = {
+        primer_nombre: '',
+        segundo_nombre: '',
+        primer_apellido: '',
+        segundo_apellido: '',
+        email: '',
+        telefono: '',
+        password: '',
+        confirm_password: ''
+      };
+    },
+
+    async createUser() {
+      if (this.creatingUser) return;
+
+      if (!this.addForm.primer_nombre.trim()) {
+        alert('El primer nombre es requerido');
+        return;
+      }
+      if (!this.addForm.primer_apellido.trim()) {
+        alert('El primer apellido es requerido');
+        return;
+      }
+      if (!this.addForm.email.trim()) {
+        alert('El email es requerido');
+        return;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(this.addForm.email)) {
+        alert('El formato del email no es válido');
+        return;
+      }
+
+      if (!this.addForm.password || this.addForm.password.length < 6) {
+        alert('La contraseña debe tener al menos 6 caracteres');
+        return;
+      }
+
+      if (this.addForm.password !== this.addForm.confirm_password) {
+        alert('Las contraseñas no coinciden');
+        return;
+      }
+
+      this.creatingUser = true;
+      try {
+        const payload = {
+          primer_nombre: this.addForm.primer_nombre.trim(),
+          segundo_nombre: this.addForm.segundo_nombre.trim() || null,
+          primer_apellido: this.addForm.primer_apellido.trim(),
+          segundo_apellido: this.addForm.segundo_apellido.trim() || null,
+          email: this.addForm.email.trim(),
+          telefono: this.addForm.telefono.trim() || null,
+          password: this.addForm.password
+        };
+
+        const response = await authAPI.register(payload);
+        if (response.data?.status === 'success') {
+          alert('Usuario creado exitosamente');
+          this.closeAddModal();
+          await this.cargarUsuarios();
+        } else {
+          throw new Error(response.data?.message || 'No se pudo crear el usuario');
+        }
+      } catch (error) {
+        alert('Error al crear usuario: ' + (error.message || 'desconocido'));
+      } finally {
+        this.creatingUser = false;
+      }
+    },
+
     editUser(usuario) {
       this.editForm = {
         primer_nombre: usuario.persona?.primer_nombre || '',
