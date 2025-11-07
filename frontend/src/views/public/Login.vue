@@ -127,6 +127,13 @@ async function login() {
         showConfirmButton: false
       });
 
+      try {
+        sessionStorage.setItem('lastLoginEmail', email.value);
+        sessionStorage.setItem('lastLoginPassword', password.value);
+      } catch (storageError) {
+        console.warn('No se pudieron guardar las credenciales en sessionStorage', storageError);
+      }
+
       // Redirigir según el rol del usuario
       const redirectPath = authService.getRedirectPath();
       router.push(redirectPath);

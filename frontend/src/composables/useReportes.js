@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { reportAPI } from '../services/api.js'
+import { reportAPI, authAPI } from '../services/api.js'
 
 export function useReportes() {
   const resumen = ref(null)
@@ -10,17 +10,62 @@ export function useReportes() {
     try {
       loading.value = true
       error.value = null
-      const response = await reportAPI.getSummary()
-      if (response.data?.status === 'success') {
-        resumen.value = response.data.data
-      } else {
-        error.value = response.data?.message || 'No fue posible obtener el resumen'
-      }
+      await obtenerResumenConRenovacion()
     } catch (err) {
       error.value = err.message || 'Error al consultar reportes'
       console.error('[useReportes] Error cargando resumen:', err)
     } finally {
       loading.value = false
+    }
+  }
+
+  const obtenerResumenConRenovacion = async () => {
+    try {
+      const response = await reportAPI.getSummary()
+      if (response.data?.status === 'success') {
+        resumen.value = response.data.data
+        return
+      }
+
+      throw response
+    } catch (err) {
+      const status = err?.response?.status ?? err?.status
+
+      if (status === 401) {
+        await renovarToken()
+        const response = await reportAPI.getSummary()
+        if (response.data?.status === 'success') {
+          resumen.value = response.data.data
+          return
+        }
+        throw new Error(response.data?.message || 'No autorizado')
+      }
+
+      throw err
+    }
+  }
+
+  const renovarToken = async () => {
+    try {
+      const email = sessionStorage.getItem('lastLoginEmail')
+      const password = sessionStorage.getItem('lastLoginPassword')
+
+      if (!email || !password) {
+        throw new Error('No hay credenciales almacenadas para renovar el token')
+      }
+
+      const response = await authAPI.login({ email, password })
+      if (response.data?.status === 'success') {
+        localStorage.setItem('token', response.data.token)
+        localStorage.setItem('user', JSON.stringify(response.data.user))
+        localStorage.setItem('userRole', response.data.user?.rol?.rol || 'usuario')
+        return
+      }
+
+      throw new Error(response.data?.message || 'No fue posible renovar el token')
+    } catch (error) {
+      console.warn('[useReportes] No se pudo renovar el token automáticamente:', error.message)
+      throw error
     }
   }
 
