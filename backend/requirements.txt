@@ -1,4 +1,4 @@
-# Dependencias del Backend QR-FARM
+# Dependencias del Backend QR-FARM 
 # Sistema de gestión ganadera con Flask y MySQL
 
 # Base de datos
@@ -28,8 +28,9 @@ python-socketio==5.10.0
 # Generación de códigos QR
 qrcode[pil]
 
-# Hashing de contraseñas
+# Hashing y seguridad
 passlib==1.7.4
+bcrypt==4.0.1
 
-# Seeders para datos iniciales
-Flask-Seeder==1.2.0
+# Utilidades opcionales
+python-dateutil==2.9.0.post0
