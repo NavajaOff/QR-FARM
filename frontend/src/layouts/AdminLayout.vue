@@ -82,9 +82,6 @@
             <router-link class="nav-link mb-1 small" to="/admin/vacunacion">
               <i class="fas fa-syringe me-2"></i>Vacunación
             </router-link>
-            <router-link class="nav-link mb-1 small" to="/admin/inventario">
-              <i class="fas fa-boxes me-2"></i>Inventario
-            </router-link>
             <router-link class="nav-link mb-1 small" to="/admin/reportes">
               <i class="fas fa-chart-line me-2"></i>Reportes
             </router-link>
