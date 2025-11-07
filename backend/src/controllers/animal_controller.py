@@ -4,6 +4,12 @@ from flask import jsonify, request
 from ..models.animal import Ganado
 from ..services.animal_service import GanadoService
 
+try:
+    from ...app import emit_update
+except ImportError:
+    def emit_update(event, data):  # type: ignore
+        print(f"WebSocket no disponible, evento omitido: {event}")
+
 class GanadoController:
     @staticmethod
     def crear_ganado():
@@ -18,10 +24,18 @@ class GanadoController:
             nuevo_ganado = GanadoService.crear_ganado(ganado)
 
             if nuevo_ganado:
+                payload = nuevo_ganado.to_dict()
+                try:
+                    emit_update('animal_created', {
+                        'data': payload
+                    })
+                except Exception as ws_error:
+                    print(f"No se pudo emitir animal_created: {ws_error}")
+
                 return jsonify({
                     'status': 'success',
                     'message': 'Ganado creado exitosamente',
-                    'data': nuevo_ganado.to_dict()
+                    'data': payload
                 }), 201
             else:
                 return jsonify({
@@ -109,10 +123,19 @@ class GanadoController:
 
             # Intentar actualizar en la base de datos
             if GanadoService.actualizar_ganado(id, ganado_existente):
+                payload = ganado_existente.to_dict()
+                try:
+                    emit_update('animal_updated', {
+                        'id': id,
+                        'data': payload
+                    })
+                except Exception as ws_error:
+                    print(f"No se pudo emitir animal_updated: {ws_error}")
+
                 return jsonify({
                     'status': 'success',
                     'message': 'Ganado actualizado exitosamente',
-                    'data': ganado_existente.to_dict()
+                    'data': payload
                 }), 200
             else:
                 return jsonify({
@@ -130,6 +153,13 @@ class GanadoController:
     def eliminar_ganado(id):
         try:
             if GanadoService.eliminar_ganado(id):
+                try:
+                    emit_update('animal_deleted', {
+                        'id': id
+                    })
+                except Exception as ws_error:
+                    print(f"No se pudo emitir animal_deleted: {ws_error}")
+
                 return jsonify({
                     'status': 'success',
                     'message': 'Ganado eliminado exitosamente'

@@ -1,6 +1,9 @@
 // useGanado.js - Composables para gestión de ganado
 import { ref } from 'vue'
 import { ganadoAPI } from '../services/api.js'
+import { socket } from '../socket.js'
+
+let socketRegistered = false
 
 export function useGanado() {
   const ganado = ref([])
@@ -61,6 +64,51 @@ export function useGanado() {
       return { success: false, message: err.message }
     }
   }
+
+  const upsertGanado = (nuevo) => {
+    if (!nuevo || !nuevo.id) return
+    const index = ganado.value.findIndex(item => item.id === nuevo.id)
+    if (index >= 0) {
+      ganado.value.splice(index, 1, { ...ganado.value[index], ...nuevo })
+    } else {
+      ganado.value = [nuevo, ...ganado.value]
+    }
+  }
+
+  const removeGanado = (id) => {
+    if (!id) return
+    ganado.value = ganado.value.filter(item => item.id !== id)
+  }
+
+  const registerSocketEvents = () => {
+    if (socketRegistered) return
+    socketRegistered = true
+
+    socket.on('animal_created', (payload) => {
+      if (payload?.data) {
+        upsertGanado(payload.data)
+      }
+    })
+
+    socket.on('animal_updated', (payload) => {
+      if (payload?.data) {
+        upsertGanado(payload.data)
+      }
+    })
+
+    socket.on('animal_deleted', (payload) => {
+      const id = payload?.id
+      if (id) {
+        removeGanado(id)
+      }
+    })
+
+    socket.on('disconnect', () => {
+      socketRegistered = false
+    })
+  }
+
+  registerSocketEvents()
 
   return {
     ganado,

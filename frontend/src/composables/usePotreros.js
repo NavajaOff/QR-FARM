@@ -1,6 +1,9 @@
 // usePotreros.js - Composables para gestión de potreros
 import { ref } from 'vue'
 import { potreroAPI } from '../services/api.js'
+import { socket } from '../socket.js'
+
+let socketRegistered = false
 
 export function usePotreros() {
   const potreros = ref([])
@@ -61,6 +64,51 @@ export function usePotreros() {
       return { success: false, message: err.message }
     }
   }
+
+  const upsertPotrero = (nuevo) => {
+    if (!nuevo || !nuevo.id) return
+    const index = potreros.value.findIndex(item => item.id === nuevo.id)
+    if (index >= 0) {
+      potreros.value.splice(index, 1, { ...potreros.value[index], ...nuevo })
+    } else {
+      potreros.value = [nuevo, ...potreros.value]
+    }
+  }
+
+  const removePotrero = (id) => {
+    if (!id) return
+    potreros.value = potreros.value.filter(item => item.id !== id)
+  }
+
+  const registerSocketEvents = () => {
+    if (socketRegistered) return
+    socketRegistered = true
+
+    socket.on('potrero_created', (payload) => {
+      if (payload?.data) {
+        upsertPotrero(payload.data)
+      }
+    })
+
+    socket.on('potrero_updated', (payload) => {
+      if (payload?.data) {
+        upsertPotrero(payload.data)
+      }
+    })
+
+    socket.on('potrero_deleted', (payload) => {
+      const id = payload?.id
+      if (id) {
+        removePotrero(id)
+      }
+    })
+
+    socket.on('disconnect', () => {
+      socketRegistered = false
+    })
+  }
+
+  registerSocketEvents()
 
   return {
     potreros,
