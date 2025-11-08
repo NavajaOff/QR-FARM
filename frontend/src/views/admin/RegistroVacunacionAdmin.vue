@@ -169,7 +169,7 @@ export default {
               <label class="form-label">Animal</label>
               <select id="animal" class="form-select">
                 <option value="">Seleccionar animal...</option>
-                ${this.animales.map(a => `<option value="${a.id}">${a.nombre} (ID: ${a.id})</option>`).join('')}
+                ${this.animales.map(a => `<option value="${a.id}">${a.nombre}</option>`).join('')}
               </select>
             </div>
             <div class="col-12">
@@ -210,8 +210,8 @@ export default {
           const responsable = document.getElementById('responsable').value;
           const estado = document.getElementById('estado').value;
 
-          if (!animal || !tipoVacuna || !fechaAplicacion || !responsable) {
-            Swal.showValidationMessage('Por favor complete todos los campos requeridos');
+          if (!animal || !tipoVacuna || !fechaAplicacion || !responsable ) {
+            Swal.showValidationMessage('Por favor complete todos los campos ');
             return false;
           }
 
