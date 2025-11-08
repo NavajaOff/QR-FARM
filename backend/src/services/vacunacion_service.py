@@ -102,7 +102,19 @@ class VacunacionService:
     def crear_vacunacion(vacunacion: Vacunacion) -> bool:
         """Crear una nueva vacunación"""
         try:
+            from datetime import timedelta
             print(f"Service: Creando vacunación con datos: {vacunacion.to_dict()}")
+
+            # Calcular próxima dosis automáticamente (6 meses después de fecha_aplicacion)
+            proxima_dosis = None
+            if vacunacion.fecha_aplicacion:
+                # Convertir string a datetime si es necesario
+                if isinstance(vacunacion.fecha_aplicacion, str):
+                    from datetime import datetime
+                    vacunacion.fecha_aplicacion = datetime.fromisoformat(vacunacion.fecha_aplicacion.replace('Z', '+00:00'))
+                proxima_dosis = vacunacion.fecha_aplicacion + timedelta(days=180)  # 6 meses = 180 días
+                print(f"Service: Próxima dosis calculada: {proxima_dosis}")
+
             conn = get_connection()
             cursor = conn.cursor()
 
@@ -115,7 +127,7 @@ class VacunacionService:
             values = (
                 vacunacion.id_animal,
                 vacunacion.fecha_aplicacion,
-                vacunacion.proxima_dosis,
+                proxima_dosis,
                 vacunacion.responsable,
                 vacunacion.estado.value if hasattr(vacunacion.estado, 'value') else str(vacunacion.estado),
                 vacunacion.id_tipo_vacuna

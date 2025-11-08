@@ -179,13 +179,9 @@ export default {
                 ${this.tiposVacuna.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('')}
               </select>
             </div>
-            <div class="col-6">
+            <div class="col-12">
               <label class="form-label">Fecha Aplicación</label>
               <input id="fechaAplicacion" type="date" class="form-control">
-            </div>
-            <div class="col-6">
-              <label class="form-label">Próxima Dosis</label>
-              <input id="proximaDosis" type="date" class="form-control">
             </div>
             <div class="col-12">
               <label class="form-label">Responsable</label>
@@ -211,11 +207,10 @@ export default {
           const animal = document.getElementById('animal').value;
           const tipoVacuna = document.getElementById('tipoVacuna').value;
           const fechaAplicacion = document.getElementById('fechaAplicacion').value;
-          const proximaDosis = document.getElementById('proximaDosis').value;
           const responsable = document.getElementById('responsable').value;
           const estado = document.getElementById('estado').value;
 
-          if (!animal || !tipoVacuna || !responsable) {
+          if (!animal || !tipoVacuna || !fechaAplicacion || !responsable) {
             Swal.showValidationMessage('Por favor complete todos los campos requeridos');
             return false;
           }
@@ -223,8 +218,7 @@ export default {
           return {
             id_animal: parseInt(animal),
             id_tipo_vacuna: parseInt(tipoVacuna),
-            fecha_aplicacion: fechaAplicacion || null,
-            proxima_dosis: proximaDosis || null,
+            fecha_aplicacion: fechaAplicacion,
             responsable: parseInt(responsable),
             estado: estado
           };
@@ -323,15 +317,15 @@ export default {
           const responsable = document.getElementById('responsable').value;
           const estado = document.getElementById('estado').value;
 
-          if (!animal || !responsable) {
-            Swal.showValidationMessage('Por favor complete los campos requeridos: Animal y Responsable');
+          if (!animal || !fechaAplicacion || !responsable) {
+            Swal.showValidationMessage('Por favor complete los campos requeridos: Animal, Fecha Aplicación y Responsable');
             return false;
           }
 
           return {
             id_animal: parseInt(animal),
             id_tipo_vacuna: tipoVacuna ? parseInt(tipoVacuna) : null,
-            fecha_aplicacion: fechaAplicacion || null,
+            fecha_aplicacion: fechaAplicacion,
             proxima_dosis: proximaDosis || null,
             responsable: parseInt(responsable),
             estado: estado
