@@ -457,16 +457,22 @@ export default {
     },
 
     editUser(usuario) {
+      console.log('Usuario completo:', usuario);
+      console.log('Persona del usuario:', usuario.persona);
+
       const resolvedRoleId = this.resolveRoleId(usuario);
       const baseData = {
-        primer_nombre: usuario.persona?.primer_nombre || '',
-        segundo_nombre: usuario.persona?.segundo_nombre || '',
-        primer_apellido: usuario.persona?.primer_apellido || '',
-        segundo_apellido: usuario.persona?.segundo_apellido || '',
-        email: usuario.persona?.email || '',
-        telefono: usuario.persona?.telefono || '',
+        primer_nombre: usuario.persona?.primer_nombre || usuario.primer_nombre || '',
+        segundo_nombre: usuario.persona?.segundo_nombre || usuario.segundo_nombre || '',
+        primer_apellido: usuario.persona?.primer_apellido || usuario.primer_apellido || '',
+        segundo_apellido: usuario.persona?.segundo_apellido || usuario.segundo_apellido || '',
+        email: usuario.persona?.email || usuario.email || '',
+        telefono: usuario.persona?.telefono || usuario.telefono || '',
         id_rol: resolvedRoleId
       };
+
+      console.log('Datos base para editar:', baseData);
+
       this.originalEditData = { ...baseData };
       this.editForm = {
         ...baseData,
