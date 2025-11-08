@@ -186,13 +186,12 @@
             <form @submit.prevent="updateUser">
               <div class="row">
                 <div class="col-md-6 mb-3">
-                  <label for="primer_nombre" class="form-label">Primer Nombre *</label>
+                  <label for="primer_nombre" class="form-label">Primer Nombre</label>
                   <input
                     type="text"
                     class="form-control"
                     id="primer_nombre"
                     v-model="editForm.primer_nombre"
-                    required
                   >
                 </div>
                 <div class="col-md-6 mb-3">
@@ -207,13 +206,12 @@
               </div>
               <div class="row">
                 <div class="col-md-6 mb-3">
-                  <label for="primer_apellido" class="form-label">Primer Apellido *</label>
+                  <label for="primer_apellido" class="form-label">Primer Apellido</label>
                   <input
                     type="text"
                     class="form-control"
                     id="primer_apellido"
                     v-model="editForm.primer_apellido"
-                    required
                   >
                 </div>
                 <div class="col-md-6 mb-3">
@@ -228,13 +226,12 @@
               </div>
               <div class="row">
                 <div class="col-md-6 mb-3">
-                  <label for="email" class="form-label">Email *</label>
+                  <label for="email" class="form-label">Email</label>
                   <input
                     type="email"
                     class="form-control"
                     id="email"
                     v-model="editForm.email"
-                    required
                   >
                 </div>
                 <div class="col-md-6 mb-3">
@@ -259,21 +256,14 @@
                   >
                   <div class="form-text">Mínimo 6 caracteres</div>
                 </div>
-                <div class="col-md-6 mb-3">
-                  <label for="estado" class="form-label">Estado</label>
-                  <select class="form-select" id="estado" v-model="editForm.estado">
-                    <option value="activo">Activo</option>
-                    <option value="inactivo">Inactivo</option>
-                  </select>
-                </div>
               </div>
               <!-- Campo de rol solo visible para administradores -->
               <div v-if="isCurrentUserAdmin" class="row">
                 <div class="col-md-6 mb-3">
                   <label for="id_rol" class="form-label">Rol</label>
-                  <select class="form-select" id="id_rol" v-model="editForm.id_rol">
-                    <option value="1">Administrador</option>
-                    <option value="2">Usuario</option>
+                  <select class="form-select" id="id_rol" v-model.number="editForm.id_rol">
+                    <option :value="1">Administrador</option>
+                    <option :value="2">Usuario</option>
                   </select>
                 </div>
               </div>
@@ -344,9 +334,9 @@ export default {
         email: '',
         telefono: '',
         password: '',
-        estado: 'activo',
         id_rol: 2
       },
+      originalEditData: null,
       editingUserId: null
     };
   },
@@ -366,6 +356,24 @@ export default {
     next();
   },
   methods: {
+    resolveRoleId(usuario) {
+      const candidates = [
+        usuario?.id_rol,
+        usuario?.persona?.id_rol,
+        usuario?.rol?.id
+      ];
+      const found = candidates.find((value) => {
+        const parsed = Number(value);
+        return !Number.isNaN(parsed) && parsed > 0;
+      });
+      if (!found && typeof usuario?.rol === 'string') {
+        const normalized = usuario.rol.toLowerCase();
+        if (normalized.includes('admin')) return 1;
+        if (normalized.includes('usuario')) return 2;
+      }
+      return found ? Number(found) : 2;
+    },
+
     openAddModal() {
       this.resetAddForm();
       this.showAddUserModal = true;
@@ -449,16 +457,20 @@ export default {
     },
 
     editUser(usuario) {
-      this.editForm = {
+      const resolvedRoleId = this.resolveRoleId(usuario);
+      const baseData = {
         primer_nombre: usuario.persona?.primer_nombre || '',
         segundo_nombre: usuario.persona?.segundo_nombre || '',
         primer_apellido: usuario.persona?.primer_apellido || '',
         segundo_apellido: usuario.persona?.segundo_apellido || '',
         email: usuario.persona?.email || '',
         telefono: usuario.persona?.telefono || '',
-        password: '',
-        estado: usuario.estado || 'activo',
-        id_rol: usuario.id_rol || 2
+        id_rol: resolvedRoleId
+      };
+      this.originalEditData = { ...baseData };
+      this.editForm = {
+        ...baseData,
+        password: ''
       };
       this.editingUserId = usuario.id;
       this.showEditModal = true;
@@ -474,55 +486,73 @@ export default {
         email: '',
         telefono: '',
         password: '',
-        estado: 'activo',
         id_rol: 2
       };
+      this.originalEditData = null;
       this.editingUserId = null;
     },
 
     async updateUser() {
       if (!this.editingUserId) return;
 
-      if (!this.editForm.primer_nombre.trim()) {
-        alert('El primer nombre es requerido');
-        return;
-      }
-      if (!this.editForm.primer_apellido.trim()) {
-        alert('El primer apellido es requerido');
-        return;
-      }
-      if (!this.editForm.email.trim()) {
-        alert('El email es requerido');
-        return;
-      }
-
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(this.editForm.email)) {
-        alert('El formato del email no es válido');
-        return;
-      }
-
       if (this.editForm.password && this.editForm.password.length < 6) {
         alert('La contraseña debe tener al menos 6 caracteres');
         return;
       }
 
-      const updateData = {
-        primer_nombre: this.editForm.primer_nombre.trim(),
-        segundo_nombre: this.editForm.segundo_nombre.trim(),
-        primer_apellido: this.editForm.primer_apellido.trim(),
-        segundo_apellido: this.editForm.segundo_apellido.trim(),
-        email: this.editForm.email.trim(),
-        telefono: this.editForm.telefono.trim(),
-        estado: this.editForm.estado
-      };
+      const fieldsToProcess = [
+        'primer_nombre',
+        'segundo_nombre',
+        'primer_apellido',
+        'segundo_apellido',
+        'email',
+        'telefono'
+      ];
+      const updateData = {};
+
+      fieldsToProcess.forEach(field => {
+        const value = typeof this.editForm[field] === 'string'
+          ? this.editForm[field].trim()
+          : this.editForm[field];
+
+        const originalValue = this.originalEditData
+          ? (typeof this.originalEditData[field] === 'string'
+            ? this.originalEditData[field].trim()
+            : this.originalEditData[field])
+          : null;
+
+        if (!value) {
+          return;
+        }
+
+        if (value !== (originalValue || '')) {
+          updateData[field] = value;
+        }
+      });
 
       if (this.editForm.password.trim()) {
         updateData.password = this.editForm.password;
       }
 
       if (this.isCurrentUserAdmin) {
-        updateData.id_rol = this.editForm.id_rol;
+        const currentRoleId = Number(this.editForm.id_rol);
+        const originalRoleId = Number(this.originalEditData?.id_rol);
+        if (!Number.isNaN(currentRoleId) && (Number.isNaN(originalRoleId) || currentRoleId !== originalRoleId)) {
+          updateData.id_rol = currentRoleId;
+        }
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        alert('No hay cambios para guardar');
+        return;
+      }
+
+      if (updateData.email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(updateData.email)) {
+          alert('El formato del email no es válido');
+          return;
+        }
       }
 
       const result = await this.actualizarUsuario(this.editingUserId, updateData);
