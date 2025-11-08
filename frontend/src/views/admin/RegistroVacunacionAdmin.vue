@@ -149,7 +149,7 @@ export default {
     },
 
     estadoClass(estado) {
-      if (estado === 'aplicada') return 'bg-success';
+      if (estado === 'aplicado') return 'bg-success';
       if (estado === 'pendiente') return 'bg-warning';
       return 'bg-secondary';
     },
@@ -198,7 +198,7 @@ export default {
               <label class="form-label">Estado</label>
               <select id="estado" class="form-select">
                 <option value="pendiente">Pendiente</option>
-                <option value="aplicada">Aplicada</option>
+                <option value="aplicado">Aplicado</option>
               </select>
             </div>
           </div>
@@ -259,7 +259,7 @@ export default {
               <p><strong>Fecha Aplicación:</strong> ${v.fechaAplicacion || 'No definida'}</p>
               <p><strong>Próxima Dosis:</strong> ${v.proximaDosis || 'No definida'}</p>
               <p><strong>Responsable:</strong> ${v.responsable}</p>
-              <p><strong>Estado:</strong> <span class="badge ${this.estadoClass(v.estado)}">${v.estado}</span></p>
+              <p><strong>Estado:</strong> <span class="badge ${this.estadoClass(v.estado)}">${v.estado === 'aplicado' ? 'Aplicado' : v.estado === 'pendiente' ? 'Pendiente' : v.estado}</span></p>
             </div>
           `,
           confirmButtonColor: '#00d563'
@@ -306,7 +306,7 @@ export default {
               <label class="form-label">Estado</label>
               <select id="estado" class="form-select">
                 <option value="pendiente" ${v.estado === 'pendiente' ? 'selected' : ''}>Pendiente</option>
-                <option value="aplicada" ${v.estado === 'aplicada' ? 'selected' : ''}>Aplicada</option>
+                <option value="aplicado" ${v.estado === 'aplicado' ? 'selected' : ''}>Aplicado</option>
               </select>
             </div>
           </div>
