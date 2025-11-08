@@ -59,6 +59,15 @@
                       </button>
                     </td>
                   </tr>
+                  <tr v-if="ganado.length === 0 && !isLoading">
+                    <td colspan="8" class="text-center py-4">
+                      <div class="text-muted">
+                        <i class="fas fa-info-circle fa-2x mb-3"></i>
+                        <h5>No hay animales registrados</h5>
+                        <p class="mb-0">Aún no se han registrado animales en el sistema. Haz clic en "Agregar Animal" para comenzar.</p>
+                      </div>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>

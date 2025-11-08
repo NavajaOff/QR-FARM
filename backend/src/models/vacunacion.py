@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 
 class EstadoVacunacion(str, Enum):
-    aplicada = "aplicada"
+    aplicado = "aplicado"
     pendiente = "pendiente"
 
 class Vacunacion:
@@ -12,8 +12,6 @@ class Vacunacion:
                  id: Optional[int] = None,
                  id_animal: Optional[int] = None,
                  nombre_animal: Optional[str] = None,
-                 fecha_inicio: Optional[datetime] = None,
-                 fecha_fin: Optional[datetime] = None,
                  fecha_aplicacion: Optional[datetime] = None,
                  proxima_dosis: Optional[datetime] = None,
                  responsable: Optional[int] = None,
@@ -24,8 +22,6 @@ class Vacunacion:
         self.id = id
         self.id_animal = id_animal
         self.nombre_animal = nombre_animal
-        self.fecha_inicio = fecha_inicio
-        self.fecha_fin = fecha_fin
         self.fecha_aplicacion = fecha_aplicacion
         self.proxima_dosis = proxima_dosis
         self.responsable = responsable
@@ -41,8 +37,6 @@ class Vacunacion:
             id=data.get('id'),
             id_animal=data.get('id_animal'),
             nombre_animal=data.get('nombre_animal'),
-            fecha_inicio=data.get('fecha_inicio'),
-            fecha_fin=data.get('fecha_fin'),
             fecha_aplicacion=data.get('fecha_aplicacion'),
             proxima_dosis=data.get('proxima_dosis'),
             responsable=data.get('responsable'),
@@ -65,8 +59,6 @@ class Vacunacion:
             "id": self.id,
             "id_animal": self.id_animal,
             "nombre_animal": self.nombre_animal,
-            "fecha_inicio": safe_isoformat(self.fecha_inicio),
-            "fecha_fin": safe_isoformat(self.fecha_fin),
             "fecha_aplicacion": safe_isoformat(self.fecha_aplicacion),
             "proxima_dosis": safe_isoformat(self.proxima_dosis),
             "responsable": self.responsable,

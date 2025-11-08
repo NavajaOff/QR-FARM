@@ -149,7 +149,7 @@ export default {
     },
 
     estadoClass(estado) {
-      if (estado === 'aplicada') return 'bg-success';
+      if (estado === 'aplicado') return 'bg-success';
       if (estado === 'pendiente') return 'bg-warning';
       return 'bg-secondary';
     },
@@ -169,7 +169,7 @@ export default {
               <label class="form-label">Animal</label>
               <select id="animal" class="form-select">
                 <option value="">Seleccionar animal...</option>
-                ${this.animales.map(a => `<option value="${a.id}">${a.nombre} (ID: ${a.id})</option>`).join('')}
+                ${this.animales.map(a => `<option value="${a.id}">${a.nombre}</option>`).join('')}
               </select>
             </div>
             <div class="col-12">
@@ -179,13 +179,9 @@ export default {
                 ${this.tiposVacuna.map(t => `<option value="${t.id}">${t.nombre}</option>`).join('')}
               </select>
             </div>
-            <div class="col-6">
+            <div class="col-12">
               <label class="form-label">Fecha Aplicación</label>
               <input id="fechaAplicacion" type="date" class="form-control">
-            </div>
-            <div class="col-6">
-              <label class="form-label">Próxima Dosis</label>
-              <input id="proximaDosis" type="date" class="form-control">
             </div>
             <div class="col-12">
               <label class="form-label">Responsable</label>
@@ -198,7 +194,7 @@ export default {
               <label class="form-label">Estado</label>
               <select id="estado" class="form-select">
                 <option value="pendiente">Pendiente</option>
-                <option value="aplicada">Aplicada</option>
+                <option value="aplicado">Aplicado</option>
               </select>
             </div>
           </div>
@@ -211,20 +207,18 @@ export default {
           const animal = document.getElementById('animal').value;
           const tipoVacuna = document.getElementById('tipoVacuna').value;
           const fechaAplicacion = document.getElementById('fechaAplicacion').value;
-          const proximaDosis = document.getElementById('proximaDosis').value;
           const responsable = document.getElementById('responsable').value;
           const estado = document.getElementById('estado').value;
 
-          if (!animal || !tipoVacuna || !responsable) {
-            Swal.showValidationMessage('Por favor complete todos los campos requeridos');
+          if (!animal || !tipoVacuna || !fechaAplicacion || !responsable ) {
+            Swal.showValidationMessage('Por favor complete todos los campos ');
             return false;
           }
 
           return {
             id_animal: parseInt(animal),
             id_tipo_vacuna: parseInt(tipoVacuna),
-            fecha_aplicacion: fechaAplicacion || null,
-            proxima_dosis: proximaDosis || null,
+            fecha_aplicacion: fechaAplicacion,
             responsable: parseInt(responsable),
             estado: estado
           };
@@ -259,7 +253,7 @@ export default {
               <p><strong>Fecha Aplicación:</strong> ${v.fechaAplicacion || 'No definida'}</p>
               <p><strong>Próxima Dosis:</strong> ${v.proximaDosis || 'No definida'}</p>
               <p><strong>Responsable:</strong> ${v.responsable}</p>
-              <p><strong>Estado:</strong> <span class="badge ${this.estadoClass(v.estado)}">${v.estado}</span></p>
+              <p><strong>Estado:</strong> <span class="badge ${this.estadoClass(v.estado)}">${v.estado === 'aplicado' ? 'Aplicado' : v.estado === 'pendiente' ? 'Pendiente' : v.estado}</span></p>
             </div>
           `,
           confirmButtonColor: '#00d563'
@@ -306,7 +300,7 @@ export default {
               <label class="form-label">Estado</label>
               <select id="estado" class="form-select">
                 <option value="pendiente" ${v.estado === 'pendiente' ? 'selected' : ''}>Pendiente</option>
-                <option value="aplicada" ${v.estado === 'aplicada' ? 'selected' : ''}>Aplicada</option>
+                <option value="aplicado" ${v.estado === 'aplicado' ? 'selected' : ''}>Aplicado</option>
               </select>
             </div>
           </div>
@@ -323,15 +317,15 @@ export default {
           const responsable = document.getElementById('responsable').value;
           const estado = document.getElementById('estado').value;
 
-          if (!animal || !responsable) {
-            Swal.showValidationMessage('Por favor complete los campos requeridos: Animal y Responsable');
+          if (!animal || !fechaAplicacion || !responsable) {
+            Swal.showValidationMessage('Por favor complete los campos requeridos: Animal, Fecha Aplicación y Responsable');
             return false;
           }
 
           return {
             id_animal: parseInt(animal),
             id_tipo_vacuna: tipoVacuna ? parseInt(tipoVacuna) : null,
-            fecha_aplicacion: fechaAplicacion || null,
+            fecha_aplicacion: fechaAplicacion,
             proxima_dosis: proximaDosis || null,
             responsable: parseInt(responsable),
             estado: estado

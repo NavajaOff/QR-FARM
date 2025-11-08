@@ -16,8 +16,6 @@ class VacunacionService:
                     v.id,
                     v.id_animal,
                     g.nombre as nombre_animal,
-                    v.fecha_inicio,
-                    v.fecha_fin,
                     v.fecha_aplicacion,
                     v.proxima_dosis,
                     v.responsable,
@@ -64,8 +62,6 @@ class VacunacionService:
                     v.id,
                     v.id_animal,
                     g.nombre as nombre_animal,
-                    v.fecha_inicio,
-                    v.fecha_fin,
                     v.fecha_aplicacion,
                     v.proxima_dosis,
                     v.responsable,
@@ -106,34 +102,49 @@ class VacunacionService:
     def crear_vacunacion(vacunacion: Vacunacion) -> bool:
         """Crear una nueva vacunación"""
         try:
+            from datetime import timedelta
+            print(f"Service: Creando vacunación con datos: {vacunacion.to_dict()}")
+
+            # Calcular próxima dosis automáticamente (6 meses después de fecha_aplicacion)
+            proxima_dosis = None
+            if vacunacion.fecha_aplicacion:
+                # Convertir string a datetime si es necesario
+                if isinstance(vacunacion.fecha_aplicacion, str):
+                    from datetime import datetime
+                    vacunacion.fecha_aplicacion = datetime.fromisoformat(vacunacion.fecha_aplicacion.replace('Z', '+00:00'))
+                proxima_dosis = vacunacion.fecha_aplicacion + timedelta(days=180)  # 6 meses = 180 días
+                print(f"Service: Próxima dosis calculada: {proxima_dosis}")
+
             conn = get_connection()
             cursor = conn.cursor()
 
             query = """
                 INSERT INTO vacunacion (
-                    id_animal, fecha_inicio, fecha_fin, fecha_aplicacion,
-                    proxima_dosis, responsable, estado, id_tipo_vacuna
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    id_animal, fecha_aplicacion, proxima_dosis, responsable, estado, id_tipo_vacuna
+                ) VALUES (%s, %s, %s, %s, %s, %s)
             """
 
             values = (
                 vacunacion.id_animal,
-                vacunacion.fecha_inicio,
-                vacunacion.fecha_fin,
                 vacunacion.fecha_aplicacion,
-                vacunacion.proxima_dosis,
+                proxima_dosis,
                 vacunacion.responsable,
                 vacunacion.estado.value if hasattr(vacunacion.estado, 'value') else str(vacunacion.estado),
                 vacunacion.id_tipo_vacuna
             )
 
+            print(f"Service: Ejecutando query: {query}")
+            print(f"Service: Valores: {values}")
             cursor.execute(query, values)
             conn.commit()
+            print(f"Service: Vacunación creada exitosamente")
 
             return True
 
         except Exception as e:
-            print(f"Error creando vacunación: {str(e)}")
+            print(f"Service: Error creando vacunación: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return False
         finally:
             if 'cursor' in locals():
@@ -151,8 +162,6 @@ class VacunacionService:
             query = """
                 UPDATE vacunacion SET
                     id_animal = %s,
-                    fecha_inicio = %s,
-                    fecha_fin = %s,
                     fecha_aplicacion = %s,
                     proxima_dosis = %s,
                     responsable = %s,
@@ -163,8 +172,6 @@ class VacunacionService:
 
             values = (
                 vacunacion.id_animal,
-                vacunacion.fecha_inicio,
-                vacunacion.fecha_fin,
                 vacunacion.fecha_aplicacion,
                 vacunacion.proxima_dosis,
                 vacunacion.responsable,
