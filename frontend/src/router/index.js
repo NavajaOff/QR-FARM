@@ -92,23 +92,36 @@ const routes = [
     meta: { requiresAuth: true, role: 'usuario' },
     children: [
       {
-        path: 'dashboard',
-        name: 'DashboardUsuario',
+        path: '',
+        redirect: { name: 'InicioUsuario' }
+      },
+      {
+        path: 'inicio',
+        name: 'InicioUsuario',
         component: () => import('../views/user/DashboardContent.vue')
       },
       {
-        path: 'gestionar-animales',
-        name: 'GestionarAnimalesUsuario',
+        path: 'dashboard',
+        redirect: { name: 'InicioUsuario' }
+      },
+      {
+        path: 'ganado',
+        name: 'GanadoUsuario',
         component: () => import('../views/user/GestionarAnimalesUsuario.vue')
       },
       {
-        path: 'mi-ganado',
-        redirect: { name: 'GestionarAnimalesUsuario' }
+        path: 'gestionar-animales',
+        redirect: { name: 'GanadoUsuario' }
       },
       {
-        path: 'inventario',
-        name: 'InventarioUsuario',
-        component: () => import('../views/user/InventarioUsuario.vue')
+        path: 'potreros',
+        name: 'PotrerosUsuario',
+        component: () => import('../views/user/GestionarPotrerosUsuario.vue')
+      },
+      {
+        path: 'reportes',
+        name: 'ReportesUsuario',
+        component: () => import('../views/user/ReportesUsuario.vue')
       },
       {
         path: 'registro-vacunacion',

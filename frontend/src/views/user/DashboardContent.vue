@@ -2,7 +2,7 @@
   <div class="container-fluid py-4">
     <div class="row">
       <div class="col-12">
-        <h2 class="mb-4">Panel de Usuario</h2>
+        <h2 class="mb-4">Inicio</h2>
 
         <!-- Estadísticas del usuario -->
         <div class="row g-4 mb-4">
@@ -18,9 +18,9 @@
           <div class="col-md-4">
             <div class="card stats-card border-info">
               <div class="card-body text-center">
-                <i class="fas fa-boxes fa-2x text-info mb-2"></i>
-                <h4 class="card-title">{{ estadisticas.inventario }}</h4>
-                <p class="card-text text-muted">Items en Inventario</p>
+                <i class="fas fa-map-marked-alt fa-2x text-info mb-2"></i>
+                <h4 class="card-title">{{ estadisticas.potreros }}</h4>
+                <p class="card-text text-muted">Potreros</p>
               </div>
             </div>
           </div>
@@ -42,19 +42,24 @@
           </div>
           <div class="card-body">
             <div class="row g-3">
-              <div class="col-md-4">
-                <router-link class="btn btn-success w-100" to="/user/gestionar-animales">
+              <div class="col-md-4 col-lg-3">
+                <router-link class="btn btn-success w-100" to="/user/ganado">
                   <i class="fas fa-plus-circle me-2"></i>Agregar Ganado
                 </router-link>
               </div>
-              <div class="col-md-4">
-                <router-link class="btn btn-info w-100" to="/user/inventario">
-                  <i class="fas fa-boxes me-2"></i>Ver Inventario
+              <div class="col-md-4 col-lg-3">
+                <router-link class="btn btn-info w-100" to="/user/potreros">
+                  <i class="fas fa-map-marked-alt me-2"></i>Ver Potreros
                 </router-link>
               </div>
-              <div class="col-md-4">
+              <div class="col-md-4 col-lg-3">
                 <router-link class="btn btn-warning w-100" to="/user/qr">
                   <i class="fas fa-qrcode me-2"></i>Escanear QR
+                </router-link>
+              </div>
+              <div class="col-md-4 col-lg-3">
+                <router-link class="btn btn-outline-primary w-100" to="/user/reportes">
+                  <i class="fas fa-chart-line me-2"></i>Ver Reportes
                 </router-link>
               </div>
             </div>
@@ -85,7 +90,7 @@
 </template>
 
 <script>
-import { ganadoAPI, userAPI } from '../../services/api.js';
+import { ganadoAPI, potreroAPI, userAPI, vacunacionAPI } from '../../services/api.js';
 import authService from '../../services/authService.js';
 
 export default {
@@ -94,7 +99,7 @@ export default {
     return {
       estadisticas: {
         ganado: 0,
-        inventario: 0,
+        potreros: 0,
         vacunaciones: 0
       },
       userInfo: {
@@ -118,22 +123,21 @@ export default {
 
     async cargarEstadisticas() {
       try {
-        // Cargar estadísticas de ganado del usuario
-        const ganadoResponse = await ganadoAPI.getAll();
+        const [ganadoResponse, potreroResponse, vacunacionResponse] = await Promise.all([
+          ganadoAPI.getAll(),
+          potreroAPI.getAll(),
+          vacunacionAPI.getAll()
+        ]);
+
         this.estadisticas.ganado = ganadoResponse.data?.data?.length || 0;
-
-        // Inventario simulado
-        this.estadisticas.inventario = Math.floor(Math.random() * 50) + 10;
-
-        // Vacunaciones simuladas
-        this.estadisticas.vacunaciones = Math.floor(Math.random() * 20) + 5;
+        this.estadisticas.potreros = potreroResponse.data?.data?.length || 0;
+        this.estadisticas.vacunaciones = vacunacionResponse.data?.data?.length || 0;
       } catch (error) {
         console.error('Error cargando estadísticas:', error);
-        // En caso de error, mostrar valores por defecto
         this.estadisticas = {
-          ganado: 8,
-          potreros: 3,
-          salud: 90
+          ganado: this.estadisticas.ganado || 0,
+          potreros: this.estadisticas.potreros || 0,
+          vacunaciones: this.estadisticas.vacunaciones || 0
         };
       }
     }

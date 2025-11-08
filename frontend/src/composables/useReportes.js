@@ -1,5 +1,6 @@
 import { ref } from 'vue'
-import { reportAPI, authAPI } from '../services/api.js'
+import { reportAPI } from '../services/api.js'
+import authService from '../services/authService.js'
 
 export function useReportes() {
   const resumen = ref(null)
@@ -54,15 +55,12 @@ export function useReportes() {
         throw new Error('No hay credenciales almacenadas para renovar el token')
       }
 
-      const response = await authAPI.login({ email, password })
-      if (response.data?.status === 'success') {
-        localStorage.setItem('token', response.data.token)
-        localStorage.setItem('user', JSON.stringify(response.data.user))
-        localStorage.setItem('userRole', response.data.user?.rol?.rol || 'usuario')
+      const result = await authService.login({ email, password })
+      if (result?.success) {
         return
       }
 
-      throw new Error(response.data?.message || 'No fue posible renovar el token')
+      throw new Error(result?.message || 'No fue posible renovar el token')
     } catch (error) {
       console.warn('[useReportes] No se pudo renovar el token automáticamente:', error.message)
       throw error

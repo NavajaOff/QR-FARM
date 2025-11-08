@@ -137,7 +137,7 @@ class AuthService {
     if (this.isAdmin()) {
       return '/admin/dashboard';
     } else if (this.isUser()) {
-      return '/user/dashboard';
+      return '/user/inicio';
     }
     return '/login';
   }

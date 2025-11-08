@@ -16,7 +16,7 @@
           <i class="fas fa-user fa-lg me-2"></i>
           <span class="fw-bold">{{ userName }}</span>
           <span class="badge bg-info ms-2">Usuario</span>
-          <router-link class="navbar-brand mx-auto d-flex align-items-center" to="/user/dashboard">
+          <router-link class="navbar-brand mx-auto d-flex align-items-center" to="/user/inicio">
             <span class="fw-bold fs-2">QR FARM</span>
             <i class="fas fa-cow ms-2 logo-icon"></i>
           </router-link>
@@ -30,19 +30,22 @@
     <!-- Sidebar -->
     <div class="d-none d-md-block user-sidebar">
       <nav class="nav flex-column">
-        <router-link class="nav-link" to="/user/dashboard">
-          <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+        <router-link class="nav-link" to="/user/inicio">
+          <i class="fas fa-home me-2"></i>Inicio
         </router-link>
-        <router-link class="nav-link" to="/user/gestionar-animales">
+        <router-link class="nav-link" to="/user/ganado">
           <i class="fas fa-cow me-2"></i>Mi Ganado
         </router-link>
-        <router-link class="nav-link" to="/user/inventario">
-          <i class="fas fa-boxes me-2"></i>Inventario
+        <router-link class="nav-link" to="/user/potreros">
+          <i class="fas fa-map-marked-alt me-2"></i>Potreros
+        </router-link>
+        <router-link class="nav-link" to="/user/reportes">
+          <i class="fas fa-chart-line me-2"></i>Reportes
         </router-link>
         <router-link class="nav-link" to="/user/registro-vacunacion">
           <i class="fas fa-syringe me-2"></i>Vacunación
         </router-link>
-        <router-link class="nav-link active" to="/user/perfil">
+        <router-link class="nav-link" to="/user/perfil">
           <i class="fas fa-user-edit me-2"></i>Perfil
         </router-link>
         <router-link class="nav-link" to="/user/qr">
@@ -87,19 +90,30 @@ export default {
 </script>
 
 <style scoped>
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1030;
+  background: #1f5c38 !important;
+}
+
 .user-layout {
   min-height: 100vh;
+  padding-top: 76px;
 }
 
 .user-sidebar {
   position: fixed;
-  top: 70px;
+  top: 76px;
   left: 0;
   width: 250px;
-  height: calc(100vh - 70px);
+  height: calc(100vh - 76px);
   background-color: #343a40;
   padding: 1rem;
   overflow-y: auto;
+  margin-top: -1px;
 }
 
 .user-sidebar .nav-link {
@@ -122,8 +136,14 @@ export default {
 }
 
 .user-main-content {
-  margin-left: 250px;
-  padding-top: 2rem;
+  margin-left: 0;
+  padding-top: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .user-main-content {
+    margin-left: 250px;
+  }
 }
 
 @media (max-width: 767px) {

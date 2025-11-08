@@ -15,8 +15,11 @@ export function usePotreros() {
       loading.value = true
       error.value = null
       const response = await potreroAPI.getAll()
-      if (response.data?.status === 'success') {
-        potreros.value = response.data.data
+      const payload = response.data
+      if (payload?.success || payload?.status === 'success') {
+        potreros.value = payload.data || []
+      } else {
+        error.value = payload?.message || 'No fue posible obtener los potreros'
       }
     } catch (err) {
       error.value = err.message

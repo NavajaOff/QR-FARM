@@ -9,44 +9,35 @@
         </div>
 
        <div class="row">
-         <div class="col-md-8">
+        <div class="col-md-8">
                 <div class="card">
                   <div class="card-header">
                     <h5 class="mb-0">Información Personal</h5>
                   </div>
-                  <div class="card-body">
+                  <div class="card-body" v-if="!mostrarResumen">
                     <form @submit.prevent="updateProfile">
                       <div class="row g-3">
                         <div class="col-md-6">
-                          <label class="form-label">Primer Nombre</label>
-                          <input type="text" class="form-control" v-model="profile.primerNombre" required>
+                          <input type="text" class="form-control" v-model="profile.nombreCompleto" placeholder="Nombre completo" required>
                         </div>
                         <div class="col-md-6">
-                          <label class="form-label">Segundo Nombre</label>
-                          <input type="text" class="form-control" v-model="profile.segundoNombre">
+                          <input type="email" class="form-control" v-model="profile.email" placeholder="Email" required>
                         </div>
                         <div class="col-md-6">
-                          <label class="form-label">Primer Apellido</label>
-                          <input type="text" class="form-control" v-model="profile.primerApellido" required>
+                          <input type="tel" class="form-control" v-model="profile.telefono" placeholder="Teléfono">
                         </div>
                         <div class="col-md-6">
-                          <label class="form-label">Segundo Apellido</label>
-                          <input type="text" class="form-control" v-model="profile.segundoApellido">
-                        </div>
-                        <div class="col-md-6">
-                          <label class="form-label">Email</label>
-                          <input type="email" class="form-control" v-model="profile.email" required readonly>
-                        </div>
-                        <div class="col-md-6">
-                          <label class="form-label">Teléfono</label>
-                          <input type="tel" class="form-control" v-model="profile.telefono">
+                          <input type="text" class="form-control" :value="formatDate(profile.fechaCreacion)" readonly>
                         </div>
                       </div>
 
-                      <div class="mt-4">
+                      <div class="mt-4 d-flex gap-2">
                         <button type="submit" class="btn btn-primary" :disabled="loading">
                           <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-                          Actualizar Perfil
+                          Guardar cambios
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" @click="cancelarEdicion" :disabled="loading">
+                          Cancelar
                         </button>
                       </div>
 
@@ -54,6 +45,29 @@
                         {{ message }}
                       </div>
                     </form>
+                  </div>
+                  <div class="card-body" v-else>
+                    <div class="row g-3">
+                      <div class="col-md-6">
+                        <strong>Nombre completo</strong>
+                        <p class="mb-0">{{ profile.nombreCompleto || 'Sin información' }}</p>
+                      </div>
+                      <div class="col-md-6">
+                        <strong>Email</strong>
+                        <p class="mb-0">{{ profile.email || 'Sin información' }}</p>
+                      </div>
+                      <div class="col-md-6">
+                        <strong>Teléfono</strong>
+                        <p class="mb-0">{{ profile.telefono || 'Sin información' }}</p>
+                      </div>
+                      <div class="col-md-6">
+                        <strong>Fecha de creación</strong>
+                        <p class="mb-0">{{ formatDate(profile.fechaCreacion) }}</p>
+                      </div>
+                    </div>
+                    <div class="mt-4">
+                      <button class="btn btn-primary" @click="mostrarResumen = false">Actualizar perfil</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -69,74 +83,37 @@
                       <span class="badge bg-info ms-2">{{ userRole }}</span>
                     </div>
                     <div class="mb-3">
-                      <strong>Estado:</strong>
-                      <span class="badge bg-success ms-2">Activo</span>
-                    </div>
-                    <div class="mb-3">
-                      <strong>Fecha de Registro:</strong>
-                      <span class="text-muted">{{ formatDate(user?.persona?.fecha_creacion) }}</span>
+                      <strong>Fecha de creación:</strong>
+                      <span class="text-muted">{{ formatDate(profile.fechaCreacion) }}</span>
                     </div>
                   </div>
                 </div>
-
-                <div class="card mt-3">
-                  <div class="card-header">
-                    <h5 class="mb-0">Cambiar Contraseña</h5>
-                  </div>
-                  <div class="card-body">
-                    <form @submit.prevent="changePassword">
-                      <div class="mb-3">
-                        <label class="form-label">Contraseña Actual</label>
-                        <input type="password" class="form-control" v-model="passwordData.current" required>
-                      </div>
-                      <div class="mb-3">
-                        <label class="form-label">Nueva Contraseña</label>
-                        <input type="password" class="form-control" v-model="passwordData.new" required>
-                      </div>
-                      <div class="mb-3">
-                        <label class="form-label">Confirmar Nueva Contraseña</label>
-                        <input type="password" class="form-control" v-model="passwordData.confirm" required>
-                      </div>
-                      <button type="submit" class="btn btn-warning w-100" :disabled="passwordLoading">
-                        <span v-if="passwordLoading" class="spinner-border spinner-border-sm me-2"></span>
-                        Cambiar Contraseña
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
+               </div>
+         </div>
+       </div>
+     </div>
+   </div>
+ </template>
 
 <script>
 import authService from '../../services/authService.js';
+import { authAPI } from '../../services/api.js';
 
 export default {
   name: 'PerfilUsuario',
   data() {
     return {
       userName: '',
-      user: null,
       userRole: '',
       loading: false,
-      passwordLoading: false,
       message: '',
       messageType: '',
+      mostrarResumen: true,
       profile: {
-        primerNombre: '',
-        segundoNombre: '',
-        primerApellido: '',
-        segundoApellido: '',
+        nombreCompleto: '',
         email: '',
-        telefono: ''
-      },
-      passwordData: {
-        current: '',
-        new: '',
-        confirm: ''
+        telefono: '',
+        fechaCreacion: ''
       }
     };
   },
@@ -146,32 +123,38 @@ export default {
       return;
     }
 
-    this.user = authService.getUser();
     this.userRole = authService.getRole();
-    this.userName = this.user?.persona?.primer_nombre || 'Usuario';
+    this.userName = authService.getUser()?.persona?.primer_nombre || 'Usuario';
 
-    this.loadProfile();
+    this.fetchProfile();
   },
 
   watch: {
-    '$route'(to, from) {
-      // Forzar recarga cuando se navega a esta ruta
+    '$route'(to) {
       if (to.name === 'PerfilUsuario') {
-        this.loadProfile();
+        this.fetchProfile();
       }
     }
   },
   methods: {
-    loadProfile() {
-      if (this.user?.persona) {
-        this.profile = {
-          primerNombre: this.user.persona.primer_nombre || '',
-          segundoNombre: this.user.persona.segundo_nombre || '',
-          primerApellido: this.user.persona.primer_apellido || '',
-          segundoApellido: this.user.persona.segundo_apellido || '',
-          email: this.user.persona.email || '',
-          telefono: this.user.persona.telefono || ''
-        };
+    async fetchProfile() {
+      try {
+        const response = await authAPI.getProfile();
+        if (response.data?.status === 'success') {
+          const data = response.data.data;
+          this.profile = {
+            nombreCompleto: data.nombre_completo || '',
+            email: data.email || '',
+            telefono: data.telefono || '',
+            fechaCreacion: data.fecha_creacion || ''
+          };
+          this.mostrarResumen = true; // Mostrar el resumen por defecto
+        } else {
+          throw new Error(response.data?.message || 'No se pudo cargar el perfil');
+        }
+      } catch (error) {
+        this.message = error.message || 'Error al cargar el perfil';
+        this.messageType = 'error';
       }
     },
 
@@ -180,53 +163,37 @@ export default {
       this.message = '';
 
       try {
-        // Aquí iría la llamada a la API para actualizar el perfil
-        // Por ahora solo simulamos
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const payload = {
+          nombre_completo: this.profile.nombreCompleto,
+          email: this.profile.email,
+          telefono: this.profile.telefono
+        };
 
-        this.message = 'Perfil actualizado exitosamente';
-        this.messageType = 'success';
+        const response = await authAPI.updateProfile(payload);
+        if (response.data?.status === 'success') {
+          this.message = response.data?.message || 'Perfil actualizado exitosamente';
+          this.messageType = 'success';
+          await this.fetchProfile();
+          this.mostrarResumen = true; // Volver a mostrar el resumen después de la actualización
+        } else {
+          throw new Error(response.data?.message || 'No se pudo actualizar el perfil');
+        }
       } catch (error) {
-        this.message = 'Error al actualizar el perfil';
+        this.message = error.message || 'Error al actualizar el perfil';
         this.messageType = 'error';
       } finally {
         this.loading = false;
       }
     },
 
-    async changePassword() {
-      if (this.passwordData.new !== this.passwordData.confirm) {
-        this.message = 'Las contraseñas no coinciden';
-        this.messageType = 'error';
-        return;
-      }
-
-      this.passwordLoading = true;
-      this.message = '';
-
-      try {
-        // Aquí iría la llamada a la API para cambiar contraseña
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        this.message = 'Contraseña cambiada exitosamente';
-        this.messageType = 'success';
-        this.passwordData = { current: '', new: '', confirm: '' };
-      } catch (error) {
-        this.message = 'Error al cambiar la contraseña';
-        this.messageType = 'error';
-      } finally {
-        this.passwordLoading = false;
-      }
+    cancelarEdicion() {
+      this.mostrarResumen = true;
+      this.fetchProfile(); // Recargar los datos para mostrar el resumen actualizado
     },
 
     formatDate(dateString) {
       if (!dateString) return 'N/A';
       return new Date(dateString).toLocaleDateString();
-    },
-
-    logout() {
-      authService.logout();
-      this.$router.push('/login');
     }
   }
 };

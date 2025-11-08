@@ -210,6 +210,112 @@ class UsuarioController:
             }), 500
 
     @staticmethod
+    def obtener_perfil_actual():
+        try:
+            usuario = getattr(g, 'current_user', None)
+            if not usuario:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'No autenticado'
+                }), 401
+
+            persona = usuario.persona.to_dict() if usuario.persona else {}
+            data = {
+                'nombre_completo': persona.get('nombre_completo') or '',
+                'email': persona.get('email') or '',
+                'telefono': persona.get('telefono'),
+                'fecha_creacion': persona.get('fecha_creacion')
+            }
+
+            return jsonify({
+                'status': 'success',
+                'data': data
+            }), 200
+
+        except Exception as e:
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
+
+    @staticmethod
+    def actualizar_perfil_actual():
+        try:
+            usuario = getattr(g, 'current_user', None)
+            if not usuario:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'No autenticado'
+                }), 401
+
+            data = request.get_json() or {}
+
+            nombre_completo = (data.get('nombre_completo') or '').strip()
+            email = (data.get('email') or '').strip()
+            telefono = data.get('telefono')
+
+            if not nombre_completo or not email:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Nombre completo y email son obligatorios'
+                }), 400
+
+            import re
+            if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
+                return jsonify({
+                    'status': 'error',
+                    'message': 'El formato del email no es válido'
+                }), 400
+
+            partes = nombre_completo.split()
+            primer_nombre = partes[0]
+            primer_apellido = partes[-1] if len(partes) > 1 else (usuario.persona.primer_apellido if usuario.persona else '')
+            segundo_nombre = ' '.join(partes[1:-1]) if len(partes) > 2 else (partes[1] if len(partes) == 2 else usuario.persona.segundo_nombre if usuario.persona else None)
+            segundo_apellido = usuario.persona.segundo_apellido if usuario.persona else None
+
+            persona = usuario.persona
+            if persona:
+                persona.primer_nombre = primer_nombre
+                persona.primer_apellido = primer_apellido
+                persona.segundo_nombre = segundo_nombre
+                persona.segundo_apellido = segundo_apellido
+                persona.email = email
+                persona.telefono = telefono
+            else:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Perfil de persona no encontrado'
+                }), 404
+
+            usuario.persona = persona
+
+            if UsuarioService.actualizar_usuario_completo(usuario.id, usuario):
+                actualizado = UsuarioService.obtener_usuario(usuario.id, incluir_inactivos=True)
+                g.current_user = actualizado
+                persona_dict = actualizado.persona.to_dict() if actualizado and actualizado.persona else {}
+                return jsonify({
+                    'status': 'success',
+                    'message': 'Perfil actualizado exitosamente',
+                    'data': {
+                        'nombre_completo': persona_dict.get('nombre_completo') or '',
+                        'email': persona_dict.get('email') or '',
+                        'telefono': persona_dict.get('telefono'),
+                        'fecha_creacion': persona_dict.get('fecha_creacion')
+                    }
+                }), 200
+
+            return jsonify({
+                'status': 'error',
+                'message': 'No se pudo actualizar el perfil'
+            }), 400
+
+        except Exception as e:
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
+
+    @staticmethod
     def actualizar_usuario(id):
         try:
             data = request.get_json()
