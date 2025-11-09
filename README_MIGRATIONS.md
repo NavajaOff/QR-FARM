@@ -1,105 +1,82 @@
-📚 Guía de Migraciones - QR-FARM
-🔄 Sistema de Migraciones con Flask-Migrate
+# 📚 Guía de Migraciones y Seeders Cifrados - QR-FARM
+# 🔄 Basado en Flask-Migrate + Seeders Seguros Fernet
 
-El proyecto QR-FARM utiliza Flask-Migrate (basado en Alembic y SQLAlchemy) para crear automáticamente la estructura de la base de datos a partir de las migraciones incluidas en el repositorio.
+## 1. Preparar el entorno local
 
+1. Clona el repositorio y sitúate en la raíz del proyecto.
+2. Crea el entorno virtual:
+   - Windows: `python -m venv venv`
+   - macOS/Linux: `python3 -m venv venv`
+3. Activa el entorno virtual.
+4. Instala dependencias del backend:
+   ```
+   cd backend
+   pip install -r requirements.txt
+   ```
+5. Copia la configuración de ejemplo desde la raíz del proyecto:
+   - Windows: `copy .env.example .env`
+   - macOS/Linux: `cp .env.example .env`
+6. Genera tu `SECRET_KEY` personal (se actualiza el `.env` local, nunca el ejemplo):
+   ```
+   flask --app app generate-secret-key
+   ```
 
-⚙Configuración del Entorno (.env)
+## 2. Base de datos y migraciones
 
-Antes de iniciar el proyecto, cada desarrollador debe tener su propio archivo .env en la carpeta principal del proyecto (no en backend/).
-Para ello:
+1. Crea la base de datos vacía con el nombre indicado en `.env` (por defecto `gestion_ganadera`).
+2. Aplica todas las migraciones versionadas:
+   ```
+   flask --app app db upgrade -d backend/src/database/migrations
+   ```
+3. Verifica en MySQL Workbench (u otra herramienta) que:
+   - La tabla `alembic_version` contiene la última revisión.
+   - Las tablas `roles`, `personas`, `potrero`, `ganado`, `vacunacion`, etc. fueron creadas.
 
-python -m venv venv
+## 3. Generar y compartir la TEAM_KEY
 
+1. Solo el líder del equipo ejecuta:
+   ```
+   flask --app app team:generate_key
+   ```
+2. La clave generada (`token_hex(32)`) se comparte manualmente por un canal seguro (gestor de contraseñas, Slack privado, Signal, etc.).
+3. Cada integrante copia esa `TEAM_KEY` en su archivo `.env` local. **Nunca** hagas commit de `.env`.
 
-# primero que todo instala todo lo necesario para develop:
+## 4. Exportar datos base cifrados
 
-cd backend
+1. Asegúrate de que la base de datos contenga los datos iniciales que deseas compartir (roles, personas, usuarios, potreros, ganado, vacunaciones, catálogos).
+2. Ejecuta:
+   ```
+   flask --app app seed:secure_export
+   ```
+3. Se generará `backend/src/database/seeders/secure_seed.bin`. Sube este archivo al repositorio: está cifrado con Fernet y no expone datos en texto plano.
+4. Comprueba que el archivo no sea legible abriéndolo con un editor hexadecimal o cualquier visor: debe verse como datos binarios.
 
-pip install -r requirements.txt
+## 5. Importar datos en otras máquinas
 
-# Duplica el archivo de ejemplo:
+1. Cada integrante coloca la misma `TEAM_KEY` en su `.env`.
+2. Ejecuta:
+   ```
+   flask --app app seed:secure_import
+   ```
+3. El script realiza inserciones idempotentes (`ON DUPLICATE KEY UPDATE`) para evitar duplicados. Revisa que los datos se hayan creado consultando las tablas en MySQL Workbench.
 
-cp .env.example .env
+## 6. Rotación y mantenimiento
 
-# Genera una clave secreta automáticamente:
+- Si sospechas que la `TEAM_KEY` se filtró:
+  1. Exporta con la clave actual para no perder los datos.
+  2. Genera una nueva clave con `flask --app app team:generate_key`.
+  3. Distribuye la nueva clave de forma segura.
+  4. Vuelve a exportar con la clave renovada y sube el `secure_seed.bin` actualizado.
+- Cada vez que actualices el script o la estructura de datos, repite el proceso de exportar y avisar al equipo.
 
-flask --app app generate-secret-key
+## 7. Validaciones rápidas
 
-# importante este comando para generar la key se tiene que ejecutar en backend:
+- `flask --help` debe listar los comandos:
+  - `seed:secure_export`
+  - `seed:secure_import`
+  - `team:generate_key`
+- `secure_seed.bin` debe existir y estar cifrado (contenido ilegible).
+- La tabla `alembic_version` debe tener la última revisión después de ejecutar `db upgrade`.
 
- cd backend
+Con este flujo cada integrante puede reconstruir la base de datos de forma segura y consistente 🚀
 
-
-🛠 Aplicar Migraciones
-
-Las migraciones ya están creadas y versionadas dentro del proyecto.
-Cada integrante solo debe aplicarlas localmente para generar las tablas.
-
-Ejecuta este comando:
-
-alembic -c alembic.ini upgrade head
-
-⚠ Importante: antes de ejecutar ese comando crea la base de datos con el nombre que sale en el example
-
-# este comando hara es agregar todas las tablas con los datos importantes para que funcione el proyecto y ya solo seria correr develop
-
-
-# si vas a aplicar nuevas migraciones:
-
-alembic -c alembic.ini revision --autogenerate -m "Descripción del cambio"
-
-# si vas a actualizar tus migraciones:
-
-alembic -c alembic.ini upgrade head
-
-# ahora inicializamos el backend (esto dentro de develop):
-
-python app.py
-
-
-# despues inicia el frontend:
-
-cd frontend
-
-# y instala el vite
-
-npm install
-
-
-# si al ejecutar el backend dice que no se puede crear el usuario admin ejecuta este comando:
-
-pip install bcrypt==4.0.1 passlib==1.7.4 --force-reinstall
-
-# despues vuelve a correr el backend, esto hara que se pueda crear el usuario admin correctamente
-
-
-
-🧩 Flujo de Trabajo del Equipo
-
-Cuando un integrante clona el repositorio o actualiza su entorno:
-
-# git pull origin develop
-
-# 
-
-
-Esto asegura que tu base de datos esté sincronizada con la estructura más reciente.
-
-
-❌ No hagas esto:
-
-No crees nuevas migraciones manualmente si no cambiaste los modelos.
-
-No edites las migraciones ya aplicadas.
-
-🧠 Resumen Final
-
-El archivo .env se crea a partir de .env.example y se genera la clave con flask --app backend/app.py secret.
-
-Las migraciones ya están incluidas en el proyecto.
-
-Cada integrante solo debe ejecutar un comando para generar la base de datos y sus tablas:
-
-
-Con eso, el entorno queda listo para trabajar 🚀

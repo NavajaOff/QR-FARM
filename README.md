@@ -44,7 +44,9 @@ QR-FARM es una plataforma integral para la gestión ganadera que combina un back
 1. **Backend**
    - Crear y activar un entorno virtual en `backend/`.
    - Instalar dependencias con `pip install -r requirements.txt`.
-   - Configurar el archivo `.env` en la raíz del proyecto con las variables de base de datos y `SECRET_KEY`.
+   - Copiar el archivo de ejemplo `cp .env.example .env` (o `copy .env.example .env` en Windows) desde la raíz del proyecto.
+   - Generar una `SECRET_KEY` personal ejecutando `flask --app app generate-secret-key` dentro de `backend/`.
+   - Aplicar las migraciones con `flask --app app db upgrade -d backend/src/database/migrations`.
    - Ejecutar `python app.py` para iniciar el servidor Flask con SocketIO en `http://localhost:5000`.
 
 2. **Frontend**
@@ -72,4 +74,29 @@ QR-FARM es una plataforma integral para la gestión ganadera que combina un back
 - Añadir manejo de roles granular en el frontend (guardas de ruta) y el backend (autorización detallada).
 - Mejorar la gestión de errores globales mostrando mensajes consistentes en la interfaz.
 - Documentar los esquemas de base de datos y los contratos de la API para facilitar integraciones futuras.
+
+## Migraciones y Seeders Cifrados
+
+- **Inicializar el entorno**  
+  - Clona el repositorio y crea tu entorno virtual.  
+  - Copia `.env.example` a `.env` y rellena credenciales de base de datos.  
+  - Genera tu `SECRET_KEY` personal con `flask --app app generate-secret-key` desde `backend/`.  
+  - Ejecuta `flask --app app db upgrade -d backend/src/database/migrations` para aplicar las migraciones.
+
+- **Clave del equipo (`TEAM_KEY`)**  
+  - Solo el líder del equipo ejecuta `flask --app app team:generate_key` para generar una clave hex segura (`token_hex(32)`).  
+  - Comparte la `TEAM_KEY` con el equipo usando un canal seguro (gestor de contraseñas, Slack privado, Signal, etc.).  
+  - Cada integrante agrega esa `TEAM_KEY` a su archivo `.env`.
+
+- **Exportar e importar datos base**  
+  - Con datos de referencia en la base, ejecuta `flask --app app seed:secure_export` para crear `backend/src/database/seeders/secure_seed.bin`.  
+  - Sube el archivo `secure_seed.bin` al repositorio: está cifrado y no expone datos legibles sin la `TEAM_KEY`.  
+  - En otra máquina, coloca la misma `TEAM_KEY` en `.env` y ejecuta `flask --app app seed:secure_import` para poblar la base de datos sin duplicados.
+
+- **Verificación y mantenimiento**  
+  - Revisa que la tabla `alembic_version` contenga la última migración y que las tablas claves (`roles`, `personas`, `potrero`, `ganado`, `vacunacion`, etc.) tengan datos.  
+  - Confirma que `secure_seed.bin` existe y no es legible en texto plano.  
+  - Si la `TEAM_KEY` se expone, genera una nueva, comparte la actualización y vuelve a cifrar los datos con `seed:secure_export`.
+
+Estas herramientas sustituyen los seeders en texto plano y permiten mantener datos iniciales consistentes sin comprometer información sensible.
 

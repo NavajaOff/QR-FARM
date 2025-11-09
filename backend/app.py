@@ -18,6 +18,7 @@ from src.services.usuario_service import UsuarioService
 from src.services.animal_service import GanadoService
 from src.services.potrero_service import PotreroService
 from src.services.vacunacion_service import VacunacionService
+from src.cli.secure_seed import COMMANDS as SECURE_SEED_COMMANDS
 from src.routes.potrero_routes import potrero_bp
 from src.routes.usuario_routes import usuario_bp
 from src.routes.animal_routes import animal_bp
@@ -378,6 +379,9 @@ def generate_secret_key():
     print(f"[OK] Nueva SECRET_KEY generada y guardada en .env:")
     print(key)
 
+
+for command in SECURE_SEED_COMMANDS:
+    app.cli.add_command(command)
 
 
 
