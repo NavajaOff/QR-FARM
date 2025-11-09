@@ -62,7 +62,7 @@
                 </router-link>
               </div>
               <div class="col-md-4">
-                <router-link class="btn btn-info w-100" to="/admin/inventario">
+                <router-link class="btn btn-info w-100" to="/admin/reportes">
                   <i class="fas fa-chart-bar me-2"></i>Ver Reportes
                 </router-link>
               </div>
