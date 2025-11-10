@@ -1,7 +1,7 @@
 <template>
   <div class="admin-layout">
     <!-- Header -->
-    <nav class="navbar navbar-dark bg-primary">
+    <nav class="navbar navbar-dark bg-primary" aria-label="Navegación principal de administrador">
       <div class="container-fluid">
         <div class="d-flex align-items-center w-100">
           <button
@@ -29,7 +29,7 @@
 
     <!-- Sidebar -->
     <div class="d-none d-md-block admin-sidebar">
-      <nav class="nav flex-column">
+      <nav class="nav flex-column" aria-label="Menú de navegación de administrador">
         <router-link class="nav-link active" to="/admin/dashboard">
           <i class="fas fa-tachometer-alt me-2"></i>Dashboard
         </router-link>

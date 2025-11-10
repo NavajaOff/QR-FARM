@@ -48,7 +48,8 @@ export default {
         const vacunasResponse = await vacunacionAPI.getAll();
         this.estadisticas.vacunas = vacunasResponse.data?.data?.length || 0;
 
-        // Salud promedio simulada
+        // Salud promedio simulada - usando Math.random() de manera segura para demo
+        // En producción, este valor debería venir de cálculos reales de salud del ganado
         this.estadisticas.salud = Math.floor(Math.random() * 20) + 80;
       } catch (error) {
         console.error('Error cargando estadísticas:', error);

@@ -1,7 +1,7 @@
 <template>
   <div class="user-layout">
     <!-- Header -->
-    <nav class="navbar navbar-dark bg-success">
+    <nav class="navbar navbar-dark bg-success" aria-label="Navegación principal de usuario">
       <div class="container-fluid">
         <div class="d-flex align-items-center w-100">
           <button
@@ -29,7 +29,7 @@
 
     <!-- Sidebar -->
     <div class="d-none d-md-block user-sidebar">
-      <nav class="nav flex-column">
+      <nav class="nav flex-column" aria-label="Menú de navegación de usuario">
         <router-link class="nav-link active" to="/user/dashboard">
           <i class="fas fa-home me-2"></i>Inicio
         </router-link>

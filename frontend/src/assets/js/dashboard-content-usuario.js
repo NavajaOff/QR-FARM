@@ -1,4 +1,4 @@
-import { ganadoAPI, potreroAPI, userAPI, vacunacionAPI } from '../../services/api.js';
+import { ganadoAPI, potreroAPI, vacunacionAPI } from '../../services/api.js';
 import authService from '../../services/authService.js';
 
 /**
