@@ -1,7 +1,7 @@
 <template>
   <div class="admin-layout">
     <!-- Header -->
-    <nav class="navbar navbar-dark bg-primary">
+    <nav class="navbar navbar-dark bg-primary" aria-label="Navegación principal de administrador">
       <div class="container-fluid">
         <div class="d-flex align-items-center w-100">
           <button
@@ -29,7 +29,7 @@
 
     <!-- Sidebar -->
     <div class="d-none d-md-block admin-sidebar">
-      <nav class="nav flex-column">
+      <nav class="nav flex-column" aria-label="Menú de navegación de administrador">
         <router-link class="nav-link active" to="/admin/dashboard">
           <i class="fas fa-tachometer-alt me-2"></i>Dashboard
         </router-link>
@@ -137,248 +137,11 @@
 </template>
 
 <script>
-import authService from '../../services/authService.js';
-import { ganadoAPI, potreroAPI, userAPI } from '../../services/api.js';
+import dashboardAdmin from '../../assets/js/dashboard-admin.js';
 
-export default {
-  name: 'DashboardAdmin',
-  data() {
-    return {
-      userName: '',
-      estadisticas: {
-        usuarios: 0,
-        ganado: 0,
-        potreros: 0,
-        salud: 0
-      }
-    };
-  },
-  mounted() {
-    if (!authService.isAuthenticated() || !authService.isAdmin()) {
-      this.$router.push('/login');
-      return;
-    }
-
-    const user = authService.getUser();
-    this.userName = user?.persona?.primer_nombre || 'Administrador';
-
-    this.cargarEstadisticas();
-  },
-  methods: {
-    async cargarEstadisticas() {
-      try {
-        // Cargar estadísticas de usuarios
-        const usuariosResponse = await userAPI.getAll();
-        this.estadisticas.usuarios = usuariosResponse.data?.data?.length || 0;
-
-        // Cargar estadísticas de ganado
-        const ganadoResponse = await ganadoAPI.getAll();
-        this.estadisticas.ganado = ganadoResponse.data?.data?.length || 0;
-
-        // Cargar estadísticas de potreros
-        const potrerosResponse = await potreroAPI.getAll();
-        this.estadisticas.potreros = potrerosResponse.data?.data?.length || 0;
-
-        // Salud promedio simulada
-        this.estadisticas.salud = Math.floor(Math.random() * 20) + 80;
-      } catch (error) {
-        console.error('Error cargando estadísticas:', error);
-      }
-    },
-
-    logout() {
-      authService.logout();
-      this.$router.push('/login');
-    }
-  }
-};
+export default dashboardAdmin;
 </script>
 
 <style scoped>
-.admin-layout {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.navbar {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  border: none;
-}
-
-.navbar-brand {
-  font-weight: 700;
-  font-size: 1.5rem;
-  color: white !important;
-}
-
-.logo-icon {
-  color: #ffc107;
-}
-
-.admin-sidebar {
-  position: fixed;
-  top: 70px;
-  left: 0;
-  width: 280px;
-  height: calc(100vh - 70px);
-  background: linear-gradient(180deg, #343a40 0%, #495057 100%);
-  padding: 1.5rem 1rem;
-  overflow-y: auto;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-}
-
-.admin-sidebar .nav-link {
-  color: rgba(255, 255, 255, 0.9);
-  padding: 0.875rem 1.25rem;
-  margin-bottom: 0.5rem;
-  border-radius: var(--border-radius);
-  transition: var(--transition);
-  font-weight: 500;
-  position: relative;
-}
-
-.admin-sidebar .nav-link:hover {
-  color: #fff;
-  background-color: rgba(255, 255, 255, 0.15);
-  transform: translateX(5px);
-}
-
-.admin-sidebar .nav-link.active {
-  color: #fff;
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
-}
-
-.admin-sidebar .nav-link i {
-  width: 20px;
-  margin-right: 0.75rem;
-}
-
-.admin-main-content {
-  margin-left: 280px;
-  padding-top: 2rem;
-  background-color: #f8f9fa;
-  min-height: calc(100vh - 70px);
-}
-
-.stats-card {
-  border: none !important;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow);
-  transition: var(--transition);
-  background: white;
-}
-
-.stats-card:hover {
-  transform: translateY(-8px);
-  box-shadow: var(--shadow-lg);
-}
-
-.stats-card .card-body {
-  padding: 2rem 1.5rem;
-}
-
-.stats-card i {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-}
-
-.stats-card h4 {
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-}
-
-.stats-card p {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #6c757d;
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-  border: none;
-  font-weight: 600;
-}
-
-.btn-success {
-  background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
-  border: none;
-  font-weight: 600;
-}
-
-.btn-info {
-  background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%);
-  border: none;
-  font-weight: 600;
-}
-
-.card {
-  border: none;
-  border-radius: var(--border-radius-lg);
-  box-shadow: var(--shadow);
-}
-
-.card-header {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-bottom: 1px solid #dee2e6;
-  font-weight: 600;
-  color: #495057;
-}
-
-h2 {
-  color: #343a40;
-  font-weight: 700;
-  margin-bottom: 2rem;
-}
-
-.alert-info {
-  background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
-  border: 1px solid #b3d9ff;
-  border-radius: var(--border-radius);
-}
-
-@media (max-width: 768px) {
-  .admin-sidebar {
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-  }
-
-  .admin-sidebar.show {
-    transform: translateX(0);
-  }
-
-  .admin-main-content {
-    margin-left: 0 !important;
-  }
-
-  .stats-card .card-body {
-    padding: 1.5rem 1rem;
-  }
-
-  .stats-card h4 {
-    font-size: 1.5rem;
-  }
-
-  .navbar-brand {
-    font-size: 1.25rem;
-  }
-}
-
-@media (max-width: 576px) {
-  .container-fluid {
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
-  }
-
-  .btn {
-    padding: 0.5rem 1rem;
-    font-size: 0.8rem;
-  }
-
-  .card-body .row .col-md-4 {
-    margin-bottom: 1rem;
-  }
-}
+@import '../../assets/css/dashboard-admin.css';
 </style>

@@ -221,11 +221,8 @@ class PotreroService:
                 if 'T' in value:
                     value = value.split('T')[0]
                 # Asegurar que sea formato YYYY-MM-DD
-                if len(value) == 10 and value.count('-') == 2:
-                    pass  # Ya está en formato correcto
-                else:
-                    # Si hay algún problema, mantener el valor original
-                    pass
+                # Si no cumple el formato esperado, mantener el valor original sin cambios
+                # Esta validación se elimina porque ambos bloques hacen lo mismo (pass)
             # Para el campo estado, asegurar que sea válido para el enum
             elif key == 'estado':
                 # Los valores válidos del enum son: 'disponible', 'ocupado', 'limpieza'
