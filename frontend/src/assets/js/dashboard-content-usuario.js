@@ -1,6 +1,10 @@
 import { ganadoAPI, potreroAPI, userAPI, vacunacionAPI } from '../../services/api.js';
 import authService from '../../services/authService.js';
 
+/**
+ * Componente DashboardContent para usuarios
+ * Maneja la lógica del dashboard de usuarios
+ */
 export default {
   name: 'DashboardContent',
   data() {
@@ -21,6 +25,9 @@ export default {
     this.cargarEstadisticas();
   },
   methods: {
+    /**
+     * Carga los datos del usuario actual
+     */
     cargarDatosUsuario() {
       const user = authService.getUser();
       if (user && user.persona) {
@@ -29,6 +36,9 @@ export default {
       }
     },
 
+    /**
+     * Carga las estadísticas del usuario
+     */
     async cargarEstadisticas() {
       try {
         const [ganadoResponse, potreroResponse, vacunacionResponse] = await Promise.all([
@@ -42,6 +52,7 @@ export default {
         this.estadisticas.vacunaciones = vacunacionResponse.data?.data?.length || 0;
       } catch (error) {
         console.error('Error cargando estadísticas:', error);
+        // Mantener valores por defecto en caso de error
         this.estadisticas = {
           ganado: this.estadisticas.ganado || 0,
           potreros: this.estadisticas.potreros || 0,

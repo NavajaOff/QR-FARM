@@ -1,6 +1,10 @@
 import authService from '../../services/authService.js';
 import { ganadoAPI, vacunacionAPI } from '../../services/api.js';
 
+/**
+ * Componente DashboardUsuario
+ * Maneja la lógica del dashboard principal de usuarios
+ */
 export default {
   name: 'DashboardUsuario',
   data() {
@@ -27,6 +31,9 @@ export default {
     this.cargarEstadisticas();
   },
   methods: {
+    /**
+     * Carga las estadísticas del usuario
+     */
     async cargarEstadisticas() {
       try {
         const user = authService.getUser();
@@ -48,6 +55,9 @@ export default {
       }
     },
 
+    /**
+     * Cierra la sesión del usuario
+     */
     logout() {
       authService.logout();
       this.$router.push('/login');

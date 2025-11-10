@@ -1,5 +1,9 @@
 import authService from '../../services/authService.js';
 
+/**
+ * Componente EscanearQR para usuarios
+ * Maneja la lógica de escaneo de códigos QR
+ */
 export default {
   name: "EscanearQR",
   data() {
@@ -22,6 +26,9 @@ export default {
     this.userName = user?.persona?.primer_nombre || 'Usuario';
   },
   methods: {
+    /**
+     * Inicia el proceso de escaneo de QR
+     */
     async iniciarEscaneo() {
       this.isScanning = true;
 
@@ -54,10 +61,17 @@ export default {
       }
     },
 
+    /**
+     * Abre el selector de archivos para subir imagen
+     */
     subirImagen() {
       this.$refs.fileInput.click();
     },
 
+    /**
+     * Maneja la subida de archivos de imagen
+     * @param {Event} event - Evento de cambio del input file
+     */
     handleFileUpload(event) {
       const file = event.target.files[0];
       if (file) {
