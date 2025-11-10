@@ -48,9 +48,6 @@
         <router-link class="nav-link" to="/admin/escanear-qr">
           <i class="fas fa-qrcode me-2"></i>Escanear QR
         </router-link>
-        <router-link class="nav-link" to="/admin/inventario">
-          <i class="fas fa-boxes me-2"></i>Inventario
-        </router-link>
         <router-link class="nav-link" to="/admin/vacunacion">
           <i class="fas fa-syringe me-2"></i>Vacunación
         </router-link>
@@ -122,7 +119,7 @@
                     </router-link>
                   </div>
                   <div class="col-md-4">
-                    <router-link class="btn btn-info w-100" to="/admin/inventario">
+                    <router-link class="btn btn-info w-100" to="/admin/reportes">
                       <i class="fas fa-chart-bar me-2"></i>Ver Reportes
                     </router-link>
                   </div>

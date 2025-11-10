@@ -42,9 +42,6 @@
         <router-link class="nav-link" to="/user/perfil">
           <i class="fas fa-user-edit me-2"></i>Mi Perfil
         </router-link>
-        <router-link class="nav-link" to="/user/inventario">
-          <i class="fas fa-boxes me-2"></i>Inventario
-        </router-link>
         <router-link class="nav-link" to="/user/escanear-qr">
           <i class="fas fa-qrcode me-2"></i>Escanear QR
         </router-link>
@@ -108,8 +105,8 @@
                     </router-link>
                   </div>
                   <div class="col-md-4">
-                    <router-link class="btn btn-info w-100" to="/user/inventario">
-                      <i class="fas fa-chart-bar me-2"></i>Ver Inventario
+                    <router-link class="btn btn-info w-100" to="/user/reportes">
+                      <i class="fas fa-chart-bar me-2"></i>Ver Reportes
                     </router-link>
                   </div>
                 </div>
@@ -121,7 +118,7 @@
               <div class="col-12">
                 <div class="alert alert-info">
                   <h6><i class="fas fa-info-circle me-2"></i>Información del Sistema</h6>
-                  <p class="mb-0">Como usuario, tienes acceso a gestionar tu propio ganado, registrar vacunaciones y consultar el inventario general.</p>
+                  <p class="mb-0">Como usuario, tienes acceso a gestionar tu propio ganado y registrar vacunaciones.</p>
                 </div>
               </div>
             </div>
