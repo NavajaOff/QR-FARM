@@ -189,12 +189,18 @@ def usuarios_login():
             # Verificar contraseña con hash o sin hash (para compatibilidad)
             password_valid = False
             if result:
-                # Primero intentar verificar como hash
+                stored_password = result['contrasena']
+                # Primero intentar verificar como hash bcrypt
                 try:
-                    password_valid = bcrypt.verify(password, result['contrasena'])
-                except:
-                    # Si falla, comparar directamente (para usuarios antiguos)
-                    password_valid = (result['contrasena'] == password)
+                    if stored_password and stored_password.startswith('$2b$'):
+                        password_valid = bcrypt.verify(password, stored_password)
+                    else:
+                        # Para contraseñas sin hash (compatibilidad)
+                        password_valid = (stored_password == password)
+                except Exception as hash_error:
+                    print(f"Error verificando hash: {hash_error}")
+                    # Fallback a comparación directa
+                    password_valid = (stored_password == password)
 
             if result and password_valid:
                 print(f"Usuario encontrado: {result['email']} - Rol: {result['rol']}")
@@ -208,7 +214,11 @@ def usuarios_login():
                     "status": "success",
                     "message": "Inicio de sesión exitoso",
                     "token": token,
-                    "rol": result['rol']
+                    "user": {
+                        "id": result['usuario_id'],
+                        "email": result['email'],
+                        "rol": result['rol']
+                    }
                 }), 200
             else:
                 print("Credenciales invalidas")
@@ -219,6 +229,8 @@ def usuarios_login():
 
         except Exception as db_error:
             print(f"Error de base de datos: {str(db_error)}")
+            import traceback
+            traceback.print_exc()
             return jsonify({
                 "status": "error",
                 "message": "Error de conexión a la base de datos"
@@ -226,11 +238,13 @@ def usuarios_login():
         finally:
             if cursor:
                 cursor.close()
-            if conn and conn.is_connected():
+            if conn and hasattr(conn, 'is_connected') and conn.is_connected():
                 conn.close()
 
     except Exception as e:
         print(f"Error en login: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             "status": "error",
             "message": "Error interno del servidor"
