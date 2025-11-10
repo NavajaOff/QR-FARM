@@ -24,6 +24,8 @@ from src.routes.usuario_routes import usuario_bp
 from src.routes.animal_routes import animal_bp
 from src.routes.vacunacion_routes import vacunacion_bp
 from src.routes.reporte_routes import reporte_bp
+# Constantes para mensajes de error
+INTERNAL_SERVER_ERROR_MSG = "Error interno del servidor"
 
 # Cargar variables de entorno desde la raíz del proyecto
 import os
@@ -128,7 +130,7 @@ def obtener_usuarios():
         print(f"Error al obtener usuarios: {str(e)}")
         return jsonify({
             "status": "error",
-            "message": "Error interno del servidor"
+            "message": INTERNAL_SERVER_ERROR_MSG
         }), 500
 
 
@@ -247,7 +249,7 @@ def usuarios_login():
         traceback.print_exc()
         return jsonify({
             "status": "error",
-            "message": "Error interno del servidor"
+            "message": INTERNAL_SERVER_ERROR_MSG
         }), 500
 
 # Endpoint para servir imágenes QR
@@ -269,7 +271,7 @@ def get_qr_image(filename):
             return jsonify({"error": "Imagen QR no encontrada"}), 404
     except Exception as e:
         print(f"Error sirviendo imagen QR: {e}")
-        return jsonify({"error": "Error interno del servidor"}), 500
+        return jsonify({"error": INTERNAL_SERVER_ERROR_MSG}), 500
 
 # Registrar blueprints
 app.register_blueprint(potrero_bp, url_prefix='/api/potreros')
