@@ -16,7 +16,7 @@ export const error = ref(null);
 let cancelTokenSource = null;
 
 // Importar potreros para el select
-import { potreros, cargarPotreros, cargarDatosIniciales as cargarDatosInicialesPotreros } from './gestionar-potreros.js';
+import { potreros, cargarDatosIniciales as cargarDatosInicialesPotreros } from './gestionar-potreros.js';
 
 // API configuration
 const API_BASE = 'http://localhost:5000/api';
