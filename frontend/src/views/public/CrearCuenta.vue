@@ -1,5 +1,5 @@
 <template>
-  <nav class="navbar navbar-dark bg-success">
+  <nav class="navbar navbar-dark bg-success" aria-label="Barra principal para creación de cuentas">
     <div class="container-fluid py-2 py-md-3 px-3 px-md-4">
       <router-link class="navbar-brand" to="/">
         <i class="fas fa-home me-2"></i>Inicio

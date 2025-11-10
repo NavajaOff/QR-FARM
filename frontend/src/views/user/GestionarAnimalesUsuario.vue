@@ -107,7 +107,6 @@ import {
   animales,
   loading,
   error,
-  cargarGanado,
   cargarAnimales,
   razasDisponibles,
   estadosDisponibles,

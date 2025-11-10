@@ -1,5 +1,5 @@
 // useFetchData.js - Hook reutilizable para manejo de datos con cancelación
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, readonly, onUnmounted, nextTick } from 'vue'
 import axios from 'axios'
 
 export function useFetchData(fetchFunction, options = {}) {

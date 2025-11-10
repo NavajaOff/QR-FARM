@@ -1,6 +1,6 @@
 <template>
   <div>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-success">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-success" aria-label="Navegación principal del sitio público">
       <div class="container-fluid py-2 py-md-3 px-3 px-md-4">
         <router-link class="navbar-brand d-flex align-items-center" to="/">
           <i class="fas fa-cow me-2 logo-icon"></i>

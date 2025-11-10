@@ -293,4 +293,5 @@ export default gestionarUsuarios;
 </script>
 
 <style scoped>
+/* Estilos específicos para GestionarUsuarios admin pendientes de definir */
 </style>

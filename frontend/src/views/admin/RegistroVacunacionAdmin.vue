@@ -105,4 +105,5 @@ export default registroVacunacionAdmin;
 </script>
 
 <style scoped>
+/* Estilos específicos para RegistroVacunacionAdmin se añadirán aquí cuando sean necesarios */
 </style>

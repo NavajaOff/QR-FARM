@@ -1,4 +1,5 @@
 """Potrero model module."""
+from dataclasses import dataclass
 from typing import Dict, Any, Optional
 from datetime import datetime
 from decimal import Decimal
@@ -9,14 +10,58 @@ class EstadoPotrero(str, Enum):
     OCUPADO = 'ocupado'
     LIMPIEZA = 'limpieza'
 
+@dataclass
+class PotreroData:
+    """Container for Potrero initialization data."""
+    id: Optional[int] = None
+    id_tipo_pasto: Optional[int] = None
+    nombre: Optional[str] = None
+    capacidad: Optional[int] = None
+    hectareas: Optional[float] = None
+    area: Optional[Decimal] = None
+    descripcion: Optional[str] = None
+    responsable_persona_id: Optional[int] = None
+    propietario_persona_id: Optional[int] = None
+    fecha_ultimo_uso: Optional[datetime] = None
+    ultima_limpieza: Optional[datetime] = None
+    proxima_limpieza: Optional[datetime] = None
+    ocupacion: int = 0
+
+
 class Potrero:
     """Potrero model representing a paddock/field in the system."""
 
     def __init__(
         self,
+        datos: PotreroData,
+        estado: EstadoPotrero = EstadoPotrero.DISPONIBLE
+    ):
+        """Initialize Potrero model with grouped data.
+
+        Refactor: Constructor simplificado usando PotreroData.
+        """
+        self.id = datos.id
+        self.id_tipo_pasto = datos.id_tipo_pasto
+        self.nombre = datos.nombre
+        self.estado = estado if isinstance(estado, EstadoPotrero) else EstadoPotrero(estado)
+        self.capacidad = datos.capacidad
+        self.hectareas = datos.hectareas
+        self.ocupacion = datos.ocupacion
+        self.fecha_ultimo_uso = datos.fecha_ultimo_uso
+        self.responsable_persona_id = datos.responsable_persona_id
+        self.proxima_limpieza = datos.proxima_limpieza
+        self.area = datos.area
+        self.ultima_limpieza = datos.ultima_limpieza
+        self.descripcion = datos.descripcion
+        self.propietario_persona_id = datos.propietario_persona_id
+
+    @classmethod
+    def from_params(
+        cls,
+        *,
         id: Optional[int] = None,
         id_tipo_pasto: Optional[int] = None,
-        nombre: str = None,
+        nombre: Optional[str] = None,
         capacidad: Optional[int] = None,
         hectareas: Optional[float] = None,
         ocupacion: int = 0,
@@ -28,41 +73,47 @@ class Potrero:
         descripcion: Optional[str] = None,
         propietario_persona_id: Optional[int] = None,
         estado: EstadoPotrero = EstadoPotrero.DISPONIBLE
-    ):
-        """Initialize Potrero model."""
-        self.id = id
-        self.id_tipo_pasto = id_tipo_pasto
-        self.nombre = nombre
-        self.estado = estado if isinstance(estado, EstadoPotrero) else EstadoPotrero(estado)
-        self.capacidad = capacidad
-        self.hectareas = hectareas
-        self.ocupacion = ocupacion
-        self.fecha_ultimo_uso = fecha_ultimo_uso
-        self.responsable_persona_id = responsable_persona_id
-        self.proxima_limpieza = proxima_limpieza
-        self.area = area
-        self.ultima_limpieza = ultima_limpieza
-        self.descripcion = descripcion
-        self.propietario_persona_id = propietario_persona_id
+    ) -> 'Potrero':
+        """Backward compatible constructor with explicit parameters."""
+        datos = PotreroData(
+            id=id,
+            id_tipo_pasto=id_tipo_pasto,
+            nombre=nombre,
+            capacidad=capacidad,
+            hectareas=hectareas,
+            ocupacion=ocupacion,
+            fecha_ultimo_uso=fecha_ultimo_uso,
+            responsable_persona_id=responsable_persona_id,
+            proxima_limpieza=proxima_limpieza,
+            area=area,
+            ultima_limpieza=ultima_limpieza,
+            descripcion=descripcion,
+            propietario_persona_id=propietario_persona_id
+        )
+        return cls(datos=datos, estado=estado)
 
     @staticmethod
     def from_db_row(row: Dict[str, Any]) -> 'Potrero':
         """Create model from database row."""
-        return Potrero(
+        area_value = row.get('area')
+        datos = PotreroData(
             id=row.get('id'),
             id_tipo_pasto=row.get('id_tipo_pasto'),
             nombre=row.get('nombre'),
-            estado=EstadoPotrero(row.get('estado', 'disponible')),
             capacidad=row.get('capacidad'),
             hectareas=row.get('hectareas'),
             ocupacion=row.get('ocupacion', 0),
             fecha_ultimo_uso=row.get('fecha_ultimo_uso'),
             responsable_persona_id=row.get('responsable_persona_id'),
             proxima_limpieza=row.get('proxima_limpieza'),
-            area=Decimal(str(row.get('area'))) if row.get('area') is not None else None,
+            area=Decimal(str(area_value)) if area_value is not None else None,
             ultima_limpieza=row.get('ultima_limpieza'),
             descripcion=row.get('descripcion'),
             propietario_persona_id=row.get('propietario_persona_id')
+        )
+        return Potrero(
+            datos=datos,
+            estado=EstadoPotrero(row.get('estado', 'disponible'))
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -87,18 +138,22 @@ class Potrero:
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> 'Potrero':
         """Create model from dictionary."""
-        return Potrero(
+        area_value = data.get('area')
+        datos = PotreroData(
             nombre=data.get('nombre'),
             id_tipo_pasto=data.get('id_tipo_pasto'),
-            estado=EstadoPotrero(data.get('estado', 'disponible')),
             capacidad=data.get('capacidad'),
             hectareas=data.get('hectareas'),
             ocupacion=data.get('ocupacion', 0),
             fecha_ultimo_uso=data.get('fecha_ultimo_uso'),
             responsable_persona_id=data.get('responsable_persona_id'),
             proxima_limpieza=data.get('proxima_limpieza'),
-            area=Decimal(str(data.get('area'))) if data.get('area') is not None else None,
+            area=Decimal(str(area_value)) if area_value is not None else None,
             ultima_limpieza=data.get('ultima_limpieza'),
             descripcion=data.get('descripcion'),
             propietario_persona_id=data.get('propietario_persona_id')
+        )
+        return Potrero(
+            datos=datos,
+            estado=EstadoPotrero(data.get('estado', 'disponible'))
         )

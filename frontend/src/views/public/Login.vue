@@ -1,6 +1,6 @@
 <template>
-  <!-- Header -->
-  <nav class="navbar navbar-dark bg-success">
+  <!-- Barra superior pública -->
+  <nav class="navbar navbar-dark bg-success" aria-label="Barra principal del acceso público">
     <div class="container-fluid py-2 py-md-3 px-3 px-md-4">
       <router-link class="navbar-brand" to="/login">
         <i class="fas fa-home me-2"></i>Inicio

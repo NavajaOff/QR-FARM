@@ -113,7 +113,6 @@
 
 <script setup>
 import {
-  potreros,
   loading,
   error,
   cargarPotreros,

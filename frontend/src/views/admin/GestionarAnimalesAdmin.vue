@@ -104,7 +104,6 @@
 </template>
 
 <script>
-import { ganadoAPI } from '../../services/api.js';
 import {
   cargarDatosIniciales,
   animales,

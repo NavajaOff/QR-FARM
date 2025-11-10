@@ -1,7 +1,7 @@
 <template>
   <div class="admin-layout">
-    <!-- Header -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-gradient-primary shadow-sm">
+    <!-- Barra superior -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-gradient-primary shadow-sm" aria-label="Barra de navegación del administrador">
       <div class="container-fluid px-4">
         <div class="d-flex align-items-center w-100">
           <button
@@ -44,9 +44,9 @@
       </div>
     </nav>
 
-    <!-- Sidebar -->
+    <!-- Menú lateral -->
     <div class="d-none d-md-block admin-sidebar">
-      <nav class="nav flex-column py-3">
+      <nav class="nav flex-column py-3" aria-label="Menú lateral de administración">
         <!-- Inicio -->
         <router-link class="nav-link mb-2" to="/admin/dashboard">
           <div class="d-flex align-items-center">
