@@ -12,11 +12,55 @@ export const personasUsuario = ref([]);
 export const loading = ref(true);
 export const error = ref(null);
 
+const findPotreroById = (potreroId) => potreros.value.find(p => p.id == potreroId);
+
+const buildPersonaNombre = (persona) => {
+  if (!persona) return null;
+  if (persona.nombre_completo) return persona.nombre_completo;
+  const partes = [
+    persona.primer_nombre,
+    persona.segundo_nombre,
+    persona.primer_apellido,
+    persona.segundo_apellido
+  ].filter(Boolean);
+  const nombreCompuesto = partes.join(' ').trim();
+  return nombreCompuesto || null;
+};
+
+const obtenerNombrePersonaPorId = (personaId, fallback = 'Sin asignar') => {
+  if (!personaId) return fallback;
+  const persona = personasUsuario.value.find(p => p.id == personaId);
+  const nombre = buildPersonaNombre(persona);
+  if (nombre) return nombre;
+  return `Persona ${personaId}`;
+};
+
+const obtenerNombrePersonaDesdeEntidad = (entidad, fallback = 'Sin asignar') => {
+  if (!entidad) return fallback;
+  if (entidad.persona_nombre) return entidad.persona_nombre;
+  if (entidad.propietario) return entidad.propietario;
+  return obtenerNombrePersonaPorId(entidad.id_persona, fallback);
+};
+
+const obtenerNombrePotreroPorId = (potreroId, fallback = 'Sin asignar') => {
+  if (!potreroId) return fallback;
+  const potrero = findPotreroById(potreroId);
+  if (potrero?.nombre) return potrero.nombre;
+  return `Potrero ${potreroId}`;
+};
+
+const obtenerNombrePotreroDesdeEntidad = (entidad, fallback = 'Sin asignar') => {
+  if (!entidad) return fallback;
+  if (entidad.potrero_nombre) return entidad.potrero_nombre;
+  if (entidad.potreroActual) return entidad.potreroActual;
+  return obtenerNombrePotreroPorId(entidad.id_potrero, fallback);
+};
+
 // Control de cancelación con Axios
 let cancelTokenSource = null;
 
 // Importar potreros para el select
-import { potreros, cargarPotreros, cargarDatosIniciales as cargarDatosInicialesPotreros } from './gestionar-potreros.js';
+import { potreros, cargarDatosIniciales as cargarDatosInicialesPotreros } from './gestionar-potreros.js';
 
 // API configuration
 const API_BASE = 'http://localhost:5000/api';
@@ -201,8 +245,8 @@ export const cargarAnimales = async () => {
         id_persona: animal.id_persona,
         // Campos calculados
         estado: animal.estado_tipo || animal.estado || 'No definido',
-        potreroActual: animal.potrero_nombre || (animal.id_potrero ? (potreros.value.find(p => p.id == animal.id_potrero)?.nombre || `Potrero ${animal.id_potrero}`) : 'Sin asignar'),
-        propietario: animal.persona_nombre || (animal.id_persona ? (personasUsuario.value.find(p => p.id == animal.id_persona) ? `${personasUsuario.value.find(p => p.id == animal.id_persona).primer_nombre} ${personasUsuario.value.find(p => p.id == animal.id_persona).primer_apellido}` : `Persona ${animal.id_persona}`) : 'Sin asignar'),
+        potreroActual: obtenerNombrePotreroDesdeEntidad(animal),
+        propietario: obtenerNombrePersonaDesdeEntidad(animal),
         edad: animal.fecha_nacimiento ? calcularEdad(animal.fecha_nacimiento) : 'No definida',
         codigo_qr: animal.codigo_qr
       }));
@@ -226,7 +270,7 @@ export const cargarAnimales = async () => {
 
 // Utility functions
 export const calcularEdad = (fechaNacimiento) => {
-  if (!fechaNacimiento) return 'No definida';
+  if (!fechaNacimiento) return Number.NaN;
   const nacimiento = new Date(fechaNacimiento);
   const hoy = new Date();
   let edad = hoy.getFullYear() - nacimiento.getFullYear();
@@ -257,7 +301,9 @@ export const estadoClass = (estado) => {
 };
 
 export const iconClass = (animal) => {
-  return animal.estado === 'activo' ? 'text-success' : (animal.estado === 'en_tratamiento' ? 'text-warning' : 'text-danger');
+  if (animal.estado === 'activo') return 'text-success';
+  if (animal.estado === 'en_tratamiento') return 'text-warning';
+  return 'text-danger';
 };
 
 // CRUD operations
@@ -274,6 +320,9 @@ export const verPerfilAnimal = async (id) => {
     if (data.success) {
       const animalActualizado = data.data;
 
+      const encargado = obtenerNombrePersonaDesdeEntidad(animalActualizado, 'Sin encargado');
+      const potreroNombre = obtenerNombrePotreroDesdeEntidad(animalActualizado, 'Sin dato');
+
       Swal.fire({
         title: `Perfil de ${animalActualizado.nombre}`,
         html: `
@@ -281,11 +330,11 @@ export const verPerfilAnimal = async (id) => {
             <p><strong>Código QR:</strong> ${animalActualizado.codigo_qr || 'Sin código'}</p>
             <p><strong>Sexo:</strong> ${animalActualizado.sexo || 'Sin dato'}</p>
             <p><strong>Raza:</strong> ${animalActualizado.raza || 'Sin dato'}</p>
-            <p><strong>Encargado:</strong> ${animalActualizado.id_persona ? (personasUsuario.value.find(p => p.id == animalActualizado.id_persona) ? `${personasUsuario.value.find(p => p.id == animalActualizado.id_persona).primer_nombre} ${personasUsuario.value.find(p => p.id == animalActualizado.id_persona).primer_apellido}` : `Persona ${animalActualizado.id_persona}`) : 'Sin encargado'}</p>
+            <p><strong>Encargado:</strong> ${encargado}</p>
             <p><strong>Fecha de nacimiento:</strong> ${animalActualizado.fecha_nacimiento ? formatDate(animalActualizado.fecha_nacimiento) : 'Sin dato'}</p>
             <p><strong>Peso actual:</strong> ${animalActualizado.peso || 'Sin dato'} kg</p>
             <p><strong>Estado:</strong> ${animalActualizado.estado_tipo || animalActualizado.estado || 'Sin dato'}</p>
-            <p><strong>Potrero actual:</strong> ${animalActualizado.id_potrero ? (potreros.value.find(p => p.id == animalActualizado.id_potrero)?.nombre || `Potrero ${animalActualizado.id_potrero}`) : 'Sin dato'}</p>
+            <p><strong>Potrero actual:</strong> ${potreroNombre}</p>
             <p><strong>Historial médico:</strong> Sin incidencias</p>
             ${animalActualizado.codigo_qr ? `<div class="mt-3"><img src="http://localhost:5000/api/animales/qr/${animalActualizado.codigo_qr}.png" alt="Código QR" class="img-fluid" style="max-width: 300px;"></div>` : ''}
           </div>
@@ -306,6 +355,9 @@ export const verPerfilAnimal = async (id) => {
   } catch (error) {
     console.error('Error obteniendo perfil del animal:', error);
     // Mostrar perfil con datos locales si falla la petición
+    const encargadoLocal = obtenerNombrePersonaDesdeEntidad(animal, 'Sin encargado');
+    const potreroLocal = obtenerNombrePotreroDesdeEntidad(animal, 'Sin dato');
+
     Swal.fire({
       title: `Perfil de ${animal.nombre}`,
       html: `
@@ -313,11 +365,11 @@ export const verPerfilAnimal = async (id) => {
           <p><strong>Código QR:</strong> ${animal.codigo_qr || 'Sin código'}</p>
           <p><strong>Sexo:</strong> ${animal.sexo || 'Sin dato'}</p>
           <p><strong>Raza:</strong> ${animal.raza || 'Sin dato'}</p>
-          <p><strong>Encargado:</strong> ${animal.propietario || 'Sin encargado'}</p>
+          <p><strong>Encargado:</strong> ${encargadoLocal}</p>
           <p><strong>Fecha de nacimiento:</strong> ${animal.fecha_nacimiento || 'Sin dato'}</p>
           <p><strong>Peso actual:</strong> ${animal.peso || 'Sin dato'} kg</p>
           <p><strong>Estado:</strong> ${animal.estado || 'Sin dato'}</p>
-          <p><strong>Potrero actual:</strong> ${animal.potreroActual || 'Sin dato'}</p>
+          <p><strong>Potrero actual:</strong> ${potreroLocal}</p>
           <p><strong>Historial médico:</strong> Sin incidencias</p>
           ${animal.codigo_qr ? `<div class="mt-3"><img src="http://localhost:5000/api/animales/qr/${animal.codigo_qr}.png" alt="Código QR" class="img-fluid" style="max-width: 300px;"></div>` : ''}
         </div>
@@ -400,7 +452,7 @@ export const editarAnimal = (id) => {
     showCancelButton: true,
     confirmButtonText: 'Actualizar',
     confirmButtonColor: '#00d563',
-    preConfirm: () => {
+    preConfirm: async () => {
       const nombre = document.getElementById('edit_nombre').value;
       const peso = document.getElementById('edit_peso').value;
       const raza = document.getElementById('edit_raza').value;
@@ -412,7 +464,7 @@ export const editarAnimal = (id) => {
       // Solo validar campos obligatorios
       if (!nombre) {
         Swal.showValidationMessage('El nombre es obligatorio');
-        return false;
+        throw new Error('VALIDATION_ERROR');
       }
 
       const updateData = {
@@ -532,7 +584,7 @@ export const agregarNuevoAnimal = () => {
     showCancelButton: true,
     confirmButtonText: 'Agregar',
     confirmButtonColor: '#00d563',
-    preConfirm: () => {
+    preConfirm: async () => {
       const nombre = document.getElementById('nombre').value;
       const peso = document.getElementById('peso').value;
       const raza = document.getElementById('raza').value;
@@ -544,7 +596,7 @@ export const agregarNuevoAnimal = () => {
 
       if (!nombre || !raza || !fecha_nacimiento || !estado || !sexo) {
         Swal.showValidationMessage('Por favor complete todos los campos requeridos');
-        return false;
+        throw new Error('VALIDATION_ERROR');
       }
 
       return {

@@ -1,6 +1,13 @@
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
 
+const createInventoryChart = (ctx, config) => {
+  const ChartConstructor = (typeof window !== 'undefined' && window.Chart) ? window.Chart : Chart;
+  const chartInstance = new ChartConstructor(ctx, config);
+  chartInstance.update();
+  return chartInstance;
+};
+
 export default {
   name: "Inventario",
   data() {
@@ -9,7 +16,8 @@ export default {
         { id: "001", nombre: "Holstein-001", raza: "Holstein", edad: 3, estado: "Saludable", potrero: "Potrero 1" },
         { id: "002", nombre: "Angus-002", raza: "Angus", edad: 2, estado: "En Tratamiento", potrero: "Potrero 2" },
         { id: "003", nombre: "Jersey-003", raza: "Jersey", edad: 4, estado: "Saludable", potrero: "Potrero 1" }
-      ]
+      ],
+      chartInstance: null
     };
   },
   computed: {
@@ -27,24 +35,38 @@ export default {
     }
   },
   mounted() {
-    if (window.Chart) {
-      const ctx = document.getElementById('inventarioPie').getContext('2d');
-      const data = {
-        labels: ['Saludables', 'En Tratamiento', 'Otros'],
-        datasets: [{
-          data: [
-            this.countSaludable,
-            this.countTratamiento,
-            Math.max(0, this.totalAnimales - this.countSaludable - this.countTratamiento)
-          ],
-          backgroundColor: ['#28a745', '#ffc107', '#6c757d']
-        }]
-      };
-      new window.Chart(ctx, {
-        type: 'doughnut',
-        data,
-        options: { responsive: true, maintainAspectRatio: false }
-      });
+    if (this.chartInstance) {
+      this.chartInstance.destroy();
+      this.chartInstance = null;
+    }
+
+    const ctxElement = document.getElementById('inventarioPie');
+    if (!ctxElement) {
+      return;
+    }
+
+    const ctx = ctxElement.getContext('2d');
+    const data = {
+      labels: ['Saludables', 'En Tratamiento', 'Otros'],
+      datasets: [{
+        data: [
+          this.countSaludable,
+          this.countTratamiento,
+          Math.max(0, this.totalAnimales - this.countSaludable - this.countTratamiento)
+        ],
+        backgroundColor: ['#28a745', '#ffc107', '#6c757d']
+      }]
+    };
+    this.chartInstance = createInventoryChart(ctx, {
+      type: 'doughnut',
+      data,
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  },
+  beforeUnmount() {
+    if (this.chartInstance) {
+      this.chartInstance.destroy();
+      this.chartInstance = null;
     }
   },
   methods: {

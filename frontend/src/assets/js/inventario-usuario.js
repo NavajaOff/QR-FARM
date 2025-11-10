@@ -1,4 +1,14 @@
 import authService from '../../services/authService.js';
+import { Chart, registerables } from 'chart.js';
+
+Chart.register(...registerables);
+
+const createInventoryChart = (ctx, config) => {
+  const ChartConstructor = (typeof window !== 'undefined' && window.Chart) ? window.Chart : Chart;
+  const chartInstance = new ChartConstructor(ctx, config);
+  chartInstance.update();
+  return chartInstance;
+};
 
 /**
  * Componente InventarioUsuario
@@ -13,7 +23,8 @@ export default {
         { id: 2, nombre: "Luna", raza: "Brahman", edad: 1, estado: "En tratamiento", potrero: "Potrero 2" },
         { id: 3, nombre: "Bella", raza: "Holstein", edad: 3, estado: "Saludable", potrero: "Potrero 1" },
         { id: 4, nombre: "Max", raza: "Angus", edad: 4, estado: "Saludable", potrero: "Potrero 2" }
-      ]
+      ],
+      chartInstance: null
     };
   },
   mounted() {
@@ -56,47 +67,56 @@ export default {
       return this.animales.filter(a => a.edad <= 1).length;
     }
   },
+  beforeUnmount() {
+    if (this.chartInstance) {
+      this.chartInstance.destroy();
+      this.chartInstance = null;
+    }
+  },
   methods: {
     /**
      * Inicializa el gráfico de inventario
      */
     initChart() {
-      // Verificar si Chart.js está disponible
-      if (typeof Chart !== 'undefined') {
-        const ctx = document.getElementById('inventarioPie');
-        if (ctx) {
-          const chartCtx = ctx.getContext('2d');
-          new Chart(chartCtx, {
-            type: 'doughnut',
-            data: {
-              labels: ['Saludables', 'En tratamiento', 'Otros'],
-              datasets: [{
-                data: [
-                  this.countSaludable,
-                  this.countTratamiento,
-                  Math.max(0, this.totalAnimales - this.countSaludable - this.countTratamiento)
-                ],
-                backgroundColor: ['#28a745', '#ffc107', '#6c757d'],
-                borderWidth: 2,
-                borderColor: '#fff'
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: {
-                  position: 'bottom',
-                  labels: {
-                    padding: 20,
-                    usePointStyle: true
-                  }
-                }
+      const ctxElement = document.getElementById('inventarioPie');
+      if (!ctxElement) {
+        return;
+      }
+
+      const chartCtx = ctxElement.getContext('2d');
+      if (this.chartInstance) {
+        this.chartInstance.destroy();
+      }
+
+      this.chartInstance = createInventoryChart(chartCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Saludables', 'En tratamiento', 'Otros'],
+          datasets: [{
+            data: [
+              this.countSaludable,
+              this.countTratamiento,
+              Math.max(0, this.totalAnimales - this.countSaludable - this.countTratamiento)
+            ],
+            backgroundColor: ['#28a745', '#ffc107', '#6c757d'],
+            borderWidth: 2,
+            borderColor: '#fff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                padding: 20,
+                usePointStyle: true
               }
             }
-          });
+          }
         }
-      }
+      });
     },
 
     /**

@@ -1,6 +1,24 @@
 import authService from '../../services/authService.js';
 import { ganadoAPI, potreroAPI, userAPI } from '../../services/api.js';
 
+const secureRandomInt = (min, max) => {
+  const lower = Number(min);
+  const upper = Number(max);
+  if (!Number.isFinite(lower) || !Number.isFinite(upper) || lower > upper) {
+    return lower;
+  }
+
+  if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
+    const range = upper - lower + 1;
+    const buffer = new Uint32Array(1);
+    window.crypto.getRandomValues(buffer);
+    const randomFraction = buffer[0] / 0x100000000;
+    return lower + Math.floor(randomFraction * range);
+  }
+
+  return lower;
+};
+
 export default {
   name: 'DashboardAdmin',
   data() {
@@ -41,7 +59,7 @@ export default {
         this.estadisticas.potreros = potrerosResponse.data?.data?.length || 0;
 
         // Salud promedio simulada
-        this.estadisticas.salud = Math.floor(Math.random() * 20) + 80;
+        this.estadisticas.salud = secureRandomInt(80, 99);
       } catch (error) {
         console.error('Error cargando estadísticas:', error);
       }

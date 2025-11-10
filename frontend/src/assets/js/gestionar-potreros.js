@@ -12,6 +12,62 @@ export const personasUsuario = ref([]);
 export const loading = ref(true);
 export const error = ref(null);
 
+const buildPersonaNombre = (persona) => {
+  if (!persona) return '';
+  if (persona.nombre_completo) return persona.nombre_completo;
+  const partes = [
+    persona.primer_nombre,
+    persona.segundo_nombre,
+    persona.primer_apellido,
+    persona.segundo_apellido
+  ].filter(Boolean);
+  return partes.join(' ').trim();
+};
+
+const obtenerResponsableNombre = (personaId) => {
+  if (!personaId) return 'No asignado';
+  const persona = personasUsuario.value.find(p => p.id == personaId);
+  const etiqueta = buildPersonaNombre(persona);
+  if (etiqueta) return etiqueta;
+  return `Persona ${personaId}`;
+};
+
+const mapPotreroFromApi = (potrero) => {
+  const mapped = {
+    id: potrero.id,
+    nombre: potrero.nombre,
+    estado: potrero.estado,
+    capacidad: potrero.capacidad,
+    ocupacion: potrero.ocupacion,
+    hectareas: potrero.hectareas,
+    area: potrero.area,
+    fechaUso: '',
+    ultimaLimpieza: '',
+    proximaLimpieza: null,
+    responsable: obtenerResponsableNombre(potrero.responsable_persona_id),
+    descripcion: potrero.descripcion || '',
+    pasto: 'No definido'
+  };
+
+  if (potrero.fecha_ultimo_uso) {
+    mapped.fechaUso = formatDate(potrero.fecha_ultimo_uso);
+  }
+
+  if (potrero.ultima_limpieza) {
+    mapped.ultimaLimpieza = formatDate(potrero.ultima_limpieza);
+  }
+
+  if (potrero.proxima_limpieza) {
+    mapped.proximaLimpieza = formatDate(potrero.proxima_limpieza);
+  }
+
+  if (potrero.tipo_pasto_nombre) {
+    mapped.pasto = potrero.tipo_pasto_nombre;
+  }
+
+  return mapped;
+};
+
 // API configuration
 const API_BASE = 'http://localhost:5000/api';
 
@@ -45,7 +101,11 @@ export const cargarTiposPasto = async () => {
     const response = await fetch(`${API_BASE}/potreros/tipos-pasto`);
     if (response.ok) {
       const data = await response.json();
-      tiposPasto.value = data.success ? data.data : [];
+      if (data.success) {
+        tiposPasto.value = data.data;
+      } else {
+        tiposPasto.value = [];
+      }
     } else {
       tiposPasto.value = [];
     }
@@ -60,7 +120,11 @@ export const cargarEstadosPotrero = async () => {
     const response = await fetch(`${API_BASE}/potreros/estados`);
     if (response.ok) {
       const data = await response.json();
-      estadosPotrero.value = data.success ? data.data : [];
+      if (data.success) {
+        estadosPotrero.value = data.data;
+      } else {
+        estadosPotrero.value = [];
+      }
     } else {
       estadosPotrero.value = [];
     }
@@ -75,7 +139,11 @@ export const cargarPersonasUsuario = async () => {
     const response = await fetch(`${API_BASE}/potreros/personas-usuario`);
     if (response.ok) {
       const data = await response.json();
-      personasUsuario.value = data.success ? data.data : [];
+      if (data.success) {
+        personasUsuario.value = data.data;
+      } else {
+        personasUsuario.value = [];
+      }
     } else {
       personasUsuario.value = [];
     }
@@ -101,21 +169,7 @@ export const cargarPotreros = async () => {
     // Validar si la respuesta contiene un array dentro de data.data
     if (data.success && data.data && Array.isArray(data.data)) {
       console.log('Procesando array de potreros desde data.data');
-      potreros.value = data.data.map(potrero => ({
-        id: potrero.id,
-        nombre: potrero.nombre,
-        estado: potrero.estado,
-        capacidad: potrero.capacidad,
-        ocupacion: potrero.ocupacion,
-        hectareas: potrero.hectareas,
-        area: potrero.area,
-        fechaUso: potrero.fecha_ultimo_uso ? formatDate(potrero.fecha_ultimo_uso) : '',
-        ultimaLimpieza: potrero.ultima_limpieza ? formatDate(potrero.ultima_limpieza) : '',
-        proximaLimpieza: potrero.proxima_limpieza ? formatDate(potrero.proxima_limpieza) : null,
-        responsable: potrero.responsable_persona_id ? (personasUsuario.value.find(p => p.id == potrero.responsable_persona_id) ? `${personasUsuario.value.find(p => p.id == potrero.responsable_persona_id).primer_nombre} ${personasUsuario.value.find(p => p.id == potrero.responsable_persona_id).primer_apellido}` : `Persona ${potrero.responsable_persona_id}`) : 'No asignado',
-        descripcion: potrero.descripcion || '',
-        pasto: potrero.tipo_pasto_nombre || 'No definido'
-      }));
+      potreros.value = data.data.map(mapPotreroFromApi);
       console.log('Potreros cargados exitosamente:', potreros.value.length, 'potreros');
     } else {
       // Si no hay datos, mostrar lista vacía (modo sin BD)
@@ -447,4 +501,25 @@ export const configurarWebSocketPotreros = (callback) => {
 
 export const toggleAccordion = () => {
    accordionOpen.value = !accordionOpen.value;
+};
+
+export const actualizarProximaLimpieza = async (id, fecha) => {
+  try {
+    const response = await fetch(`${API_BASE}/potreros/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ proxima_limpieza: fecha })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (!data.success) {
+        console.error('Error actualizando próxima limpieza:', data.message);
+      }
+    } else {
+      console.error('Error HTTP actualizando próxima limpieza:', response.status);
+    }
+  } catch (error) {
+    console.error('Error actualizando próxima limpieza:', error);
+  }
 };

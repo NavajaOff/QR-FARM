@@ -2,6 +2,8 @@ import { useUsuarios } from '../../composables/useUsuarios.js';
 import authService from '../../services/authService.js';
 import { authAPI } from '../../services/api.js';
 
+const SAFE_EMAIL_REGEX = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,}$/;
+
 export default {
   name: 'GestionarUsuarios',
   setup() {
@@ -74,16 +76,31 @@ export default {
         usuario?.persona?.id_rol,
         usuario?.rol?.id
       ];
-      const found = candidates.find((value) => {
+
+      const numericCandidate = candidates.find((value) => {
         const parsed = Number(value);
         return !Number.isNaN(parsed) && parsed > 0;
       });
-      if (!found && typeof usuario?.rol === 'string') {
-        const normalized = usuario.rol.toLowerCase();
-        if (normalized.includes('admin')) return 1;
-        if (normalized.includes('usuario')) return 2;
+
+      if (numericCandidate) {
+        return Number(numericCandidate);
       }
-      return found ? Number(found) : 2;
+
+      let roleFromLabel = null;
+      if (typeof usuario?.rol === 'string') {
+        const normalized = usuario.rol.toLowerCase();
+        if (normalized.includes('admin')) {
+          roleFromLabel = 1;
+        } else if (normalized.includes('usuario')) {
+          roleFromLabel = 2;
+        }
+      }
+
+      if (roleFromLabel !== null) {
+        return roleFromLabel;
+      }
+
+      return 2;
     },
 
     openAddModal() {
@@ -125,8 +142,7 @@ export default {
         return;
       }
 
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(this.addForm.email)) {
+      if (!SAFE_EMAIL_REGEX.test(this.addForm.email)) {
         alert('El formato del email no es válido');
         return;
       }
@@ -229,21 +245,27 @@ export default {
       const updateData = {};
 
       fieldsToProcess.forEach(field => {
-        const value = typeof this.editForm[field] === 'string'
-          ? this.editForm[field].trim()
-          : this.editForm[field];
+        const currentField = this.editForm[field];
+        let value = currentField;
+        if (typeof value === 'string') {
+          value = value.trim();
+        }
 
-        const originalValue = this.originalEditData
-          ? (typeof this.originalEditData[field] === 'string'
-            ? this.originalEditData[field].trim()
-            : this.originalEditData[field])
-          : null;
+        let originalValue = null;
+        if (this.originalEditData) {
+          const originalField = this.originalEditData[field];
+          originalValue = originalField;
+          if (typeof originalField === 'string') {
+            originalValue = originalField.trim();
+          }
+        }
 
         if (!value) {
           return;
         }
 
-        if (value !== (originalValue || '')) {
+        const comparableOriginal = originalValue ?? '';
+        if (value !== comparableOriginal) {
           updateData[field] = value;
         }
       });
@@ -266,8 +288,7 @@ export default {
       }
 
       if (updateData.email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(updateData.email)) {
+        if (!SAFE_EMAIL_REGEX.test(updateData.email)) {
           alert('El formato del email no es válido');
           return;
         }
