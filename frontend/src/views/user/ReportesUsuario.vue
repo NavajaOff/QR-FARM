@@ -64,6 +64,7 @@
                 </div>
                 <div class="table-responsive">
                   <table class="table table-sm table-striped">
+                    <caption class="visually-hidden">Tabla de detalle de reportes mostrando estado y cantidad para ganado, potreros y vacunaciones</caption>
                     <thead>
                       <tr>
                         <th>Estado</th>

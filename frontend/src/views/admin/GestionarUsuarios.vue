@@ -14,6 +14,7 @@
           <div class="card-body">
             <div class="table-responsive">
               <table class="table table-striped">
+                <caption class="visually-hidden">Tabla de gestión de usuarios mostrando ID, nombre, email, rol, estado y acciones disponibles</caption>
                 <thead>
                   <tr>
                     <th>ID</th>

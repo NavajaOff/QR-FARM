@@ -49,6 +49,7 @@
 
               <div class="table-responsive">
                 <table class="table table-striped table-sm">
+                  <caption class="visually-hidden">Tabla de detalle administrativo de reportes mostrando estado y cantidad para usuarios, ganado, potreros y vacunaciones</caption>
                   <thead>
                     <tr>
                       <th>Estado</th>

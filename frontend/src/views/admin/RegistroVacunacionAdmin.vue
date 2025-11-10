@@ -48,6 +48,7 @@
           <div class="card-body p-0">
             <div class="table-responsive">
               <table class="table table-hover mb-0">
+                <caption class="visually-hidden">Tabla administrativa de registros de vacunación mostrando ID animal, nombre, tipo de vacuna, fechas, responsable, estado y acciones disponibles</caption>
                 <thead class="bg-light">
                   <tr>
                     <th>ID Animal</th>

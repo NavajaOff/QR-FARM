@@ -22,6 +22,7 @@
           <div class="card-body">
             <div class="table-responsive">
               <table class="table table-striped">
+                <caption class="visually-hidden">Tabla de gestión de ganado mostrando ID, nombre, raza, edad, peso, potrero, estado y acciones disponibles</caption>
                 <thead>
                   <tr>
                     <th>ID</th>

@@ -52,6 +52,7 @@
           <div class="card-body p-3 p-sm-4">
             <div class="table-responsive">
               <table class="table table-hover">
+                <caption class="visually-hidden">Lista de animales en el inventario administrativo, mostrando ID, nombre/código, raza, edad, estado, ubicación y acciones disponibles</caption>
                 <thead class="table-light">
                   <tr>
                     <th>ID</th>
