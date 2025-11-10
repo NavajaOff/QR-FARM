@@ -460,12 +460,12 @@ def _import_usuarios(cursor, rows: List[Dict[str, Any]]) -> None:
 
 
 def _import_dataset(data: Dict[str, Any]) -> None:
-    expected_tables = data.get("metadata", {}).get("tables", [])
     missing_tables = [
         table
         for table in ["roles", "tipo_pasto", "tipo_vacuna", "estado_ganado", "personas", "potrero", "ganado", "vacunacion", "usuarios"]
         if table not in data
     ]
+    LOGGER.debug(f"Missing tables: {missing_tables}")
     if missing_tables:
         raise click.ClickException(
             f"El archivo de semillas cifrado no contiene todas las tablas requeridas: {', '.join(missing_tables)}"
