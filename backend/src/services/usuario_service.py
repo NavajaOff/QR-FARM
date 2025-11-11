@@ -656,7 +656,7 @@ class UsuarioService:
             if 'conn' in locals():
                 try:
                     conn.close()
-                except:
+                except Exception:
                     pass
 
     @staticmethod
@@ -769,7 +769,7 @@ class UsuarioService:
                 if 'original_autocommit' in locals() and original_autocommit is not None:
                     try:
                         conn.autocommit = original_autocommit
-                    except:
+                    except Exception:
                         pass
 
         except Exception as e:
