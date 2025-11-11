@@ -1,6 +1,17 @@
 import authService from '../../services/authService.js';
 import { ganadoAPI, vacunacionAPI } from '../../services/api.js';
 
+const generarFraccionAleatoriaDemo = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const buffer = new Uint32Array(1);
+    crypto.getRandomValues(buffer);
+    return buffer[0] / 0xffffffff;
+  }
+  const timestamp = Date.now();
+  const entropia = Number(String(timestamp).slice(-6));
+  return (entropia % 1000) / 1000;
+};
+
 /**
  * Componente DashboardUsuario
  * Maneja la lógica del dashboard principal de usuarios
@@ -48,10 +59,8 @@ export default {
         const vacunasResponse = await vacunacionAPI.getAll();
         this.estadisticas.vacunas = vacunasResponse.data?.data?.length || 0;
 
-        // Salud promedio simulada para demo - en producción calcular con datos reales
-        // Usando Math.random() de manera segura ya que es solo para mostrar datos de ejemplo
-        // eslint-disable-next-line sonarjs/pseudo-random
-        this.estadisticas.salud = Math.floor(Math.random() * 20) + 80;
+        // Salud promedio simulada de demostración (no representa datos sensibles)
+        this.estadisticas.salud = Math.floor(generarFraccionAleatoriaDemo() * 20) + 80;
       } catch (error) {
         console.error('Error cargando estadísticas:', error);
       }
