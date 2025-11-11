@@ -94,8 +94,8 @@ class TestGanado:
         dt = datetime(2023, 1, 1, 10, 0, 0)
         ganado = Ganado(fecha_nacimiento=dt, created_at=dt)
         result = ganado.to_dict()
-        assert result['fecha_nacimiento'] == '2023-01-01T10:00:00'
-        assert result['created_at'] == '2023-01-01T10:00:00'
+        assert result['fecha_nacimiento'] == TEST_DATETIME_STR
+        assert result['created_at'] == TEST_DATETIME_STR
 
     def test_enum_values(self):
         """Test enum value access"""
