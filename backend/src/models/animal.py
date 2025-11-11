@@ -15,38 +15,22 @@ class SexoGanado(str, Enum):
     HEMBRA = 'hembra'
 
 class Ganado:
-    def __init__(self,
-                 id: Optional[int] = None,
-                 codigo_qr: Optional[str] = None,
-                 id_potrero: Optional[int] = None,
-                 id_persona: Optional[int] = None,
-                 nombre: str = "",
-                 raza: Optional[str] = None,
-                 fecha_nacimiento: Optional[date] = None,
-                 edad: Optional[int] = None,
-                 sexo: SexoGanado = SexoGanado.MACHO,
-                 peso: Optional[float] = None,
-                 estado: EstadoGanado = EstadoGanado.ACTIVO,
-                 estado_salud: Optional[str] = None,
-                 estado_tipo: Optional[str] = None,
-                 created_at: Optional[date] = None,
-                 updated_at: Optional[date] = None):
-
-        self.id = id
-        self.codigo_qr = codigo_qr
-        self.id_potrero = id_potrero
-        self.id_persona = id_persona
-        self.nombre = nombre
-        self.raza = raza
-        self.fecha_nacimiento = fecha_nacimiento
-        self.edad = edad
-        self.sexo = sexo
-        self.peso = peso
-        self.estado = estado
-        self.estado_salud = estado_salud
-        self.estado_tipo = estado_tipo
-        self.created_at = created_at
-        self.updated_at = updated_at
+    def __init__(self, **kwargs):
+        self.id = kwargs.get('id')
+        self.codigo_qr = kwargs.get('codigo_qr')
+        self.id_potrero = kwargs.get('id_potrero')
+        self.id_persona = kwargs.get('id_persona')
+        self.nombre = kwargs.get('nombre', "")
+        self.raza = kwargs.get('raza')
+        self.fecha_nacimiento = kwargs.get('fecha_nacimiento')
+        self.edad = kwargs.get('edad')
+        self.sexo = kwargs.get('sexo', SexoGanado.MACHO)
+        self.peso = kwargs.get('peso')
+        self.estado = kwargs.get('estado', EstadoGanado.ACTIVO)
+        self.estado_salud = kwargs.get('estado_salud')
+        self.estado_tipo = kwargs.get('estado_tipo')
+        self.created_at = kwargs.get('created_at')
+        self.updated_at = kwargs.get('updated_at')
 
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> 'Ganado':
