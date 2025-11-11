@@ -6,6 +6,7 @@ from datetime import datetime
 
 class PotreroService:
     """Service class for handling Potrero business logic."""
+    NO_DEFINIDO = 'NO_DEFINIDO'
 
     @staticmethod
     def get_all() -> List[Dict[str, Any]]:
@@ -31,11 +32,11 @@ class PotreroService:
                     try:
                         tipos_pasto = PotreroService.get_tipos_pasto()
                         tipo_encontrado = next((tp for tp in tipos_pasto if tp['id'] == potrero['id_tipo_pasto']), None)
-                        potrero['tipo_pasto_nombre'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'No definido'
+                        potrero['tipo_pasto_nombre'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'NO_DEFINIDO'
                     except Exception:
-                        potrero['tipo_pasto_nombre'] = 'No definido'
+                        potrero['tipo_pasto_nombre'] = 'NO_DEFINIDO'
                 else:
-                    potrero['tipo_pasto_nombre'] = 'No definido'
+                    potrero['tipo_pasto_nombre'] = 'NO_DEFINIDO'
 
             return potreros
         except Exception as e:
@@ -67,11 +68,11 @@ class PotreroService:
                 try:
                     tipos_pasto = PotreroService.get_tipos_pasto()
                     tipo_encontrado = next((tp for tp in tipos_pasto if tp['id'] == result['id_tipo_pasto']), None)
-                    result['tipo_pasto_nombre'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'No definido'
+                    result['tipo_pasto_nombre'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'NO_DEFINIDO'
                 except Exception:
-                    result['tipo_pasto_nombre'] = 'No definido'
+                    result['tipo_pasto_nombre'] = 'NO_DEFINIDO'
             else:
-                result['tipo_pasto_nombre'] = 'No definido'
+                result['tipo_pasto_nombre'] = 'NO_DEFINIDO'
 
             return result
 
@@ -162,12 +163,12 @@ class PotreroService:
                         try:
                             tipos_pasto = PotreroService.get_tipos_pasto()
                             tipo_encontrado = next((tp for tp in tipos_pasto if tp['id'] == result['id_tipo_pasto']), None)
-                            result['tipo_pasto_nombre'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'No definido'
+                            result['tipo_pasto_nombre'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'NO_DEFINIDO'
                         except Exception as e:
                             print(f"Error obteniendo tipo de pasto: {e}")
-                            result['tipo_pasto_nombre'] = 'No definido'
+                            result['tipo_pasto_nombre'] = 'NO_DEFINIDO'
                     else:
-                        result['tipo_pasto_nombre'] = 'No definido'
+                        result['tipo_pasto_nombre'] = 'NO_DEFINIDO'
     
                     # Agregar nombre del responsable si existe
                     if result.get('responsable_persona_id'):
@@ -227,11 +228,8 @@ class PotreroService:
             elif key == 'estado':
                 # Los valores válidos del enum son: 'disponible', 'ocupado', 'limpieza'
                 valid_states = ['disponible', 'ocupado', 'limpieza']
-                if value and value not in valid_states:
-                    # Si no es válido, usar 'disponible' por defecto
-                    value = 'disponible'
-                elif not value:
-                    # Si viene vacío, usar 'disponible' por defecto
+                if not value or value not in valid_states:
+                    # Si no es válido o viene vacío, usar 'disponible' por defecto
                     value = 'disponible'
 
             update_fields.append(f"{key} = %s")
@@ -271,12 +269,12 @@ class PotreroService:
                     try:
                         tipos_pasto = PotreroService.get_tipos_pasto()
                         tipo_encontrado = next((tp for tp in tipos_pasto if tp['id'] == result['id_tipo_pasto']), None)
-                        result['tipo_pasto'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'No definido'
+                        result['tipo_pasto'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'NO_DEFINIDO'
                     except Exception as e:
                         print(f"Error obteniendo tipo de pasto: {e}")
-                        result['tipo_pasto'] = 'No definido'
+                        result['tipo_pasto'] = 'NO_DEFINIDO'
                 else:
-                    result['tipo_pasto'] = 'No definido'
+                    result['tipo_pasto'] = 'NO_DEFINIDO'
 
                 print(f"Potrero actualizado exitosamente: {result}")
                 return result
@@ -314,11 +312,11 @@ class PotreroService:
                     try:
                         tipos_pasto = PotreroService.get_tipos_pasto()
                         tipo_encontrado = next((tp for tp in tipos_pasto if tp['id'] == potrero['id_tipo_pasto']), None)
-                        potrero['tipo_pasto_nombre'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'No definido'
+                        potrero['tipo_pasto_nombre'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'NO_DEFINIDO'
                     except Exception:
-                        potrero['tipo_pasto_nombre'] = 'No definido'
+                        potrero['tipo_pasto_nombre'] = 'NO_DEFINIDO'
                 else:
-                    potrero['tipo_pasto_nombre'] = 'No definido'
+                    potrero['tipo_pasto_nombre'] = 'NO_DEFINIDO'
 
                 # Agregar nombre del responsable si existe
                 if potrero.get('responsable_persona_id'):

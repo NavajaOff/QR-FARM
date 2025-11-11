@@ -14,7 +14,7 @@ try:
     try:
         from ...app import emit_update
     except ImportError:
-        def emit_update(event):
+        def emit_update(event, data=None):
             print(f"WebSocket no disponible, evento omitido: {event}")
 except ImportError:
     def emit_update(event):
