@@ -1,17 +1,26 @@
 """Configuration module."""
 import os
 
+
+def _require_env(nombre_variable: str) -> str:
+    """Obtiene una variable de entorno obligatoria."""
+    valor = os.getenv(nombre_variable)
+    if valor is None:
+        raise ValueError(f"Variable de entorno obligatoria no configurada: {nombre_variable}")
+    return valor
+
+
 class Config:
     """Base configuration."""
-    
+
     # Secret key para JWT y sesiones
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
-    
+    SECRET_KEY: str = _require_env('SECRET_KEY')
+
     # Configuración de la base de datos
-    DB_HOST = os.environ.get('DB_HOST') or 'localhost'
-    DB_USER = os.environ.get('DB_USER') or 'root'
-    DB_PASSWORD = os.environ.get('DB_PASSWORD') or ''
-    DB_NAME = os.environ.get('DB_NAME') or 'gestion_ganadera'
-    
+    DB_HOST: str = _require_env('DB_HOST')
+    DB_USER: str = _require_env('DB_USER')
+    DB_PASSWORD: str = _require_env('DB_PASSWORD')
+    DB_NAME: str = _require_env('DB_NAME')
+
     # Configuración de JWT
-    JWT_ACCESS_TOKEN_EXPIRES = 24 * 60 * 60  # 24 horas en segundos
+    JWT_ACCESS_TOKEN_EXPIRES: int = 24 * 60 * 60  # 24 horas en segundos
