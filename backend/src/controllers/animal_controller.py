@@ -7,7 +7,7 @@ from ..services.animal_service import GanadoService
 try:
     from ...app import emit_update
 except ImportError:
-    def emit_update(event, data=None):  # type: ignore
+    def emit_update(event, _data=None):  # type: ignore
         print(f"WebSocket no disponible, evento omitido: {event}")
 
 # Constantes para mensajes de error
