@@ -10,6 +10,15 @@ EMAIL_REGEX = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
 EMAIL_INVALID_MSG = 'El formato del email no es válido'
 EMAIL_REGISTERED_MSG = 'El email ya está registrado'
 USER_NOT_FOUND_MSG = 'Usuario no encontrado'
+
+def _validar_email(email):
+    return EMAIL_REGEX.match(email) is not None
+
+def _obtener_usuario_actual():
+    return getattr(g, 'current_user', None)
+
+def _respuesta_error(message, status):
+    return jsonify({'status': 'error', 'message': message}), status
 try:
     try:
         from ...app import emit_update
@@ -117,7 +126,7 @@ class UsuarioController:
                 token = jwt.encode({
                     'user_id': usuario.id,
                     'email': usuario.persona.email if usuario.persona else email,
-                    'role': usuario.rol.rol if usuario.rol else 'usuario',
+                    'role': usuario.rol.nombre_rol if usuario.rol else 'usuario',
                     'exp': datetime.utcnow() + timedelta(hours=24)
                 }, current_app.config['SECRET_KEY'], algorithm='HS256')
 

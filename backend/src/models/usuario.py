@@ -21,21 +21,25 @@ class SexoGanado(str, Enum):
 class Rol:
     def __init__(self,
                  id: Optional[int] = None,
-                 rol: str = ""):
+                 nombre_rol: str = "",
+                 descripcion: Optional[str] = None):
         self.id = id
-        self.rol = rol
+        self.nombre_rol = nombre_rol
+        self.descripcion = descripcion
 
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> 'Rol':
         return Rol(
             id=data.get('id'),
-            rol=data.get('rol', '')
+            nombre_rol=data.get('rol', ''),
+            descripcion=data.get('descripcion')
         )
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             'id': self.id,
-            'rol': self.rol
+            'rol': self.nombre_rol,
+            'descripcion': self.descripcion
         }
 
 class Persona:
@@ -48,7 +52,8 @@ class Persona:
                  segundo_apellido: Optional[str] = None,
                  email: str = "",
                  telefono: Optional[str] = None,
-                 fecha_creacion: Optional[datetime] = None):
+                 fecha_creacion: Optional[datetime] = None,
+                 rol: Optional[Rol] = None):
 
         self.id = id
         self.id_rol = id_rol
@@ -59,6 +64,7 @@ class Persona:
         self.email = email
         self.telefono = telefono
         self.fecha_creacion = fecha_creacion
+        self.rol = rol
 
     @property
     def nombre_completo(self) -> str:
@@ -75,7 +81,7 @@ class Persona:
 
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> 'Persona':
-        return Persona(
+        persona = Persona(
             id=data.get('id'),
             id_rol=data.get('id_rol'),
             primer_nombre=data.get('primer_nombre', ''),
@@ -86,9 +92,12 @@ class Persona:
             telefono=data.get('telefono'),
             fecha_creacion=data.get('fecha_creacion')
         )
+        if 'rol' in data and data['rol']:
+            persona.rol = Rol.from_dict(data['rol'])
+        return persona
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        data = {
             'id': self.id,
             'id_rol': self.id_rol,
             'primer_nombre': self.primer_nombre,
@@ -100,6 +109,9 @@ class Persona:
             'nombre_completo': self.nombre_completo,
             'fecha_creacion': self.fecha_creacion.isoformat() if self.fecha_creacion else None
         }
+        if self.rol:
+            data['rol'] = self.rol.to_dict()
+        return data
 
 class Usuario:
     def __init__(self,

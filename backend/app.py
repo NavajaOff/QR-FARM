@@ -114,7 +114,7 @@ def obtener_usuarios():
                 "id": usuario.id,
                 "nombre": f"{usuario.persona.primer_nombre} {usuario.persona.primer_apellido}",
                 "email": usuario.persona.email,
-                "rol": usuario.rol.rol if usuario.rol else "user",
+                "rol": usuario.rol.nombre_rol if usuario.rol else "user",
                 "estado": usuario.estado.value if hasattr(usuario.estado, 'value') else str(usuario.estado)
             })
 
