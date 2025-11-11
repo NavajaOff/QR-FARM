@@ -110,3 +110,6 @@ backend/qr/*
 # Logs
 *.log
 logs/
+
+# Configuración local de VS Code
+.vscode/
