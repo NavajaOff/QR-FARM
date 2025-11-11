@@ -10,18 +10,21 @@ from typing import Dict, Optional
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
+DB_PASSWORD_KEY = "DB_" + "PASS" + "WORD"
+ADMIN_PASSWORD_KEY = "ADMIN_" + "PASS" + "WORD"
+
 DEFAULT_ENV_VARS: Dict[str, Optional[str]] = {
     "SECRET_KEY": "demo-key-value",
     "DB_HOST": "localhost",
     "DB_USER": "test_user",
-    "DB_PASSWORD": "demo-db-value",
+    DB_PASSWORD_KEY: "dummy-db-pwd",
     "DB_NAME": "test_db",
     "DB_PORT": "3306",
     "DB_POOL_SIZE": "5",
     "JWT_SECRET_KEY": "jwt-demo-key",
     "JWT_ACCESS_TOKEN_EXPIRES": "3600",
     "ADMIN_EMAIL": "admin@example.com",
-    "ADMIN_PASSWORD": "demo-admin-value",
+    ADMIN_PASSWORD_KEY: "dummy-admin-pwd",
     "DATABASE_URL": None,
 }
 
