@@ -7,7 +7,7 @@ Servidor REST API con autenticación JWT
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from flask_migrate import Migrate
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 import jwt
 import datetime
 import os
@@ -35,18 +35,42 @@ from pathlib import Path
 env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
+
+def _require_env(nombre_variable: str) -> str:
+    """Obtiene una variable de entorno obligatoria."""
+    valor = os.getenv(nombre_variable)
+    if valor is None:
+        raise RuntimeError(f"Variable de entorno obligatoria no configurada: {nombre_variable}")
+    return valor
+
+
+def _build_sqlalchemy_uri() -> str:
+    """Construye la URI de SQLAlchemy a partir de variables de entorno."""
+    existing_url = os.getenv('DATABASE_URL')
+    if existing_url:
+        return existing_url
+    db_user = _require_env('DB_USER')
+    db_password = _require_env('DB_PASSWORD')
+    db_host = _require_env('DB_HOST')
+    db_port = _require_env('DB_PORT')
+    db_name = _require_env('DB_NAME')
+    return (
+        f"mysql+mysqlconnector://{db_user}:{db_password}@"
+        f"{db_host}:{db_port}/{db_name}"
+    )
+
+
 # Configuración de la aplicación Flask
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'qr-farm-secret-key-2024')
-app.config['FLASK_ENV'] = os.getenv('FLASK_ENV', 'development')
+app.config['SECRET_KEY'] = _require_env('SECRET_KEY')
+app.config['FLASK_ENV'] = os.getenv('FLASK_ENV')
 app.config['DEBUG'] = os.getenv('DEBUG', 'False').lower() == 'true'
 
 # Configuración de Flask-Migrate
 from src.database.db import ConexionBaseDatos
 # Para Flask-Migrate necesitamos SQLAlchemy, pero como usamos MySQL Connector,
 # crearemos una configuración básica
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL',
-    f"mysql+mysqlconnector://{os.getenv('DB_USER', 'root')}:{os.getenv('DB_PASSWORD', '')}@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '3306')}/{os.getenv('DB_NAME', 'gestion_ganadera')}")
+app.config['SQLALCHEMY_DATABASE_URI'] = _build_sqlalchemy_uri()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Inicializar Flask-Migrate (aunque no usaremos SQLAlchemy directamente)
@@ -318,12 +342,11 @@ def emit_update(event_type, data):
 def crear_usuario_admin(app):
     """Crea el usuario administrador desde las variables de entorno"""
     with app.app_context():
-        admin_email = os.getenv("ADMIN_EMAIL")
-        admin_password = os.getenv("ADMIN_PASSWORD")
+        admin_email = _require_env("ADMIN_EMAIL")
+        admin_password = _require_env("ADMIN_PASSWORD")
 
         if not admin_email or not admin_password:
-            print("ADVERTENCIA: Faltan ADMIN_EMAIL o ADMIN_PASSWORD en .env")
-            return
+            raise RuntimeError("ADMIN_EMAIL y ADMIN_PASSWORD deben contener valores válidos.")
 
         conn = None
         cursor = None
@@ -361,7 +384,6 @@ def crear_usuario_admin(app):
                 
                 conn.commit()
                 print(f"[OK] Usuario admin creado correctamente: {admin_email}")
-                print(f"     Contrasena: {admin_password} (desde .env)")
             else:
                 print(f"[INFO] Usuario admin ya existe: {admin_existente['email']}")
 
@@ -431,7 +453,7 @@ if __name__ == '__main__':
         print(f"[OK] Archivo .env encontrado en: {env_file}")
     else:
         print(f"[ADVERTENCIA] No se encontro archivo .env en: {env_file}")
-        print("              Usando valores por defecto")
+        print("              Configura las variables de entorno requeridas antes de iniciar el servicio")
     
     # Crear usuario admin si no existe
     crear_usuario_admin(app)

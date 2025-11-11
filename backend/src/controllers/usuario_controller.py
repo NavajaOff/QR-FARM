@@ -34,7 +34,7 @@ class UsuarioController:
     MSG_INVALID_EMAIL_FORMAT = 'El formato del email no es válido'
     MSG_USER_NOT_FOUND = 'Usuario no encontrado'
     MSG_EMAIL_ALREADY_REGISTERED = 'El email ya está registrado'
-    MSG_PASSWORD_TOO_SHORT = 'La contraseña debe tener al menos 6 caracteres'
+    MSG_CLAVE_CORTA = 'La contraseña debe tener al menos 6 caracteres'
     MSG_NOT_AUTHENTICATED = 'No autenticado'
     MSG_FIELD_REQUIRED = 'El campo {field} es requerido'
     @staticmethod
@@ -69,7 +69,7 @@ class UsuarioController:
             if len(password) < 6:
                 return jsonify({
                     'status': 'error',
-                    'message': MSG_PASSWORD_TOO_SHORT
+                    'message': MSG_CLAVE_CORTA
                 }), 400
 
             # Verificar si el email ya existe
@@ -393,7 +393,7 @@ class UsuarioController:
                 return UsuarioController._error(MSG_EMAIL_ALREADY_REGISTERED, 400)
 
         if 'password' in data and len(data['password']) < 6:
-            return UsuarioController._error(MSG_PASSWORD_TOO_SHORT, 400)
+            return UsuarioController._error(MSG_CLAVE_CORTA, 400)
 
         if 'id_rol' in data:
             try:

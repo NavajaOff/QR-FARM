@@ -4,13 +4,32 @@ from typing import Dict, Any, Generator, Optional
 from contextlib import contextmanager
 import logging
 import mysql.connector
-from mysql.connector import Error, connect
+from passlib.hash import bcrypt
+from mysql.connector import Error
 from mysql.connector.connection import MySQLConnection
 from mysql.connector.cursor import MySQLCursor
 
 # Configurar el registrador de eventos
 registrador = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+
+def _require_env(nombre_variable: str) -> str:
+    """Obtiene una variable de entorno obligatoria."""
+    valor = os.getenv(nombre_variable)
+    if valor is None:
+        raise ValueError(f"Variable de entorno obligatoria no configurada: {nombre_variable}")
+    return valor
+
+
+def _require_int_env(nombre_variable: str) -> int:
+    """Obtiene una variable de entorno entera obligatoria."""
+    valor = _require_env(nombre_variable)
+    try:
+        return int(valor)
+    except ValueError as error:
+        raise ValueError(f"La variable de entorno {nombre_variable} debe ser un número entero válido") from error
+
 
 class ErrorBaseDatos(Exception):
     """Excepción personalizada para errores de base de datos."""
@@ -35,11 +54,11 @@ class ConexionBaseDatos:
         """Inicializar la configuración de la conexión a la base de datos."""
         try:
             self.configuracion = {
-                'host': os.getenv('DB_HOST', 'localhost'),
-                'user': os.getenv('DB_USER', 'root'),
-                'password': os.getenv('DB_PASSWORD', ''),
-                'database': os.getenv('DB_NAME', 'gestion_ganadera'),
-                'port': int(os.getenv('DB_PORT', '3306')),
+                'host': _require_env('DB_HOST'),
+                'user': _require_env('DB_USER'),
+                'password': _require_env('DB_PASSWORD'),
+                'database': _require_env('DB_NAME'),
+                'port': _require_int_env('DB_PORT'),
                 'use_unicode': True,
                 'charset': 'utf8mb4',
                 'ssl_disabled': True
@@ -47,7 +66,7 @@ class ConexionBaseDatos:
             # Probar conexión
             self._obtener_conexion()
             registrador.info("Conexión a la base de datos inicializada correctamente")
-        except Error as e:
+        except (Error, ValueError) as e:
             registrador.error(f"Error al inicializar la conexión a la base de datos: {e}")
             raise ErrorBaseDatos(f"Error de inicialización de base de datos: {e}")
 
@@ -111,15 +130,21 @@ def init_db():
 
 def crear_usuario_admin_por_defecto():
     """Crear usuario administrador por defecto si no existe."""
+    admin_email = _require_env('ADMIN_EMAIL')
+    admin_password = _require_env('ADMIN_PASSWORD')
+    db_name = _require_env('DB_NAME')
     try:
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
 
         # Usar la base de datos gestion_ganadera
-        cursor.execute('USE gestion_ganadera')
+        cursor.execute(f"USE `{db_name}`")
 
         # Verificar si ya existe el usuario admin
-        cursor.execute('SELECT COUNT(*) as count FROM usuarios u JOIN personas p ON u.id_persona = p.id WHERE p.email = %s', ('admin@qrfarm.com',))
+        cursor.execute(
+            'SELECT COUNT(*) as count FROM usuarios u JOIN personas p ON u.id_persona = p.id WHERE p.email = %s',
+            (admin_email,)
+        )
         result = cursor.fetchone()
 
         if result['count'] == 0:
@@ -137,28 +162,31 @@ def crear_usuario_admin_por_defecto():
             # Crear persona admin
             cursor.execute('''INSERT INTO personas (id_rol, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, email, telefono, fecha_creacion)
                             VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())''',
-                         (rol_id, 'Admin', 'Sistema', 'QR', 'Farm', 'admin@qrfarm.com', '1234567890'))
+                         (rol_id, 'Admin', 'Sistema', 'QR', 'Farm', admin_email, '1234567890'))
 
             persona_id = cursor.lastrowid
 
             # Crear usuario admin
             cursor.execute('''INSERT INTO usuarios (id_persona, id_rol, contrasena, estado)
                             VALUES (%s, %s, %s, %s)''',
-                         (persona_id, rol_id, 'admin123', 'activo'))
+                         (persona_id, rol_id, bcrypt.hash(admin_password), 'activo'))
 
             conn.commit()
 
             registrador.info("Usuario administrador creado exitosamente")
-            registrador.info("Email: admin@qrfarm.com")
-            registrador.info("Contraseña: admin123")
+            registrador.info("Email: %s", admin_email)
+            registrador.info("Contraseña establecida desde variables de entorno")
         else:
             registrador.info("Usuario administrador ya existe")
 
-        cursor.close()
-        conn.close()
-
     except Exception as e:
         registrador.error(f"Error al crear usuario administrador por defecto: {e}")
+        raise
+    finally:
+        if 'cursor' in locals() and cursor:
+            cursor.close()
+        if 'conn' in locals() and conn:
+            conn.close()
 
 # ✅ FUNCIÓN ACTUALIZADA
 def get_connection():

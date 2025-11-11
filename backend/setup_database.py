@@ -37,7 +37,7 @@ def setup_database():
         print("\n📋 Resumen:")
         print("- Migraciones aplicadas")
         print("- Datos iniciales insertados")
-        print("- Usuario admin creado: admin@qrfarm.com / admin123")
+        print("- Usuario admin configurado mediante variables de entorno")
         return True
     else:
         print("❌ Error al configurar la base de datos")
