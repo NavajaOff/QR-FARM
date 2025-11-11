@@ -91,6 +91,62 @@ def generate_token(user_id, email, role):
     token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
     return token
 
+def _validate_login_data(data):
+    """Valida los datos de login"""
+    if not data:
+        return None, _create_error_response("Se requieren datos JSON"), 400
+
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return None, _create_error_response("Email y contraseña son requeridos"), 400
+
+    return {'email': email, 'password': password}, None, None
+
+def _create_error_response(message):
+    """Crea una respuesta de error estándar"""
+    return jsonify({
+        "status": "error",
+        "message": message
+    })
+
+def _verify_password(stored_password, password):
+    """Verifica la contraseña con diferentes métodos de hash"""
+    try:
+        if stored_password and stored_password.startswith('$2b$'):
+            return bcrypt.verify(password, stored_password)
+        else:
+            # Para contraseñas sin hash (compatibilidad)
+            return stored_password == password
+    except Exception as hash_error:
+        print(f"Error verificando hash: {hash_error}")
+        # Fallback a comparación directa
+        return stored_password == password
+
+def _create_success_response(token, user_data):
+    """Crea una respuesta de login exitoso"""
+    return jsonify({
+        "status": "success",
+        "message": "Inicio de sesión exitoso",
+        "token": token,
+        "user": user_data
+    }), 200
+
+def _create_invalid_credentials_response():
+    """Crea una respuesta de credenciales inválidas"""
+    return jsonify({
+        "status": "error",
+        "message": "Credenciales inválidas"
+    }), 401
+
+def _create_db_error_response():
+    """Crea una respuesta de error de base de datos"""
+    return jsonify({
+        "status": "error",
+        "message": "Error de conexión a la base de datos"
+    }), 500
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Endpoint de verificación de salud del servidor"""
@@ -135,122 +191,85 @@ def obtener_usuarios():
 
 
 
+def _query_user_by_email(email):
+    """Consulta usuario por email en la base de datos"""
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    query = """
+        SELECT
+            u.id as usuario_id,
+            u.contrasena,
+            u.estado,
+            p.email,
+            r.rol AS rol
+        FROM usuarios u
+        INNER JOIN personas p ON u.id_persona = p.id
+        INNER JOIN roles r ON u.id_rol = r.id
+        WHERE p.email = %s AND u.estado = 'activo'
+    """
+
+    cursor.execute(query, (email,))
+    result = cursor.fetchone()
+
+    cursor.close()
+    if conn and hasattr(conn, 'is_connected') and conn.is_connected():
+        conn.close()
+
+    return result
+
+def _process_login_success(result):
+    """Procesa un login exitoso y retorna la respuesta"""
+    print(f"Usuario encontrado: {result['email']} - Rol: {result['rol']}")
+
+    token = generate_token(result['usuario_id'], result['email'], result['rol'])
+    print("Login exitoso - Token generado")
+
+    user_data = {
+        "id": result['usuario_id'],
+        "email": result['email'],
+        "rol": result['rol']
+    }
+
+    return _create_success_response(token, user_data)
+
 @app.route('/api/usuarios/login', methods=['POST'])
 def usuarios_login():
     """Endpoint de autenticación de usuarios"""
     try:
         print("Procesando login...")
 
-        # Obtener datos JSON del request
-        data = request.get_json()
+        # Validar datos del request
+        login_data, error_response, status_code = _validate_login_data(request.get_json())
+        if error_response:
+            return error_response, status_code
 
-        if not data:
-            print("ERROR: No se recibieron datos JSON")
-            return jsonify({
-                "status": "error",
-                "message": "Se requieren datos JSON"
-            }), 400
-
-        email = data.get('email')
-        password = data.get('password')
-
+        email = login_data['email']
+        password = login_data['password']
         print(f"Datos recibidos - Email: {email}")
 
-        # Validar que se proporcionaron email y password
-        if not email or not password:
-            print("ERROR: Email o password faltantes")
-            return jsonify({
-                "status": "error",
-                "message": "Email y contraseña son requeridos"
-            }), 400
-
-        # Consultar usuario en la base de datos real
-        conn = None
-        cursor = None
+        # Consultar usuario en la base de datos
         try:
-            conn = get_connection()
-            cursor = conn.cursor(dictionary=True)
+            result = _query_user_by_email(email)
 
-            # Consulta que une las tres tablas: usuarios, personas y roles
-            query = """
-                SELECT
-                    u.id as usuario_id,
-                    u.contrasena,
-                    u.estado,
-                    p.email,
-                    r.rol AS rol
-                FROM usuarios u
-                INNER JOIN personas p ON u.id_persona = p.id
-                INNER JOIN roles r ON u.id_rol = r.id
-                WHERE p.email = %s AND u.estado = 'activo'
-            """
-
-            cursor.execute(query, (email,))
-            result = cursor.fetchone()
-
-            # Verificar contraseña con hash o sin hash (para compatibilidad)
-            password_valid = False
-            if result:
-                stored_password = result['contrasena']
-                # Primero intentar verificar como hash bcrypt
-                try:
-                    if stored_password and stored_password.startswith('$2b$'):
-                        password_valid = bcrypt.verify(password, stored_password)
-                    else:
-                        # Para contraseñas sin hash (compatibilidad)
-                        password_valid = (stored_password == password)
-                except Exception as hash_error:
-                    print(f"Error verificando hash: {hash_error}")
-                    # Fallback a comparación directa
-                    password_valid = (stored_password == password)
-
-            if result and password_valid:
-                print(f"Usuario encontrado: {result['email']} - Rol: {result['rol']}")
-
-                # Generar token JWT
-                token = generate_token(result['usuario_id'], result['email'], result['rol'])
-
-                print("Login exitoso - Token generado")
-
-                return jsonify({
-                    "status": "success",
-                    "message": "Inicio de sesión exitoso",
-                    "token": token,
-                    "user": {
-                        "id": result['usuario_id'],
-                        "email": result['email'],
-                        "rol": result['rol']
-                    }
-                }), 200
+            # Verificar credenciales
+            if result and _verify_password(result['contrasena'], password):
+                return _process_login_success(result)
             else:
                 print("Credenciales invalidas")
-                return jsonify({
-                    "status": "error",
-                    "message": "Credenciales inválidas"
-                }), 401
+                return _create_invalid_credentials_response()
 
         except Exception as db_error:
             print(f"Error de base de datos: {str(db_error)}")
             import traceback
             traceback.print_exc()
-            return jsonify({
-                "status": "error",
-                "message": "Error de conexión a la base de datos"
-            }), 500
-        finally:
-            if cursor:
-                cursor.close()
-            if conn and hasattr(conn, 'is_connected') and conn.is_connected():
-                conn.close()
+            return _create_db_error_response()
 
     except Exception as e:
         print(f"Error en login: {str(e)}")
         import traceback
         traceback.print_exc()
-        return jsonify({
-            "status": "error",
-            "message": INTERNAL_SERVER_ERROR_MSG
-        }), 500
+        return _create_error_response(INTERNAL_SERVER_ERROR_MSG), 500
 
 # Endpoint para servir imágenes QR
 @app.route('/api/qr/<filename>', methods=['GET'])

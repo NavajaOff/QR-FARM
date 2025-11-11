@@ -154,7 +154,7 @@ class Usuario:
         # Intentar verificar como hash primero
         try:
             return bcrypt.verify(password, self.contrasena)
-        except:
+        except ValueError:
             # Si falla, comparar directamente (para usuarios antiguos sin hash)
             # Esto permite compatibilidad con usuarios existentes
             return self.contrasena == password
