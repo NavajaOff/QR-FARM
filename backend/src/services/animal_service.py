@@ -286,49 +286,55 @@ class GanadoService:
                 conn.close()
 
     @staticmethod
+    def _mapear_estado_a_id(estado: EstadoGanado) -> int:
+        """Mapea un estado del enum EstadoGanado a su ID en la base de datos."""
+        estado_mapping = {
+            EstadoGanado.ACTIVO: 1,
+            EstadoGanado.SALUDABLE: 2,
+            EstadoGanado.REVISION: 3,
+            EstadoGanado.VENDIDO: 4,
+            EstadoGanado.ENFERMO: 5
+        }
+        return estado_mapping.get(estado, 1)  # Default: activo
+
+    @staticmethod
+    def _obtener_estado_id_desde_db(estado_value: str) -> Optional[int]:
+        """Obtiene el ID del estado desde la base de datos."""
+        try:
+            conn_temp = get_connection()
+            cursor_temp = conn_temp.cursor()
+            cursor_temp.execute("SELECT id FROM estado_ganado WHERE tipo_estado = %s", (estado_value,))
+            result = cursor_temp.fetchone()
+            cursor_temp.close()
+            conn_temp.close()
+            return result[0] if result else None
+        except Exception as e:
+            print(f"Error obteniendo ID de estado: {e}")
+            return None
+
+    @staticmethod
+    def _convertir_fecha_nacimiento(fecha_nac):
+        """Convierte la fecha de nacimiento al formato adecuado para la BD."""
+        if fecha_nac and hasattr(fecha_nac, 'isoformat'):
+            return fecha_nac.isoformat()
+        elif isinstance(fecha_nac, str):
+            return fecha_nac  # Ya es string, mantener como está
+        else:
+            return None
+
+    @staticmethod
     def actualizar_ganado(id: int, ganado: Ganado) -> bool:
         try:
             conn = get_connection()
             cursor = conn.cursor()
 
-            # Obtener el ID del estado desde la base de datos
-            estado_id = None
-            try:
-                conn_temp = get_connection()
-                cursor_temp = conn_temp.cursor()
-                cursor_temp.execute("SELECT id FROM estado_ganado WHERE tipo_estado = %s", (ganado.estado.value,))
-                result = cursor_temp.fetchone()
-                if result:
-                    estado_id = result[0]
-                cursor_temp.close()
-                conn_temp.close()
-            except Exception as e:
-                print(f"Error obteniendo ID de estado: {e}")
-
-            # Si no se encontró el estado, usar default
+            # Obtener el ID del estado
+            estado_id = GanadoService._obtener_estado_id_desde_db(ganado.estado.value)
             if estado_id is None:
-                # Mapear los valores del enum EstadoGanado a IDs de base de datos
-                if ganado.estado == EstadoGanado.ACTIVO:
-                    estado_id = 1
-                elif ganado.estado == EstadoGanado.SALUDABLE:
-                    estado_id = 2
-                elif ganado.estado == EstadoGanado.REVISION:
-                    estado_id = 3
-                elif ganado.estado == EstadoGanado.VENDIDO:
-                    estado_id = 4
-                elif ganado.estado == EstadoGanado.ENFERMO:
-                    estado_id = 5
-                else:
-                    estado_id = 1  # Default: activo
+                estado_id = GanadoService._mapear_estado_a_id(ganado.estado)
 
-            # Convertir fecha_nacimiento a string si es date object
-            fecha_nac = ganado.fecha_nacimiento
-            if fecha_nac and hasattr(fecha_nac, 'isoformat'):
-                fecha_nac = fecha_nac.isoformat()
-            elif isinstance(fecha_nac, str):
-                pass
-            else:
-                fecha_nac = None
+            # Convertir fecha de nacimiento
+            fecha_nac = GanadoService._convertir_fecha_nacimiento(ganado.fecha_nacimiento)
 
             sql = """
                 UPDATE ganado SET
