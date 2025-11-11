@@ -7,6 +7,13 @@ from src.services.potrero_service import PotreroService
 class PotreroController:
     """Controller handling Potrero HTTP requests."""
 
+    # Error message constants
+    ERROR_INTERNO_SERVIDOR = 'Error interno del servidor'
+    ERROR_BASE_DATOS = 'Error de base de datos'
+    POTRERO_NO_ENCONTRADO = 'Potrero no encontrado'
+    DATOS_INVALIDOS = 'Datos inválidos'
+    WEBSOCKET_NO_DISPONIBLE = 'WebSocket no disponible, omitiendo emisión'
+
     @staticmethod
     def get_all() -> Tuple[Any, int]:
         """Get all potreros endpoint."""
@@ -18,7 +25,7 @@ class PotreroController:
             import traceback
             traceback.print_exc()
             return jsonify({
-                'error': 'Error interno del servidor',
+                'error': PotreroController.ERROR_INTERNO_SERVIDOR,
                 'message': str(e),
                 'success': False
             }), 500
@@ -31,19 +38,19 @@ class PotreroController:
             return jsonify({'data': potrero, 'success': True}), 200
         except ValueError as e:
             return jsonify({
-                'error': 'Potrero no encontrado',
+                'error': PotreroController.POTRERO_NO_ENCONTRADO,
                 'message': str(e),
                 'success': False
             }), 404
         except DatabaseError as e:
             return jsonify({
-                'error': 'Error de base de datos',
+                'error': PotreroController.ERROR_BASE_DATOS,
                 'message': str(e),
                 'success': False
             }), 500
         except Exception as e:
             return jsonify({
-                'error': 'Error interno del servidor',
+                'error': PotreroController.ERROR_INTERNO_SERVIDOR,
                 'message': str(e),
                 'success': False
             }), 500
@@ -55,7 +62,7 @@ class PotreroController:
             data = request.get_json()
             if not data:
                 return jsonify({
-                    'error': 'Datos inválidos',
+                    'error': PotreroController.DATOS_INVALIDOS,
                     'message': 'No se proporcionaron datos',
                     'success': False
                 }), 400
@@ -73,7 +80,7 @@ class PotreroController:
                     'data': potrero
                 })
             except ImportError:
-                print("WebSocket no disponible, omitiendo emisión")
+                print(PotreroController.WEBSOCKET_NO_DISPONIBLE)
             return jsonify({
                 'data': potrero,
                 'message': 'Potrero creado correctamente',
@@ -82,14 +89,14 @@ class PotreroController:
         except ValueError as e:
             print(f"Error de validación: {str(e)}")
             return jsonify({
-                'error': 'Datos inválidos',
+                'error': PotreroController.DATOS_INVALIDOS,
                 'message': str(e),
                 'success': False
             }), 400
         except DatabaseError as e:
             print(f"Error de base de datos: {str(e)}")
             return jsonify({
-                'error': 'Error de base de datos',
+                'error': PotreroController.ERROR_BASE_DATOS,
                 'message': str(e),
                 'success': False
             }), 500
@@ -98,7 +105,7 @@ class PotreroController:
             import traceback
             traceback.print_exc()
             return jsonify({
-                'error': 'Error interno del servidor',
+                'error': PotreroController.ERROR_INTERNO_SERVIDOR,
                 'message': str(e),
                 'success': False
             }), 500
@@ -110,7 +117,7 @@ class PotreroController:
             data = request.get_json()
             if not data:
                 return jsonify({
-                    'error': 'Datos inválidos',
+                    'error': PotreroController.DATOS_INVALIDOS,
                     'message': 'No se proporcionaron datos para actualizar',
                     'success': False
                 }), 400
@@ -124,7 +131,7 @@ class PotreroController:
                     'data': potrero
                 })
             except ImportError:
-                print("WebSocket no disponible, omitiendo emisión")
+                print(PotreroController.WEBSOCKET_NO_DISPONIBLE)
             return jsonify({
                 'data': potrero,
                 'message': 'Potrero actualizado correctamente',
@@ -132,19 +139,19 @@ class PotreroController:
             }), 200
         except ValueError as e:
             return jsonify({
-                'error': 'Potrero no encontrado',
+                'error': PotreroController.POTRERO_NO_ENCONTRADO,
                 'message': str(e),
                 'success': False
             }), 404
         except DatabaseError as e:
             return jsonify({
-                'error': 'Error de base de datos',
+                'error': PotreroController.ERROR_BASE_DATOS,
                 'message': str(e),
                 'success': False
             }), 500
         except Exception as e:
             return jsonify({
-                'error': 'Error interno del servidor',
+                'error': PotreroController.ERROR_INTERNO_SERVIDOR,
                 'message': str(e),
                 'success': False
             }), 500
@@ -161,26 +168,26 @@ class PotreroController:
                     'id': potrero_id
                 })
             except ImportError:
-                print("WebSocket no disponible, omitiendo emisión")
+                print(PotreroController.WEBSOCKET_NO_DISPONIBLE)
             return jsonify({
                 'message': 'Potrero eliminado correctamente',
                 'success': True
             }), 200
         except ValueError as e:
             return jsonify({
-                'error': 'Potrero no encontrado',
+                'error': PotreroController.POTRERO_NO_ENCONTRADO,
                 'message': str(e),
                 'success': False
             }), 404
         except DatabaseError as e:
             return jsonify({
-                'error': 'Error de base de datos',
+                'error': PotreroController.ERROR_BASE_DATOS,
                 'message': str(e),
                 'success': False
             }), 500
         except Exception as e:
             return jsonify({
-                'error': 'Error interno del servidor',
+                'error': PotreroController.ERROR_INTERNO_SERVIDOR,
                 'message': str(e),
                 'success': False
             }), 500
@@ -199,13 +206,13 @@ class PotreroController:
             }), 400
         except DatabaseError as e:
             return jsonify({
-                'error': 'Error de base de datos',
+                'error': PotreroController.ERROR_BASE_DATOS,
                 'message': str(e),
                 'success': False
             }), 500
         except Exception as e:
             return jsonify({
-                'error': 'Error interno del servidor',
+                'error': PotreroController.ERROR_INTERNO_SERVIDOR,
                 'message': str(e),
                 'success': False
             }), 500
@@ -217,7 +224,7 @@ class PotreroController:
             data = request.get_json()
             if not isinstance(data.get('delta'), (int, float)):
                 return jsonify({
-                    'error': 'Datos inválidos',
+                    'error': PotreroController.DATOS_INVALIDOS,
                     'message': 'El campo delta es requerido y debe ser un número',
                     'success': False
                 }), 400
@@ -238,13 +245,13 @@ class PotreroController:
             }), 400
         except DatabaseError as e:
             return jsonify({
-                'error': 'Error de base de datos',
+                'error': PotreroController.ERROR_BASE_DATOS,
                 'message': str(e),
                 'success': False
             }), 500
         except Exception as e:
             return jsonify({
-                'error': 'Error interno del servidor',
+                'error': PotreroController.ERROR_INTERNO_SERVIDOR,
                 'message': str(e),
                 'success': False
             }), 500
@@ -257,13 +264,13 @@ class PotreroController:
             return jsonify({'data': tipos_pasto, 'success': True}), 200
         except DatabaseError as e:
             return jsonify({
-                'error': 'Error de base de datos',
+                'error': PotreroController.ERROR_BASE_DATOS,
                 'message': str(e),
                 'success': False
             }), 500
         except Exception as e:
             return jsonify({
-                'error': 'Error interno del servidor',
+                'error': PotreroController.ERROR_INTERNO_SERVIDOR,
                 'message': str(e),
                 'success': False
             }), 500
@@ -276,13 +283,13 @@ class PotreroController:
             return jsonify({'data': personas, 'success': True}), 200
         except DatabaseError as e:
             return jsonify({
-                'error': 'Error de base de datos',
+                'error': PotreroController.ERROR_BASE_DATOS,
                 'message': str(e),
                 'success': False
             }), 500
         except Exception as e:
             return jsonify({
-                'error': 'Error interno del servidor',
+                'error': PotreroController.ERROR_INTERNO_SERVIDOR,
                 'message': str(e),
                 'success': False
             }), 500
@@ -295,13 +302,13 @@ class PotreroController:
             return jsonify({'data': estados, 'success': True}), 200
         except DatabaseError as e:
             return jsonify({
-                'error': 'Error de base de datos',
+                'error': PotreroController.ERROR_BASE_DATOS,
                 'message': str(e),
                 'success': False
             }), 500
         except Exception as e:
             return jsonify({
-                'error': 'Error interno del servidor',
+                'error': PotreroController.ERROR_INTERNO_SERVIDOR,
                 'message': str(e),
                 'success': False
             }), 500
