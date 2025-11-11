@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import importlib
+import os
 from importlib import util
 from pathlib import Path
 from typing import Dict, Optional
@@ -9,17 +11,17 @@ from typing import Dict, Optional
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 DEFAULT_ENV_VARS: Dict[str, Optional[str]] = {
-    "SECRET_KEY": "test-secret-key",
+    "SECRET_KEY": "demo-key-value",
     "DB_HOST": "localhost",
     "DB_USER": "test_user",
-    "DB_PASSWORD": "test_password",
+    "DB_PASSWORD": "demo-db-value",
     "DB_NAME": "test_db",
     "DB_PORT": "3306",
     "DB_POOL_SIZE": "5",
-    "JWT_SECRET_KEY": "jwt-secret",
+    "JWT_SECRET_KEY": "jwt-demo-key",
     "JWT_ACCESS_TOKEN_EXPIRES": "3600",
     "ADMIN_EMAIL": "admin@example.com",
-    "ADMIN_PASSWORD": "admin-pass",
+    "ADMIN_PASSWORD": "demo-admin-value",
     "DATABASE_URL": None,
 }
 
@@ -46,4 +48,12 @@ def load_module(module_name: str, relative_path: str):
     module = util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def import_module(module_path: str):
+    """Importa un módulo asegurando que el proyecto esté en sys.path."""
+    project_str = str(PROJECT_ROOT)
+    if project_str not in os.sys.path:
+        os.sys.path.insert(0, project_str)
+    return importlib.import_module(module_path)
 

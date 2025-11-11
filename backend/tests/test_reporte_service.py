@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from io import BytesIO
 
-from .helpers import load_module, prepare_environment
+from .helpers import import_module, prepare_environment
 
 
 def test_generar_pdf_crea_documento(monkeypatch):
     """El PDF generado debe contener datos binarios válidos."""
     prepare_environment(monkeypatch)
-    reporte_module = load_module("reporte_service_module", "src/services/reporte_service.py")
+    reporte_module = import_module("src.services.reporte_service")
 
     resumen = {
         "generado_en": "2025-11-11T10:00:00Z",

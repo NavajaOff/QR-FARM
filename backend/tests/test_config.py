@@ -12,7 +12,7 @@ def test_require_env_return(monkeypatch):
     prepare_environment(monkeypatch)
     config_module = load_module("backend_config_module", "config.py")
 
-    assert config_module._require_env("SECRET_KEY") == "test-secret-key"
+    assert config_module._require_env("SECRET_KEY") == "demo-key-value"
 
 
 def test_require_env_missing(monkeypatch):
