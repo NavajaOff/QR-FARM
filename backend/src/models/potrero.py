@@ -59,37 +59,11 @@ class Potrero:
     def from_params(
         cls,
         *,
-        id: Optional[int] = None,
-        id_tipo_pasto: Optional[int] = None,
-        nombre: Optional[str] = None,
-        capacidad: Optional[int] = None,
-        hectareas: Optional[float] = None,
-        ocupacion: int = 0,
-        fecha_ultimo_uso: Optional[datetime] = None,
-        responsable_persona_id: Optional[int] = None,
-        proxima_limpieza: Optional[datetime] = None,
-        area: Optional[Decimal] = None,
-        ultima_limpieza: Optional[datetime] = None,
-        descripcion: Optional[str] = None,
-        propietario_persona_id: Optional[int] = None,
-        estado: EstadoPotrero = EstadoPotrero.DISPONIBLE
+        estado: EstadoPotrero = EstadoPotrero.DISPONIBLE,
+        **kwargs
     ) -> 'Potrero':
         """Backward compatible constructor with explicit parameters."""
-        datos = PotreroData(
-            id=id,
-            id_tipo_pasto=id_tipo_pasto,
-            nombre=nombre,
-            capacidad=capacidad,
-            hectareas=hectareas,
-            ocupacion=ocupacion,
-            fecha_ultimo_uso=fecha_ultimo_uso,
-            responsable_persona_id=responsable_persona_id,
-            proxima_limpieza=proxima_limpieza,
-            area=area,
-            ultima_limpieza=ultima_limpieza,
-            descripcion=descripcion,
-            propietario_persona_id=propietario_persona_id
-        )
+        datos = PotreroData(**kwargs)
         return cls(datos=datos, estado=estado)
 
     @staticmethod
@@ -140,6 +114,7 @@ class Potrero:
         """Create model from dictionary."""
         area_value = data.get('area')
         datos = PotreroData(
+            id=data.get('id'),
             nombre=data.get('nombre'),
             id_tipo_pasto=data.get('id_tipo_pasto'),
             capacidad=data.get('capacidad'),
