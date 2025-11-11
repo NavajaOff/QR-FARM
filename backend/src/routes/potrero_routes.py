@@ -5,7 +5,7 @@ from src.controllers.potrero_controller import PotreroController
 try:
     from ...app import emit_update
 except ImportError:
-    def emit_update(event, data):
+    def emit_update(event):
         print(f"WebSocket no disponible, evento omitido: {event}")
 
 # Create blueprint

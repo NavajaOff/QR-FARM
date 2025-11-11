@@ -7,7 +7,7 @@ import os
 try:
     from ...app import emit_update
 except ImportError:
-    def emit_update(event, data):
+    def emit_update(event):
         print(f"WebSocket no disponible, evento omitido: {event}")
 
 animal_bp = Blueprint('animal', __name__, url_prefix='/api/animales')

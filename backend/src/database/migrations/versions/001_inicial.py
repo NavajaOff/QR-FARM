@@ -18,9 +18,6 @@ def upgrade():
     # -------------------
     # TABLAS
     # -------------------
-
-    # Constantes para referencias de tabla
-    PERSONAS_ID = PERSONAS_ID
     
     op.create_table(
         'roles',
@@ -76,7 +73,7 @@ def upgrade():
         sa.Column('hectareas', sa.Float),
         sa.Column('ocupacion', sa.Integer, server_default='0'),
         sa.Column('fecha_ultimo_uso', sa.DateTime),
-        sa.Column('responsable_persona_id', sa.Integer, sa.ForeignKey(PERSONAS_ID)),
+        sa.Column('responsable_persona_id', sa.Integer, sa.ForeignKey('personas.id')),
         sa.Column('proxima_limpieza', sa.DateTime),
         sa.Column('area', sa.Numeric(10,2)),
         sa.Column('ultima_limpieza', sa.DateTime),
@@ -88,7 +85,7 @@ def upgrade():
         'ganado',
         sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
         sa.Column('id_potrero', sa.Integer, sa.ForeignKey('potrero.id')),
-        sa.Column('id_persona', sa.Integer, sa.ForeignKey(PERSONAS_ID)),
+        sa.Column('id_persona', sa.Integer, sa.ForeignKey('personas.id')),
         sa.Column('id_revision', sa.Integer, sa.ForeignKey('revision.id')),
         sa.Column('nombre', sa.String(50)),
         sa.Column('peso', sa.Integer),
@@ -102,8 +99,8 @@ def upgrade():
         'qr',
         sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
         sa.Column('id_ganado', sa.Integer, sa.ForeignKey('ganado.id', ondelete='CASCADE')),
-        sa.Column('id_persona_encargado', sa.Integer, sa.ForeignKey(PERSONAS_ID)),
-        sa.Column('id_persona_dueno', sa.Integer, sa.ForeignKey(PERSONAS_ID)),
+        sa.Column('id_persona_encargado', sa.Integer, sa.ForeignKey('personas.id')),
+        sa.Column('id_persona_dueno', sa.Integer, sa.ForeignKey('personas.id')),
         sa.Column('codigo_qr', sa.String(255), nullable=False),
         sa.Column('fecha_creacion', sa.DateTime, server_default=sa.func.current_timestamp()),
         sa.Column('fecha_actualizacion', sa.DateTime, server_default=sa.func.current_timestamp(), onupdate=sa.func.current_timestamp())
@@ -112,7 +109,7 @@ def upgrade():
     op.create_table(
         'usuarios',
         sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
-        sa.Column('id_persona', sa.Integer, sa.ForeignKey(PERSONAS_ID)),
+        sa.Column('id_persona', sa.Integer, sa.ForeignKey('personas.id')),
         sa.Column('id_rol', sa.Integer, sa.ForeignKey('roles.id')),
         sa.Column('contrasena', sa.String(255)),
         sa.Column('estado', sa.Enum('activo','inactivo'), server_default='activo')
@@ -127,7 +124,7 @@ def upgrade():
         sa.Column('fecha_fin', sa.DateTime),
         sa.Column('fecha_aplicacion', sa.DateTime),
         sa.Column('proxima_dosis', sa.DateTime),
-        sa.Column('responsable', sa.Integer, sa.ForeignKey(PERSONAS_ID)),
+        sa.Column('responsable', sa.Integer, sa.ForeignKey('personas.id')),
         sa.Column('estado', sa.Enum('aplicado','pendiente'), server_default='pendiente'),
         sa.Column('id_tipo_vacuna', sa.Integer, sa.ForeignKey('tipo_vacuna.id'))
     )
