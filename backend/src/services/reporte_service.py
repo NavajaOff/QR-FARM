@@ -132,8 +132,8 @@ class ReporteService:
     @staticmethod
     def generar_pdf(resumen: Dict[str, Any]) -> BytesIO:
         """Genera un PDF en memoria a partir del resumen."""
-        buffer = BytesIO()
-        pdf = canvas.Canvas(buffer, pagesize=letter)
+        pdf_buffer = BytesIO()
+        pdf = canvas.Canvas(pdf_buffer, pagesize=letter)
         width, height = letter
 
         margin = 0.75 * inch
@@ -209,6 +209,6 @@ class ReporteService:
 
         pdf.showPage()
         pdf.save()
-        buffer.seek(0)
-        return buffer
+        pdf_buffer.seek(0)
+        return pdf_buffer
 

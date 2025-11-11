@@ -749,12 +749,12 @@ class UsuarioService:
 
                 # Si hay nueva contraseña, actualizarla
                 if usuario.contrasena:
-                    sql_password = """
+                    sql_actualizar_contrasena = """
                         UPDATE usuarios SET
                             contrasena = %s
                         WHERE id = %s
                     """
-                    cursor.execute(sql_password, (usuario.contrasena, id))
+                    cursor.execute(sql_actualizar_contrasena, (usuario.contrasena, id))
 
                 # Commit de la transacción
                 conn.commit()
