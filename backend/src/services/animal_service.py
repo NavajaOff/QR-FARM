@@ -182,7 +182,7 @@ class GanadoService:
             print(f"Error al buscar animales por potrero: {e}")
             return []
         finally:
-            if 'conn' in locals():
+            if 'conn' in locals() and conn is not None:
                 conn.close()
 
     @staticmethod
@@ -203,7 +203,7 @@ class GanadoService:
             print(f"Error al buscar animal por código QR: {e}")
             return None
         finally:
-            if 'conn' in locals():
+            if 'conn' in locals() and conn is not None:
                 conn.close()
 
     @staticmethod
@@ -282,7 +282,7 @@ class GanadoService:
             print(f"Error al obtener animales: {e}")
             return []
         finally:
-            if 'conn' in locals():
+            if 'conn' in locals() and conn is not None:
                 conn.close()
 
     @staticmethod
@@ -456,5 +456,5 @@ class GanadoService:
             # Retornar lista vacía si hay error
             return []
         finally:
-            if 'conn' in locals():
+            if 'conn' in locals() and conn is not None:
                 conn.close()
