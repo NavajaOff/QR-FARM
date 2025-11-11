@@ -234,7 +234,7 @@ class UsuarioService:
             for row in results:
                 rol = Rol(
                     id=row['id_rol'],
-                    nombre=row['rol_nombre'],
+                    nombre_rol=row['rol_nombre'],
                     descripcion=row['rol_descripcion']
                 )
                 
@@ -301,7 +301,7 @@ class UsuarioService:
             if result:
                 rol = Rol(
                     id=result['id_rol'],
-                    nombre=result['rol_nombre'],
+                    nombre_rol=result['rol_nombre'],
                     descripcion=result['rol_descripcion']
                 )
                 
@@ -369,7 +369,7 @@ class UsuarioService:
             if result:
                 rol = Rol(
                     id=result['id_rol'],
-                    nombre=result['rol_nombre'],
+                    nombre_rol=result['rol_nombre'],
                     descripcion=result['rol_descripcion']
                 )
                 
@@ -551,7 +551,7 @@ class UsuarioService:
                 if result.get('rol_nombre'):
                     rol = Rol(
                         id=result['id_rol'],
-                        rol=result['rol_nombre']
+                        nombre_rol=result['rol_nombre']
                     )
 
                 # Crear persona
@@ -614,7 +614,7 @@ class UsuarioService:
                 if result.get('rol_nombre'):
                     rol = Rol(
                         id=result['id_rol'],
-                        rol=result['rol_nombre']
+                        nombre_rol=result['rol_nombre']
                     )
 
                 # Crear persona
@@ -817,7 +817,7 @@ class UsuarioService:
                 if result.get('rol_nombre'):
                     rol = Rol(
                         id=result['id_rol'],
-                        rol=result['rol_nombre']
+                        nombre_rol=result['rol_nombre']
                     )
 
                 # Crear persona

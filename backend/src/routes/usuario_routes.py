@@ -6,7 +6,7 @@ from ..utils.auth import token_required
 try:
     from ...app import emit_update
 except ImportError:
-    def emit_update(event, data):
+    def emit_update(event, data=None):
         print(f"WebSocket no disponible, evento omitido: {event}")
 
 usuario_bp = Blueprint('usuario', __name__)

@@ -3,11 +3,13 @@ from src.services.potrero_service import PotreroService
 from src.services.animal_service import GanadoService
 from src.models.animal import Ganado
 import os
+ERROR_INTERNO_SERVIDOR = 'Error interno del servidor'
+DATOS_INVALIDOS = 'Datos inválidos'
 
 try:
     from ...app import emit_update
 except ImportError:
-    def emit_update(event, data):
+    def emit_update(event, data=None):
         print(f"WebSocket no disponible, evento omitido: {event}")
 
 animal_bp = Blueprint('animal', __name__, url_prefix='/api/animales')
@@ -65,7 +67,7 @@ def get_animal(animal_id):
     except Exception as e:
         print(f"Error obteniendo animal {animal_id}: {e}")
         return jsonify({
-            'error': 'Error interno del servidor',
+            'error': ERROR_INTERNO_SERVIDOR,
             'message': str(e),
             'success': False
         }), 500
@@ -91,7 +93,7 @@ def update_animal(animal_id):
         data = request.get_json()
         if not data:
             return jsonify({
-                'error': 'Datos inválidos',
+                'error': DATOS_INVALIDOS,
                 'message': 'No se proporcionaron datos para actualizar',
                 'success': False
             }), 400
@@ -138,7 +140,7 @@ def update_animal(animal_id):
     except Exception as e:
         print(f"Error actualizando animal {animal_id}: {e}")
         return jsonify({
-            'error': 'Error interno del servidor',
+            'error': ERROR_INTERNO_SERVIDOR,
             'message': str(e),
             'success': False
         }), 500
@@ -150,7 +152,7 @@ def create_animal():
         data = request.get_json()
         if not data:
             return jsonify({
-                'error': 'Datos inválidos',
+                'error': DATOS_INVALIDOS,
                 'message': 'No se proporcionaron datos',
                 'success': False
             }), 400
@@ -158,28 +160,28 @@ def create_animal():
         # Validaciones básicas
         if not data.get('nombre'):
             return jsonify({
-                'error': 'Datos inválidos',
+                'error': DATOS_INVALIDOS,
                 'message': 'El nombre es requerido',
                 'success': False
             }), 400
 
         if not data.get('raza'):
             return jsonify({
-                'error': 'Datos inválidos',
+                'error': DATOS_INVALIDOS,
                 'message': 'La raza es requerida',
                 'success': False
             }), 400
 
         if not data.get('fecha_nacimiento'):
             return jsonify({
-                'error': 'Datos inválidos',
+                'error': DATOS_INVALIDOS,
                 'message': 'La fecha de nacimiento es requerida',
                 'success': False
             }), 400
 
         if not data.get('estado'):
             return jsonify({
-                'error': 'Datos inválidos',
+                'error': DATOS_INVALIDOS,
                 'message': 'El estado es requerido',
                 'success': False
             }), 400
@@ -221,7 +223,7 @@ def create_animal():
     except Exception as e:
         print(f"Error creando animal: {e}")
         return jsonify({
-            'error': 'Error interno del servidor',
+            'error': ERROR_INTERNO_SERVIDOR,
             'message': str(e),
             'success': False
         }), 500

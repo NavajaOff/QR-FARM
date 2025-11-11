@@ -5,6 +5,9 @@ from src.services.vacunacion_service import VacunacionService
 from src.models.vacunacion import Vacunacion
 
 class VacunacionController:
+    # Error message constants
+    ERROR_INTERNO_SERVIDOR = 'Error interno del servidor'
+    VACUNACION_NO_ENCONTRADA = 'Vacunación no encontrada'
     @staticmethod
     def obtener_todas_vacunaciones() -> Tuple[Any, int]:
         """Obtener todas las vacunaciones"""
@@ -41,7 +44,7 @@ class VacunacionController:
             print(f"Error obteniendo vacunaciones: {str(e)}")
             return jsonify({
                 "status": "error",
-                "message": "Error interno del servidor"
+                "message": VacunacionController.ERROR_INTERNO_SERVIDOR
             }), 500
 
     @staticmethod
@@ -53,7 +56,7 @@ class VacunacionController:
             if not vacunacion:
                 return jsonify({
                     "status": "error",
-                    "message": "Vacunación no encontrada"
+                    "message": VacunacionController.VACUNACION_NO_ENCONTRADA
                 }), 404
 
             return jsonify({
@@ -66,7 +69,7 @@ class VacunacionController:
             print(f"Error obteniendo vacunación: {str(e)}")
             return jsonify({
                 "status": "error",
-                "message": "Error interno del servidor"
+                "message": VacunacionController.ERROR_INTERNO_SERVIDOR
             }), 500
 
     @staticmethod
@@ -111,7 +114,7 @@ class VacunacionController:
             print(f"Error creando vacunación: {str(e)}")
             return jsonify({
                 "status": "error",
-                "message": "Error interno del servidor"
+                "message": VacunacionController.ERROR_INTERNO_SERVIDOR
             }), 500
 
     @staticmethod
@@ -131,7 +134,7 @@ class VacunacionController:
             if not existing_vacunacion:
                 return jsonify({
                     "status": "error",
-                    "message": "Vacunación no encontrada"
+                    "message": VacunacionController.VACUNACION_NO_ENCONTRADA
                 }), 404
 
             # Crear objeto con datos actualizados
@@ -157,7 +160,7 @@ class VacunacionController:
             print(f"Error actualizando vacunación: {str(e)}")
             return jsonify({
                 "status": "error",
-                "message": "Error interno del servidor"
+                "message": VacunacionController.ERROR_INTERNO_SERVIDOR
             }), 500
 
     @staticmethod
@@ -172,7 +175,7 @@ class VacunacionController:
                 print(f"Controller: Vacunación con ID {vacunacion_id} no encontrada")
                 return jsonify({
                     "status": "error",
-                    "message": "Vacunación no encontrada"
+                    "message": VacunacionController.VACUNACION_NO_ENCONTRADA
                 }), 404
 
             # Eliminar de la base de datos
@@ -199,7 +202,7 @@ class VacunacionController:
             traceback.print_exc()
             return jsonify({
                 "status": "error",
-                "message": "Error interno del servidor"
+                "message": VacunacionController.ERROR_INTERNO_SERVIDOR
             }), 500
 
     @staticmethod
@@ -218,5 +221,5 @@ class VacunacionController:
             print(f"Error obteniendo tipos de vacuna: {str(e)}")
             return jsonify({
                 "status": "error",
-                "message": "Error interno del servidor"
+                "message": VacunacionController.ERROR_INTERNO_SERVIDOR
             }), 500
