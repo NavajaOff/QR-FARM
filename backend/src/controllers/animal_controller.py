@@ -10,6 +10,9 @@ except ImportError:
     def emit_update(event, data=None):  # type: ignore
         print(f"WebSocket no disponible, evento omitido: {event}")
 
+# Constantes para mensajes de error
+GANADO_NO_ENCONTRADO = 'Ganado no encontrado'
+
 class GanadoController:
     @staticmethod
     def crear_ganado():
@@ -62,7 +65,7 @@ class GanadoController:
             else:
                 return jsonify({
                     'status': 'error',
-                    'message': 'Ganado no encontrado'
+                    'message': GANADO_NO_ENCONTRADO
                 }), 404
 
         except Exception as e:
@@ -112,7 +115,7 @@ class GanadoController:
             if not ganado_existente:
                 return jsonify({
                     'status': 'error',
-                    'message': 'Ganado no encontrado'
+                    'message': GANADO_NO_ENCONTRADO
                 }), 404
 
             # Actualizar los campos del ganado con los nuevos datos
@@ -204,7 +207,7 @@ class GanadoController:
             else:
                 return jsonify({
                     'status': 'error',
-                    'message': 'Ganado no encontrado'
+                    'message': GANADO_NO_ENCONTRADO
                 }), 404
 
         except Exception as e:

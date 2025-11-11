@@ -139,13 +139,13 @@ class PotreroService:
             if cursor:
                 try:
                     cursor.close()
-                except:
+                except Exception:
                     pass
             if conn and conn is not None:
                 try:
                     if conn.is_connected():
                         conn.close()
-                except:
+                except Exception:
                     pass
 
         # Usar una nueva conexión para obtener el registro completo

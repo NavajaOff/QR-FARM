@@ -240,7 +240,7 @@ class GanadoService:
             if 'conn' in locals() and conn is not None:
                 try:
                     conn.close()
-                except:
+                except Exception:
                     pass
 
     @staticmethod

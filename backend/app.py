@@ -91,6 +91,25 @@ def generate_token(user_id, email, role):
     token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
     return token
 
+def _validate_login_data(data):
+    """Valida los datos de login"""
+    if not data:
+        return None, jsonify({
+            "status": "error",
+            "message": "Se requieren datos JSON"
+        }), 400
+
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return None, jsonify({
+            "status": "error",
+            "message": "Email y contraseña son requeridos"
+        }), 400
+
+    return {'email': email, 'password': password}, None, None
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Endpoint de verificación de salud del servidor"""
@@ -141,28 +160,14 @@ def usuarios_login():
     try:
         print("Procesando login...")
 
-        # Obtener datos JSON del request
-        data = request.get_json()
+        # Validar datos del request
+        login_data, error_response, status_code = _validate_login_data(request.get_json())
+        if error_response:
+            return error_response, status_code
 
-        if not data:
-            print("ERROR: No se recibieron datos JSON")
-            return jsonify({
-                "status": "error",
-                "message": "Se requieren datos JSON"
-            }), 400
-
-        email = data.get('email')
-        password = data.get('password')
-
+        email = login_data['email']
+        password = login_data['password']
         print(f"Datos recibidos - Email: {email}")
-
-        # Validar que se proporcionaron email y password
-        if not email or not password:
-            print("ERROR: Email o password faltantes")
-            return jsonify({
-                "status": "error",
-                "message": "Email y contraseña son requeridos"
-            }), 400
 
         # Consultar usuario en la base de datos real
         conn = None

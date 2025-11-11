@@ -9,6 +9,9 @@ except ImportError:
     def emit_update(event, data=None):
         print(f"WebSocket no disponible, evento omitido: {event}")
 
+# Constantes para rutas
+USER_ID_ROUTE = '/<int:id>'
+
 usuario_bp = Blueprint('usuario', __name__)
 
 # Rutas públicas
@@ -20,9 +23,9 @@ usuario_bp.route('/', methods=['POST'])(UsuarioController.login)
 
 # Rutas protegidas
 usuario_bp.route('/', methods=['GET'])(token_required(UsuarioController.obtener_todos_usuarios))
-usuario_bp.route('/<int:id>', methods=['GET'])(token_required(UsuarioController.obtener_usuario))
-usuario_bp.route('/<int:id>', methods=['PUT'])(token_required(UsuarioController.actualizar_usuario))
+usuario_bp.route(USER_ID_ROUTE, methods=['GET'])(token_required(UsuarioController.obtener_usuario))
+usuario_bp.route(USER_ID_ROUTE, methods=['PUT'])(token_required(UsuarioController.actualizar_usuario))
 usuario_bp.route('/<int:id>/estado', methods=['PUT'])(token_required(UsuarioController.cambiar_estado_usuario))
-usuario_bp.route('/<int:id>', methods=['DELETE'])(token_required(UsuarioController.eliminar_usuario))
+usuario_bp.route(USER_ID_ROUTE, methods=['DELETE'])(token_required(UsuarioController.eliminar_usuario))
 usuario_bp.route('/profile', methods=['GET'])(token_required(UsuarioController.obtener_perfil_actual))
 usuario_bp.route('/profile', methods=['PUT'])(token_required(UsuarioController.actualizar_perfil_actual))

@@ -28,6 +28,9 @@ class Colors:
     BOLD = '\033[1m'
     END = '\033[0m'
 
+# Constantes
+NPM_CMD = 'npm.cmd'
+
 def print_banner():
     """Imprime el banner del proyecto"""
     banner = f"""
@@ -54,7 +57,7 @@ def check_requirements():
     try:
         # Intentar diferentes formas de ejecutar node
         node_commands = [['node', '--version'], ['node.exe', '--version']]
-        npm_commands = [['npm', '--version'], ['npm.cmd', '--version']]
+        npm_commands = [['npm', '--version'], [NPM_CMD, '--version']]
 
         node_result = None
         npm_result = None
@@ -65,7 +68,7 @@ def check_requirements():
                 if result.returncode == 0:
                     node_result = result
                     break
-            except:
+            except Exception:
                 continue
 
         for cmd in npm_commands:
@@ -74,7 +77,7 @@ def check_requirements():
                 if result.returncode == 0:
                     npm_result = result
                     break
-            except:
+            except Exception:
                 continue
 
         if node_result and npm_result:
@@ -188,7 +191,7 @@ def install_dependencies():
     print(f"{Colors.YELLOW}[INFO] Instalando dependencias del frontend...{Colors.END}")
 
     # Intentar diferentes comandos de npm para Windows
-    npm_commands = [['npm', 'install'], ['npm.cmd', 'install']]
+    npm_commands = [['npm', 'install'], [NPM_CMD, 'install']]
 
     frontend_result = None
     for cmd in npm_commands:
@@ -255,7 +258,7 @@ def start_frontend():
 
     try:
         # Intentar diferentes comandos para npm en Windows
-        npm_commands = [['npm', 'run', 'dev'], ['npm.cmd', 'run', 'dev']]
+        npm_commands = [['npm', 'run', 'dev'], [NPM_CMD, 'run', 'dev']]
 
         process = None
         for cmd in npm_commands:

@@ -5,6 +5,9 @@ from ..database.db import get_connection
 from ..models.usuario import Usuario, Persona, Rol, EstadoUsuario
 
 class UsuarioService:
+    # Constantes para mensajes y queries
+    EMAIL_DUPLICADO_MSG = "El email ya está registrado"
+    QUERY_PERSONA_ID = "SELECT id_persona FROM usuarios WHERE id = %s"
     @staticmethod
     def obtener_rol(id: int) -> Optional[Rol]:
         try:
@@ -107,7 +110,7 @@ class UsuarioService:
             cursor = conn.cursor(dictionary=True)
             
             # Verificar que el usuario existe
-            cursor.execute("SELECT id_persona FROM usuarios WHERE id = %s", (id,))
+            cursor.execute(UsuarioService.QUERY_PERSONA_ID, (id,))
             result = cursor.fetchone()
             if not result:
                 return None, "Usuario no encontrado"
@@ -115,10 +118,10 @@ class UsuarioService:
             id_persona = result['id_persona']
             
             # Verificar si el email ya existe para otro usuario
-            cursor.execute("SELECT id FROM personas WHERE email = %s AND id != %s", 
+            cursor.execute("SELECT id FROM personas WHERE email = %s AND id != %s",
                          (persona.email, id_persona))
             if cursor.fetchone():
-                return None, "El email ya está registrado"
+                return None, UsuarioService.EMAIL_DUPLICADO_MSG
 
             # Verificar si el username ya existe para otro usuario
             if usuario.username:
@@ -414,7 +417,7 @@ class UsuarioService:
             cursor = conn.cursor(dictionary=True)
             
             # Verificar que el usuario existe y obtener id_persona
-            cursor.execute("SELECT id_persona FROM usuarios WHERE id = %s", (id,))
+            cursor.execute(UsuarioService.QUERY_PERSONA_ID, (id,))
             result = cursor.fetchone()
             if not result:
                 return False, "Usuario no encontrado"
@@ -460,7 +463,7 @@ class UsuarioService:
             # Verificar si el email ya existe
             cursor.execute("SELECT id FROM personas WHERE email = %s", (persona.email,))
             if cursor.fetchone():
-                return None, "El email ya está registrado"
+                return None, UsuarioService.EMAIL_DUPLICADO_MSG
 
             try:
                 if hasattr(conn, 'in_transaction') and conn.in_transaction:
@@ -689,7 +692,7 @@ class UsuarioService:
             cursor = conn.cursor(dictionary=True)
 
             # Verificar que el usuario existe y obtener id_persona
-            cursor.execute("SELECT id_persona FROM usuarios WHERE id = %s", (id,))
+            cursor.execute(UsuarioService.QUERY_PERSONA_ID, (id,))
             result = cursor.fetchone()
             if not result:
                 return False
@@ -774,7 +777,10 @@ class UsuarioService:
             return False
         finally:
             if 'conn' in locals():
-                conn.close()
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     @staticmethod
     def eliminar_usuario(id: int) -> bool:
