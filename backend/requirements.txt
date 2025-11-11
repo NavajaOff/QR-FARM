@@ -39,3 +39,7 @@ cryptography==41.0.7
 
 # Utilidades opcionales
 python-dateutil==2.9.0.post0
+
+# Pruebas
+pytest==7.4.3
+pytest-cov==4.1.0
