@@ -42,7 +42,7 @@
         <router-link class="nav-link" to="/user/perfil">
           <i class="fas fa-user-edit me-2"></i>Mi Perfil
         </router-link>
-        <router-link class="nav-link" to="/user/escanear-qr">
+        <router-link class="nav-link" to="/user/scan-qr">
           <i class="fas fa-qrcode me-2"></i>Escanear QR
         </router-link>
       </nav>
@@ -95,7 +95,7 @@
               <div class="card-body">
                 <div class="row g-3">
                   <div class="col-md-4">
-                    <router-link class="btn btn-success w-100" to="/user/escanear-qr">
+                    <router-link class="btn btn-success w-100" to="/user/scan-qr">
                       <i class="fas fa-qrcode me-2"></i>Escanear QR
                     </router-link>
                   </div>

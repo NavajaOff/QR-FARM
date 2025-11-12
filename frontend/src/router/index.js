@@ -78,7 +78,7 @@ const routes = [
         component: () => import('../views/admin/PerfilAdmin.vue')
       },
       {
-        path: 'escanear-qr',
+        path: 'scan-qr',
         name: 'EscanearQRAdmin',
         component: () => import('../views/admin/EscanearQRAdmin.vue')
       }
@@ -138,7 +138,7 @@ const routes = [
         component: () => import('../views/user/PerfilUsuario.vue')
       },
       {
-        path: 'qr',
+        path: 'scan-qr',
         name: 'EscanearQRUsuario',
         component: () => import('../views/user/EscanearQRUsuario.vue')
       }

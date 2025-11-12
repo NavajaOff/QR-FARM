@@ -79,7 +79,9 @@ migrate = Migrate(app, directory='src/database/migrations')
 # Inicializar SocketIO para actualizaciones en tiempo real
 ALLOWED_CORS_ORIGINS = [
     "http://localhost:5173",
-    "http://127.0.0.1:5173"
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174"
 ]
 
 socketio = SocketIO(app, cors_allowed_origins=ALLOWED_CORS_ORIGINS)
@@ -97,6 +99,29 @@ CORS(app, resources={
         "expose_headers": ["Content-Type", "Authorization"]
     }
 })
+
+
+@app.route('/api/ganado/<int:ganado_id>', methods=['GET'])
+def obtener_ganado_detallado(ganado_id: int):
+    """Devuelve la ficha detallada de un ganado, incluida la información relacionada."""
+    try:
+        detalle = GanadoService.obtener_ganado_detallado(ganado_id)
+        if not detalle:
+            return jsonify({
+                "status": "error",
+                "message": f"No se encontró el ganado con ID {ganado_id}"
+            }), 404
+
+        return jsonify({
+            "status": "success",
+            "data": detalle
+        }), 200
+    except Exception as error:
+        print(f"Error obteniendo detalle de ganado {ganado_id}: {error}")
+        return jsonify({
+            "status": "error",
+            "message": "Error interno del servidor"
+        }), 500
 
 # Middleware para logging de peticiones
 @app.before_request

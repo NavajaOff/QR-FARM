@@ -55,12 +55,12 @@ class GanadoController:
     @staticmethod
     def obtener_ganado(id):
         try:
-            ganado = GanadoService.obtener_ganado(id)
+            ganado = GanadoService.obtener_ganado_detallado(id)
 
             if ganado:
                 return jsonify({
                     'status': 'success',
-                    'data': ganado.to_dict()
+                    'data': ganado
                 }), 200
             else:
                 return jsonify({
@@ -200,9 +200,10 @@ class GanadoController:
             ganado = GanadoService.buscar_por_codigo_qr(codigo_qr)
 
             if ganado:
+                detalle = GanadoService.obtener_ganado_detallado(ganado.id) if ganado.id else None
                 return jsonify({
                     'status': 'success',
-                    'data': ganado.to_dict()
+                    'data': detalle if detalle else ganado.to_dict()
                 }), 200
             else:
                 return jsonify({
