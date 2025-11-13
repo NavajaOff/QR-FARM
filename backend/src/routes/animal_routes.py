@@ -145,6 +145,30 @@ def update_animal(animal_id):
             'success': False
         }), 500
 
+@animal_bp.route('/<int:animal_id>', methods=['DELETE'])
+def delete_animal(animal_id):
+    """Eliminar un animal."""
+    try:
+        eliminado = GanadoService.eliminar_ganado(animal_id)
+        if eliminado:
+            emit_update('animal_deleted', {'id': animal_id})
+            return jsonify({
+                'message': 'Animal eliminado correctamente',
+                'success': True
+            }), 200
+        return jsonify({
+            'error': 'Animal no encontrado',
+            'message': f'No se encontró el animal con ID {animal_id}',
+            'success': False
+        }), 404
+    except Exception as e:
+        print(f"Error eliminando animal {animal_id}: {e}")
+        return jsonify({
+            'error': ERROR_INTERNO_SERVIDOR,
+            'message': str(e),
+            'success': False
+        }), 500
+
 @animal_bp.route('/', methods=['POST'])
 def create_animal():
     """Create a new animal."""

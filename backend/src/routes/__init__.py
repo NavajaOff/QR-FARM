@@ -42,8 +42,6 @@ def create_app(config_class=None):
     # Register blueprints
     app.register_blueprint(potrero_bp, url_prefix='/api/potreros')
     app.register_blueprint(usuario_bp, url_prefix='/api/usuarios')
-    app.register_blueprint(animal_bp, url_prefix='/api/animales', name='animal_compat')
-
     app.register_blueprint(animal_bp, url_prefix='/api/animales')
 
     # Add favicon route to prevent 404 errors
