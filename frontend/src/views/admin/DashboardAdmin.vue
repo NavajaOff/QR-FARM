@@ -45,7 +45,7 @@
         <router-link class="nav-link" to="/admin/perfil">
           <i class="fas fa-user-edit me-2"></i>Perfil
         </router-link>
-        <router-link class="nav-link" to="/admin/escanear-qr">
+        <router-link class="nav-link" to="/admin/scan-qr">
           <i class="fas fa-qrcode me-2"></i>Escanear QR
         </router-link>
         <router-link class="nav-link" to="/admin/vacunacion">

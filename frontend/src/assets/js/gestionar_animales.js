@@ -60,7 +60,7 @@ const obtenerNombrePotreroDesdeEntidad = (entidad, fallback = 'Sin asignar') => 
 let cancelTokenSource = null;
 
 // Importar potreros para el select
-import { potreros, cargarDatosIniciales as cargarDatosInicialesPotreros } from './gestionar-potreros.js';
+import { potreros, cargarDatosIniciales as cargarDatosInicialesPotreros, cargarPotreros } from './gestionar-potreros.js';
 
 // API configuration
 const API_BASE = 'http://localhost:5000/api';
@@ -467,6 +467,22 @@ export const editarAnimal = (id) => {
         throw new Error('VALIDATION_ERROR');
       }
 
+      if (id_potrero) {
+        const potreroSeleccionado = potreros.value.find(
+          (pot) => pot.id === parseInt(id_potrero, 10)
+        );
+        if (potreroSeleccionado && potreroSeleccionado.capacidad !== null && potreroSeleccionado.capacidad !== undefined) {
+          const capacidad = Number(potreroSeleccionado.capacidad);
+          const ocupacionActual = Number(potreroSeleccionado.ocupacion || 0);
+          const esMismoPotrero = potreroSeleccionado.id === animal.id_potrero;
+          const ocupacionPrevista = esMismoPotrero ? ocupacionActual : ocupacionActual + 1;
+          if (capacidad > 0 && ocupacionPrevista > capacidad) {
+            Swal.showValidationMessage(`El potrero ${potreroSeleccionado.nombre} no tiene cupo disponible (${ocupacionActual}/${capacidad}).`);
+            throw new Error('VALIDATION_ERROR');
+          }
+        }
+      }
+
       const updateData = {
         nombre,
         peso: peso ? parseFloat(peso) : null,
@@ -499,6 +515,7 @@ export const editarAnimal = (id) => {
           const data = await response.json();
           if (data.success) {
             Swal.fire('¡Éxito!', 'Animal actualizado correctamente', 'success');
+            await cargarPotreros();
             await cargarAnimales();
             // Notificar al componente Vue que actualice la lista
             if (updateCallback) {
@@ -599,6 +616,20 @@ export const agregarNuevoAnimal = () => {
         throw new Error('VALIDATION_ERROR');
       }
 
+      if (id_potrero) {
+        const potreroSeleccionado = potreros.value.find(
+          (pot) => pot.id === parseInt(id_potrero, 10)
+        );
+        if (potreroSeleccionado && potreroSeleccionado.capacidad !== null && potreroSeleccionado.capacidad !== undefined) {
+          const capacidad = Number(potreroSeleccionado.capacidad);
+          const ocupacionActual = Number(potreroSeleccionado.ocupacion || 0);
+          if (capacidad > 0 && ocupacionActual >= capacidad) {
+            Swal.showValidationMessage(`El potrero ${potreroSeleccionado.nombre} alcanzó su capacidad máxima (${capacidad}).`);
+            throw new Error('VALIDATION_ERROR');
+          }
+        }
+      }
+
       return {
         nombre,
         peso: peso ? parseFloat(peso) : null,
@@ -623,6 +654,7 @@ export const agregarNuevoAnimal = () => {
           const data = await response.json();
           if (data.success) {
             Swal.fire('¡Éxito!', 'Animal agregado correctamente', 'success');
+            await cargarPotreros();
             await cargarAnimales();
             // Notificar al componente Vue que actualice la lista
             if (updateCallback) {
@@ -641,6 +673,33 @@ export const agregarNuevoAnimal = () => {
       }
     }
   });
+};
+
+export const eliminarAnimal = async (id) => {
+  try {
+    const response = await fetch(`${API_BASE}/animales/${id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const data = await response.json().catch(() => ({ success: response.ok }));
+
+    if (!response.ok || !data.success) {
+      const message = data?.message || `Error HTTP: ${response.status}`;
+      throw new Error(message);
+    }
+
+    await cargarPotreros();
+    await cargarAnimales();
+    if (updateCallback) {
+      updateCallback();
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error eliminando animal:', error);
+    return { success: false, message: error.message };
+  }
 };
 
 // Función para limpiar estado al cambiar de ruta

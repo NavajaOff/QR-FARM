@@ -46,6 +46,11 @@ class GanadoController:
                     'message': 'Error al crear el ganado'
                 }), 400
 
+        except ValueError as e:
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 400
         except Exception as e:
             return jsonify({
                 'status': 'error',
@@ -55,12 +60,12 @@ class GanadoController:
     @staticmethod
     def obtener_ganado(id):
         try:
-            ganado = GanadoService.obtener_ganado(id)
+            ganado = GanadoService.obtener_ganado_detallado(id)
 
             if ganado:
                 return jsonify({
                     'status': 'success',
-                    'data': ganado.to_dict()
+                    'data': ganado
                 }), 200
             else:
                 return jsonify({
@@ -68,6 +73,11 @@ class GanadoController:
                     'message': GANADO_NO_ENCONTRADO
                 }), 404
 
+        except ValueError as e:
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 400
         except Exception as e:
             return jsonify({
                 'status': 'error',
@@ -200,9 +210,10 @@ class GanadoController:
             ganado = GanadoService.buscar_por_codigo_qr(codigo_qr)
 
             if ganado:
+                detalle = GanadoService.obtener_ganado_detallado(ganado.id) if ganado.id else None
                 return jsonify({
                     'status': 'success',
-                    'data': ganado.to_dict()
+                    'data': detalle if detalle else ganado.to_dict()
                 }), 200
             else:
                 return jsonify({

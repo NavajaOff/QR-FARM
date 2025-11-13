@@ -85,7 +85,7 @@
             <router-link class="nav-link mb-1 small" to="/admin/reportes">
               <i class="fas fa-chart-line me-2"></i>Reportes
             </router-link>
-            <router-link class="nav-link mb-1 small" to="/admin/escanear-qr">
+            <router-link class="nav-link mb-1 small" to="/admin/scan-qr">
               <i class="fas fa-qrcode me-2"></i>Escanear QR
             </router-link>
           </div>

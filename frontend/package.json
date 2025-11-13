@@ -13,6 +13,7 @@
     "axios": "^1.13.0",
     "bootstrap": "^5.3.8",
     "chart.js": "^4.4.4",
+    "html5-qrcode": "^2.3.8",
     "socket.io-client": "^4.7.5",
     "sweetalert2": "^11.23.0",
     "vue": "^3.5.18",
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
+    "typescript": "^5.9.3",
     "vite": "^7.1.2"
   }
 }

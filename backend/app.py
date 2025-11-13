@@ -79,7 +79,9 @@ migrate = Migrate(app, directory='src/database/migrations')
 # Inicializar SocketIO para actualizaciones en tiempo real
 ALLOWED_CORS_ORIGINS = [
     "http://localhost:5173",
-    "http://127.0.0.1:5173"
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174"
 ]
 
 socketio = SocketIO(app, cors_allowed_origins=ALLOWED_CORS_ORIGINS)
@@ -97,6 +99,32 @@ CORS(app, resources={
         "expose_headers": ["Content-Type", "Authorization"]
     }
 })
+
+
+@app.route('/api/ganado/<identifier>', methods=['GET', 'OPTIONS'])
+def obtener_ganado_detallado(identifier: str):
+    """Devuelve la ficha detallada de un ganado, incluida la información relacionada."""
+    if request.method == 'OPTIONS':
+        return ('', 204)
+
+    try:
+        detalle = GanadoService.obtener_ganado_detallado(identifier)
+        if not detalle:
+            return jsonify({
+                "success": False,
+                "message": "Este QR no está registrado en la base de datos."
+            }), 404
+
+        return jsonify({
+            "success": True,
+            "data": detalle
+        }), 200
+    except Exception as error:
+        print(f"Error obteniendo detalle de ganado {identifier}: {error}")
+        return jsonify({
+            "status": "error",
+            "message": "Error interno del servidor"
+        }), 500
 
 # Middleware para logging de peticiones
 @app.before_request
