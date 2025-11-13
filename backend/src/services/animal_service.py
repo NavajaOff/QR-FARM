@@ -40,6 +40,81 @@ class GanadoService:
         return edad if edad >= 0 else None
 
     @staticmethod
+    def _empty_propietario() -> Dict[str, Optional[str]]:
+        return {
+            "nombre": None,
+            "telefono": None,
+            "rol": None
+        }
+
+    @staticmethod
+    def _empty_potrero() -> Dict[str, Optional[Any]]:
+        return {
+            "nombre": None,
+            "tipo_pasto": None,
+            "ultima_limpieza": None,
+            "fecha_ultimo_uso": None,
+            "proxima_limpieza": None,
+            "capacidad": None,
+            "estado": None
+        }
+
+    @staticmethod
+    def _to_nullable_int(value: Any) -> Optional[int]:
+        try:
+            return int(value) if value is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _to_nullable_float(value: Any) -> Optional[float]:
+        try:
+            return float(value) if value is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    @staticmethod
+    def _fetch_vacunas(connection, animal_id: int) -> List[Dict[str, Any]]:
+        """Obtiene las vacunas asociadas a un animal."""
+        query = """
+            SELECT
+                v.id,
+                v.fecha_aplicacion,
+                v.proxima_dosis,
+                v.estado,
+                v.responsable,
+                tv.nombre_vacuna,
+                CONCAT_WS(' ', resp.primer_nombre, resp.segundo_nombre, resp.primer_apellido, resp.segundo_apellido) AS responsable_nombre
+            FROM vacunacion v
+            LEFT JOIN tipo_vacuna tv ON tv.id = v.id_tipo_vacuna
+            LEFT JOIN personas resp ON resp.id = v.responsable
+            WHERE v.id_animal = %s
+            ORDER BY v.fecha_aplicacion DESC, v.id DESC
+        """
+
+        cursor = connection.cursor(dictionary=True)
+        rows: List[Dict[str, Any]] = []
+        try:
+            cursor.execute(query, (animal_id,))
+            rows = cursor.fetchall()
+        except Exception as exc:  # pylint: disable=broad-except
+            print(f"Error obteniendo vacunas para el animal {animal_id}: {exc}")
+        finally:
+            cursor.close()
+
+        vacunas: List[Dict[str, Any]] = []
+        for row in rows:
+            vacunas.append({
+                "id": row.get("id"),
+                "nombre": row.get("nombre_vacuna"),
+                "fecha_aplicacion": GanadoService._to_iso_string(row.get("fecha_aplicacion")),
+                "proxima_dosis": GanadoService._to_iso_string(row.get("proxima_dosis")),
+                "estado": row.get("estado"),
+                "responsable": row.get("responsable_nombre") or row.get("responsable"),
+            })
+        return vacunas
+
+    @staticmethod
     def crear_ganado(ganado: Ganado) -> Optional[Ganado]:
         try:
             conn = get_connection()
@@ -463,43 +538,114 @@ class GanadoService:
 
     @staticmethod
     def obtener_ganado_detallado(identifier: Union[int, str]) -> Optional[Dict[str, Any]]:
-        from ..database.db import get_connection
-
         connection = get_connection()
         if connection is None:
             print("No se pudo obtener conexión a la base de datos.")
             return None
 
+        main_query = """
+            SELECT
+                g.id,
+                g.nombre,
+                g.raza,
+                g.fecha_nacimiento,
+                g.sexo,
+                g.peso,
+                g.id_potrero,
+                g.id_persona,
+                g.id_revision,
+                g.id_estado,
+                q.codigo_qr,
+                eg.tipo_estado AS estado_principal,
+                NULL AS estado_salud,
+                p.nombre AS potrero_nombre,
+                p.capacidad AS potrero_capacidad,
+                p.ultima_limpieza AS potrero_ultima_limpieza,
+                p.fecha_ultimo_uso AS potrero_fecha_ultimo_uso,
+                p.proxima_limpieza AS potrero_proxima_limpieza,
+                p.estado AS potrero_estado,
+                tp.tipo_pasto AS potrero_tipo_pasto,
+                per.telefono AS propietario_telefono,
+                CONCAT_WS(' ', per.primer_nombre, per.segundo_nombre, per.primer_apellido, per.segundo_apellido) AS propietario_nombre,
+                roles.rol AS propietario_rol
+            FROM ganado g
+            LEFT JOIN qr q ON q.id_ganado = g.id
+            LEFT JOIN estado_ganado eg ON eg.id = g.id_estado
+            LEFT JOIN potrero p ON p.id = g.id_potrero
+            LEFT JOIN tipo_pasto tp ON tp.id = p.id_tipo_pasto
+            LEFT JOIN personas per ON per.id = g.id_persona
+            LEFT JOIN roles ON roles.id = per.id_rol
+            WHERE g.id = %s OR q.codigo_qr = %s
+            LIMIT 1
+        """
+
         try:
-            with connection.cursor(dictionary=True) as cursor:
-                sql = """
-                    SELECT
-                        g.id,
-                        g.nombre,
-                        g.raza,
-                        g.fecha_nacimiento,
-                        g.sexo,
-                        g.peso,
-                        g.id_potrero,
-                        g.id_persona,
-                        g.id_estado,
-                        q.codigo_qr,
-                        p.nombre AS potrero_nombre,
-                        per.telefono AS propietario_telefono,
-                        CONCAT_WS(' ', per.primer_nombre, per.segundo_nombre, per.primer_apellido, per.segundo_apellido) AS propietario_nombre
-                    FROM gestion_ganadera.ganado g
-                    LEFT JOIN gestion_ganadera.qr q ON q.id_ganado = g.id
-                    LEFT JOIN gestion_ganadera.potrero p ON p.id = g.id_potrero
-                    LEFT JOIN gestion_ganadera.personas per ON per.id = g.id_persona
-                    WHERE g.id = %s OR q.codigo_qr = %s
-                    LIMIT 1;
-                """
-                cursor.execute(sql, (identifier, identifier))
-                ganado = cursor.fetchone()
-                if not ganado:
-                    return None
-                return ganado
-        except Exception as ex:
+            cursor = connection.cursor(dictionary=True)
+            try:
+                cursor.execute(main_query, (identifier, identifier))
+                row = cursor.fetchone()
+            finally:
+                cursor.close()
+
+            if not row:
+                return None
+
+            animal_id_value = row.get("id")
+            animal_id: Optional[int] = None
+            if animal_id_value is not None:
+                try:
+                    animal_id = int(animal_id_value)
+                except (TypeError, ValueError):
+                    animal_id = None
+
+            propietario = GanadoService._empty_propietario()
+            propietario.update({
+                "nombre": row.get("propietario_nombre"),
+                "telefono": row.get("propietario_telefono"),
+                "rol": row.get("propietario_rol"),
+            })
+
+            potrero = GanadoService._empty_potrero()
+            if row.get("id_potrero") is not None:
+                potrero.update({
+                    "nombre": row.get("potrero_nombre"),
+                    "tipo_pasto": row.get("potrero_tipo_pasto"),
+                    "ultima_limpieza": GanadoService._to_iso_string(row.get("potrero_ultima_limpieza")),
+                    "fecha_ultimo_uso": GanadoService._to_iso_string(row.get("potrero_fecha_ultimo_uso")),
+                    "proxima_limpieza": GanadoService._to_iso_string(row.get("potrero_proxima_limpieza")),
+                    "capacidad": GanadoService._to_nullable_int(row.get("potrero_capacidad")),
+                    "estado": row.get("potrero_estado"),
+                })
+
+            vacunas: List[Dict[str, Any]] = []
+            if animal_id is not None:
+                vacunas = GanadoService._fetch_vacunas(connection, animal_id)
+
+            detalle: Dict[str, Any] = {
+                "id": animal_id if animal_id is not None else animal_id_value,
+                "nombre": row.get("nombre"),
+                "raza": row.get("raza"),
+                "fecha_nacimiento": GanadoService._to_iso_string(row.get("fecha_nacimiento")),
+                "edad": GanadoService._calcular_edad(row.get("fecha_nacimiento")),
+                "sexo": row.get("sexo"),
+                "peso": GanadoService._to_nullable_float(row.get("peso")),
+                "estado": row.get("estado_principal"),
+                "estado_salud": row.get("estado_salud"),
+                "codigo_qr": row.get("codigo_qr"),
+                "propietario": propietario,
+                "propietario_nombre": propietario["nombre"],
+                "propietario_telefono": propietario["telefono"],
+                "propietario_rol": propietario["rol"],
+                "potrero": potrero,
+                "potrero_nombre": potrero["nombre"],
+                "vacunas": vacunas,
+                "historial": [],
+                "id_potrero": GanadoService._to_nullable_int(row.get("id_potrero")),
+                "id_persona": GanadoService._to_nullable_int(row.get("id_persona")),
+                "id_revision": GanadoService._to_nullable_int(row.get("id_revision")),
+            }
+            return detalle
+        except Exception as ex:  # pylint: disable=broad-except
             print(f"Error en obtener_ganado_detallado: {ex}")
             return None
         finally:
