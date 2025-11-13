@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Dict, Any, List
-from datetime import datetime
+from typing import Dict, Any, List, Iterable
+from datetime import datetime, date, timedelta
 from io import BytesIO
 
 from reportlab.lib.pagesizes import letter
@@ -42,6 +42,122 @@ class ReporteService:
                 conn.close()
             except Exception:
                 pass
+
+    @staticmethod
+    def _fetch_daily_counts(
+        cursor,
+        tabla: str,
+        columna_fecha: str,
+        dias: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """Obtiene conteos diarios de registros para la tabla dada."""
+        try:
+            query = f"""
+                SELECT DATE({columna_fecha}) AS fecha, COUNT(*) AS total
+                FROM {tabla}
+                WHERE {columna_fecha} IS NOT NULL
+                  AND {columna_fecha} >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
+                GROUP BY DATE({columna_fecha})
+                ORDER BY fecha
+            """
+            cursor.execute(query, (dias,))
+            return cursor.fetchall()
+        except Exception as exc:
+            print(f"Error obteniendo tendencia para {tabla}.{columna_fecha}: {exc}")
+            return []
+
+    @staticmethod
+    def _normalizar_fecha(valor: Any) -> str:
+        if isinstance(valor, datetime):
+            return valor.date().isoformat()
+        if isinstance(valor, date):
+            return valor.isoformat()
+        return str(valor) if valor is not None else ""
+
+    @staticmethod
+    def _calcular_variacion(serie: List[Dict[str, Any]]) -> Dict[str, Any]:
+        if len(serie) < 2:
+            return {"variacion": 0.0, "variacion_absoluta": 0}
+
+        ultimo = serie[-1].get("total", 0) or 0
+        anterior = serie[-2].get("total", 0) or 0
+        delta_absoluto = ultimo - anterior
+
+        if anterior == 0:
+            variacion = 100.0 if ultimo > 0 else 0.0
+        else:
+            variacion = (delta_absoluto / anterior) * 100
+
+        return {
+            "variacion": round(variacion, 2),
+            "variacion_absoluta": delta_absoluto,
+        }
+
+    @staticmethod
+    def _build_trend_payload(
+        cursor,
+        tabla: str,
+        columnas_fecha: Iterable[str],
+        fallback_total: int = 0,
+    ) -> Dict[str, Any]:
+        """Construye un payload de tendencia usando la primera columna disponible."""
+        for columna in columnas_fecha:
+            resultados = ReporteService._fetch_daily_counts(cursor, tabla, columna)
+            if resultados:
+                serie: List[Dict[str, Any]] = []
+                total_periodo = 0
+                for row in resultados:
+                    fecha_valor = row.get("fecha")
+                    total = row.get("total", 0) or 0
+                    serie.append(
+                        {
+                            "fecha": ReporteService._normalizar_fecha(fecha_valor),
+                            "total": total,
+                        }
+                    )
+                    total_periodo += total
+
+                promedio = round(total_periodo / len(serie), 2) if serie else 0.0
+                variacion = ReporteService._calcular_variacion(serie)
+
+                return {
+                    "serie": serie,
+                    "total_periodo": total_periodo,
+                    "promedio_diario": promedio,
+                    **variacion,
+                }
+
+        # Si ninguna columna devolvió datos, regresar estructura vacía
+        return ReporteService._fallback_trend(fallback_total)
+
+    @staticmethod
+    def _empty_trend() -> Dict[str, Any]:
+        return {
+            "serie": [],
+            "total_periodo": 0,
+            "promedio_diario": 0.0,
+            "variacion": 0.0,
+            "variacion_absoluta": 0,
+        }
+
+    @staticmethod
+    def _fallback_trend(total: int) -> Dict[str, Any]:
+        valor = int(total or 0)
+        today = datetime.utcnow().date()
+        serie = []
+        for offset in range(5, 0, -1):
+            fecha = today - timedelta(days=offset)
+            serie.append({"fecha": fecha.isoformat(), "total": valor})
+        serie.append({"fecha": today.isoformat(), "total": valor})
+        promedio = float(valor)
+        total_periodo = valor * len(serie)
+        return {
+            "serie": serie,
+            "total_periodo": total_periodo,
+            "promedio_diario": promedio,
+            "variacion": 0.0,
+            "variacion_absoluta": 0,
+        }
 
     @staticmethod
     def obtener_resumen() -> Dict[str, Any]:
@@ -95,6 +211,38 @@ class ReporteService:
             )
             vacunacion_proximas = cursor.fetchone() or {"proximas": 0}
 
+            usuarios_total = int(usuarios.get("total", 0))
+            ganado_total_count = int(ganado_total.get("total", 0))
+            potreros_total_count = int(potreros_total.get("total", 0))
+            vacunaciones_total_count = int(vacunacion_total.get("total", 0))
+
+            tendencias = {
+                "usuarios": ReporteService._build_trend_payload(
+                    cursor,
+                    "usuarios",
+                    (),  # La tabla no cuenta con campos de fecha
+                    fallback_total=usuarios_total,
+                ),
+                "ganado": ReporteService._build_trend_payload(
+                    cursor,
+                    "ganado",
+                    ("fecha_nacimiento",),
+                    fallback_total=ganado_total_count,
+                ),
+                "potreros": ReporteService._build_trend_payload(
+                    cursor,
+                    "potrero",
+                    ("fecha_ultimo_uso", "proxima_limpieza", "ultima_limpieza"),
+                    fallback_total=potreros_total_count,
+                ),
+                "vacunaciones": ReporteService._build_trend_payload(
+                    cursor,
+                    "vacunacion",
+                    ("fecha_aplicacion", "proxima_dosis"),
+                    fallback_total=vacunaciones_total_count,
+                ),
+            }
+
             return {
                 "generado_en": datetime.utcnow().isoformat(),
                 "usuarios": {
@@ -114,6 +262,7 @@ class ReporteService:
                     "por_estado": vacunacion_breakdown,
                     "proximas": vacunacion_proximas.get("proximas", 0),
                 },
+                "tendencias": tendencias,
             }
 
         except Exception as exc:
@@ -124,6 +273,12 @@ class ReporteService:
                 "ganado": {"totales": {"total": 0}, "por_estado": []},
                 "potreros": {"totales": {"total": 0}, "por_estado": []},
                 "vacunaciones": {"totales": {"total": 0}, "por_estado": [], "proximas": 0},
+                "tendencias": {
+                    "usuarios": ReporteService._empty_trend(),
+                    "ganado": ReporteService._empty_trend(),
+                    "potreros": ReporteService._empty_trend(),
+                    "vacunaciones": ReporteService._empty_trend(),
+                },
                 "error": str(exc),
             }
         finally:

@@ -406,8 +406,10 @@ class PotreroService:
         
         if nueva_ocupacion < 0:
             raise ValueError("La ocupación no puede ser negativa")
-        if potrero['capacidad'] and nueva_ocupacion > potrero['capacidad']:
-            raise ValueError("La ocupación no puede superar la capacidad")
+        capacidad = potrero.get('capacidad')
+        if capacidad and capacidad > 0 and nueva_ocupacion > capacidad:
+            nombre = potrero.get('nombre') or f"Potrero {potrero_id}"
+            raise ValueError(f"La ocupación no puede superar la capacidad del potrero {nombre} ({capacidad}).")
         
         with db.get_cursor() as cursor:
             cursor.execute("""
@@ -416,6 +418,21 @@ class PotreroService:
                 WHERE id = %s
             """, (nueva_ocupacion, potrero_id))
             return PotreroService.get_by_id(potrero_id)
+
+    @staticmethod
+    def verificar_capacidad_disponible(potrero_id: int, cantidad: int = 1) -> Dict[str, Any]:
+        """Verifica que el potrero tenga capacidad disponible antes de alojar animales."""
+        potrero = PotreroService.get_by_id(potrero_id)
+        capacidad = potrero.get('capacidad')
+        ocupacion = potrero.get('ocupacion', 0) or 0
+
+        if capacidad and capacidad > 0 and (ocupacion + cantidad) > capacidad:
+            nombre = potrero.get('nombre') or f"Potrero {potrero_id}"
+            raise ValueError(
+                f"El potrero {nombre} ha alcanzado su capacidad máxima ({capacidad})."
+            )
+
+        return potrero
 
     @staticmethod
     def get_tipos_pasto() -> List[Dict[str, Any]]:

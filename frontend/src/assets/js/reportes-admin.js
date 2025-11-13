@@ -1,4 +1,5 @@
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch, nextTick } from 'vue'
+import Chart from 'chart.js/auto'
 import { useReportes } from '../../composables/useReportes.js'
 
 export default {
@@ -6,9 +7,20 @@ export default {
   setup() {
     const { resumen, loading, error, cargarResumen, descargarPdf } = useReportes()
     const descargando = ref(false)
+    const trendCanvas = ref(null)
+    let trendChart = null
 
-    onMounted(() => {
-      cargarResumen()
+    const metricConfig = [
+      { clave: 'usuarios', titulo: 'Usuarios', color: '#0d6efd' },
+      { clave: 'ganado', titulo: 'Ganado', color: '#198754' },
+      { clave: 'potreros', titulo: 'Potreros', color: '#ffc107' },
+      { clave: 'vacunaciones', titulo: 'Vacunaciones', color: '#fd7e14' }
+    ]
+
+    onMounted(async () => {
+      await cargarResumen()
+      await nextTick()
+      renderTrendChart()
     })
 
     const summaryCards = computed(() => {
@@ -19,33 +31,38 @@ export default {
       const potreros = resumen.value.potreros || {}
       const vacunaciones = resumen.value.vacunaciones || {}
 
-      return [
-        {
-          titulo: 'Usuarios',
-          total: usuarios.totales?.total ?? 0,
-          detalles: [
+      const tendencias = resumen.value.tendencias || {}
+
+      const construirDetalles = (clave) => {
+        if (clave === 'usuarios') {
+          return [
             `Activos: ${usuarios.totales?.activos ?? 0}`,
             `Inactivos: ${usuarios.totales?.inactivos ?? 0}`
           ]
-        },
-        {
-          titulo: 'Ganado',
-          total: ganado.totales?.total ?? 0,
-          detalles: ganado.por_estado?.slice(0, 2).map(e => `${e.estado}: ${e.cantidad}`) || []
-        },
-        {
-          titulo: 'Potreros',
-          total: potreros.totales?.total ?? 0,
-          detalles: potreros.por_estado?.slice(0, 2).map(e => `${e.estado}: ${e.cantidad}`) || []
-        },
-        {
-          titulo: 'Vacunaciones',
-          total: vacunaciones.totales?.total ?? 0,
-          detalles: [
+        }
+        if (clave === 'vacunaciones') {
+          return [
             `Próximas dosis: ${vacunaciones.proximas ?? 0}`
           ]
         }
-      ]
+        const lista = resumen.value[clave]?.por_estado || []
+        return lista.slice(0, 2).map(e => `${formatearEstado(e.estado)}: ${e.cantidad}`)
+      }
+
+      return metricConfig.map((config) => {
+        const totales = resumen.value[config.clave]?.totales || {}
+        const total = totales.total ?? 0
+        const tendencia = tendencias[config.clave] || {}
+        return {
+          ...config,
+          total,
+          detalles: construirDetalles(config.clave),
+          variacion: tendencia.variacion ?? 0,
+          variacionAbsoluta: tendencia.variacion_absoluta ?? 0,
+          promedio: tendencia.promedio_diario ?? 0,
+          serie: tendencia.serie || []
+        }
+      })
     })
 
     const secciones = computed(() => {
@@ -88,6 +105,161 @@ export default {
       return estado.replace('_', ' ')
     }
 
+    const formatBadgeClass = (valor) => {
+      if (valor > 0) return 'badge-soft-success'
+      if (valor < 0) return 'badge-soft-danger'
+      return 'badge-soft-muted'
+    }
+
+    const formatPromedio = (valor) => {
+      if (typeof valor !== 'number' || Number.isNaN(valor)) return '0'
+      return Number.isInteger(valor) ? String(valor) : valor.toFixed(1)
+    }
+
+    const formatVariacion = (valor) => {
+      if (typeof valor !== 'number' || Number.isNaN(valor)) return '0.0'
+      return valor.toFixed(1)
+    }
+
+    const trendInsights = computed(() => {
+      if (!resumen.value?.tendencias) return []
+      return summaryCards.value.map(card => ({
+        titulo: card.titulo,
+        color: card.color,
+        promedio: card.promedio ?? 0,
+        variacion: card.variacion ?? 0
+      }))
+    })
+
+    const buildTrendChartData = () => {
+      if (!resumen.value?.tendencias) {
+        console.debug('[ReportesAdmin] Tendencias no disponibles todavía')
+        return { labels: [], datasets: [] }
+      }
+
+      const labelsSet = new Set()
+      const tendencias = resumen.value.tendencias
+
+      metricConfig.forEach(config => {
+        const serie = tendencias[config.clave]?.serie || []
+        serie.forEach(punto => {
+          if (punto.fecha) {
+            labelsSet.add(punto.fecha)
+          }
+        })
+      })
+
+      const labels = Array.from(labelsSet).sort()
+
+      const datasets = metricConfig.map((config) => {
+        const serie = tendencias[config.clave]?.serie || []
+        const mapa = new Map(serie.map(p => [p.fecha, p.total]))
+
+        return {
+          label: config.titulo,
+          data: labels.map(label => mapa.get(label) ?? 0),
+          borderColor: config.color,
+          backgroundColor: `${config.color}20`,
+          tension: 0.35,
+          fill: true,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          borderWidth: 2
+        }
+      })
+
+      return { labels, datasets }
+    }
+
+    const renderTrendChart = async () => {
+      if (!trendCanvas.value) return
+
+      await nextTick()
+
+      const { labels, datasets } = buildTrendChartData()
+
+      if (!labels.length) {
+        console.debug('[ReportesAdmin] No hay etiquetas para la gráfica')
+        if (trendChart) {
+          trendChart.destroy()
+          trendChart = null
+        }
+        return
+      }
+
+      if (trendChart) {
+        console.debug('[ReportesAdmin] Actualizando gráfica existente', labels, datasets)
+        trendChart.data.labels = labels
+        trendChart.data.datasets = datasets
+        trendChart.update()
+        return
+      }
+
+      trendChart = new Chart(trendCanvas.value, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top'
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: {
+                label: (context) => {
+                  const label = context.dataset.label || ''
+                  const value = context.raw ?? 0
+                  return `${label}: ${value}`
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Fecha'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Total'
+              },
+              beginAtZero: true,
+              ticks: {
+                precision: 0
+              }
+            }
+          }
+        }
+      })
+      console.debug('[ReportesAdmin] Gráfica creada', labels, datasets)
+    }
+
+    watch(
+      [() => resumen.value?.tendencias, () => trendCanvas.value, () => loading.value],
+      async () => {
+        if (loading.value) return
+        await nextTick()
+        if (resumen.value?.tendencias && trendCanvas.value) {
+          renderTrendChart()
+        }
+      },
+      { deep: true, immediate: true, flush: 'post' }
+    )
+
+    onUnmounted(() => {
+      if (trendChart) {
+        trendChart.destroy()
+        trendChart = null
+      }
+    })
+
     const formatFecha = (fechaISO) => {
       if (!fechaISO) return 'No disponible'
       try {
@@ -113,7 +285,12 @@ export default {
       error,
       summaryCards,
       secciones,
+      trendCanvas,
+      trendInsights,
       formatearEstado,
+      formatBadgeClass,
+      formatPromedio,
+      formatVariacion,
       formatFecha,
       descargarReporte,
       descargando

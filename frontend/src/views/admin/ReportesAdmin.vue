@@ -24,15 +24,57 @@
 
       <template v-if="resumen">
         <div class="row g-3">
-          <div class="col-12 col-sm-6 col-xl-3" v-for="card in summaryCards" :key="card.titulo">
-            <div class="card shadow-sm h-100">
-              <div class="card-body">
-                <h5 class="card-title mb-2">{{ card.titulo }}</h5>
-                <p class="display-6 fw-bold mb-2">{{ card.total }}</p>
-                <p class="text-muted small mb-0" v-for="detalle in card.detalles" :key="detalle">
-                  {{ detalle }}
-                </p>
+          <div class="col-12 col-md-6 col-xl-3" v-for="card in summaryCards" :key="card.clave">
+            <div class="card shadow-sm h-100 overflow-hidden">
+              <div class="card-body d-flex flex-column gap-3">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <span class="card-badge" :style="{ backgroundColor: card.color + '20', color: card.color }">
+                      <i class="fas fa-chart-line me-1"></i>{{ card.titulo }}
+                    </span>
+                    <p class="display-6 fw-bold mb-0 mt-2">{{ card.total }}</p>
+                  </div>
+                  <span class="badge" :class="formatBadgeClass(card.variacion)">
+                    <i :class="card.variacion >= 0 ? 'fas fa-arrow-up me-1' : 'fas fa-arrow-down me-1'"></i>
+                    {{ formatVariacion(card.variacion) }}%
+                  </span>
+                </div>
+                <ul class="list-unstyled mb-0 small text-muted d-grid gap-1">
+                  <li v-for="detalle in card.detalles" :key="detalle">{{ detalle }}</li>
+                </ul>
+                <div class="card-stats text-muted small">
+                  Promedio diario: <strong>{{ formatPromedio(card.promedio) }}</strong>
+                </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mt-4 chart-card">
+          <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-3">
+              <div>
+                <h4 class="card-title mb-1">Evolución reciente de registros</h4>
+                <p class="text-muted mb-0">Tendencia de los últimos días para usuarios, ganado, potreros y vacunaciones.</p>
+              </div>
+              <div class="d-flex flex-wrap gap-2">
+                <span
+                  v-for="insight in trendInsights"
+                  :key="insight.titulo"
+                  class="badge trend-badge"
+                  :style="{ borderColor: insight.color }"
+                >
+                  <span class="trend-dot" :style="{ backgroundColor: insight.color }"></span>
+                  {{ insight.titulo }}
+                  <span class="text-muted ms-1">Promedio: {{ formatPromedio(insight.promedio) }}</span>
+                  <span class="ms-2 badge" :class="formatBadgeClass(insight.variacion)">
+                    {{ formatVariacion(insight.variacion) }}%
+                  </span>
+                </span>
+              </div>
+            </div>
+            <div class="chart-wrapper">
+              <canvas ref="trendCanvas" aria-label="Gráfico de evolución diaria" role="img"></canvas>
             </div>
           </div>
         </div>

@@ -467,6 +467,22 @@ export const editarAnimal = (id) => {
         throw new Error('VALIDATION_ERROR');
       }
 
+      if (id_potrero) {
+        const potreroSeleccionado = potreros.value.find(
+          (pot) => pot.id === parseInt(id_potrero, 10)
+        );
+        if (potreroSeleccionado && potreroSeleccionado.capacidad !== null && potreroSeleccionado.capacidad !== undefined) {
+          const capacidad = Number(potreroSeleccionado.capacidad);
+          const ocupacionActual = Number(potreroSeleccionado.ocupacion || 0);
+          const esMismoPotrero = potreroSeleccionado.id === animal.id_potrero;
+          const ocupacionPrevista = esMismoPotrero ? ocupacionActual : ocupacionActual + 1;
+          if (capacidad > 0 && ocupacionPrevista > capacidad) {
+            Swal.showValidationMessage(`El potrero ${potreroSeleccionado.nombre} no tiene cupo disponible (${ocupacionActual}/${capacidad}).`);
+            throw new Error('VALIDATION_ERROR');
+          }
+        }
+      }
+
       const updateData = {
         nombre,
         peso: peso ? parseFloat(peso) : null,
@@ -597,6 +613,20 @@ export const agregarNuevoAnimal = () => {
       if (!nombre || !raza || !fecha_nacimiento || !estado || !sexo) {
         Swal.showValidationMessage('Por favor complete todos los campos requeridos');
         throw new Error('VALIDATION_ERROR');
+      }
+
+      if (id_potrero) {
+        const potreroSeleccionado = potreros.value.find(
+          (pot) => pot.id === parseInt(id_potrero, 10)
+        );
+        if (potreroSeleccionado && potreroSeleccionado.capacidad !== null && potreroSeleccionado.capacidad !== undefined) {
+          const capacidad = Number(potreroSeleccionado.capacidad);
+          const ocupacionActual = Number(potreroSeleccionado.ocupacion || 0);
+          if (capacidad > 0 && ocupacionActual >= capacidad) {
+            Swal.showValidationMessage(`El potrero ${potreroSeleccionado.nombre} alcanzó su capacidad máxima (${capacidad}).`);
+            throw new Error('VALIDATION_ERROR');
+          }
+        }
       }
 
       return {

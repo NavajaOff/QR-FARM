@@ -3,6 +3,7 @@ from typing import List, Optional, Dict, Any, Union
 from datetime import datetime, date
 from ..database.db import get_connection
 from ..models.animal import Ganado, EstadoGanado
+from .potrero_service import PotreroService
 
 class GanadoService:
     @staticmethod
@@ -120,6 +121,9 @@ class GanadoService:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
+            if ganado.id_potrero:
+                PotreroService.verificar_capacidad_disponible(ganado.id_potrero)
+
             sql = """
                 INSERT INTO ganado (
                     nombre, raza, fecha_nacimiento,
@@ -166,6 +170,8 @@ class GanadoService:
             conn.commit()
 
             ganado.id = cursor.lastrowid
+            if ganado.id_potrero:
+                PotreroService.actualizar_ocupacion(ganado.id_potrero, 1)
             return ganado
 
         except Exception as e:
@@ -217,6 +223,18 @@ class GanadoService:
     @staticmethod
     def actualizar_ganado(id: int, ganado: Ganado) -> bool:
         try:
+            potrero_anterior_id: Optional[int] = None
+            try:
+                registro_actual = GanadoService.obtener_ganado(id)
+                if registro_actual:
+                    potrero_anterior_id = registro_actual.id_potrero
+            except Exception as consulta_error:
+                print(f"Advertencia: no se pudo obtener potrero actual del ganado {id}: {consulta_error}")
+
+            nuevo_potrero_id = ganado.id_potrero
+            if nuevo_potrero_id and nuevo_potrero_id != potrero_anterior_id:
+                PotreroService.verificar_capacidad_disponible(nuevo_potrero_id)
+
             conn = get_connection()
             cursor = conn.cursor()
 
@@ -247,7 +265,15 @@ class GanadoService:
             cursor.execute(sql, values)
             conn.commit()
 
-            return cursor.rowcount > 0
+            actualizado = cursor.rowcount > 0
+
+            if actualizado and nuevo_potrero_id != potrero_anterior_id:
+                if potrero_anterior_id:
+                    PotreroService.actualizar_ocupacion(potrero_anterior_id, -1)
+                if nuevo_potrero_id:
+                    PotreroService.actualizar_ocupacion(nuevo_potrero_id, 1)
+
+            return actualizado
 
         except Exception as e:
             print(f"Error al actualizar ganado: {e}")
@@ -434,6 +460,18 @@ class GanadoService:
     @staticmethod
     def actualizar_ganado(id: int, ganado: Ganado) -> bool:
         try:
+            potrero_anterior_id: Optional[int] = None
+            try:
+                registro_actual = GanadoService.obtener_ganado(id)
+                if registro_actual:
+                    potrero_anterior_id = registro_actual.id_potrero
+            except Exception as consulta_error:
+                print(f"Advertencia: no se pudo obtener potrero actual del ganado {id}: {consulta_error}")
+
+            nuevo_potrero_id = ganado.id_potrero
+            if nuevo_potrero_id and nuevo_potrero_id != potrero_anterior_id:
+                PotreroService.verificar_capacidad_disponible(nuevo_potrero_id)
+
             conn = get_connection()
             cursor = conn.cursor()
 
@@ -468,7 +506,15 @@ class GanadoService:
             cursor.execute(sql, values)
             conn.commit()
 
-            return cursor.rowcount > 0
+            actualizado = cursor.rowcount > 0
+
+            if actualizado and nuevo_potrero_id != potrero_anterior_id:
+                if potrero_anterior_id:
+                    PotreroService.actualizar_ocupacion(potrero_anterior_id, -1)
+                if nuevo_potrero_id:
+                    PotreroService.actualizar_ocupacion(nuevo_potrero_id, 1)
+
+            return actualizado
 
         except Exception as e:
             print(f"Error al actualizar animal: {e}")

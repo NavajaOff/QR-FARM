@@ -46,6 +46,11 @@ class GanadoController:
                     'message': 'Error al crear el ganado'
                 }), 400
 
+        except ValueError as e:
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 400
         except Exception as e:
             return jsonify({
                 'status': 'error',
@@ -68,6 +73,11 @@ class GanadoController:
                     'message': GANADO_NO_ENCONTRADO
                 }), 404
 
+        except ValueError as e:
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 400
         except Exception as e:
             return jsonify({
                 'status': 'error',
