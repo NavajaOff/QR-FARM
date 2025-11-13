@@ -4,6 +4,7 @@ import axios, { isAxiosError } from 'axios';
 export interface QrResourceRequest {
   endpoint: string;
   resourceId: string;
+  alternatives?: string[];
   signal?: AbortSignal;
 }
 
@@ -94,7 +95,7 @@ const mapAxiosError = (error: unknown): Error => {
   if (error.response) {
     const status = error.response.status;
     if (status === 404) {
-      return createError('QR no reconocido. Verifica que el código exista.', 'QrNotFoundError');
+      return createError('Este QR no está registrado en la base de datos.', 'QrNotFoundError');
     }
     if (status === 403) {
       return createError('No autorizado para consultar este recurso.', 'QrForbiddenError');
@@ -219,49 +220,94 @@ const parseHistorial = (value: unknown): GanadoRevision[] => {
     .filter((registro): registro is GanadoRevision => registro !== null);
 };
 
-export const fetchQrResource = async (params: QrResourceRequest): Promise<GanadoResource> => {
-  const url = buildUrl(params.endpoint, params.resourceId);
-  try {
-    const response = await api.get(url, { signal: params.signal });
-    const payload = response.data as Record<string, unknown>;
-    const raw = typeof payload === 'object' && payload !== null && 'data' in payload
-      ? (payload as Record<string, unknown>).data
-      : payload;
-
-    if (!raw || typeof raw !== 'object') {
-      throw createError('La respuesta del servidor no es válida.', 'QrInvalidResponseError');
-    }
-
-    const data = raw as Record<string, unknown>;
-    const identifier = toNullableString(data.id);
-    if (!identifier) {
-      throw createError('La respuesta del servidor no incluye un identificador válido.', 'QrInvalidResponseError');
-    }
-
-    const estadoPrincipal = toNullableString(data.estado) ?? toNullableString(data.estado_salud);
-
-    return {
-      id: identifier,
-      nombre: toNullableString(data.nombre),
-      raza: toNullableString(data.raza),
-      fecha_nacimiento: toIsoString(data.fecha_nacimiento),
-      edad: toNullableNumber(data.edad),
-      sexo: toNullableString(data.sexo),
-      estado: estadoPrincipal,
-      estado_salud: toNullableString(data.estado_salud),
-      peso: toNullableNumber(data.peso),
-      codigo_qr: toNullableString(data.codigo_qr),
-      propietario: parseOwner(data.propietario),
-      potrero: parsePotrero(data.potrero),
-      vacunas: parseVacunas(data.vacunas),
-      historial: parseHistorial(data.historial)
-    };
-  } catch (error) {
-    if (axios.isCancel(error)) {
-      throw createError('La consulta fue cancelada.', 'QrRequestCancelledError');
-    }
-    throw mapAxiosError(error);
+const parseGanadoResponse = (input: unknown): GanadoResource => {
+  if (!input || typeof input !== 'object') {
+    throw createError('La respuesta del servidor no es válida.', 'QrInvalidResponseError');
   }
+  const payload = input as Record<string, unknown>;
+  const raw = 'data' in payload ? (payload.data as unknown) : payload;
+
+  if (!raw || typeof raw !== 'object') {
+    throw createError('La respuesta del servidor no es válida.', 'QrInvalidResponseError');
+  }
+
+  const data = raw as Record<string, unknown>;
+  const identifier = toNullableString(data.id);
+  if (!identifier) {
+    throw createError('La respuesta del servidor no incluye un identificador válido.', 'QrInvalidResponseError');
+  }
+
+  const primaryState = toNullableString(data.estado) ?? toNullableString(data.estado_salud);
+
+  return {
+    id: identifier,
+    nombre: toNullableString(data.nombre),
+    raza: toNullableString(data.raza),
+    fecha_nacimiento: toIsoString(data.fecha_nacimiento),
+    edad: toNullableNumber(data.edad),
+    sexo: toNullableString(data.sexo),
+    estado: primaryState,
+    estado_salud: toNullableString(data.estado_salud),
+    peso: toNullableNumber(data.peso),
+    codigo_qr: toNullableString(data.codigo_qr),
+    propietario: parseOwner(data.propietario),
+    potrero: parsePotrero(data.potrero),
+    vacunas: parseVacunas(data.vacunas),
+    historial: parseHistorial(data.historial)
+  };
+};
+
+export const fetchQrResource = async (params: QrResourceRequest): Promise<GanadoResource> => {
+  const candidates = [params.resourceId, ...(params.alternatives ?? [])]
+    .map((candidate) => {
+      if (typeof candidate === 'number') {
+        return String(candidate);
+      }
+      if (typeof candidate === 'string') {
+        return candidate.trim();
+      }
+      return '';
+    })
+    .filter((value): value is string => value.length > 0);
+
+  const seen = new Set<string>();
+  const queue = candidates.filter(candidate => {
+    const normalized = candidate.trim();
+    if (seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  });
+
+  if (queue.length === 0) {
+    throw createError('El identificador del código QR es obligatorio.', 'QrResourceIdError');
+  }
+
+  let lastNotFoundError: Error | null = null;
+
+  for (const candidate of queue) {
+    const url = buildUrl(params.endpoint, candidate);
+    try {
+      const response = await api.get(url, { signal: params.signal });
+      return parseGanadoResponse(response.data);
+    } catch (error) {
+      if (axios.isCancel(error)) {
+        throw createError('La consulta fue cancelada.', 'QrRequestCancelledError');
+      }
+
+      if (isAxiosError(error) && error.response?.status === 404) {
+        lastNotFoundError = mapAxiosError(error);
+        continue;
+      }
+
+      throw mapAxiosError(error);
+    }
+  }
+
+  if (lastNotFoundError) {
+    throw lastNotFoundError;
+  }
+
+  throw createError('No se pudo consultar el recurso asociado.', 'QrUnknownError');
 };
 
 export interface EmbeddedQrPayload {

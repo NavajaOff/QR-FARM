@@ -101,23 +101,26 @@ CORS(app, resources={
 })
 
 
-@app.route('/api/ganado/<int:ganado_id>', methods=['GET'])
-def obtener_ganado_detallado(ganado_id: int):
+@app.route('/api/ganado/<identifier>', methods=['GET', 'OPTIONS'])
+def obtener_ganado_detallado(identifier: str):
     """Devuelve la ficha detallada de un ganado, incluida la información relacionada."""
+    if request.method == 'OPTIONS':
+        return ('', 204)
+
     try:
-        detalle = GanadoService.obtener_ganado_detallado(ganado_id)
+        detalle = GanadoService.obtener_ganado_detallado(identifier)
         if not detalle:
             return jsonify({
-                "status": "error",
-                "message": f"No se encontró el ganado con ID {ganado_id}"
+                "success": False,
+                "message": "Este QR no está registrado en la base de datos."
             }), 404
 
         return jsonify({
-            "status": "success",
+            "success": True,
             "data": detalle
         }), 200
     except Exception as error:
-        print(f"Error obteniendo detalle de ganado {ganado_id}: {error}")
+        print(f"Error obteniendo detalle de ganado {identifier}: {error}")
         return jsonify({
             "status": "error",
             "message": "Error interno del servidor"

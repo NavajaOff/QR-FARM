@@ -401,6 +401,48 @@ const stopScanner = async (): Promise<void> => {
   }
 };
 
+const readCandidateIdentifier = (value: unknown): string | null => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof value === 'number') {
+    return String(value);
+  }
+  return null;
+};
+
+const collectAlternativeIdentifiers = (payload: NormalizedResourcePayload): string[] => {
+  const alternatives = new Set<string>();
+  const register = (candidate: unknown) => {
+    const normalized = readCandidateIdentifier(candidate);
+    if (!normalized) return;
+    if (normalized === payload.resourceId) return;
+    alternatives.add(normalized);
+  };
+
+  const metadata = payload.metadata ?? {};
+  if (metadata && typeof metadata === 'object') {
+    const metaRecord = metadata as Record<string, unknown>;
+    register(metaRecord.codigo);
+    register(metaRecord.code);
+    register(metaRecord.codigo_qr);
+    register(metaRecord.qr);
+  }
+
+  if (payload.embeddedResource) {
+    const embedded = payload.embeddedResource;
+    register(embedded.codigo);
+    register(embedded.code);
+    register(embedded.codigo_qr);
+    if (embedded.id !== undefined && embedded.id !== null) {
+      register(embedded.id);
+    }
+  }
+
+  return Array.from(alternatives);
+};
+
 const normalizePayload = (raw: string): NormalizedPayload => {
   const sanitized = raw.trim();
   if (sanitized.length === 0) {
@@ -528,10 +570,13 @@ const fetchResource = async (payload: NormalizedPayload): Promise<void> => {
   const controller = new AbortController();
   abortControllerRef.value = controller;
 
+  const alternativeIds = collectAlternativeIdentifiers(payload);
+
   try {
     const resource = await fetchQrResource({
       endpoint: props.resourceEndpoint,
       resourceId: payload.resourceId,
+      alternatives: alternativeIds,
       signal: controller.signal
     });
     applyResource(resource, 'api', false);
