@@ -28,6 +28,14 @@ class PotreroService:
 
             # Agregar el nombre del tipo de pasto a cada potrero
             for potrero in potreros:
+                try:
+                    ocupacion_real = PotreroService._obtener_ocupacion_real(potrero['id'])
+                    if potrero.get('ocupacion') != ocupacion_real:
+                        PotreroService._actualizar_ocupacion_en_db(potrero['id'], ocupacion_real)
+                    potrero['ocupacion'] = ocupacion_real
+                except Exception as sync_error:
+                    print(f"Advertencia sincronizando ocupación del potrero {potrero.get('id')}: {sync_error}")
+
                 if potrero.get('id_tipo_pasto'):
                     try:
                         tipos_pasto = PotreroService.get_tipos_pasto()
@@ -62,6 +70,14 @@ class PotreroService:
             result = cursor.fetchone()
             if not result:
                 raise ValueError(f"Potrero with id {potrero_id} not found")
+
+            try:
+                ocupacion_real = PotreroService._obtener_ocupacion_real(potrero_id)
+                if result.get('ocupacion') != ocupacion_real:
+                    PotreroService._actualizar_ocupacion_en_db(potrero_id, ocupacion_real)
+                result['ocupacion'] = ocupacion_real
+            except Exception as sync_error:
+                print(f"Advertencia al sincronizar ocupación para potrero {potrero_id}: {sync_error}")
 
             # Agregar el nombre del tipo de pasto
             if result.get('id_tipo_pasto'):
@@ -400,33 +416,43 @@ class PotreroService:
 
     @staticmethod
     def actualizar_ocupacion(potrero_id: int, delta: int) -> Dict[str, Any]:
-        """Update ocupacion of potrero."""
-        potrero = PotreroService.get_by_id(potrero_id)
-        nueva_ocupacion = potrero['ocupacion'] + delta
-        
+        """Actualiza la ocupación registrada del potrero aplicando un delta sobre la ocupación real."""
+        capacidad = None
+        try:
+            potrero = PotreroService.get_by_id(potrero_id)
+            capacidad = potrero.get('capacidad')
+        except Exception:
+            potrero = None
+
+        ocupacion_real = PotreroService._obtener_ocupacion_real(potrero_id)
+        nueva_ocupacion = ocupacion_real + (delta or 0)
         if nueva_ocupacion < 0:
-            raise ValueError("La ocupación no puede ser negativa")
-        capacidad = potrero.get('capacidad')
+            nueva_ocupacion = 0
+
         if capacidad and capacidad > 0 and nueva_ocupacion > capacidad:
-            nombre = potrero.get('nombre') or f"Potrero {potrero_id}"
+            nombre = potrero.get('nombre') if potrero else f"Potrero {potrero_id}"
             raise ValueError(f"La ocupación no puede superar la capacidad del potrero {nombre} ({capacidad}).")
-        
-        with db.get_cursor() as cursor:
-            cursor.execute("""
-                UPDATE potrero
-                SET ocupacion = %s
-                WHERE id = %s
-            """, (nueva_ocupacion, potrero_id))
-            return PotreroService.get_by_id(potrero_id)
+
+        return PotreroService._actualizar_ocupacion_en_db(potrero_id, nueva_ocupacion)
+
+    @staticmethod
+    def sincronizar_ocupacion(potrero_id: int) -> Dict[str, Any]:
+        """Fuerza que la columna ocupacion refleje el número real de animales asignados."""
+        ocupacion_real = PotreroService._obtener_ocupacion_real(potrero_id)
+        return PotreroService._actualizar_ocupacion_en_db(potrero_id, ocupacion_real)
 
     @staticmethod
     def verificar_capacidad_disponible(potrero_id: int, cantidad: int = 1) -> Dict[str, Any]:
         """Verifica que el potrero tenga capacidad disponible antes de alojar animales."""
         potrero = PotreroService.get_by_id(potrero_id)
         capacidad = potrero.get('capacidad')
-        ocupacion = potrero.get('ocupacion', 0) or 0
+        ocupacion_real = PotreroService._obtener_ocupacion_real(potrero_id)
 
-        if capacidad and capacidad > 0 and (ocupacion + cantidad) > capacidad:
+        ocupacion_registrada = potrero.get('ocupacion')
+        if ocupacion_registrada is None or ocupacion_registrada != ocupacion_real:
+            PotreroService._actualizar_ocupacion_en_db(potrero_id, ocupacion_real)
+
+        if capacidad and capacidad > 0 and (ocupacion_real + cantidad) > capacidad:
             nombre = potrero.get('nombre') or f"Potrero {potrero_id}"
             raise ValueError(
                 f"El potrero {nombre} ha alcanzado su capacidad máxima ({capacidad})."
@@ -526,3 +552,32 @@ class PotreroService:
             return []
 
     # Método get_estados_ganado eliminado porque pertenece a GanadoService
+
+    @staticmethod
+    def _obtener_ocupacion_real(potrero_id: int) -> int:
+        """Cuenta cuántos animales están actualmente asociados al potrero."""
+        try:
+            with db.get_cursor() as cursor:
+                cursor.execute("""
+                    SELECT COUNT(*) AS total
+                    FROM ganado
+                    WHERE id_potrero = %s
+                """, (potrero_id,))
+                row = cursor.fetchone()
+                if row and row.get('total') is not None:
+                    return int(row['total'])
+        except Exception as error:
+            print(f"Error obteniendo ocupación real del potrero {potrero_id}: {error}")
+        return 0
+
+    @staticmethod
+    def _actualizar_ocupacion_en_db(potrero_id: int, ocupacion: int) -> Dict[str, Any]:
+        """Actualiza la columna ocupacion en la tabla potrero y devuelve el registro actualizado."""
+        ocupacion = max(0, int(ocupacion))
+        with db.get_cursor() as cursor:
+            cursor.execute("""
+                UPDATE potrero
+                SET ocupacion = %s
+                WHERE id = %s
+            """, (ocupacion, potrero_id))
+        return PotreroService.get_by_id(potrero_id)

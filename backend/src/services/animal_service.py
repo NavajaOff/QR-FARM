@@ -1,9 +1,13 @@
 # Servicio Ganado
 from typing import List, Optional, Dict, Any, Union
 from datetime import datetime, date
+from pathlib import Path
 from ..database.db import get_connection
 from ..models.animal import Ganado, EstadoGanado
 from .potrero_service import PotreroService
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+QR_STORAGE_DIR = BASE_DIR / "qr"
 
 class GanadoService:
     @staticmethod
@@ -171,7 +175,10 @@ class GanadoService:
 
             ganado.id = cursor.lastrowid
             if ganado.id_potrero:
-                PotreroService.actualizar_ocupacion(ganado.id_potrero, 1)
+                try:
+                    PotreroService.sincronizar_ocupacion(ganado.id_potrero)
+                except Exception as sync_error:
+                    print(f"Advertencia al sincronizar ocupación del potrero {ganado.id_potrero} tras crear ganado: {sync_error}")
             return ganado
 
         except Exception as e:
@@ -269,9 +276,15 @@ class GanadoService:
 
             if actualizado and nuevo_potrero_id != potrero_anterior_id:
                 if potrero_anterior_id:
-                    PotreroService.actualizar_ocupacion(potrero_anterior_id, -1)
+                    try:
+                        PotreroService.sincronizar_ocupacion(potrero_anterior_id)
+                    except Exception as sync_error:
+                        print(f"Advertencia al sincronizar potrero {potrero_anterior_id}: {sync_error}")
                 if nuevo_potrero_id:
-                    PotreroService.actualizar_ocupacion(nuevo_potrero_id, 1)
+                    try:
+                        PotreroService.sincronizar_ocupacion(nuevo_potrero_id)
+                    except Exception as sync_error:
+                        print(f"Advertencia al sincronizar potrero {nuevo_potrero_id}: {sync_error}")
 
             return actualizado
 
@@ -285,6 +298,10 @@ class GanadoService:
     @staticmethod
     def eliminar_ganado(id: int) -> bool:
         try:
+            registro = GanadoService.obtener_ganado(id)
+            potrero_id = registro.id_potrero if registro else None
+            codigo_qr = registro.codigo_qr if registro else None
+
             conn = get_connection()
             cursor = conn.cursor()
 
@@ -292,8 +309,19 @@ class GanadoService:
             cursor.execute(sql, (id,))
             conn.commit()
 
-            return cursor.rowcount > 0
-            
+            eliminado = cursor.rowcount > 0
+
+            if eliminado:
+                if potrero_id:
+                    try:
+                        PotreroService.sincronizar_ocupacion(potrero_id)
+                    except Exception as sync_error:
+                        print(f"Advertencia al sincronizar potrero {potrero_id} al eliminar ganado {id}: {sync_error}")
+                if codigo_qr:
+                    GanadoService._eliminar_archivo_qr(codigo_qr)
+
+            return eliminado
+
         except Exception as e:
             print(f"Error al eliminar animal: {e}")
             return False
@@ -458,6 +486,17 @@ class GanadoService:
             return None
 
     @staticmethod
+    def _eliminar_archivo_qr(codigo_qr: str) -> None:
+        if not codigo_qr:
+            return
+        try:
+            qr_path = QR_STORAGE_DIR / f"{codigo_qr}.png"
+            if qr_path.exists():
+                qr_path.unlink()
+        except OSError as error:
+            print(f"Advertencia al eliminar archivo QR {codigo_qr}: {error}")
+
+    @staticmethod
     def actualizar_ganado(id: int, ganado: Ganado) -> bool:
         try:
             potrero_anterior_id: Optional[int] = None
@@ -510,9 +549,15 @@ class GanadoService:
 
             if actualizado and nuevo_potrero_id != potrero_anterior_id:
                 if potrero_anterior_id:
-                    PotreroService.actualizar_ocupacion(potrero_anterior_id, -1)
+                    try:
+                        PotreroService.sincronizar_ocupacion(potrero_anterior_id)
+                    except Exception as sync_error:
+                        print(f"Advertencia al sincronizar potrero {potrero_anterior_id}: {sync_error}")
                 if nuevo_potrero_id:
-                    PotreroService.actualizar_ocupacion(nuevo_potrero_id, 1)
+                    try:
+                        PotreroService.sincronizar_ocupacion(nuevo_potrero_id)
+                    except Exception as sync_error:
+                        print(f"Advertencia al sincronizar potrero {nuevo_potrero_id}: {sync_error}")
 
             return actualizado
 
@@ -526,6 +571,10 @@ class GanadoService:
     @staticmethod
     def eliminar_ganado(id: int) -> bool:
         try:
+            registro = GanadoService.obtener_ganado(id)
+            potrero_id = registro.id_potrero if registro else None
+            codigo_qr = registro.codigo_qr if registro else None
+
             conn = get_connection()
             cursor = conn.cursor()
 
@@ -533,7 +582,18 @@ class GanadoService:
             cursor.execute(sql, (id,))
             conn.commit()
 
-            return cursor.rowcount > 0
+            eliminado = cursor.rowcount > 0
+
+            if eliminado:
+                if potrero_id:
+                    try:
+                        PotreroService.sincronizar_ocupacion(potrero_id)
+                    except Exception as sync_error:
+                        print(f"Advertencia al sincronizar potrero {potrero_id} al eliminar ganado {id}: {sync_error}")
+                if codigo_qr:
+                    GanadoService._eliminar_archivo_qr(codigo_qr)
+
+            return eliminado
 
         except Exception as e:
             print(f"Error al eliminar ganado: {e}")

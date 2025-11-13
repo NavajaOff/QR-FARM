@@ -112,6 +112,7 @@ import {
   editarAnimal,
   agregarNuevoAnimal,
   verPerfilAnimal,
+  eliminarAnimal,
   setUpdateCallback,
   cancelPendingRequests,
   resetEstado
@@ -185,11 +186,20 @@ export default {
       editarAnimal(animal.id);
     },
 
-    deleteAnimal(animal) {
-      if (confirm(`¿Estás seguro de que deseas eliminar al animal "${animal.nombre}"?`)) {
-        console.log('Eliminando animal:', animal);
-        alert('Funcionalidad de eliminar animal próximamente disponible');
+    async deleteAnimal(animal) {
+      const confirmar = confirm(`¿Estás seguro de que deseas eliminar al animal "${animal.nombre}"? Esta acción no se puede deshacer.`);
+      if (!confirmar) {
+        return;
       }
+
+      const resultado = await eliminarAnimal(animal.id);
+      if (!resultado.success) {
+        alert(`No se pudo eliminar el animal: ${resultado.message || 'Error desconocido'}`);
+        return;
+      }
+
+      alert(`Animal "${animal.nombre}" eliminado correctamente.`);
+      this.ganado = [...animales.value];
     },
 
     addAnimal() {
