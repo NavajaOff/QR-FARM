@@ -152,7 +152,7 @@ export const cargarDatosIniciales = async () => {
     await cargarDatosInicialesPotreros();
 
     // Verificar si fue cancelado
-    if (cancelTokenSource.token.reason) {
+    if (cancelTokenSource && cancelTokenSource.token.reason) {
       console.log('Carga de datos iniciales cancelada después de potreros');
       return;
     }
@@ -163,7 +163,7 @@ export const cargarDatosIniciales = async () => {
     ]);
 
     // Verificar si fue cancelado
-    if (cancelTokenSource.token.reason) {
+    if (cancelTokenSource && cancelTokenSource.token.reason) {
       console.log('Carga de datos iniciales cancelada después de estados/personas');
       return;
     }
@@ -186,7 +186,7 @@ export const cargarEstadosGanado = async () => {
   try {
     console.log('Cargando estados de ganado desde endpoint corregido...');
     const response = await axios.get(`${API_BASE}/animales/estados-ganado`, {
-      cancelToken: cancelTokenSource.token,
+      cancelToken: cancelTokenSource?.token,
       timeout: 10000
     });
     console.log('Respuesta estados ganado:', response.status);
@@ -206,7 +206,7 @@ export const cargarPersonasUsuario = async () => {
   try {
     console.log('Cargando personas usuario desde endpoint corregido...');
     const response = await axios.get(`${API_BASE}/potreros/personas-usuario`, {
-      cancelToken: cancelTokenSource.token,
+      cancelToken: cancelTokenSource?.token,
       timeout: 10000
     });
     console.log('Respuesta personas usuario:', response.status);
@@ -227,7 +227,7 @@ export const cargarAnimales = async () => {
   try {
     console.log('Cargando animales desde API...');
     const response = await axios.get(`${API_BASE}/animales/`, {
-      cancelToken: cancelTokenSource.token,
+      cancelToken: cancelTokenSource?.token,
       timeout: 15000  // Timeout más largo para listas grandes
     });
     console.log('Respuesta HTTP ganado:', response.status);

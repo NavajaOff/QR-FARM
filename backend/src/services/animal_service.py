@@ -137,22 +137,6 @@ class GanadoService:
                 )
             """
 
-            # Convertir estado a ID numérico basado en el enum EstadoGanado
-            estado_id = None
-            if ganado.estado == EstadoGanado.ACTIVO:
-                estado_id = 1
-            elif ganado.estado == EstadoGanado.SALUDABLE:
-                estado_id = 2
-            elif ganado.estado == EstadoGanado.REVISION:
-                estado_id = 3
-            elif ganado.estado == EstadoGanado.VENDIDO:
-                estado_id = 4
-            elif ganado.estado == EstadoGanado.ENFERMO:
-                estado_id = 5
-            else:
-                # Si no coincide, usar default
-                estado_id = 1
-
             # Convertir fecha_nacimiento a string si es date object
             fecha_nac = ganado.fecha_nacimiento
             if fecha_nac and hasattr(fecha_nac, 'isoformat'):
@@ -163,6 +147,9 @@ class GanadoService:
             else:
                 fecha_nac = None
 
+            estado_id = GanadoService._obtener_estado_id_desde_db(ganado.estado.value)
+            if estado_id is None:
+                estado_id = GanadoService._mapear_estado_a_id(ganado.estado)
             values = (
                 ganado.nombre, ganado.raza,
                 fecha_nac, ganado.sexo.value,
@@ -272,11 +259,9 @@ class GanadoService:
     def _mapear_estado_a_id(estado: EstadoGanado) -> int:
         """Mapea un estado del enum EstadoGanado a su ID en la base de datos."""
         estado_mapping = {
-            EstadoGanado.ACTIVO: 1,
-            EstadoGanado.SALUDABLE: 2,
-            EstadoGanado.REVISION: 3,
-            EstadoGanado.VENDIDO: 4,
-            EstadoGanado.ENFERMO: 5
+            EstadoGanado.SALUDABLE: 1,
+            EstadoGanado.REVISION: 2,
+            EstadoGanado.ENFERMO: 3
         }
         return estado_mapping.get(estado, 1)  # Default: activo
 
@@ -389,14 +374,23 @@ class GanadoService:
                 conn.close()
 
     @staticmethod
-    def eliminar_ganado(id: int) -> bool:
+    def eliminar_ganado(id: int) -> Union[bool, str]:
         try:
+            # First check if the animal has vaccination records
+            conn = get_connection()
+            cursor = conn.cursor(dictionary=True)
+
+            # Check for vaccination records
+            cursor.execute("SELECT COUNT(*) as count FROM vacunacion WHERE id_animal = %s", (id,))
+            result = cursor.fetchone()
+            if result and result['count'] > 0:
+                cursor.close()
+                conn.close()
+                return "No se puede eliminar el animal porque tiene registros de vacunación asociados"
+
             registro = GanadoService.obtener_ganado(id)
             potrero_id = registro.id_potrero if registro else None
             codigo_qr = registro.codigo_qr if registro else None
-
-            conn = get_connection()
-            cursor = conn.cursor()
 
             sql = "DELETE FROM ganado WHERE id = %s"
             cursor.execute(sql, (id,))
