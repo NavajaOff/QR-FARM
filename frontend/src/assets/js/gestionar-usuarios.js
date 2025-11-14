@@ -1,6 +1,7 @@
 import { useUsuarios } from '../../composables/useUsuarios.js';
 import authService from '../../services/authService.js';
 import { authAPI } from '../../services/api.js';
+import Swal from 'sweetalert2';
 
 const SAFE_EMAIL_REGEX = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,}$/;
 
@@ -130,30 +131,30 @@ export default {
       if (this.creatingUser) return;
 
       if (!this.addForm.primer_nombre.trim()) {
-        alert('El primer nombre es requerido');
+        Swal.fire('Error', 'El primer nombre es requerido', 'error');
         return;
       }
       if (!this.addForm.primer_apellido.trim()) {
-        alert('El primer apellido es requerido');
+        Swal.fire('Error', 'El primer apellido es requerido', 'error');
         return;
       }
       if (!this.addForm.email.trim()) {
-        alert('El email es requerido');
+        Swal.fire('Error', 'El email es requerido', 'error');
         return;
       }
 
       if (!SAFE_EMAIL_REGEX.test(this.addForm.email)) {
-        alert('El formato del email no es válido');
+        Swal.fire('Error', 'El formato del email no es válido', 'error');
         return;
       }
 
       if (!this.addForm.password || this.addForm.password.length < 6) {
-        alert('La contraseña debe tener al menos 6 caracteres');
+        Swal.fire('Error', 'La contraseña debe tener al menos 6 caracteres', 'error');
         return;
       }
 
       if (this.addForm.password !== this.addForm.confirm_password) {
-        alert('Las contraseñas no coinciden');
+        Swal.fire('Error', 'Las contraseñas no coinciden', 'error');
         return;
       }
 
@@ -171,14 +172,14 @@ export default {
 
         const response = await authAPI.register(payload);
         if (response.data?.status === 'success') {
-          alert('Usuario creado exitosamente');
+          Swal.fire('¡Éxito!', 'Usuario creado exitosamente', 'success');
           this.closeAddModal();
           await this.cargarUsuarios();
         } else {
           throw new Error(response.data?.message || 'No se pudo crear el usuario');
         }
       } catch (error) {
-        alert('Error al crear usuario: ' + (error.message || 'desconocido'));
+        Swal.fire('Error', 'Error al crear usuario: ' + (error.message || 'desconocido'), 'error');
       } finally {
         this.creatingUser = false;
       }
@@ -230,7 +231,7 @@ export default {
       if (!this.editingUserId) return;
 
       if (this.editForm.password && this.editForm.password.length < 6) {
-        alert('La contraseña debe tener al menos 6 caracteres');
+        Swal.fire('Error', 'La contraseña debe tener al menos 6 caracteres', 'error');
         return;
       }
 
@@ -283,13 +284,13 @@ export default {
       }
 
       if (Object.keys(updateData).length === 0) {
-        alert('No hay cambios para guardar');
+        Swal.fire('Información', 'No hay cambios para guardar', 'info');
         return;
       }
 
       if (updateData.email) {
         if (!SAFE_EMAIL_REGEX.test(updateData.email)) {
-          alert('El formato del email no es válido');
+          Swal.fire('Error', 'El formato del email no es válido', 'error');
           return;
         }
       }
@@ -297,30 +298,40 @@ export default {
       const result = await this.actualizarUsuario(this.editingUserId, updateData);
       if (result.success) {
         this.closeEditModal();
-        alert('Usuario actualizado exitosamente');
+        Swal.fire('¡Éxito!', 'Usuario actualizado exitosamente', 'success');
       } else {
-        alert('Error al actualizar usuario: ' + result.message);
+        Swal.fire('Error', 'Error al actualizar usuario: ' + result.message, 'error');
       }
     },
 
     async toggleUserStatus(usuario) {
       if (!this.isCurrentUserAdmin) {
-        alert('No tienes permisos para cambiar el estado de usuarios');
+        Swal.fire('Error', 'No tienes permisos para cambiar el estado de usuarios', 'error');
         return;
       }
 
-      const accion = usuario.estado === 'activo' ? 'desactivar' : 'activar';
-      const confirmacion = confirm(`¿Estás seguro de que quieres ${accion} al usuario ${usuario.nombre}?`);
+      const accion = usuario.estado === 'activo' ? 'desactiva' : 'activa';
+      const result = await Swal.fire({
+        title: '¿Estás seguro?',
+        text: `¿Estás seguro de que quieres ${accion} al usuario ${usuario.nombre}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, ' + accion,
+        cancelButtonText: 'Cancelar'
+      });
 
-      if (!confirmacion) return;
+      if (!result.isConfirmed) return;
 
       const nuevoEstado = usuario.estado === 'activo' ? 'inactivo' : 'activo';
-      const result = await this.cambiarEstadoUsuario(usuario.id, nuevoEstado);
+      const cambioResult = await this.cambiarEstadoUsuario(usuario.id, nuevoEstado);
 
-      if (result.success) {
-        alert(`Usuario ${accion}do exitosamente`);
+      
+      if (cambioResult.success) {
+        Swal.fire('¡Éxito!', `Usuario ${accion}do exitosamente`, 'success');
       } else {
-        alert('Error al cambiar el estado del usuario: ' + result.message);
+        Swal.fire('Error', 'Error al cambiar el estado del usuario: ' + cambioResult.message, 'error');
       }
     }
   }

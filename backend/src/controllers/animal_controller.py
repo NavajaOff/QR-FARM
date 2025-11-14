@@ -165,7 +165,8 @@ class GanadoController:
     @staticmethod
     def eliminar_ganado(id):
         try:
-            if GanadoService.eliminar_ganado(id):
+            result = GanadoService.eliminar_ganado(id)
+            if result is True:
                 try:
                     emit_update('animal_deleted', {
                         'id': id
@@ -177,6 +178,12 @@ class GanadoController:
                     'status': 'success',
                     'message': 'Ganado eliminado exitosamente'
                 }), 200
+            elif isinstance(result, str):
+                # Specific error message from service
+                return jsonify({
+                    'status': 'error',
+                    'message': result
+                }), 400
             else:
                 return jsonify({
                     'status': 'error',

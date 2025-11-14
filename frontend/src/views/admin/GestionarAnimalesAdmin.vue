@@ -104,6 +104,7 @@
 </template>
 
 <script>
+import Swal from 'sweetalert2';
 import {
   cargarDatosIniciales,
   animales,
@@ -187,18 +188,38 @@ export default {
     },
 
     async deleteAnimal(animal) {
-      const confirmar = confirm(`¿Estás seguro de que deseas eliminar al animal "${animal.nombre}"? Esta acción no se puede deshacer.`);
-      if (!confirmar) {
+      const result = await Swal.fire({
+        title: '¿Estás seguro?',
+        text: `¿Estás seguro de que deseas eliminar al animal "${animal.nombre}"? Esta acción no se puede deshacer.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      });
+
+      if (!result.isConfirmed) {
         return;
       }
 
       const resultado = await eliminarAnimal(animal.id);
       if (!resultado.success) {
-        alert(`No se pudo eliminar el animal: ${resultado.message || 'Error desconocido'}`);
+        await Swal.fire({
+          title: 'Error',
+          text: `No se pudo eliminar el animal: ${resultado.message || 'Error desconocido'}`,
+          icon: 'error',
+          confirmButtonText: 'Aceptar'
+        });
         return;
       }
 
-      alert(`Animal "${animal.nombre}" eliminado correctamente.`);
+      await Swal.fire({
+        title: '¡Eliminado!',
+        text: `Animal "${animal.nombre}" eliminado correctamente.`,
+        icon: 'success',
+        confirmButtonText: 'Aceptar'
+      });
       this.ganado = [...animales.value];
     },
 

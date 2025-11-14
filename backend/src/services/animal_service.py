@@ -137,22 +137,6 @@ class GanadoService:
                 )
             """
 
-            # Convertir estado a ID numérico basado en el enum EstadoGanado
-            estado_id = None
-            if ganado.estado == EstadoGanado.ACTIVO:
-                estado_id = 1
-            elif ganado.estado == EstadoGanado.SALUDABLE:
-                estado_id = 2
-            elif ganado.estado == EstadoGanado.REVISION:
-                estado_id = 3
-            elif ganado.estado == EstadoGanado.VENDIDO:
-                estado_id = 4
-            elif ganado.estado == EstadoGanado.ENFERMO:
-                estado_id = 5
-            else:
-                # Si no coincide, usar default
-                estado_id = 1
-
             # Convertir fecha_nacimiento a string si es date object
             fecha_nac = ganado.fecha_nacimiento
             if fecha_nac and hasattr(fecha_nac, 'isoformat'):
@@ -163,6 +147,9 @@ class GanadoService:
             else:
                 fecha_nac = None
 
+            estado_id = GanadoService._obtener_estado_id_desde_db(ganado.estado.value)
+            if estado_id is None:
+                estado_id = GanadoService._mapear_estado_a_id(ganado.estado)
             values = (
                 ganado.nombre, ganado.raza,
                 fecha_nac, ganado.sexo.value,
@@ -188,186 +175,6 @@ class GanadoService:
             if 'conn' in locals():
                 conn.close()
 
-    @staticmethod
-    def obtener_ganado(id: int) -> Optional[Ganado]:
-        try:
-            conn = get_connection()
-            cursor = conn.cursor(dictionary=True)
-
-            sql = "SELECT * FROM ganado WHERE id = %s"
-            cursor.execute(sql, (id,))
-
-            result = cursor.fetchone()
-            if result:
-                return Ganado.from_dict(result)
-            return None
-
-        except Exception as e:
-            print(f"Error al obtener ganado: {e}")
-            return None
-        finally:
-            if 'conn' in locals():
-                conn.close()
-
-    @staticmethod
-    def obtener_todos_ganados() -> List[Ganado]:
-        try:
-            conn = get_connection()
-            cursor = conn.cursor(dictionary=True)
-
-            cursor.execute("SELECT * FROM ganado")
-            results = cursor.fetchall()
-
-            return [Ganado.from_dict(result) for result in results]
-
-        except Exception as e:
-            print(f"Error al obtener ganados: {e}")
-            return []
-        finally:
-            if 'conn' in locals():
-                conn.close()
-
-    @staticmethod
-    def actualizar_ganado(id: int, ganado: Ganado) -> bool:
-        try:
-            potrero_anterior_id: Optional[int] = None
-            try:
-                registro_actual = GanadoService.obtener_ganado(id)
-                if registro_actual:
-                    potrero_anterior_id = registro_actual.id_potrero
-            except Exception as consulta_error:
-                print(f"Advertencia: no se pudo obtener potrero actual del ganado {id}: {consulta_error}")
-
-            nuevo_potrero_id = ganado.id_potrero
-            if nuevo_potrero_id and nuevo_potrero_id != potrero_anterior_id:
-                PotreroService.verificar_capacidad_disponible(nuevo_potrero_id)
-
-            conn = get_connection()
-            cursor = conn.cursor()
-
-            sql = """
-                UPDATE ganado SET
-                    codigo_qr = %s,
-                    nombre = %s,
-                    raza = %s,
-                    fecha_nacimiento = %s,
-                    edad = %s,
-                    sexo = %s,
-                    peso = %s,
-                    estado = %s,
-                    estado_salud = %s,
-                    id_potrero = %s,
-                    id_persona = %s,
-                    updated_at = NOW()
-                WHERE id = %s
-            """
-
-            values = (
-                ganado.codigo_qr, ganado.nombre, ganado.raza,
-                ganado.fecha_nacimiento, ganado.edad, ganado.sexo.value,
-                ganado.peso, ganado.estado.value, ganado.estado_salud,
-                ganado.id_potrero, ganado.id_persona, id
-            )
-
-            cursor.execute(sql, values)
-            conn.commit()
-
-            actualizado = cursor.rowcount > 0
-
-            if actualizado and nuevo_potrero_id != potrero_anterior_id:
-                if potrero_anterior_id:
-                    try:
-                        PotreroService.sincronizar_ocupacion(potrero_anterior_id)
-                    except Exception as sync_error:
-                        print(f"Advertencia al sincronizar potrero {potrero_anterior_id}: {sync_error}")
-                if nuevo_potrero_id:
-                    try:
-                        PotreroService.sincronizar_ocupacion(nuevo_potrero_id)
-                    except Exception as sync_error:
-                        print(f"Advertencia al sincronizar potrero {nuevo_potrero_id}: {sync_error}")
-
-            return actualizado
-
-        except Exception as e:
-            print(f"Error al actualizar ganado: {e}")
-            return False
-        finally:
-            if 'conn' in locals():
-                conn.close()
-
-    @staticmethod
-    def eliminar_ganado(id: int) -> bool:
-        try:
-            registro = GanadoService.obtener_ganado(id)
-            potrero_id = registro.id_potrero if registro else None
-            codigo_qr = registro.codigo_qr if registro else None
-
-            conn = get_connection()
-            cursor = conn.cursor()
-
-            sql = "DELETE FROM ganado WHERE id = %s"
-            cursor.execute(sql, (id,))
-            conn.commit()
-
-            eliminado = cursor.rowcount > 0
-
-            if eliminado:
-                if potrero_id:
-                    try:
-                        PotreroService.sincronizar_ocupacion(potrero_id)
-                    except Exception as sync_error:
-                        print(f"Advertencia al sincronizar potrero {potrero_id} al eliminar ganado {id}: {sync_error}")
-                if codigo_qr:
-                    GanadoService._eliminar_archivo_qr(codigo_qr)
-
-            return eliminado
-
-        except Exception as e:
-            print(f"Error al eliminar animal: {e}")
-            return False
-        finally:
-            if 'conn' in locals():
-                conn.close()
-
-    @staticmethod
-    def buscar_por_potrero(potrero_id: int) -> List[Ganado]:
-        try:
-            conn = get_connection()
-            cursor = conn.cursor(dictionary=True)
-
-            sql = "SELECT * FROM ganado WHERE id_potrero = %s"
-            cursor.execute(sql, (potrero_id,))
-            results = cursor.fetchall()
-
-            return [Ganado.from_dict(result) for result in results]
-            
-        except Exception as e:
-            print(f"Error al buscar animales por potrero: {e}")
-            return []
-        finally:
-            if 'conn' in locals() and conn is not None:
-                conn.close()
-
-    @staticmethod
-    def buscar_por_codigo_qr(codigo_qr: str) -> Optional[Ganado]:
-        try:
-            conn = get_connection()
-            cursor = conn.cursor(dictionary=True)
-
-            sql = "SELECT * FROM ganado WHERE codigo_qr = %s"
-            cursor.execute(sql, (codigo_qr,))
-
-            result = cursor.fetchone()
-            if result:
-                return Ganado.from_dict(result)
-            return None
-            
-        except Exception as e:
-            print(f"Error al buscar animal por código QR: {e}")
-            return None
-        finally:
-            if 'conn' in locals() and conn is not None:
-                conn.close()
 
     @staticmethod
     def obtener_ganado(id: int) -> Optional[Ganado]:
@@ -452,11 +259,9 @@ class GanadoService:
     def _mapear_estado_a_id(estado: EstadoGanado) -> int:
         """Mapea un estado del enum EstadoGanado a su ID en la base de datos."""
         estado_mapping = {
-            EstadoGanado.ACTIVO: 1,
-            EstadoGanado.SALUDABLE: 2,
-            EstadoGanado.REVISION: 3,
-            EstadoGanado.VENDIDO: 4,
-            EstadoGanado.ENFERMO: 5
+            EstadoGanado.SALUDABLE: 1,
+            EstadoGanado.REVISION: 2,
+            EstadoGanado.ENFERMO: 3
         }
         return estado_mapping.get(estado, 1)  # Default: activo
 
@@ -569,14 +374,23 @@ class GanadoService:
                 conn.close()
 
     @staticmethod
-    def eliminar_ganado(id: int) -> bool:
+    def eliminar_ganado(id: int) -> Union[bool, str]:
         try:
+            # First check if the animal has vaccination records
+            conn = get_connection()
+            cursor = conn.cursor(dictionary=True)
+
+            # Check for vaccination records
+            cursor.execute("SELECT COUNT(*) as count FROM vacunacion WHERE id_animal = %s", (id,))
+            result = cursor.fetchone()
+            if result and result['count'] > 0:
+                cursor.close()
+                conn.close()
+                return "No se puede eliminar el animal porque tiene registros de vacunación asociados"
+
             registro = GanadoService.obtener_ganado(id)
             potrero_id = registro.id_potrero if registro else None
             codigo_qr = registro.codigo_qr if registro else None
-
-            conn = get_connection()
-            cursor = conn.cursor()
 
             sql = "DELETE FROM ganado WHERE id = %s"
             cursor.execute(sql, (id,))

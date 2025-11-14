@@ -149,18 +149,26 @@ def update_animal(animal_id):
 def delete_animal(animal_id):
     """Eliminar un animal."""
     try:
-        eliminado = GanadoService.eliminar_ganado(animal_id)
-        if eliminado:
+        result = GanadoService.eliminar_ganado(animal_id)
+        if result is True:
             emit_update('animal_deleted', {'id': animal_id})
             return jsonify({
                 'message': 'Animal eliminado correctamente',
                 'success': True
             }), 200
-        return jsonify({
-            'error': 'Animal no encontrado',
-            'message': f'No se encontró el animal con ID {animal_id}',
-            'success': False
-        }), 404
+        elif isinstance(result, str):
+            # Specific error message from service
+            return jsonify({
+                'error': 'No se puede eliminar',
+                'message': result,
+                'success': False
+            }), 400
+        else:
+            return jsonify({
+                'error': 'Animal no encontrado',
+                'message': f'No se encontró el animal con ID {animal_id}',
+                'success': False
+            }), 404
     except Exception as e:
         print(f"Error eliminando animal {animal_id}: {e}")
         return jsonify({
