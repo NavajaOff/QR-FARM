@@ -380,9 +380,24 @@ export const verPerfilAnimal = async (id) => {
   }
 };
 
-export const editarAnimal = (id) => {
+export const editarAnimal = async (id) => {
   const animal = animales.value.find(a => a.id === id);
   if (!animal) return;
+
+  // Asegurar que los datos estén cargados antes de mostrar el formulario
+  if (estadosGanado.value.length === 0 || personasUsuario.value.length === 0) {
+    console.log('Cargando datos necesarios para el formulario de editar animal...');
+    try {
+      await Promise.all([
+        cargarEstadosGanado(),
+        cargarPersonasUsuario()
+      ]);
+    } catch (error) {
+      console.error('Error cargando datos para formulario de edición:', error);
+      Swal.fire('Error', 'No se pudieron cargar los datos necesarios para el formulario', 'error');
+      return;
+    }
+  }
 
   // Construir opciones de estado
   let estadoOptions = '<option value="">Seleccionar estado</option>';
@@ -536,7 +551,22 @@ export const editarAnimal = (id) => {
   });
 };
 
-export const agregarNuevoAnimal = () => {
+export const agregarNuevoAnimal = async () => {
+  // Asegurar que los datos estén cargados antes de mostrar el formulario
+  if (estadosGanado.value.length === 0 || personasUsuario.value.length === 0) {
+    console.log('Cargando datos necesarios para el formulario de agregar animal...');
+    try {
+      await Promise.all([
+        cargarEstadosGanado(),
+        cargarPersonasUsuario()
+      ]);
+    } catch (error) {
+      console.error('Error cargando datos para formulario:', error);
+      Swal.fire('Error', 'No se pudieron cargar los datos necesarios para el formulario', 'error');
+      return;
+    }
+  }
+
   // Construir opciones de estado
   let estadoOptions = '<option value="">Seleccionar estado</option>';
   estadosGanado.value.forEach(estado => {
