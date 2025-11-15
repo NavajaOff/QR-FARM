@@ -5,30 +5,20 @@ from src.models.animal import Ganado, EstadoGanado, SexoGanado
 
 
 class TestGanadoService:
-    def test_mapear_estado_a_id_activo(self):
-        """Test mapping EstadoGanado.ACTIVO to ID"""
-        result = GanadoService._mapear_estado_a_id(EstadoGanado.ACTIVO)
-        assert result == 1
-
     def test_mapear_estado_a_id_saludable(self):
         """Test mapping EstadoGanado.SALUDABLE to ID"""
         result = GanadoService._mapear_estado_a_id(EstadoGanado.SALUDABLE)
-        assert result == 2
+        assert result == 1
 
     def test_mapear_estado_a_id_revision(self):
         """Test mapping EstadoGanado.REVISION to ID"""
         result = GanadoService._mapear_estado_a_id(EstadoGanado.REVISION)
-        assert result == 3
-
-    def test_mapear_estado_a_id_vendido(self):
-        """Test mapping EstadoGanado.VENDIDO to ID"""
-        result = GanadoService._mapear_estado_a_id(EstadoGanado.VENDIDO)
-        assert result == 4
+        assert result == 2
 
     def test_mapear_estado_a_id_enfermo(self):
         """Test mapping EstadoGanado.ENFERMO to ID"""
         result = GanadoService._mapear_estado_a_id(EstadoGanado.ENFERMO)
-        assert result == 5
+        assert result == 3
 
     def test_mapear_estado_a_id_default(self):
         """Test mapping unknown estado returns default"""

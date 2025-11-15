@@ -12,7 +12,7 @@ class TestGanado:
         ganado = Ganado()
         assert ganado.nombre == ""
         assert ganado.sexo == SexoGanado.MACHO
-        assert ganado.estado == EstadoGanado.ACTIVO
+        assert ganado.estado == EstadoGanado.SALUDABLE
         assert ganado.id is None
         assert ganado.peso is None
 
@@ -51,14 +51,14 @@ class TestGanado:
             'raza': 'Holstein',
             'sexo': 'hembra',
             'peso': '450.5',
-            'estado': 'activo'
+            'estado': 'saludable'
         }
         ganado = Ganado.from_dict(data)
         assert ganado.id == 1
         assert ganado.nombre == 'Vaca1'
         assert ganado.sexo == SexoGanado.HEMBRA
         assert ganado.peso == 450.5
-        assert ganado.estado == EstadoGanado.ACTIVO
+        assert ganado.estado == EstadoGanado.SALUDABLE
 
     def test_from_dict_with_dates(self):
         """Test from_dict with date fields"""
@@ -78,7 +78,7 @@ class TestGanado:
             codigo_qr='QR123',
             nombre='Vaca1',
             sexo=SexoGanado.HEMBRA,
-            estado=EstadoGanado.ACTIVO,
+            estado=EstadoGanado.SALUDABLE,
             peso=450.5
         )
         result = ganado.to_dict()
@@ -86,7 +86,7 @@ class TestGanado:
         assert result['codigo_qr'] == 'QR123'
         assert result['nombre'] == 'Vaca1'
         assert result['sexo'] == 'hembra'
-        assert result['estado'] == 'activo'
+        assert result['estado'] == 'saludable'
         assert result['peso'] == 450.5
 
     def test_to_dict_with_datetime(self):
@@ -99,20 +99,20 @@ class TestGanado:
 
     def test_enum_values(self):
         """Test enum value access"""
-        assert EstadoGanado.ACTIVO.value == 'activo'
+        assert EstadoGanado.SALUDABLE.value == 'saludable'
         assert SexoGanado.MACHO.value == 'macho'
         assert SexoGanado.HEMBRA.value == 'hembra'
 
     def test_from_dict_enum_conversion(self):
         """Test enum conversion in from_dict"""
-        data = {'estado': 'vendido', 'sexo': 'hembra'}
+        data = {'estado': 'revision', 'sexo': 'hembra'}
         ganado = Ganado.from_dict(data)
-        assert ganado.estado == EstadoGanado.VENDIDO
+        assert ganado.estado == EstadoGanado.REVISION
         assert ganado.sexo == SexoGanado.HEMBRA
 
     def test_from_dict_default_enum(self):
         """Test default enum values in from_dict"""
         data = {}
         ganado = Ganado.from_dict(data)
-        assert ganado.estado == EstadoGanado.ACTIVO
+        assert ganado.estado == EstadoGanado.SALUDABLE
         assert ganado.sexo == SexoGanado.MACHO

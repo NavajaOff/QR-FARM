@@ -263,7 +263,7 @@ class GanadoService:
             EstadoGanado.REVISION: 2,
             EstadoGanado.ENFERMO: 3
         }
-        return estado_mapping.get(estado, 1)  # Default: activo
+        return estado_mapping.get(estado, 1)  # Default: saludable
 
     @staticmethod
     def _obtener_estado_id_desde_db(estado_value: str) -> Optional[int]:

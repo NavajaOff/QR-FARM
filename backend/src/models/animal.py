@@ -4,9 +4,7 @@ from datetime import date
 from enum import Enum
 
 class EstadoGanado(str, Enum):
-    ACTIVO = 'activo'
     SALUDABLE = 'saludable'
-    VENDIDO = 'vendido'
     REVISION = 'revision'
     ENFERMO = 'enfermo'
 
@@ -26,7 +24,7 @@ class Ganado:
         self.edad = kwargs.get('edad')
         self.sexo = kwargs.get('sexo', SexoGanado.MACHO)
         self.peso = kwargs.get('peso')
-        self.estado = kwargs.get('estado', EstadoGanado.ACTIVO)
+        self.estado = kwargs.get('estado', EstadoGanado.SALUDABLE)
         self.estado_salud = kwargs.get('estado_salud')
         self.estado_tipo = kwargs.get('estado_tipo')
         self.created_at = kwargs.get('created_at')
@@ -48,7 +46,7 @@ class Ganado:
             edad=data.get('edad'),
             sexo=SexoGanado(data.get('sexo', 'macho')),
             peso=float(data.get('peso')) if data.get('peso') is not None else None,
-            estado=EstadoGanado(data.get('estado_tipo') or data.get('estado') or 'activo'),
+            estado=EstadoGanado(data.get('estado_tipo') or data.get('estado') or 'saludable'),
             estado_salud=data.get('estado_salud'),
             estado_tipo=data.get('estado_tipo'),
             created_at=data.get('created_at'),
