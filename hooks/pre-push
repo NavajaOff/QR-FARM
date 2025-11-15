@@ -1,0 +1,26 @@
+#!/bin/bash
+
+echo "🔄 Ejecutando hook pre-push: Generando reporte de cobertura..."
+
+# Entrar a la carpeta backend
+cd backend || { echo "❌ Error: No se pudo acceder a la carpeta backend."; exit 1; }
+
+# Ejecutar coverage
+if pytest --cov=src --cov-report=xml:coverage.xml --cov-report=term; then
+    echo "✅ Pruebas ejecutadas exitosamente."
+else
+    echo "❌ Error en las pruebas. Abortando push."
+    exit 1
+fi
+
+# Ajustar el <source> dentro de backend/coverage.xml
+if [ -f coverage.xml ]; then
+    sed -i 's|<source>.*</source>|<source>backend/src</source>|g' coverage.xml
+    echo "✅ Archivo coverage.xml ajustado correctamente en backend/coverage.xml."
+else
+    echo "❌ Error: No se encontró coverage.xml dentro de backend."
+    exit 1
+fi
+
+echo "🎉 Hook pre-push completado exitosamente."
+exit 0
