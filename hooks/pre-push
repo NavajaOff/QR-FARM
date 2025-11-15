@@ -2,8 +2,6 @@
 
 echo "🔄 Ejecutando hook pre-push: Generando reporte de cobertura..."
 
-cd backend || { echo "❌ Error: No se pudo acceder a la carpeta backend."; exit 1; }
-
 if pytest --cov=src --cov-report=xml:coverage.xml --cov-report=term; then
     echo "✅ Pruebas ejecutadas exitosamente."
 else
@@ -13,8 +11,8 @@ fi
 
 # Ajustar el source en coverage.xml
 if [ -f coverage.xml ]; then
-    sed -i 's|<source>.*</source>|<source>backend/src</source>|g' coverage.xml
-    echo "✅ Archivo coverage.xml ajustado y guardado en backend/coverage.xml"
+    sed -i 's|<source>.*</source>|<source>src</source>|g' coverage.xml
+    echo "✅ Archivo coverage.xml ajustado y guardado en la raíz del repositorio."
 else
     echo "❌ Error: No se encontró coverage.xml"
     exit 1
