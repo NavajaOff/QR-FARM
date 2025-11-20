@@ -39,9 +39,30 @@ def _validar_datos_perfil(data):
 def _parsear_nombre_completo(nombre_completo, usuario):
     partes = nombre_completo.split()
     primer_nombre = partes[0]
-    primer_apellido = partes[-1] if len(partes) > 1 else (usuario.persona.primer_apellido if usuario.persona else '')
-    segundo_nombre = ' '.join(partes[1:-1]) if len(partes) > 2 else (partes[1] if len(partes) == 2 else usuario.persona.segundo_nombre if usuario.persona else None)
-    segundo_apellido = usuario.persona.segundo_apellido if usuario.persona else None
+
+    if len(partes) > 1:
+        primer_apellido = partes[-1]
+    else:
+        if usuario.persona:
+            primer_apellido = usuario.persona.primer_apellido
+        else:
+            primer_apellido = ''
+
+    if len(partes) > 2:
+        segundo_nombre = ' '.join(partes[1:-1])
+    elif len(partes) == 2:
+        segundo_nombre = partes[1]
+    else:
+        if usuario.persona:
+            segundo_nombre = usuario.persona.segundo_nombre
+        else:
+            segundo_nombre = None
+
+    if usuario.persona:
+        segundo_apellido = usuario.persona.segundo_apellido
+    else:
+        segundo_apellido = None
+
     return primer_nombre, segundo_nombre, primer_apellido, segundo_apellido
 
 def _actualizar_persona_perfil(persona, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, email, telefono):
