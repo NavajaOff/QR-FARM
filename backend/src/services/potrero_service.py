@@ -9,6 +9,27 @@ class PotreroService:
     NO_DEFINIDO = 'NO_DEFINIDO'
 
     @staticmethod
+    def _procesar_potrero(potrero: Dict[str, Any]) -> None:
+        """Procesa un potrero individual agregando ocupación y tipo de pasto."""
+        try:
+            ocupacion_real = PotreroService._obtener_ocupacion_real(potrero['id'])
+            if potrero.get('ocupacion') != ocupacion_real:
+                PotreroService._actualizar_ocupacion_en_db(potrero['id'], ocupacion_real)
+            potrero['ocupacion'] = ocupacion_real
+        except Exception as sync_error:
+            print(f"Advertencia sincronizando ocupación del potrero {potrero.get('id')}: {sync_error}")
+
+        if potrero.get('id_tipo_pasto'):
+            try:
+                tipos_pasto = PotreroService.get_tipos_pasto()
+                tipo_encontrado = next((tp for tp in tipos_pasto if tp['id'] == potrero['id_tipo_pasto']), None)
+                potrero['tipo_pasto_nombre'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'NO_DEFINIDO'
+            except Exception:
+                potrero['tipo_pasto_nombre'] = 'NO_DEFINIDO'
+        else:
+            potrero['tipo_pasto_nombre'] = 'NO_DEFINIDO'
+
+    @staticmethod
     def get_all() -> List[Dict[str, Any]]:
         """Get all potreros."""
         conn = None
@@ -26,25 +47,9 @@ class PotreroService:
             """)
             potreros = cursor.fetchall()
 
-            # Agregar el nombre del tipo de pasto a cada potrero
+            # Procesar cada potrero
             for potrero in potreros:
-                try:
-                    ocupacion_real = PotreroService._obtener_ocupacion_real(potrero['id'])
-                    if potrero.get('ocupacion') != ocupacion_real:
-                        PotreroService._actualizar_ocupacion_en_db(potrero['id'], ocupacion_real)
-                    potrero['ocupacion'] = ocupacion_real
-                except Exception as sync_error:
-                    print(f"Advertencia sincronizando ocupación del potrero {potrero.get('id')}: {sync_error}")
-
-                if potrero.get('id_tipo_pasto'):
-                    try:
-                        tipos_pasto = PotreroService.get_tipos_pasto()
-                        tipo_encontrado = next((tp for tp in tipos_pasto if tp['id'] == potrero['id_tipo_pasto']), None)
-                        potrero['tipo_pasto_nombre'] = tipo_encontrado['tipo_pasto'] if tipo_encontrado else 'NO_DEFINIDO'
-                    except Exception:
-                        potrero['tipo_pasto_nombre'] = 'NO_DEFINIDO'
-                else:
-                    potrero['tipo_pasto_nombre'] = 'NO_DEFINIDO'
+                PotreroService._procesar_potrero(potrero)
 
             return potreros
         except Exception as e:
