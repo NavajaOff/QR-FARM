@@ -17,6 +17,22 @@ export default {
       { clave: 'vacunaciones', titulo: 'Vacunaciones', color: '#fd7e14' }
     ]
 
+    const construirDetalles = (clave, resumen, usuarios, vacunaciones) => {
+      if (clave === 'usuarios') {
+        return [
+          `Activos: ${usuarios.totales?.activos ?? 0}`,
+          `Inactivos: ${usuarios.totales?.inactivos ?? 0}`
+        ]
+      }
+      if (clave === 'vacunaciones') {
+        return [
+          `Próximas dosis: ${vacunaciones.proximas ?? 0}`
+        ]
+      }
+      const lista = resumen[clave]?.por_estado || []
+      return lista.slice(0, 2).map(e => `${formatearEstado(e.estado)}: ${e.cantidad}`)
+    }
+
     onMounted(async () => {
       await cargarResumen()
       await nextTick()
@@ -27,27 +43,8 @@ export default {
       if (!resumen.value) return []
 
       const usuarios = resumen.value.usuarios || {}
-      const ganado = resumen.value.ganado || {}
-      const potreros = resumen.value.potreros || {}
       const vacunaciones = resumen.value.vacunaciones || {}
-
       const tendencias = resumen.value.tendencias || {}
-
-      const construirDetalles = (clave) => {
-        if (clave === 'usuarios') {
-          return [
-            `Activos: ${usuarios.totales?.activos ?? 0}`,
-            `Inactivos: ${usuarios.totales?.inactivos ?? 0}`
-          ]
-        }
-        if (clave === 'vacunaciones') {
-          return [
-            `Próximas dosis: ${vacunaciones.proximas ?? 0}`
-          ]
-        }
-        const lista = resumen.value[clave]?.por_estado || []
-        return lista.slice(0, 2).map(e => `${formatearEstado(e.estado)}: ${e.cantidad}`)
-      }
 
       return metricConfig.map((config) => {
         const totales = resumen.value[config.clave]?.totales || {}
@@ -56,7 +53,7 @@ export default {
         return {
           ...config,
           total,
-          detalles: construirDetalles(config.clave),
+          detalles: construirDetalles(config.clave, resumen.value, usuarios, vacunaciones),
           variacion: tendencia.variacion ?? 0,
           variacionAbsoluta: tendencia.variacion_absoluta ?? 0,
           promedio: tendencia.promedio_diario ?? 0,
