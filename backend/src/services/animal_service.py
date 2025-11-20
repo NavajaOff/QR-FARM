@@ -302,31 +302,43 @@ class GanadoService:
             print(f"Advertencia al eliminar archivo QR {codigo_qr}: {error}")
 
     @staticmethod
-    def actualizar_ganado(id: int, ganado: Ganado) -> bool:
+    def _obtener_potrero_anterior(id: int) -> Optional[int]:
         try:
-            potrero_anterior_id: Optional[int] = None
+            registro_actual = GanadoService.obtener_ganado(id)
+            return registro_actual.id_potrero if registro_actual else None
+        except Exception as consulta_error:
+            print(f"Advertencia: no se pudo obtener potrero actual del ganado {id}: {consulta_error}")
+            return None
+
+    @staticmethod
+    def _verificar_cambio_potrero(nuevo_potrero_id: Optional[int], potrero_anterior_id: Optional[int]) -> None:
+        if nuevo_potrero_id and nuevo_potrero_id != potrero_anterior_id:
+            PotreroService.verificar_capacidad_disponible(nuevo_potrero_id)
+
+    @staticmethod
+    def _sincronizar_potreros_despues_actualizacion(actualizado: bool, nuevo_potrero_id: Optional[int], potrero_anterior_id: Optional[int]) -> None:
+        if not actualizado or nuevo_potrero_id == potrero_anterior_id:
+            return
+        if potrero_anterior_id:
             try:
-                registro_actual = GanadoService.obtener_ganado(id)
-                if registro_actual:
-                    potrero_anterior_id = registro_actual.id_potrero
-            except Exception as consulta_error:
-                print(f"Advertencia: no se pudo obtener potrero actual del ganado {id}: {consulta_error}")
+                PotreroService.sincronizar_ocupacion(potrero_anterior_id)
+            except Exception as sync_error:
+                print(f"Advertencia al sincronizar potrero {potrero_anterior_id}: {sync_error}")
+        if nuevo_potrero_id:
+            try:
+                PotreroService.sincronizar_ocupacion(nuevo_potrero_id)
+            except Exception as sync_error:
+                print(f"Advertencia al sincronizar potrero {nuevo_potrero_id}: {sync_error}")
 
-            nuevo_potrero_id = ganado.id_potrero
-            if nuevo_potrero_id and nuevo_potrero_id != potrero_anterior_id:
-                PotreroService.verificar_capacidad_disponible(nuevo_potrero_id)
-
-            conn = get_connection()
-            cursor = conn.cursor()
-
-            # Obtener el ID del estado
+    @staticmethod
+    def _actualizar_ganado_en_db(id: int, ganado: Ganado) -> bool:
+        conn = get_connection()
+        cursor = conn.cursor()
+        try:
             estado_id = GanadoService._obtener_estado_id_desde_db(ganado.estado.value)
             if estado_id is None:
                 estado_id = GanadoService._mapear_estado_a_id(ganado.estado)
-
-            # Convertir fecha de nacimiento
             fecha_nac = GanadoService._convertir_fecha_nacimiento(ganado.fecha_nacimiento)
-
             sql = """
                 UPDATE ganado SET
                     nombre = %s,
@@ -339,39 +351,30 @@ class GanadoService:
                     id_persona = %s
                 WHERE id = %s
             """
-
             values = (
                 ganado.nombre, ganado.raza,
                 fecha_nac, ganado.sexo.value,
                 ganado.peso, estado_id,
                 ganado.id_potrero, ganado.id_persona, id
             )
-
             cursor.execute(sql, values)
             conn.commit()
+            return cursor.rowcount > 0
+        finally:
+            conn.close()
 
-            actualizado = cursor.rowcount > 0
-
-            if actualizado and nuevo_potrero_id != potrero_anterior_id:
-                if potrero_anterior_id:
-                    try:
-                        PotreroService.sincronizar_ocupacion(potrero_anterior_id)
-                    except Exception as sync_error:
-                        print(f"Advertencia al sincronizar potrero {potrero_anterior_id}: {sync_error}")
-                if nuevo_potrero_id:
-                    try:
-                        PotreroService.sincronizar_ocupacion(nuevo_potrero_id)
-                    except Exception as sync_error:
-                        print(f"Advertencia al sincronizar potrero {nuevo_potrero_id}: {sync_error}")
-
+    @staticmethod
+    def actualizar_ganado(id: int, ganado: Ganado) -> bool:
+        try:
+            potrero_anterior_id = GanadoService._obtener_potrero_anterior(id)
+            nuevo_potrero_id = ganado.id_potrero
+            GanadoService._verificar_cambio_potrero(nuevo_potrero_id, potrero_anterior_id)
+            actualizado = GanadoService._actualizar_ganado_en_db(id, ganado)
+            GanadoService._sincronizar_potreros_despues_actualizacion(actualizado, nuevo_potrero_id, potrero_anterior_id)
             return actualizado
-
         except Exception as e:
             print(f"Error al actualizar animal: {e}")
             return False
-        finally:
-            if 'conn' in locals():
-                conn.close()
 
     @staticmethod
     def eliminar_ganado(id: int) -> Union[bool, str]:
