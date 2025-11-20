@@ -62,7 +62,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="v in vacunaciones" :key="v.id">
+                  <tr v-for="v in filteredVacunaciones" :key="v.id">
                     <td>{{ v.idAnimal }}</td>
                     <td>{{ v.nombre }}</td>
                     <td>{{ v.tipoVacuna }}</td>
@@ -84,8 +84,8 @@
                       Cargando vacunaciones...
                     </td>
                   </tr>
-                  <tr v-else-if="vacunaciones.length === 0">
-                    <td colspan="9" class="text-center">No hay registros de vacunación.</td>
+                  <tr v-else-if="filteredVacunaciones.length === 0">
+                    <td colspan="9" class="text-center">No hay registros de vacunación que coincidan con los filtros.</td>
                   </tr>
                 </tbody>
               </table>

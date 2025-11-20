@@ -102,11 +102,75 @@ const error = ref('');
 const loading = ref(false);
 const router = useRouter();
 
-async function login() {
+function validateInput() {
   if (email.value === '' || password.value === '') {
     error.value = 'Por favor completa todos los campos';
-    return;
+    return false;
   }
+  return true;
+}
+
+async function handleLoginSuccess() {
+  await Swal.fire({
+    icon: 'success',
+    title: '¡Bienvenido!',
+    text: 'Inicio de sesión exitoso',
+    timer: 1500,
+    showConfirmButton: false
+  });
+
+  try {
+    sessionStorage.setItem('lastLoginEmail', email.value);
+    sessionStorage.setItem('lastLoginPassword', password.value);
+  } catch (storageError) {
+    console.warn('No se pudieron guardar las credenciales en sessionStorage', storageError);
+  }
+
+  const redirectPath = authService.getRedirectPath();
+  router.push(redirectPath);
+}
+
+async function handleLoginError(result) {
+  await Swal.fire({
+    icon: 'error',
+    title: 'Error de autenticación',
+    text: result.message,
+    confirmButtonText: 'Intentar de nuevo'
+  });
+  error.value = result.message;
+}
+
+function getErrorMessage(err) {
+  if (err.response) {
+    if (err.response.status === 401) {
+      return 'Credenciales incorrectas';
+    } else if (err.response.status === 500) {
+      return 'Error interno del servidor';
+    } else {
+      return err.response.data?.message || 'Error desconocido del servidor';
+    }
+  } else if (err.request) {
+    return 'No se pudo conectar al servidor. Verifica tu conexión a internet.';
+  }
+  return 'Error al conectar con el servidor';
+}
+
+async function handleConnectionError(err) {
+  console.error('Error en login:', err);
+  const errorMessage = getErrorMessage(err);
+
+  await Swal.fire({
+    icon: 'error',
+    title: 'Error de conexión',
+    text: errorMessage,
+    confirmButtonText: 'Aceptar'
+  });
+
+  error.value = errorMessage;
+}
+
+async function login() {
+  if (!validateInput()) return;
 
   loading.value = true;
   error.value = '';
@@ -118,63 +182,12 @@ async function login() {
     });
 
     if (result.success) {
-      // Mostrar mensaje de éxito
-      await Swal.fire({
-        icon: 'success',
-        title: '¡Bienvenido!',
-        text: 'Inicio de sesión exitoso',
-        timer: 1500,
-        showConfirmButton: false
-      });
-
-      try {
-        sessionStorage.setItem('lastLoginEmail', email.value);
-        sessionStorage.setItem('lastLoginPassword', password.value);
-      } catch (storageError) {
-        console.warn('No se pudieron guardar las credenciales en sessionStorage', storageError);
-      }
-
-      // Redirigir según el rol del usuario
-      const redirectPath = authService.getRedirectPath();
-      router.push(redirectPath);
+      await handleLoginSuccess();
     } else {
-      // Mostrar error con SweetAlert2
-      await Swal.fire({
-        icon: 'error',
-        title: 'Error de autenticación',
-        text: result.message,
-        confirmButtonText: 'Intentar de nuevo'
-      });
-      error.value = result.message;
+      await handleLoginError(result);
     }
   } catch (err) {
-    console.error('Error en login:', err);
-
-    let errorMessage = 'Error al conectar con el servidor';
-
-    if (err.response) {
-      // Error de respuesta del servidor
-      if (err.response.status === 401) {
-        errorMessage = 'Credenciales incorrectas';
-      } else if (err.response.status === 500) {
-        errorMessage = 'Error interno del servidor';
-      } else {
-        errorMessage = err.response.data?.message || 'Error desconocido del servidor';
-      }
-    } else if (err.request) {
-      // Error de conexión
-      errorMessage = 'No se pudo conectar al servidor. Verifica tu conexión a internet.';
-    }
-
-    // Mostrar error con SweetAlert2
-    await Swal.fire({
-      icon: 'error',
-      title: 'Error de conexión',
-      text: errorMessage,
-      confirmButtonText: 'Aceptar'
-    });
-
-    error.value = errorMessage;
+    await handleConnectionError(err);
   } finally {
     loading.value = false;
   }

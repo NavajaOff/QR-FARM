@@ -7,9 +7,6 @@ from ..models.usuario import Usuario, EstadoUsuario
 from ..services.usuario_service import UsuarioService
 
 EMAIL_REGEX = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
-EMAIL_INVALID_MSG = 'El formato del email no es válido'
-EMAIL_REGISTERED_MSG = 'El email ya está registrado'
-USER_NOT_FOUND_MSG = 'Usuario no encontrado'
 
 def _validar_email(email):
     return EMAIL_REGEX.match(email) is not None
@@ -19,14 +16,82 @@ def _obtener_usuario_actual():
 
 def _respuesta_error(message, status):
     return jsonify({'status': 'error', 'message': message}), status
+
+def _validar_datos_perfil(data):
+    nombre_completo = (data.get('nombre_completo') or '').strip()
+    email = (data.get('email') or '').strip()
+    telefono = data.get('telefono')
+
+    if not nombre_completo or not email:
+        return None, jsonify({
+            'status': 'error',
+            'message': 'Nombre completo y email son obligatorios'
+        }), 400
+
+    if not _validar_email(email):
+        return None, jsonify({
+            'status': 'error',
+            'message': UsuarioController.MSG_INVALID_EMAIL_FORMAT
+        }), 400
+
+    return {'nombre_completo': nombre_completo, 'email': email, 'telefono': telefono}, None, None
+
+def _parsear_nombre_completo(nombre_completo, usuario):
+    partes = nombre_completo.split()
+    primer_nombre = partes[0]
+
+    if len(partes) > 1:
+        primer_apellido = partes[-1]
+    else:
+        if usuario.persona:
+            primer_apellido = usuario.persona.primer_apellido
+        else:
+            primer_apellido = ''
+
+    if len(partes) > 2:
+        segundo_nombre = ' '.join(partes[1:-1])
+    elif len(partes) == 2:
+        segundo_nombre = partes[1]
+    else:
+        if usuario.persona:
+            segundo_nombre = usuario.persona.segundo_nombre
+        else:
+            segundo_nombre = None
+
+    if usuario.persona:
+        segundo_apellido = usuario.persona.segundo_apellido
+    else:
+        segundo_apellido = None
+
+    return primer_nombre, segundo_nombre, primer_apellido, segundo_apellido
+
+def _actualizar_persona_perfil(persona, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, email, telefono):
+    if not persona:
+        return False
+    persona.primer_nombre = primer_nombre
+    persona.primer_apellido = primer_apellido
+    persona.segundo_nombre = segundo_nombre
+    persona.segundo_apellido = segundo_apellido
+    persona.email = email
+    persona.telefono = telefono
+    return True
+
+def _respuesta_actualizacion_exitosa(actualizado):
+    persona_dict = actualizado.persona.to_dict() if actualizado and actualizado.persona else {}
+    return jsonify({
+        'status': 'success',
+        'message': 'Perfil actualizado exitosamente',
+        'data': {
+            'nombre_completo': persona_dict.get('nombre_completo') or '',
+            'email': persona_dict.get('email') or '',
+            'telefono': persona_dict.get('telefono'),
+            'fecha_creacion': persona_dict.get('fecha_creacion')
+        }
+    }), 200
 try:
-    try:
-        from ...app import emit_update
-    except ImportError:
-        def emit_update(event, data=None):
-            print(f"WebSocket no disponible, evento omitido: {event}")
+    from ...app import emit_update
 except ImportError:
-    def emit_update(event):
+    def emit_update(event, data=None):
         print(f"WebSocket no disponible, evento omitido: {event}")
 
 class UsuarioController:
@@ -263,64 +328,30 @@ class UsuarioController:
             if not usuario:
                 return jsonify({
                     'status': 'error',
-                    'message': MSG_NOT_AUTHENTICATED
+                    'message': UsuarioController.MSG_NOT_AUTHENTICATED
                 }), 401
 
             data = request.get_json() or {}
+            datos_validos, error_response, status = _validar_datos_perfil(data)
+            if error_response:
+                return error_response, status
 
-            nombre_completo = (data.get('nombre_completo') or '').strip()
-            email = (data.get('email') or '').strip()
-            telefono = data.get('telefono')
+            nombre_completo = datos_validos['nombre_completo']
+            email = datos_validos['email']
+            telefono = datos_validos['telefono']
 
-            if not nombre_completo or not email:
-                return jsonify({
-                    'status': 'error',
-                    'message': 'Nombre completo y email son obligatorios'
-                }), 400
+            primer_nombre, segundo_nombre, primer_apellido, segundo_apellido = _parsear_nombre_completo(nombre_completo, usuario)
 
-            import re
-            if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
-                return jsonify({
-                    'status': 'error',
-                    'message': MSG_INVALID_EMAIL_FORMAT
-                }), 400
-
-            partes = nombre_completo.split()
-            primer_nombre = partes[0]
-            primer_apellido = partes[-1] if len(partes) > 1 else (usuario.persona.primer_apellido if usuario.persona else '')
-            segundo_nombre = ' '.join(partes[1:-1]) if len(partes) > 2 else (partes[1] if len(partes) == 2 else usuario.persona.segundo_nombre if usuario.persona else None)
-            segundo_apellido = usuario.persona.segundo_apellido if usuario.persona else None
-
-            persona = usuario.persona
-            if persona:
-                persona.primer_nombre = primer_nombre
-                persona.primer_apellido = primer_apellido
-                persona.segundo_nombre = segundo_nombre
-                persona.segundo_apellido = segundo_apellido
-                persona.email = email
-                persona.telefono = telefono
-            else:
+            if not _actualizar_persona_perfil(usuario.persona, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, email, telefono):
                 return jsonify({
                     'status': 'error',
                     'message': 'Perfil de persona no encontrado'
                 }), 404
 
-            usuario.persona = persona
-
             if UsuarioService.actualizar_usuario_completo(usuario.id, usuario):
                 actualizado = UsuarioService.obtener_usuario(usuario.id, incluir_inactivos=True)
                 g.current_user = actualizado
-                persona_dict = actualizado.persona.to_dict() if actualizado and actualizado.persona else {}
-                return jsonify({
-                    'status': 'success',
-                    'message': 'Perfil actualizado exitosamente',
-                    'data': {
-                        'nombre_completo': persona_dict.get('nombre_completo') or '',
-                        'email': persona_dict.get('email') or '',
-                        'telefono': persona_dict.get('telefono'),
-                        'fecha_creacion': persona_dict.get('fecha_creacion')
-                    }
-                }), 200
+                return _respuesta_actualizacion_exitosa(actualizado)
 
             return jsonify({
                 'status': 'error',
@@ -387,7 +418,7 @@ class UsuarioController:
 
         if 'email' in data:
             email = data['email'].strip()
-            if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
+            if not _validar_email(email):
                 return UsuarioController._error(MSG_INVALID_EMAIL_FORMAT, 400)
             if email != usuario.persona.email and UsuarioService.buscar_por_email(email):
                 return UsuarioController._error(MSG_EMAIL_ALREADY_REGISTERED, 400)

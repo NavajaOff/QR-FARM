@@ -380,221 +380,224 @@ export const verPerfilAnimal = async (id) => {
   }
 };
 
+// Helper functions for editarAnimal
+async function asegurarDatosFormulario() {
+  if (estadosGanado.value.length && personasUsuario.value.length) return;
+
+  try {
+    await Promise.all([
+      cargarEstadosGanado(),
+      cargarPersonasUsuario()
+    ]);
+  } catch (error) {
+    console.error('Error cargando datos para formulario:', error);
+    Swal.fire('Error', 'No se pudieron cargar los datos necesarios', 'error');
+    throw new Error('DATOS_INCOMPLETOS');
+  }
+}
+
+function construirOpcionesEstado(animal) {
+  return [
+    `<option value="">Seleccionar estado</option>`,
+    ...estadosGanado.value.map(e =>
+      `<option value="${e.estado}" ${e.estado === animal.estado ? 'selected' : ''}>${e.estado}</option>`
+    )
+  ].join('');
+}
+
+function construirOpcionesSexo(animal) {
+  return `
+    <option value="">Seleccionar sexo</option>
+    <option value="macho" ${animal.sexo === 'macho' ? 'selected' : ''}>Macho</option>
+    <option value="hembra" ${animal.sexo === 'hembra' ? 'selected' : ''}>Hembra</option>
+  `;
+}
+
+function construirOpcionesPotrero(animal) {
+  return [
+    `<option value="">Seleccionar potrero</option>`,
+    ...potreros.value.map(p =>
+      `<option value="${p.id}" ${p.id === animal.id_potrero ? 'selected' : ''}>${p.nombre}</option>`
+    )
+  ].join('');
+}
+
+function construirOpcionesPropietario(animal) {
+  return [
+    `<option value="">Seleccionar propietario</option>`,
+    ...personasUsuario.value.map(p => {
+      const nombre = `${p.primer_nombre} ${p.primer_apellido}`.trim();
+      return `<option value="${p.id}" ${p.id === animal.id_persona ? 'selected' : ''}>${nombre}</option>`;
+    })
+  ].join('');
+}
+
+function generarFormularioEdicion(a, opts) {
+  return `
+    <form class="text-start">
+      <div class="mb-3"><label>Nombre:</label>
+        <input id="edit_nombre" class="form-control" value="${a.nombre}">
+      </div>
+
+      <div class="mb-3"><label>Peso (kg):</label>
+        <input id="edit_peso" type="number" class="form-control" value="${a.peso || ''}">
+      </div>
+
+      <div class="mb-3"><label>Raza:</label>
+        <input id="edit_raza" class="form-control" value="${a.raza || ''}">
+      </div>
+
+      <div class="mb-3"><label>Estado:</label>
+        <select id="edit_estado" class="form-control">${opts.estadoOptions}</select>
+      </div>
+
+      <div class="mb-3"><label>Sexo:</label>
+        <select id="edit_sexo" class="form-control">${opts.sexoOptions}</select>
+      </div>
+
+      <div class="mb-3"><label>Potrero:</label>
+        <select id="edit_id_potrero" class="form-control">${opts.potreroOptions}</select>
+      </div>
+
+      <div class="mb-3"><label>Propietario:</label>
+        <select id="edit_id_persona" class="form-control">${opts.propietarioOptions}</select>
+      </div>
+    </form>`;
+}
+
+function validarYConstruirUpdate(animal) {
+  const nombre = document.getElementById('edit_nombre').value.trim();
+  if (!nombre) {
+    Swal.showValidationMessage('El nombre es obligatorio');
+    return;
+  }
+
+  const id_potrero = document.getElementById('edit_id_potrero').value;
+  if (id_potrero && !validarCapacidadPotrero(id_potrero, animal)) {
+    return;
+  }
+
+  const data = construirUpdateData();
+  return data;
+}
+
+function validarCapacidadPotrero(id_potrero, animal) {
+  const potrero = potreros.value.find(p => p.id === Number(id_potrero));
+  if (!potrero || potrero.capacidad == null) return true;
+
+  const capacidad = Number(potrero.capacidad);
+  const ocup = Number(potrero.ocupacion || 0);
+  const esMismo = potrero.id === animal.id_potrero;
+  const nuevaOcupacion = esMismo ? ocup : ocup + 1;
+
+  if (capacidad > 0 && nuevaOcupacion > capacidad) {
+    Swal.showValidationMessage(
+      `El potrero ${potrero.nombre} no tiene cupo (${ocup}/${capacidad}).`
+    );
+    return false;
+  }
+
+  return true;
+}
+
+function construirUpdateData() {
+  const nombre = document.getElementById('edit_nombre').value.trim();
+  const peso = document.getElementById('edit_peso').value;
+  const raza = document.getElementById('edit_raza').value.trim();
+  const estado = document.getElementById('edit_estado').value;
+  const sexo = document.getElementById('edit_sexo').value;
+  const id_potrero = document.getElementById('edit_id_potrero').value;
+  const id_persona = document.getElementById('edit_id_persona').value;
+
+  const data = {
+    nombre,
+    peso: peso ? parseFloat(peso) : null,
+    raza: raza || null,
+    estado: estado || null,
+    sexo: sexo || null,
+    id_potrero: id_potrero ? parseInt(id_potrero) : null,
+    id_persona: id_persona ? parseInt(id_persona) : null
+  };
+
+  return limpiarCampos(data);
+}
+
+function limpiarCampos(data) {
+  return Object.fromEntries(
+    Object.entries(data).filter(([_, value]) => value !== null && value !== undefined)
+  );
+}
+
+function mostrarModalEditarAnimal(animal, opts, onConfirm) {
+  Swal.fire({
+    title: `<i class="fas fa-edit"></i> Editar Animal: ${animal.nombre}`,
+    html: generarFormularioEdicion(animal, opts),
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: 'Actualizar',
+    preConfirm: () => validarYConstruirUpdate(animal)
+  }).then(res => {
+    if (res.isConfirmed) onConfirm(res.value);
+  });
+}
+
+async function actualizarAnimal(id, data) {
+  try {
+    const res = await fetch(`${API_BASE}/animales/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.message || 'Error desconocido');
+
+    Swal.fire('Éxito', 'Animal actualizado correctamente', 'success');
+    await cargarPotreros();
+    await cargarAnimales();
+
+    if (updateCallback) updateCallback();
+
+  } catch (err) {
+    console.error(err);
+    Swal.fire('Error', err.message, 'error');
+  }
+}
+
 export const editarAnimal = async (id) => {
   const animal = animales.value.find(a => a.id === id);
   if (!animal) return;
 
-  // Asegurar que los datos estén cargados antes de mostrar el formulario
-  if (estadosGanado.value.length === 0 || personasUsuario.value.length === 0) {
-    console.log('Cargando datos necesarios para el formulario de editar animal...');
-    try {
-      await Promise.all([
-        cargarEstadosGanado(),
-        cargarPersonasUsuario()
-      ]);
-    } catch (error) {
-      console.error('Error cargando datos para formulario de edición:', error);
-      Swal.fire('Error', 'No se pudieron cargar los datos necesarios para el formulario', 'error');
-      return;
-    }
+  try {
+    await asegurarDatosFormulario();
+  } catch {
+    return; // datos no listos
   }
 
-  // Construir opciones de estado
-  let estadoOptions = '<option value="">Seleccionar estado</option>';
-  estadosGanado.value.forEach(estado => {
-    const selected = estado.estado === animal.estado ? 'selected' : '';
-    estadoOptions += `<option value="${estado.estado}" ${selected}>${estado.estado}</option>`;
-  });
+  const estadoOptions = construirOpcionesEstado(animal);
+  const sexoOptions = construirOpcionesSexo(animal);
+  const potreroOptions = construirOpcionesPotrero(animal);
+  const propietarioOptions = construirOpcionesPropietario(animal);
 
-  // Construir opciones de sexo
-  let sexoOptions = '<option value="">Seleccionar sexo</option>';
-  sexoOptions += `<option value="macho" ${animal.sexo === 'macho' ? 'selected' : ''}>Macho</option>`;
-  sexoOptions += `<option value="hembra" ${animal.sexo === 'hembra' ? 'selected' : ''}>Hembra</option>`;
-
-  // Construir opciones de potrero
-  let potreroOptions = '<option value="">Seleccionar potrero</option>';
-  console.log('Potreros disponibles para select:', potreros.value);
-  console.log('Animal id_potrero:', animal.id_potrero);
-  potreros.value.forEach(potrero => {
-    const selected = potrero.id === animal.id_potrero ? 'selected' : '';
-    console.log(`Comparando potrero ${potrero.id} (${potrero.nombre}) con animal.id_potrero ${animal.id_potrero}: ${selected}`);
-    potreroOptions += `<option value="${potrero.id}" ${selected}>${potrero.nombre}</option>`;
-  });
-  console.log('Opciones potrero generadas:', potreroOptions);
-
-  // Construir opciones de propietario
-  let propietarioOptions = '<option value="">Seleccionar propietario</option>';
-  personasUsuario.value.forEach(persona => {
-    const nombreCompleto = `${persona.primer_nombre} ${persona.primer_apellido}`.trim();
-    const selected = persona.id === animal.id_persona ? 'selected' : '';
-    propietarioOptions += `<option value="${persona.id}" ${selected}>${nombreCompleto}</option>`;
-  });
-
-  Swal.fire({
-    title: `<i class="fas fa-edit"></i> Editar Animal: ${animal.nombre}`,
-    html: `
-      <form class="text-start">
-        <div class="mb-3"><label class="form-label">Nombre:</label><input type="text" id="edit_nombre" class="form-control" value="${animal.nombre}" required></div>
-        <div class="mb-3"><label class="form-label">Peso (kg):</label><input type="number" id="edit_peso" class="form-control" value="${animal.peso || ''}" min="0" step="0.1"></div>
-        <div class="mb-3"><label class="form-label">Raza:</label><input type="text" id="edit_raza" class="form-control" value="${animal.raza || ''}" required></div>
-        <div class="mb-3">
-          <label class="form-label">Estado:</label>
-          <select id="edit_estado" class="form-control" required>
-            ${estadoOptions}
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Sexo:</label>
-          <select id="edit_sexo" class="form-control" required>
-            ${sexoOptions}
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Potrero actual:</label>
-          <select id="edit_id_potrero" class="form-control">
-            ${potreroOptions}
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Propietario:</label>
-          <select id="edit_id_persona" class="form-control">
-            ${propietarioOptions}
-          </select>
-        </div>
-      </form>
-    `,
-    width: '600px',
-    showCancelButton: true,
-    confirmButtonText: 'Actualizar',
-    confirmButtonColor: '#00d563',
-    preConfirm: async () => {
-      const nombre = document.getElementById('edit_nombre').value;
-      const peso = document.getElementById('edit_peso').value;
-      const raza = document.getElementById('edit_raza').value;
-      const estado = document.getElementById('edit_estado').value;
-      const sexo = document.getElementById('edit_sexo').value;
-      const id_potrero = document.getElementById('edit_id_potrero').value;
-      const id_persona = document.getElementById('edit_id_persona').value;
-
-      // Solo validar campos obligatorios
-      if (!nombre) {
-        Swal.showValidationMessage('El nombre es obligatorio');
-        throw new Error('VALIDATION_ERROR');
-      }
-
-      if (id_potrero) {
-        const potreroSeleccionado = potreros.value.find(
-          (pot) => pot.id === parseInt(id_potrero, 10)
-        );
-        if (potreroSeleccionado && potreroSeleccionado.capacidad !== null && potreroSeleccionado.capacidad !== undefined) {
-          const capacidad = Number(potreroSeleccionado.capacidad);
-          const ocupacionActual = Number(potreroSeleccionado.ocupacion || 0);
-          const esMismoPotrero = potreroSeleccionado.id === animal.id_potrero;
-          const ocupacionPrevista = esMismoPotrero ? ocupacionActual : ocupacionActual + 1;
-          if (capacidad > 0 && ocupacionPrevista > capacidad) {
-            Swal.showValidationMessage(`El potrero ${potreroSeleccionado.nombre} no tiene cupo disponible (${ocupacionActual}/${capacidad}).`);
-            throw new Error('VALIDATION_ERROR');
-          }
-        }
-      }
-
-      const updateData = {
-        nombre,
-        peso: peso ? parseFloat(peso) : null,
-        raza: raza || null,
-        estado: estado || null,
-        sexo: sexo || null,
-        id_potrero: id_potrero ? parseInt(id_potrero) : null,
-        id_persona: id_persona ? parseInt(id_persona) : null
-      };
-
-      // Remover campos null/undefined para enviar solo los campos que se van a actualizar
-      Object.keys(updateData).forEach(key => {
-        if (updateData[key] === null || updateData[key] === undefined) {
-          delete updateData[key];
-        }
-      });
-
-      return updateData;
-    }
-  }).then(async (result) => {
-    if (result.isConfirmed) {
-      try {
-        const response = await fetch(`${API_BASE}/animales/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(result.value)
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            Swal.fire('¡Éxito!', 'Animal actualizado correctamente', 'success');
-            await cargarPotreros();
-            await cargarAnimales();
-            // Notificar al componente Vue que actualice la lista
-            if (updateCallback) {
-              updateCallback();
-            }
-          } else {
-            throw new Error(data.message || 'Error desconocido');
-          }
-        } else {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `Error HTTP: ${response.status}`);
-        }
-      } catch (error) {
-        console.error('Error actualizando animal:', error);
-        Swal.fire('Error', error.message, 'error');
-      }
-    }
+  mostrarModalEditarAnimal(animal, {
+    estadoOptions,
+    sexoOptions,
+    potreroOptions,
+    propietarioOptions
+  }, async (updateData) => {
+    await actualizarAnimal(id, updateData);
   });
 };
 
 export const agregarNuevoAnimal = async () => {
-  // Asegurar que los datos estén cargados antes de mostrar el formulario
-  if (estadosGanado.value.length === 0 || personasUsuario.value.length === 0) {
-    console.log('Cargando datos necesarios para el formulario de agregar animal...');
-    try {
-      await Promise.all([
-        cargarEstadosGanado(),
-        cargarPersonasUsuario()
-      ]);
-    } catch (error) {
-      console.error('Error cargando datos para formulario:', error);
-      Swal.fire('Error', 'No se pudieron cargar los datos necesarios para el formulario', 'error');
-      return;
-    }
+  try {
+    await asegurarDatosFormulario();
+  } catch {
+    return; // datos no listos
   }
 
-  // Construir opciones de estado
-  let estadoOptions = '<option value="">Seleccionar estado</option>';
-  estadosGanado.value.forEach(estado => {
-    estadoOptions += `<option value="${estado.estado}">${estado.estado}</option>`;
-  });
-
-  // Construir opciones de sexo
-  let sexoOptions = '<option value="">Seleccionar sexo</option>';
-  sexoOptions += '<option value="macho">Macho</option>';
-  sexoOptions += '<option value="hembra">Hembra</option>';
-
-  // Construir opciones de potrero
-  let potreroOptions = '<option value="">Seleccionar potrero</option>';
-  console.log('Potreros disponibles para agregar:', potreros.value);
-  potreros.value.forEach(potrero => {
-    potreroOptions += `<option value="${potrero.id}">${potrero.nombre}</option>`;
-  });
-  console.log('Opciones potrero agregar generadas:', potreroOptions);
-
-  // Construir opciones de propietario
-  let propietarioOptions = '<option value="">Seleccionar propietario</option>';
-  personasUsuario.value.forEach(persona => {
-    const nombreCompleto = `${persona.primer_nombre} ${persona.primer_apellido}`.trim();
-    propietarioOptions += `<option value="${persona.id}">${nombreCompleto}</option>`;
-  });
-
   Swal.fire({
-    title: '<i class="fas fa-plus"></i> Agregar Nuevo Animal',
+    title: 'Agregar Animal',
     html: `
       <form class="text-start">
         <div class="mb-3"><label class="form-label">Nombre:</label><input type="text" id="nombre" class="form-control" placeholder="Ej: Holstein-001" required></div>
@@ -604,25 +607,33 @@ export const agregarNuevoAnimal = async () => {
         <div class="mb-3">
           <label class="form-label">Estado:</label>
           <select id="estado" class="form-control" required>
-            ${estadoOptions}
+            <option value="">Seleccionar estado</option>
+            ${estadosGanado.value.map(e => `<option value="${e.estado}">${e.estado}</option>`).join('')}
           </select>
         </div>
         <div class="mb-3">
           <label class="form-label">Sexo:</label>
           <select id="sexo" class="form-control" required>
-            ${sexoOptions}
+            <option value="">Seleccionar sexo</option>
+            <option value="macho">Macho</option>
+            <option value="hembra">Hembra</option>
           </select>
         </div>
         <div class="mb-3">
           <label class="form-label">Potrero actual:</label>
           <select id="id_potrero" class="form-control">
-            ${potreroOptions}
+            <option value="">Seleccionar potrero</option>
+            ${potreros.value.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('')}
           </select>
         </div>
         <div class="mb-3">
           <label class="form-label">Propietario:</label>
           <select id="id_persona" class="form-control">
-            ${propietarioOptions}
+            <option value="">Seleccionar propietario</option>
+            ${personasUsuario.value.map(p => {
+              const nombre = `${p.primer_nombre} ${p.primer_apellido}`.trim();
+              return `<option value="${p.id}">${nombre}</option>`;
+            }).join('')}
           </select>
         </div>
       </form>
@@ -631,36 +642,24 @@ export const agregarNuevoAnimal = async () => {
     showCancelButton: true,
     confirmButtonText: 'Agregar',
     confirmButtonColor: '#00d563',
-    preConfirm: async () => {
+    preConfirm: () => {
       const nombre = document.getElementById('nombre').value;
-      const peso = document.getElementById('peso').value;
       const raza = document.getElementById('raza').value;
       const fecha_nacimiento = document.getElementById('fecha_nacimiento').value;
       const estado = document.getElementById('estado').value;
       const sexo = document.getElementById('sexo').value;
       const id_potrero = document.getElementById('id_potrero').value;
       const id_persona = document.getElementById('id_persona').value;
+      const peso = document.getElementById('peso').value;
 
       if (!nombre || !raza || !fecha_nacimiento || !estado || !sexo) {
-        Swal.showValidationMessage('Por favor complete todos los campos requeridos');
+        Swal.showValidationMessage('Complete todos los campos requeridos');
         throw new Error('VALIDATION_ERROR');
       }
 
-      if (id_potrero) {
-        const potreroSeleccionado = potreros.value.find(
-          (pot) => pot.id === parseInt(id_potrero, 10)
-        );
-        if (potreroSeleccionado && potreroSeleccionado.capacidad !== null && potreroSeleccionado.capacidad !== undefined) {
-          const capacidad = Number(potreroSeleccionado.capacidad);
-          const ocupacionActual = Number(potreroSeleccionado.ocupacion || 0);
-          if (capacidad > 0 && ocupacionActual >= capacidad) {
-            Swal.showValidationMessage(`El potrero ${potreroSeleccionado.nombre} alcanzó su capacidad máxima (${capacidad}).`);
-            throw new Error('VALIDATION_ERROR');
-          }
-        }
-      }
+      validarCapacidadPotrero(id_potrero);
 
-      return {
+      const data = {
         nombre,
         peso: peso ? parseFloat(peso) : null,
         raza,
@@ -670,37 +669,32 @@ export const agregarNuevoAnimal = async () => {
         id_potrero: id_potrero ? parseInt(id_potrero) : null,
         id_persona: id_persona ? parseInt(id_persona) : null
       };
-    }
-  }).then(async (result) => {
-    if (result.isConfirmed) {
-      try {
-        const response = await fetch(`${API_BASE}/animales/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(result.value)
-        });
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            Swal.fire('¡Éxito!', 'Animal agregado correctamente', 'success');
-            await cargarPotreros();
-            await cargarAnimales();
-            // Notificar al componente Vue que actualice la lista
-            if (updateCallback) {
-              updateCallback();
-            }
-          } else {
-            throw new Error(data.message || 'Error desconocido');
-          }
-        } else {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `Error HTTP: ${response.status}`);
-        }
-      } catch (error) {
-        console.error('Error creando animal:', error);
-        Swal.fire('Error', error.message, 'error');
+      return limpiarCampos(data);
+    }
+  }).then(async result => {
+    if (!result.isConfirmed) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/animales/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(result.value)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Error desconocido');
       }
+
+      Swal.fire('Éxito', 'Animal agregado', 'success');
+      await cargarPotreros();
+      await cargarAnimales();
+      if (updateCallback) updateCallback();
+    } catch (error) {
+      console.error('Error creando animal:', error);
+      Swal.fire('Error', error.message, 'error');
     }
   });
 };

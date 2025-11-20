@@ -156,48 +156,50 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token');
   const userRole = localStorage.getItem('userRole');
 
+  const isAdmin = userRole === 'admin' || userRole === 'administrador';
+  const isUser = userRole === 'usuario' || userRole === 'user';
+
+  function redirectByRole() {
+    if (isAdmin) return '/admin/dashboard';
+    if (isUser) return '/user/dashboard';
+    return '/login';
+  }
+
+  function lacksAuth() {
+    return to.meta.requiresAuth && !token;
+  }
+
+  function invalidRole() {
+    return to.meta.role && to.meta.role !== userRole;
+  }
+
+  function isRootOrLogin(path) {
+    return path === '/' || path === '/login';
+  }
+
   console.log(`[ROUTER GUARD] Navegando de ${from.path} a ${to.path}`);
   console.log(`[ROUTER GUARD] Token: ${token ? 'presente' : 'ausente'}`);
   console.log(`[ROUTER GUARD] UserRole: ${userRole}`);
-  console.log(`[ROUTER GUARD] Meta requiresAuth: ${to.meta.requiresAuth}`);
-  console.log(`[ROUTER GUARD] Meta role: ${to.meta.role}`);
 
-  // Si la ruta requiere autenticación y no hay token
-  if (to.meta.requiresAuth && !token) {
-    console.log('[ROUTER GUARD] Redirigiendo a /login - no hay token');
+  // 1️⃣ Si requiere auth y NO hay token → LOGIN
+  if (lacksAuth()) {
     return next('/login');
   }
 
-  // Si la ruta requiere un rol específico y el usuario no lo tiene
-  if (to.meta.role && to.meta.role !== userRole) {
-    console.log(`[ROUTER GUARD] Redirigiendo a /login - rol requerido: ${to.meta.role}, rol actual: ${userRole}`);
-
-    // Si el usuario está intentando acceder a una ruta raíz sin especificar, redirigir según su rol
-    if (to.path === '/' || to.path === '/login') {
-      if (userRole === 'admin' || userRole === 'administrador') {
-        console.log('[ROUTER GUARD] Redirigiendo admin a /admin/dashboard');
-        return next('/admin/dashboard');
-      } else if (userRole === 'usuario' || userRole === 'user') {
-        console.log('[ROUTER GUARD] Redirigiendo usuario a /user/dashboard');
-        return next('/user/dashboard');
-      }
+  // 2️⃣ Si requiere rol y no coincide → LOGIN o dashboard según caso
+  if (invalidRole()) {
+    if (isRootOrLogin(to.path)) {
+      return next(redirectByRole());
     }
-
     return next('/login');
   }
 
-  // Si el usuario está autenticado y va a login, redirigir según su rol
-  if (token && (to.path === '/' || to.path === '/login')) {
-    if (userRole === 'admin' || userRole === 'administrador') {
-      console.log('[ROUTER GUARD] Usuario admin autenticado, redirigiendo a /admin/dashboard');
-      return next('/admin/dashboard');
-    } else if (userRole === 'usuario' || userRole === 'user') {
-      console.log('[ROUTER GUARD] Usuario normal autenticado, redirigiendo a /user/dashboard');
-      return next('/user/dashboard');
-    }
+  // 3️⃣ Si ya está autenticado y va a login → mandarlo a su dashboard
+  if (token && isRootOrLogin(to.path)) {
+    return next(redirectByRole());
   }
 
-  console.log('[ROUTER GUARD] Navegación permitida');
+  // 4️⃣ Permitir navegación normal
   next();
 });
 

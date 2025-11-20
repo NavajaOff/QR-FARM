@@ -53,6 +53,38 @@ export const registroVacunacionBase = {
       loading: false
     };
   },
+  computed: {
+    filteredVacunaciones() {
+      return this.vacunaciones.filter(v => {
+        // Filtro por animal (ID o nombre)
+        if (this.filtros.animal) {
+          const searchTerm = this.filtros.animal.toLowerCase();
+          const matchesId = v.idAnimal.toString().includes(searchTerm);
+          const matchesName = v.nombre && v.nombre.toLowerCase().includes(searchTerm);
+          if (!matchesId && !matchesName) return false;
+        }
+
+        // Filtro por tipo de vacuna
+        if (this.filtros.vacuna && v.tipoVacuna !== this.filtros.vacuna) return false;
+
+        // Filtro por fecha desde
+        if (this.filtros.fechaDesde && v.fechaAplicacion) {
+          const fechaAplicacion = new Date(v.fechaAplicacion.split('T')[0]);
+          const fechaDesde = new Date(this.filtros.fechaDesde);
+          if (fechaAplicacion < fechaDesde) return false;
+        }
+
+        // Filtro por fecha hasta
+        if (this.filtros.fechaHasta && v.fechaAplicacion) {
+          const fechaAplicacion = new Date(v.fechaAplicacion.split('T')[0]);
+          const fechaHasta = new Date(this.filtros.fechaHasta);
+          if (fechaAplicacion > fechaHasta) return false;
+        }
+
+        return true;
+      });
+    }
+  },
   async mounted() {
     await this.cargarDatos();
   },

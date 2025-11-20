@@ -5,6 +5,14 @@ from src.models.animal import Ganado
 import os
 ERROR_INTERNO_SERVIDOR = 'Error interno del servidor'
 DATOS_INVALIDOS = 'Datos inválidos'
+ANIMAL_NO_ENCONTRADO = 'Animal no encontrado'
+ESTADOS_DEFAULT = [
+    {'id': 1, 'estado': 'activo', 'nombre_estado': 'activo'},
+    {'id': 2, 'estado': 'saludable', 'nombre_estado': 'saludable'},
+    {'id': 3, 'estado': 'revision', 'nombre_estado': 'revision'},
+    {'id': 4, 'estado': 'enfermo', 'nombre_estado': 'enfermo'},
+    {'id': 5, 'estado': 'vendido', 'nombre_estado': 'vendido'}
+]
 
 try:
     from ...app import emit_update
@@ -21,25 +29,12 @@ def get_estados_ganado():
         estados = GanadoService.obtener_estados_ganado()
         # Si no hay conexión a BD, retornar estados por defecto
         if not estados:
-            estados = [
-                {'id': 1, 'estado': 'activo', 'nombre_estado': 'activo'},
-                {'id': 2, 'estado': 'saludable', 'nombre_estado': 'saludable'},
-                {'id': 3, 'estado': 'revision', 'nombre_estado': 'revision'},
-                {'id': 4, 'estado': 'enfermo', 'nombre_estado': 'enfermo'},
-                {'id': 5, 'estado': 'vendido', 'nombre_estado': 'vendido'}
-            ]
+            estados = ESTADOS_DEFAULT
         return jsonify({'data': estados, 'success': True}), 200
     except Exception as e:
         print(f"Error obteniendo estados de ganado: {e}")
         # Retornar estados por defecto en caso de error
-        estados_default = [
-            {'id': 1, 'estado': 'activo', 'nombre_estado': 'activo'},
-            {'id': 2, 'estado': 'saludable', 'nombre_estado': 'saludable'},
-            {'id': 3, 'estado': 'revision', 'nombre_estado': 'revision'},
-            {'id': 4, 'estado': 'enfermo', 'nombre_estado': 'enfermo'},
-            {'id': 5, 'estado': 'vendido', 'nombre_estado': 'vendido'}
-        ]
-        return jsonify({'data': estados_default, 'success': True}), 200
+        return jsonify({'data': ESTADOS_DEFAULT, 'success': True}), 200
 
 @animal_bp.route('/', methods=['GET'])
 def get_animales():
@@ -60,7 +55,7 @@ def get_animal(animal_id):
             return jsonify({'data': animal.to_dict(), 'success': True}), 200
         else:
             return jsonify({
-                'error': 'Animal no encontrado',
+                'error': ANIMAL_NO_ENCONTRADO,
                 'message': f'No se encontró el animal con ID {animal_id}',
                 'success': False
             }), 404
@@ -102,7 +97,7 @@ def update_animal(animal_id):
         animal_actual = GanadoService.obtener_ganado(animal_id)
         if not animal_actual:
             return jsonify({
-                'error': 'Animal no encontrado',
+                'error': ANIMAL_NO_ENCONTRADO,
                 'message': f'No se encontró el animal con ID {animal_id}',
                 'success': False
             }), 404
@@ -165,7 +160,7 @@ def delete_animal(animal_id):
             }), 400
         else:
             return jsonify({
-                'error': 'Animal no encontrado',
+                'error': ANIMAL_NO_ENCONTRADO,
                 'message': f'No se encontró el animal con ID {animal_id}',
                 'success': False
             }), 404
