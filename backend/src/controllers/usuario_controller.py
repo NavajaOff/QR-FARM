@@ -7,9 +7,6 @@ from ..models.usuario import Usuario, EstadoUsuario
 from ..services.usuario_service import UsuarioService
 
 EMAIL_REGEX = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
-EMAIL_INVALID_MSG = 'El formato del email no es válido'
-EMAIL_REGISTERED_MSG = 'El email ya está registrado'
-USER_NOT_FOUND_MSG = 'Usuario no encontrado'
 
 def _validar_email(email):
     return EMAIL_REGEX.match(email) is not None
@@ -20,13 +17,9 @@ def _obtener_usuario_actual():
 def _respuesta_error(message, status):
     return jsonify({'status': 'error', 'message': message}), status
 try:
-    try:
-        from ...app import emit_update
-    except ImportError:
-        def emit_update(event, data=None):
-            print(f"WebSocket no disponible, evento omitido: {event}")
+    from ...app import emit_update
 except ImportError:
-    def emit_update(event):
+    def emit_update(event, data=None):
         print(f"WebSocket no disponible, evento omitido: {event}")
 
 class UsuarioController:
@@ -278,8 +271,7 @@ class UsuarioController:
                     'message': 'Nombre completo y email son obligatorios'
                 }), 400
 
-            import re
-            if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
+            if not _validar_email(email):
                 return jsonify({
                     'status': 'error',
                     'message': MSG_INVALID_EMAIL_FORMAT
@@ -387,7 +379,7 @@ class UsuarioController:
 
         if 'email' in data:
             email = data['email'].strip()
-            if not re.match(r'^[^\s@]+@[^\s@]+\.[^\s@]+$', email):
+            if not _validar_email(email):
                 return UsuarioController._error(MSG_INVALID_EMAIL_FORMAT, 400)
             if email != usuario.persona.email and UsuarioService.buscar_por_email(email):
                 return UsuarioController._error(MSG_EMAIL_ALREADY_REGISTERED, 400)
