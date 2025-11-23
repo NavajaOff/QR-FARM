@@ -43,9 +43,11 @@ export function useUsuarios() {
         await cargarUsuarios() // Recargar lista
         return { success: true }
       }
-      return { success: false, message: response.data?.message }
+      return { success: false, message: response.data?.message || 'Error desconocido' }
     } catch (err) {
-      return { success: false, message: err.message }
+      console.error('Error cambiando estado de usuario:', err)
+      const errorMessage = err.response?.data?.message || err.message || 'Error al cambiar el estado del usuario'
+      return { success: false, message: errorMessage }
     }
   }
 

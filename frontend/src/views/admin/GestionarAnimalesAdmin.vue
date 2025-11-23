@@ -4,9 +4,17 @@
       <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h2 class="mb-0">Gestión de Ganado</h2>
-          <button class="btn btn-success" @click="addAnimal">
-            <i class="fas fa-plus me-2"></i>Agregar Animal
-          </button>
+          <div class="d-flex gap-3 align-items-center">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" v-model="mostrarBajas" @change="cargarGanado" id="mostrarBajas">
+              <label class="form-check-label" for="mostrarBajas">
+                Mostrar animales dados de baja
+              </label>
+            </div>
+            <button class="btn btn-success" @click="addAnimal">
+              <i class="fas fa-plus me-2"></i>Agregar Animal
+            </button>
+          </div>
         </div>
 
         <!-- Loader mientras carga -->
@@ -32,6 +40,7 @@
                     <th>Peso (kg)</th>
                     <th>Potrero</th>
                     <th>Estado</th>
+                    <th>Estado Baja</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -49,19 +58,28 @@
                       </span>
                     </td>
                     <td>
+                      <span v-if="animal.es_dado_de_baja" class="badge bg-danger">
+                        Dado de baja ({{ animal.estado }})
+                      </span>
+                      <span v-else class="badge bg-success">Activo</span>
+                    </td>
+                    <td>
                       <button class="btn btn-sm btn-outline-info me-2" @click="viewQR(animal)" title="Ver QR">
                         <i class="fas fa-qrcode"></i>
                       </button>
-                      <button class="btn btn-sm btn-outline-primary me-2" @click="editAnimal(animal)">
+                      <button v-if="!animal.es_dado_de_baja" class="btn btn-sm btn-outline-primary me-2" @click="editAnimal(animal)">
                         <i class="fas fa-edit"></i>
                       </button>
-                      <button class="btn btn-sm btn-outline-danger" @click="deleteAnimal(animal)">
-                        <i class="fas fa-trash"></i>
+                      <button v-if="!animal.es_dado_de_baja" class="btn btn-sm btn-outline-danger me-2" @click="darBajaAnimal(animal)">
+                        <i class="fas fa-ban"></i>
+                      </button>
+                      <button v-if="animal.es_dado_de_baja" class="btn btn-sm btn-outline-success" @click="reactivarAnimal(animal)" title="Reactivar animal">
+                        <i class="fas fa-undo"></i>
                       </button>
                     </td>
                   </tr>
                   <tr v-if="ganado.length === 0 && !isLoading">
-                    <td colspan="8" class="text-center py-4">
+                    <td colspan="9" class="text-center py-4">
                       <div class="text-muted">
                         <i class="fas fa-info-circle fa-2x mb-3"></i>
                         <h5>No hay animales registrados</h5>
@@ -108,12 +126,16 @@ import Swal from 'sweetalert2';
 import {
   cargarDatosIniciales,
   animales,
+  estadosGanado,
+  personasUsuario,
   loading,
   error,
   editarAnimal,
   agregarNuevoAnimal,
   verPerfilAnimal,
-  eliminarAnimal,
+  darBajaAnimal,
+  reactivarAnimal,
+  cargarAnimales,
   setUpdateCallback,
   cancelPendingRequests,
   resetEstado
@@ -129,7 +151,8 @@ export default {
       selectedAnimal: null,
       qrImageUrl: null,
       editingAnimal: null,
-      isLoading: true
+      isLoading: true,
+      mostrarBajas: false
     };
   },
   mounted() {
@@ -152,8 +175,12 @@ export default {
     async cargarGanado() {
       try {
         this.isLoading = true;
-        // Usar la función del archivo JS existente
-        await cargarDatosIniciales();
+        // Cargar datos iniciales si no están cargados
+        if (estadosGanado.value.length === 0 || personasUsuario.value.length === 0) {
+          await cargarDatosIniciales();
+        }
+        // Cargar animales con o sin bajas según el filtro
+        await cargarAnimales(this.mostrarBajas);
         // Copiar los datos a la variable local para compatibilidad
         this.ganado = [...animales.value];
       } catch (error) {
@@ -187,40 +214,18 @@ export default {
       editarAnimal(animal.id);
     },
 
-    async deleteAnimal(animal) {
-      const result = await Swal.fire({
-        title: '¿Estás seguro?',
-        text: `¿Estás seguro de que deseas eliminar al animal "${animal.nombre}"? Esta acción no se puede deshacer.`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-      });
-
-      if (!result.isConfirmed) {
-        return;
+    async darBajaAnimal(animal) {
+      const resultado = await darBajaAnimal(animal.id, this.mostrarBajas);
+      if (resultado && resultado.success) {
+        this.ganado = [...animales.value];
       }
+    },
 
-      const resultado = await eliminarAnimal(animal.id);
-      if (!resultado.success) {
-        await Swal.fire({
-          title: 'Error',
-          text: `No se pudo eliminar el animal: ${resultado.message || 'Error desconocido'}`,
-          icon: 'error',
-          confirmButtonText: 'Aceptar'
-        });
-        return;
+    async reactivarAnimal(animal) {
+      const resultado = await reactivarAnimal(animal.id, this.mostrarBajas);
+      if (resultado && resultado.success) {
+        this.ganado = [...animales.value];
       }
-
-      await Swal.fire({
-        title: '¡Eliminado!',
-        text: `Animal "${animal.nombre}" eliminado correctamente.`,
-        icon: 'success',
-        confirmButtonText: 'Aceptar'
-      });
-      this.ganado = [...animales.value];
     },
 
     addAnimal() {

@@ -205,6 +205,8 @@ class GanadoService:
 
         except Exception as e:
             print(f"Error al obtener ganado {id}: {e}")
+            import traceback
+            traceback.print_exc()
             return None
         finally:
             if 'conn' in locals() and conn is not None:
@@ -214,28 +216,78 @@ class GanadoService:
                     pass
 
     @staticmethod
-    def obtener_todos_ganados() -> List[Ganado]:
+    def obtener_todos_ganados(incluir_bajas: bool = False) -> List[Ganado]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
-            cursor.execute("""
-                SELECT g.*,
-                       eg.tipo_estado as estado_tipo,
-                       p.nombre as potrero_nombre,
-                       CONCAT(per.primer_nombre, ' ', COALESCE(per.segundo_nombre, ''), ' ', per.primer_apellido, ' ', COALESCE(per.segundo_apellido, '')) as persona_nombre,
-                       per.primer_nombre as persona_primer_nombre,
-                       per.primer_apellido as persona_primer_apellido,
-                       qr.codigo_qr
-                FROM ganado g
-                LEFT JOIN estado_ganado eg ON g.id_estado = eg.id
-                LEFT JOIN potrero p ON g.id_potrero = p.id
-                LEFT JOIN personas per ON g.id_persona = per.id
-                LEFT JOIN qr ON g.id = qr.id_ganado
-                ORDER BY g.id DESC
-                LIMIT 50
-            """)
+            # Verificar si existe la columna estado_baja (sistema antiguo)
+            column_exists = False
+            try:
+                cursor.execute("""
+                    SELECT COUNT(*) as count 
+                    FROM information_schema.COLUMNS 
+                    WHERE TABLE_SCHEMA = DATABASE() 
+                    AND TABLE_NAME = 'ganado' 
+                    AND COLUMN_NAME = 'estado_baja'
+                """)
+                result = cursor.fetchone()
+                column_exists = result and result.get('count', 0) > 0
+            except Exception:
+                column_exists = False
+
+            # Construir la consulta según el sistema disponible
+            if column_exists:
+                # Sistema antiguo: usar estado_baja
+                sql = """
+                    SELECT g.*,
+                           COALESCE(g.estado_baja, 'activo') as estado_baja,
+                           eg.tipo_estado as estado_tipo,
+                           p.nombre as potrero_nombre,
+                           CONCAT(per.primer_nombre, ' ', COALESCE(per.segundo_nombre, ''), ' ', per.primer_apellido, ' ', COALESCE(per.segundo_apellido, '')) as persona_nombre,
+                           per.primer_nombre as persona_primer_nombre,
+                           per.primer_apellido as persona_primer_apellido,
+                           qr.codigo_qr
+                    FROM ganado g
+                    LEFT JOIN estado_ganado eg ON g.id_estado = eg.id
+                    LEFT JOIN potrero p ON g.id_potrero = p.id
+                    LEFT JOIN personas per ON g.id_persona = per.id
+                    LEFT JOIN qr ON g.id = qr.id_ganado
+                """
+                if not incluir_bajas:
+                    sql += " WHERE COALESCE(g.estado_baja, 'activo') = 'activo'"
+            else:
+                # Sistema nuevo: usar id_estado
+                sql = """
+                    SELECT g.*,
+                           eg.tipo_estado as estado_tipo,
+                           p.nombre as potrero_nombre,
+                           CONCAT(per.primer_nombre, ' ', COALESCE(per.segundo_nombre, ''), ' ', per.primer_apellido, ' ', COALESCE(per.segundo_apellido, '')) as persona_nombre,
+                           per.primer_nombre as persona_primer_nombre,
+                           per.primer_apellido as persona_primer_apellido,
+                           qr.codigo_qr
+                    FROM ganado g
+                    LEFT JOIN estado_ganado eg ON g.id_estado = eg.id
+                    LEFT JOIN potrero p ON g.id_potrero = p.id
+                    LEFT JOIN personas per ON g.id_persona = per.id
+                    LEFT JOIN qr ON g.id = qr.id_ganado
+                """
+                if not incluir_bajas:
+                    sql += " WHERE g.id_estado IS NULL OR g.id_estado < 4"
+            
+            sql += " ORDER BY g.id DESC LIMIT 50"
+
+            print(f"[DEBUG] Consulta SQL con incluir_bajas={incluir_bajas}, sistema_antiguo={column_exists}: {sql}")
+            cursor.execute(sql)
             results = cursor.fetchall()
+            print(f"[DEBUG] Animales encontrados: {len(results)}")
+            if results:
+                print(f"[DEBUG] Primeros 3 animales - id_estado: {[r.get('id_estado') for r in results[:3]]}")
+                # Log adicional para verificar estados de baja
+                estados_baja = [r for r in results if r.get('id_estado') and r.get('id_estado') >= 4]
+                print(f"[DEBUG] Animales dados de baja encontrados en consulta: {len(estados_baja)}")
+                if estados_baja:
+                    print(f"[DEBUG] IDs de animales dados de baja: {[r.get('id') for r in estados_baja[:5]]}")
 
             # Crear objetos Ganado con el estado_tipo incluido
             ganados = []
@@ -250,6 +302,8 @@ class GanadoService:
 
         except Exception as e:
             print(f"Error al obtener animales: {e}")
+            import traceback
+            traceback.print_exc()
             return []
         finally:
             if 'conn' in locals() and conn is not None:
@@ -377,47 +431,141 @@ class GanadoService:
             return False
 
     @staticmethod
-    def eliminar_ganado(id: int) -> Union[bool, str]:
+    def _obtener_id_estado_por_causa(causa_baja: str) -> int:
+        """Obtiene el id_estado correspondiente a una causa de baja."""
+        mapeo_causas = {
+            'muerte': 5,
+            'venta': 6,
+            'robo': 7,
+            'otra': 8,
+            'dado_de_baja': 4
+        }
+        return mapeo_causas.get(causa_baja.lower(), 8)  # Por defecto 'otra'
+    
+    @staticmethod
+    def dar_baja_ganado(id: int, causa_baja: str, observaciones: Optional[str] = None) -> Union[bool, str]:
+        """Da de baja lógica a un animal cambiando su id_estado."""
         try:
-            # First check if the animal has vaccination records
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
-
-            # Check for vaccination records
-            cursor.execute("SELECT COUNT(*) as count FROM vacunacion WHERE id_animal = %s", (id,))
-            result = cursor.fetchone()
-            if result and result['count'] > 0:
+            
+            # Verificar que el animal existe
+            cursor.execute("SELECT id_estado, id_potrero FROM ganado WHERE id = %s", (id,))
+            animal = cursor.fetchone()
+            
+            if not animal:
                 cursor.close()
                 conn.close()
-                return "No se puede eliminar el animal porque tiene registros de vacunación asociados"
-
-            registro = GanadoService.obtener_ganado(id)
-            potrero_id = registro.id_potrero if registro else None
-            codigo_qr = registro.codigo_qr if registro else None
-
-            sql = "DELETE FROM ganado WHERE id = %s"
-            cursor.execute(sql, (id,))
+                return "Animal no encontrado"
+            
+            id_estado_actual = animal.get('id_estado')
+            
+            # Verificar si ya está dado de baja (id_estado >= 4)
+            if id_estado_actual and id_estado_actual >= 4:
+                cursor.close()
+                conn.close()
+                return "El animal ya está dado de baja"
+            
+            # Obtener potrero_id antes de actualizar
+            potrero_id = animal.get('id_potrero')
+            
+            # Obtener el id_estado correspondiente a la causa de baja
+            nuevo_id_estado = GanadoService._obtener_id_estado_por_causa(causa_baja)
+            
+            # Actualizar id_estado a uno de baja y liberar potrero
+            sql = """
+                UPDATE ganado 
+                SET id_estado = %s,
+                    id_potrero = NULL
+                WHERE id = %s
+            """
+            cursor.execute(sql, (nuevo_id_estado, id))
             conn.commit()
-
-            eliminado = cursor.rowcount > 0
-
-            if eliminado:
-                if potrero_id:
-                    try:
-                        PotreroService.sincronizar_ocupacion(potrero_id)
-                    except Exception as sync_error:
-                        print(f"Advertencia al sincronizar potrero {potrero_id} al eliminar ganado {id}: {sync_error}")
-                if codigo_qr:
-                    GanadoService._eliminar_archivo_qr(codigo_qr)
-
-            return eliminado
-
+            
+            # Sincronizar ocupación del potrero si tenía uno
+            if potrero_id:
+                try:
+                    PotreroService.sincronizar_ocupacion(potrero_id)
+                except Exception as sync_error:
+                    print(f"Advertencia al sincronizar potrero {potrero_id}: {sync_error}")
+            
+            cursor.close()
+            conn.close()
+            return True
+            
         except Exception as e:
-            print(f"Error al eliminar ganado: {e}")
+            print(f"Error al dar de baja el animal: {e}")
+            import traceback
+            traceback.print_exc()
             return False
         finally:
             if 'conn' in locals():
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+    @staticmethod
+    def reactivar_ganado(id: int, nuevo_estado: str = 'saludable') -> Union[bool, str]:
+        """Reactivar un animal cambiando su id_estado a uno activo."""
+        try:
+            conn = get_connection()
+            cursor = conn.cursor(dictionary=True)
+            
+            # Verificar que el animal existe
+            cursor.execute("SELECT id_estado FROM ganado WHERE id = %s", (id,))
+            animal = cursor.fetchone()
+            
+            if not animal:
+                cursor.close()
                 conn.close()
+                return "Animal no encontrado"
+            
+            id_estado_actual = animal.get('id_estado')
+            
+            # Verificar si ya está activo (id_estado < 4)
+            if id_estado_actual and id_estado_actual < 4:
+                cursor.close()
+                conn.close()
+                return "El animal ya está activo"
+            
+            # Obtener el id_estado correspondiente al nuevo estado activo
+            mapeo_estados = {
+                'saludable': 1,
+                'revision': 2,
+                'enfermo': 3
+            }
+            nuevo_id_estado = mapeo_estados.get(nuevo_estado.lower(), 1)  # Por defecto 'saludable'
+            
+            # Actualizar id_estado a uno activo
+            sql = """
+                UPDATE ganado 
+                SET id_estado = %s
+                WHERE id = %s
+            """
+            cursor.execute(sql, (nuevo_id_estado, id))
+            conn.commit()
+            
+            cursor.close()
+            conn.close()
+            return True
+            
+        except Exception as e:
+            print(f"Error al reactivar el animal: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+        finally:
+            if 'conn' in locals():
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+    @staticmethod
+    def eliminar_ganado(id: int) -> Union[bool, str]:
+        """Método legacy - ahora redirige a dar_baja_ganado con causa 'otra'."""
+        return GanadoService.dar_baja_ganado(id, 'otra', 'Eliminación automática (método legacy)')
 
     @staticmethod
     def buscar_por_potrero(potrero_id: int) -> List[Ganado]:
@@ -578,7 +726,13 @@ class GanadoService:
                 pass
 
     @staticmethod
-    def obtener_estados_ganado() -> List[dict]:
+    def obtener_estados_ganado(solo_activos: bool = False, solo_bajas: bool = False) -> List[dict]:
+        """
+        Obtiene los estados de ganado.
+        - solo_activos=True: solo estados activos (id 1-3)
+        - solo_bajas=True: solo estados de baja (id 4-8)
+        - ambos False: todos los estados
+        """
         try:
             conn = get_connection()
             if conn is None:
@@ -586,7 +740,13 @@ class GanadoService:
                 return []
             cursor = conn.cursor(dictionary=True)
 
-            cursor.execute("SELECT id, tipo_estado FROM estado_ganado ORDER BY tipo_estado")
+            if solo_activos:
+                cursor.execute("SELECT id, tipo_estado FROM estado_ganado WHERE id BETWEEN 1 AND 3 ORDER BY id")
+            elif solo_bajas:
+                cursor.execute("SELECT id, tipo_estado FROM estado_ganado WHERE id BETWEEN 4 AND 8 ORDER BY id")
+            else:
+                cursor.execute("SELECT id, tipo_estado FROM estado_ganado ORDER BY id")
+
             results = cursor.fetchall()
 
             # Transformar la estructura para que coincida con lo que espera el frontend
@@ -594,11 +754,11 @@ class GanadoService:
             for result in results:
                 estados_transformados.append({
                     'id': result['id'],
-                    'estado': result['tipo_estado'],  # Cambiar 'tipo_estado' a 'estado'
-                    'nombre_estado': result['tipo_estado']  # Agregar campo adicional
+                    'estado': result['tipo_estado'],
+                    'nombre_estado': result['tipo_estado']
                 })
 
-            print(f"Estados de ganado obtenidos y transformados: {estados_transformados}")
+            print(f"Estados de ganado obtenidos: {estados_transformados}")
             return estados_transformados
 
         except Exception as e:

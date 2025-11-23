@@ -223,14 +223,29 @@ export const cargarPersonasUsuario = async () => {
   }
 };
 
-export const cargarAnimales = async () => {
+export const mostrarBajas = ref(false);
+
+export const cargarAnimales = async (incluirBajas = false) => {
   try {
-    console.log('Cargando animales desde API...');
-    const response = await axios.get(`${API_BASE}/animales/`, {
+    console.log('[DEBUG] cargarAnimales - incluirBajas:', incluirBajas);
+    const url = incluirBajas
+      ? `${API_BASE}/animales/?incluir_bajas=true`
+      : `${API_BASE}/animales/`;
+    console.log('[DEBUG] URL de la petición:', url);
+    const response = await axios.get(url, {
       cancelToken: cancelTokenSource?.token,
       timeout: 15000  // Timeout más largo para listas grandes
     });
-    console.log('Respuesta HTTP ganado:', response.status);
+    console.log('[DEBUG] Respuesta HTTP ganado:', response.status);
+    console.log('[DEBUG] Cantidad de animales recibidos:', response.data?.data?.length || 0);
+    // Log adicional para verificar datos recibidos
+    if (response.data?.data) {
+      const dadosDeBajaRecibidos = response.data.data.filter(a => (a.id_estado && a.id_estado >= 4) || a.estado_baja === 'dado_de_baja');
+      console.log('[DEBUG] Animales dados de baja en respuesta:', dadosDeBajaRecibidos.length);
+      if (dadosDeBajaRecibidos.length > 0) {
+        console.log('[DEBUG] IDs dados de baja:', dadosDeBajaRecibidos.map(a => ({ id: a.id, id_estado: a.id_estado })));
+      }
+    }
 
     if (response.data.success && response.data.data) {
       animales.value = response.data.data.map(animal => ({
@@ -243,14 +258,27 @@ export const cargarAnimales = async () => {
         id_estado: animal.id_estado,
         id_potrero: animal.id_potrero,
         id_persona: animal.id_persona,
+        // Determinar si está dado de baja:
+        // - Sistema nuevo: por id_estado (>= 4)
+        // - Sistema antiguo: por estado_baja === 'dado_de_baja'
+        es_dado_de_baja: (animal.id_estado && animal.id_estado >= 4) || 
+                         (animal.estado_baja === 'dado_de_baja'),
         // Campos calculados
         estado: animal.estado_tipo || animal.estado || 'No definido',
+        // Debug info
+        _debug_id_estado: animal.id_estado,
+        _debug_estado_tipo: animal.estado_tipo,
         potreroActual: obtenerNombrePotreroDesdeEntidad(animal),
         propietario: obtenerNombrePersonaDesdeEntidad(animal),
         edad: animal.fecha_nacimiento ? calcularEdad(animal.fecha_nacimiento) : 'No definida',
         codigo_qr: animal.codigo_qr
       }));
-      console.log('Animales cargados exitosamente:', animales.value.length, 'animales');
+      console.log('[DEBUG] Animales cargados exitosamente:', animales.value.length, 'animales');
+      const dadosDeBaja = animales.value.filter(a => a.es_dado_de_baja);
+      console.log('[DEBUG] Animales dados de baja encontrados:', dadosDeBaja.length);
+      if (dadosDeBaja.length > 0) {
+        console.log('[DEBUG] Primeros animales dados de baja:', dadosDeBaja.slice(0, 3).map(a => ({ id: a.id, id_estado: a._debug_id_estado, estado: a.estado })));
+      }
     } else {
       // Si no hay datos, mostrar lista vacía (modo sin BD)
       animales.value = [];
@@ -699,31 +727,166 @@ export const agregarNuevoAnimal = async () => {
   });
 };
 
-export const eliminarAnimal = async (id) => {
+export const darBajaAnimal = async (id, incluirBajas = false) => {
+  const causasBaja = [
+    { value: 'muerte', label: 'Muerte' },
+    { value: 'venta', label: 'Venta' },
+    { value: 'robo', label: 'Robo' },
+    { value: 'otra', label: 'Otra causa' }
+  ];
+  
+  const causaOptions = causasBaja.map(c => 
+    `<option value="${c.value}">${c.label}</option>`
+  ).join('');
+  
+  const result = await Swal.fire({
+    title: 'Dar de baja animal',
+    html: `
+      <form class="text-start">
+        <div class="mb-3">
+          <label class="form-label">Causa de baja *</label>
+          <select id="causa_baja" class="form-control" required>
+            <option value="">Seleccionar causa</option>
+            ${causaOptions}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Observaciones</label>
+          <textarea id="observaciones_baja" class="form-control" rows="3" 
+                    placeholder="Detalles adicionales sobre la baja (opcional)"></textarea>
+        </div>
+      </form>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Dar de baja',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    allowOutsideClick: true,
+    allowEscapeKey: true,
+    preConfirm: () => {
+      const causa = document.getElementById('causa_baja').value;
+      const observaciones = document.getElementById('observaciones_baja').value;
+      
+      if (!causa) {
+        Swal.showValidationMessage('Debe seleccionar una causa de baja');
+        return false;
+      }
+      
+      return { causa_baja: causa, observaciones: observaciones || null };
+    }
+  });
+  
+  if (result.isConfirmed) {
+    try {
+      const response = await fetch(`${API_BASE}/animales/${id}/baja`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(result.value)
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        Swal.fire('Éxito', 'Animal dado de baja correctamente', 'success');
+        console.log('[DEBUG] darBajaAnimal - Recargando después de baja, incluirBajas:', incluirBajas);
+        await cargarPotreros();
+        await cargarAnimales(incluirBajas);
+        if (updateCallback) updateCallback();
+        return { success: true };
+      } else {
+        throw new Error(data.message || 'Error al dar de baja');
+      }
+    } catch (error) {
+      console.error('Error dando de baja animal:', error);
+      Swal.fire('Error', error.message, 'error');
+      return { success: false, message: error.message };
+    }
+  }
+  
+  return { success: false, message: 'Operación cancelada' };
+};
+
+export const reactivarAnimal = async (id, incluirBajas = false) => {
+  // Cargar estados activos
   try {
-    const response = await fetch(`${API_BASE}/animales/${id}`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' }
+    const estadosResponse = await axios.get(`${API_BASE}/animales/estados-ganado?solo_activos=true`);
+    const estadosActivos = estadosResponse.data.data || estadosResponse.data || [];
+    
+    const estadoOptions = estadosActivos.map(e => 
+      `<option value="${e.estado || e.nombre_estado}">${e.estado || e.nombre_estado}</option>`
+    ).join('');
+    
+    const result = await Swal.fire({
+      title: 'Reactivar animal',
+      html: `
+        <form class="text-start">
+          <p>¿Está seguro de que desea reactivar este animal?</p>
+          <div class="mb-3">
+            <label class="form-label">Nuevo estado *</label>
+            <select id="nuevo_estado" class="form-control" required>
+              <option value="">Seleccionar estado</option>
+              ${estadoOptions}
+            </select>
+          </div>
+        </form>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, reactivar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#28a745',
+      cancelButtonColor: '#6c757d',
+      allowOutsideClick: true,
+      allowEscapeKey: true,
+      preConfirm: () => {
+        const nuevoEstado = document.getElementById('nuevo_estado').value;
+        if (!nuevoEstado) {
+          Swal.showValidationMessage('Debe seleccionar un estado');
+          return false;
+        }
+        return { nuevo_estado: nuevoEstado };
+      }
     });
-
-    const data = await response.json().catch(() => ({ success: response.ok }));
-
-    if (!response.ok || !data.success) {
-      const message = data?.message || `Error HTTP: ${response.status}`;
-      throw new Error(message);
+    
+    if (result.isConfirmed) {
+      try {
+        const response = await fetch(`${API_BASE}/animales/${id}/reactivar`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(result.value)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          Swal.fire('Éxito', 'Animal reactivado correctamente', 'success');
+          console.log('[DEBUG] reactivarAnimal - Recargando después de reactivación, incluirBajas:', incluirBajas);
+          await cargarPotreros();
+          await cargarAnimales(incluirBajas);
+          if (updateCallback) updateCallback();
+          return { success: true };
+        } else {
+          throw new Error(data.message || 'Error al reactivar');
+        }
+      } catch (error) {
+        console.error('Error reactivando animal:', error);
+        Swal.fire('Error', error.message, 'error');
+        return { success: false, message: error.message };
+      }
     }
-
-    await cargarPotreros();
-    await cargarAnimales();
-    if (updateCallback) {
-      updateCallback();
-    }
-
-    return { success: true };
+    
+    return { success: false, message: 'Operación cancelada' };
   } catch (error) {
-    console.error('Error eliminando animal:', error);
+    console.error('Error cargando estados activos:', error);
+    Swal.fire('Error', 'No se pudieron cargar los estados activos', 'error');
     return { success: false, message: error.message };
   }
+};
+
+// Mantener función legacy para compatibilidad
+export const eliminarAnimal = async (id) => {
+  return await darBajaAnimal(id);
 };
 
 // Función para limpiar estado al cambiar de ruta
