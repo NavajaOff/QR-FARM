@@ -265,33 +265,29 @@ class GanadoController:
 
     @staticmethod
     def eliminar_ganado(id):
-        """Método legacy - ahora redirige a dar_baja_ganado con causa 'otra'."""
+        """Elimina un ganado usando GanadoService.eliminar_ganado()."""
         try:
-            # Usar dar_baja_ganado directamente con causa por defecto
-            result = GanadoService.dar_baja_ganado(id, 'otra', 'Eliminación automática (método legacy)')
+            result = GanadoService.eliminar_ganado(id)
             
             if result is True:
-                try:
-                    emit_update('animal_deactivated', {'id': id})
-                except Exception as ws_error:
-                    print(f"No se pudo emitir animal_deactivated: {ws_error}")
-                
                 return jsonify({
                     'status': 'success',
-                    'message': 'Animal dado de baja correctamente',
-                    'success': True
+                    'message': 'Ganado eliminado exitosamente'
                 }), 200
+            elif result is False:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Ganado no encontrado o error al eliminar'
+                }), 404
             elif isinstance(result, str):
                 return jsonify({
                     'status': 'error',
-                    'message': result,
-                    'success': False
+                    'message': result
                 }), 400
             else:
                 return jsonify({
                     'status': 'error',
-                    'message': 'Error al dar de baja el animal',
-                    'success': False
+                    'message': 'Error inesperado al eliminar el ganado'
                 }), 500
         except Exception as e:
             print(f"Error en eliminar_ganado: {str(e)}")
@@ -299,8 +295,7 @@ class GanadoController:
             traceback.print_exc()
             return jsonify({
                 'status': 'error',
-                'message': str(e),
-                'success': False
+                'message': str(e)
             }), 500
 
     @staticmethod

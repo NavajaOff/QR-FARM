@@ -564,8 +564,15 @@ class GanadoService:
 
     @staticmethod
     def eliminar_ganado(id: int) -> Union[bool, str]:
-        """Método legacy - ahora redirige a dar_baja_ganado con causa 'otra'."""
-        return GanadoService.dar_baja_ganado(id, 'otra', 'Eliminación automática (método legacy)')
+        """Elimina un ganado dando de baja con causa 'otra'."""
+        result = GanadoService.dar_baja_ganado(id, 'otra', 'Eliminación automática')
+        
+        # Convertir mensajes de error específicos a False para casos de "no encontrado"
+        if isinstance(result, str) and "no encontrado" in result.lower():
+            return False
+        
+        # Retornar el resultado tal cual (True, False, o string con mensaje de error)
+        return result
 
     @staticmethod
     def buscar_por_potrero(potrero_id: int) -> List[Ganado]:
@@ -741,11 +748,11 @@ class GanadoService:
             cursor = conn.cursor(dictionary=True)
 
             if solo_activos:
-                cursor.execute("SELECT id, tipo_estado FROM estado_ganado WHERE id BETWEEN 1 AND 3 ORDER BY id")
+                cursor.execute("SELECT id, tipo_estado FROM estado_ganado WHERE id BETWEEN 1 AND 3 ORDER BY tipo_estado")
             elif solo_bajas:
-                cursor.execute("SELECT id, tipo_estado FROM estado_ganado WHERE id BETWEEN 4 AND 8 ORDER BY id")
+                cursor.execute("SELECT id, tipo_estado FROM estado_ganado WHERE id BETWEEN 4 AND 8 ORDER BY tipo_estado")
             else:
-                cursor.execute("SELECT id, tipo_estado FROM estado_ganado ORDER BY id")
+                cursor.execute("SELECT id, tipo_estado FROM estado_ganado ORDER BY tipo_estado")
 
             results = cursor.fetchall()
 
