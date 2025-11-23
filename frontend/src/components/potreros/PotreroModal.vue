@@ -13,11 +13,11 @@
                 <label class="form-label">Nombre *</label>
                 <input type="text" class="form-control" v-model="form.nombre" required>
               </div>
-              <div class="col-md-6 mb-3">
+              <div v-if="isEditing" class="col-md-6 mb-3">
                 <label class="form-label">Estado</label>
                 <select class="form-select" v-model="form.estado">
-                  <option v-for="estado in estadosPotrero" :key="estado.id" :value="estado.nombre">
-                    {{ estado.nombre }}
+                  <option v-for="estado in estadosPotrero" :key="estado.id" :value="estado.estado || estado.nombre_estado || estado.nombre">
+                    {{ estado.estado || estado.nombre_estado || estado.nombre }}
                   </option>
                 </select>
               </div>
@@ -38,7 +38,7 @@
                 <select class="form-select" v-model="form.id_tipo_pasto">
                   <option value="">Seleccionar tipo de pasto</option>
                   <option v-for="tipo in tiposPasto" :key="tipo.id" :value="tipo.id">
-                    {{ tipo.nombre }}
+                    {{ tipo.tipo_pasto || tipo.nombre }}
                   </option>
                 </select>
               </div>
@@ -127,7 +127,6 @@ export default {
         estado: 'disponible',
         capacidad: null,
         hectareas: null,
-        ocupacion: 0,
         id_tipo_pasto: null,
         fecha_ultimo_uso: '',
         responsable_persona_id: null,
@@ -160,7 +159,6 @@ export default {
         estado: 'disponible',
         capacidad: null,
         hectareas: null,
-        ocupacion: 0,
         id_tipo_pasto: null,
         fecha_ultimo_uso: '',
         responsable_persona_id: null,

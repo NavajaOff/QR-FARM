@@ -230,15 +230,8 @@ export const crearPotrero = () => {
     title: '<i class="fas fa-plus"></i> Crear Nuevo Potrero',
     html: `
       <form class="text-start">
-        <div class="mb-3">
-          <label class="form-label">Estado:</label>
-          <select id="estado" class="form-control">
-            ${estadoOptions}
-          </select>
-        </div>
         <div class="mb-3"><label class="form-label">Capacidad:</label><input type="number" id="capacidad" class="form-control" placeholder="Ej: 25" min="0"></div>
         <div class="mb-3"><label class="form-label">Hectáreas:</label><input type="number" id="hectareas" class="form-control" placeholder="Ej: 2.5" step="0.01" min="0"></div>
-        <div class="mb-3"><label class="form-label">Ocupación:</label><input type="number" id="ocupacion" class="form-control" placeholder="Ej: 0" min="0" value="0"></div>
         <div class="mb-3">
           <label class="form-label">Tipo de pasto:</label>
           <select id="id_tipo_pasto" class="form-control">
@@ -261,10 +254,8 @@ export const crearPotrero = () => {
     confirmButtonText: 'Agregar',
     confirmButtonColor: '#00d563',
     preConfirm: () => {
-      const estado = document.getElementById('estado').value;
       const capacidad = document.getElementById('capacidad').value;
       const hectareas = document.getElementById('hectareas').value;
-      const ocupacion = document.getElementById('ocupacion').value;
       const id_tipo_pasto = document.getElementById('id_tipo_pasto').value;
       const responsable_persona_id = document.getElementById('responsable_persona_id').value;
       const proxima_limpieza = document.getElementById('proxima_limpieza').value;
@@ -273,10 +264,9 @@ export const crearPotrero = () => {
 
       return {
         nombre: null, // El backend generará el nombre automáticamente
-        estado,
+        estado: 'disponible', // Estado por defecto al crear
         capacidad: capacidad ? parseInt(capacidad) : null,
         hectareas: hectareas ? parseFloat(hectareas) : null,
-        ocupacion: ocupacion ? parseInt(ocupacion) : 0,
         id_tipo_pasto: id_tipo_pasto ? parseInt(id_tipo_pasto) : null,
         responsable_persona_id: responsable_persona_id ? parseInt(responsable_persona_id) : null,
         proxima_limpieza,
@@ -314,29 +304,42 @@ export const crearPotrero = () => {
   });
 };
 
-export const editarPotrero = (id) => {
+export const editarPotrero = async (id) => {
   const potrero = potreros.value.find(p => p.id === id);
   if (!potrero) return;
+
+  // Asegurar que los datos estén cargados
+  if (estadosPotrero.value.length === 0) {
+    await cargarEstadosPotrero();
+  }
+  if (tiposPasto.value.length === 0) {
+    await cargarTiposPasto();
+  }
+  if (personasUsuario.value.length === 0) {
+    await cargarPersonasUsuario();
+  }
 
   // Construir opciones de estado con selección
   let estadoOptions = '';
   estadosPotrero.value.forEach(estado => {
-    const selected = estado.estado === potrero.estado ? 'selected' : '';
-    estadoOptions += `<option value="${estado.estado}" ${selected}>${estado.estado}</option>`;
+    const estadoValue = estado.estado || estado.nombre_estado || estado.nombre || '';
+    const selected = estadoValue === potrero.estado ? 'selected' : '';
+    estadoOptions += `<option value="${estadoValue}" ${selected}>${estadoValue}</option>`;
   });
 
   // Construir opciones de tipo de pasto con selección
   let pastoOptions = '<option value="">Seleccionar tipo de pasto</option>';
   tiposPasto.value.forEach(tipo => {
-    const selected = tipo.tipo_pasto === potrero.pasto ? 'selected' : '';
-    pastoOptions += `<option value="${tipo.id}" ${selected}>${tipo.tipo_pasto || 'Sin nombre'}</option>`;
+    const tipoNombre = tipo.tipo_pasto || tipo.nombre || 'Sin nombre';
+    const selected = tipo.id === potrero.id_tipo_pasto || tipoNombre === potrero.pasto ? 'selected' : '';
+    pastoOptions += `<option value="${tipo.id}" ${selected}>${tipoNombre}</option>`;
   });
 
   // Construir opciones de responsable con selección
   let responsableOptions = '<option value="">Seleccionar responsable</option>';
   personasUsuario.value.forEach(persona => {
-    const nombreCompleto = `${persona.primer_nombre} ${persona.primer_apellido}`.trim();
-    const selected = nombreCompleto === potrero.responsable ? 'selected' : '';
+    const nombreCompleto = persona.nombre_completo || `${persona.primer_nombre} ${persona.primer_apellido}`.trim();
+    const selected = persona.id === potrero.responsable_persona_id || nombreCompleto === potrero.responsable ? 'selected' : '';
     responsableOptions += `<option value="${persona.id}" ${selected}>${nombreCompleto}</option>`;
   });
 
@@ -352,7 +355,6 @@ export const editarPotrero = (id) => {
         </div>
         <div class="mb-3"><label class="form-label">Capacidad:</label><input type="number" id="edit_capacidad" class="form-control" value="${potrero.capacidad || ''}" min="0"></div>
         <div class="mb-3"><label class="form-label">Hectáreas:</label><input type="number" id="edit_hectareas" class="form-control" value="${potrero.hectareas || ''}" step="0.01" min="0"></div>
-        <div class="mb-3"><label class="form-label">Ocupación:</label><input type="number" id="edit_ocupacion" class="form-control" value="${potrero.ocupacion || 0}" min="0"></div>
         <div class="mb-3">
           <label class="form-label">Tipo de pasto:</label>
           <select id="edit_id_tipo_pasto" class="form-control">
@@ -380,7 +382,6 @@ export const editarPotrero = (id) => {
       const estado = document.getElementById('edit_estado').value;
       const capacidad = document.getElementById('edit_capacidad').value;
       const hectareas = document.getElementById('edit_hectareas').value;
-      const ocupacion = document.getElementById('edit_ocupacion').value;
       const id_tipo_pasto = document.getElementById('edit_id_tipo_pasto').value;
       const responsable_persona_id = document.getElementById('edit_responsable_persona_id').value;
       const proxima_limpieza = document.getElementById('edit_proxima_limpieza').value;
@@ -392,7 +393,6 @@ export const editarPotrero = (id) => {
         estado,
         capacidad: capacidad ? parseInt(capacidad) : null,
         hectareas: hectareas ? parseFloat(hectareas) : null,
-        ocupacion: ocupacion ? parseInt(ocupacion) : 0,
         id_tipo_pasto: id_tipo_pasto ? parseInt(id_tipo_pasto) : null,
         responsable_persona_id: responsable_persona_id ? parseInt(responsable_persona_id) : null,
         area: area ? parseFloat(area) : null,

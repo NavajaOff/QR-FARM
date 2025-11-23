@@ -40,8 +40,8 @@ def get_estados_ganado():
 def get_animales():
     """Obtener todos los animales."""
     try:
-        animales = GanadoService.obtener_todos_ganados()
-        return jsonify({'data': [animal.to_dict() for animal in animales], 'success': True}), 200
+        from src.controllers.animal_controller import GanadoController
+        return GanadoController.obtener_todos_ganados()
     except Exception as e:
         print(f"Error obteniendo animales: {e}")
         return jsonify({'data': [], 'success': True}), 200
@@ -140,30 +140,40 @@ def update_animal(animal_id):
             'success': False
         }), 500
 
+@animal_bp.route('/<int:animal_id>/baja', methods=['PUT'])
+def dar_baja_animal(animal_id):
+    """Dar de baja lógica a un animal."""
+    try:
+        from src.controllers.animal_controller import GanadoController
+        return GanadoController.dar_baja_ganado(animal_id)
+    except Exception as e:
+        print(f"Error dando de baja animal {animal_id}: {e}")
+        return jsonify({
+            'error': ERROR_INTERNO_SERVIDOR,
+            'message': str(e),
+            'success': False
+        }), 500
+
+@animal_bp.route('/<int:animal_id>/reactivar', methods=['PUT'])
+def reactivar_animal(animal_id):
+    """Reactivar un animal que estaba dado de baja."""
+    try:
+        from src.controllers.animal_controller import GanadoController
+        return GanadoController.reactivar_ganado(animal_id)
+    except Exception as e:
+        print(f"Error reactivando animal {animal_id}: {e}")
+        return jsonify({
+            'error': ERROR_INTERNO_SERVIDOR,
+            'message': str(e),
+            'success': False
+        }), 500
+
 @animal_bp.route('/<int:animal_id>', methods=['DELETE'])
 def delete_animal(animal_id):
-    """Eliminar un animal."""
+    """Eliminar un animal (legacy - ahora usa baja lógica)."""
     try:
-        result = GanadoService.eliminar_ganado(animal_id)
-        if result is True:
-            emit_update('animal_deleted', {'id': animal_id})
-            return jsonify({
-                'message': 'Animal eliminado correctamente',
-                'success': True
-            }), 200
-        elif isinstance(result, str):
-            # Specific error message from service
-            return jsonify({
-                'error': 'No se puede eliminar',
-                'message': result,
-                'success': False
-            }), 400
-        else:
-            return jsonify({
-                'error': ANIMAL_NO_ENCONTRADO,
-                'message': f'No se encontró el animal con ID {animal_id}',
-                'success': False
-            }), 404
+        from src.controllers.animal_controller import GanadoController
+        return GanadoController.eliminar_ganado(animal_id)
     except Exception as e:
         print(f"Error eliminando animal {animal_id}: {e}")
         return jsonify({

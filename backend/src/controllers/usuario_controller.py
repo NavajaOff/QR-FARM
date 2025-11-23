@@ -259,8 +259,10 @@ class UsuarioController:
 
             current_user = getattr(g, 'current_user', None)
             print(f"[USUARIO] Petición cambio estado realizada por user_id={getattr(current_user, 'id', None)}")
+            print(f"[USUARIO] Cambiando estado del usuario id={id} a estado={nuevo_estado}")
 
             if nuevo_estado not in ['activo', 'inactivo']:
+                print(f"[USUARIO] ERROR: Estado inválido: {nuevo_estado}")
                 return jsonify({
                     'status': 'error',
                     'message': 'Estado inválido. Debe ser "activo" o "inactivo"'
@@ -269,27 +271,35 @@ class UsuarioController:
             # Verificar que el usuario existe
             usuario_existente = UsuarioService.obtener_usuario(id, incluir_inactivos=True)
             if not usuario_existente:
+                print(f"[USUARIO] ERROR: Usuario con id={id} no encontrado")
                 return jsonify({
                     'status': 'error',
                     'message': MSG_USER_NOT_FOUND
                 }), 404
+
+            print(f"[USUARIO] Usuario encontrado: id={usuario_existente.id}, estado_actual={usuario_existente.estado}")
 
             # Actualizar estado
             from ..models.usuario import EstadoUsuario
             usuario_existente.estado = EstadoUsuario(nuevo_estado)
 
             if UsuarioService.actualizar_usuario(id, usuario_existente):
+                print(f"[USUARIO] Estado actualizado exitosamente")
                 return jsonify({
                     'status': 'success',
                     'message': f'Usuario {"activado" if nuevo_estado == "activo" else "desactivado"} exitosamente'
                 }), 200
             else:
+                print(f"[USUARIO] ERROR: No se pudo actualizar el estado del usuario")
                 return jsonify({
                     'status': 'error',
                     'message': 'Error al actualizar el estado del usuario'
                 }), 400
 
         except Exception as e:
+            print(f"[USUARIO] EXCEPCIÓN en cambiar_estado_usuario: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return jsonify({
                 'status': 'error',
                 'message': str(e)

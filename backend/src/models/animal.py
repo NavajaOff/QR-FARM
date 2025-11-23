@@ -12,6 +12,10 @@ class SexoGanado(str, Enum):
     MACHO = 'macho'
     HEMBRA = 'hembra'
 
+# Estados de baja ahora están en estado_ganado (id 4-8)
+# Estados activos: saludable (1), revision (2), enfermo (3)
+# Estados de baja: dado_de_baja (4), muerte (5), venta (6), robo (7), otra (8)
+
 class Ganado:
     def __init__(self, **kwargs):
         self.id = kwargs.get('id')
@@ -27,6 +31,7 @@ class Ganado:
         self.estado = kwargs.get('estado', EstadoGanado.SALUDABLE)
         self.estado_salud = kwargs.get('estado_salud')
         self.estado_tipo = kwargs.get('estado_tipo')
+        # estado_baja ahora se determina por id_estado (si id_estado >= 4, está dado de baja)
         self.created_at = kwargs.get('created_at')
         self.updated_at = kwargs.get('updated_at')
 
@@ -52,6 +57,22 @@ class Ganado:
             created_at=data.get('created_at'),
             updated_at=data.get('updated_at')
         )
+    
+    @staticmethod
+    def es_estado_baja(id_estado: Optional[int]) -> bool:
+        """Determina si un id_estado corresponde a un estado de baja."""
+        if id_estado is None:
+            return False
+        # Estados de baja: 4-8
+        return 4 <= id_estado <= 8
+    
+    @staticmethod
+    def es_estado_activo(id_estado: Optional[int]) -> bool:
+        """Determina si un id_estado corresponde a un estado activo."""
+        if id_estado is None:
+            return True  # Por defecto activo
+        # Estados activos: 1-3
+        return 1 <= id_estado <= 3
 
     def to_dict(self) -> Dict[str, Any]:
         """

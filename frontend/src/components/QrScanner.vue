@@ -20,13 +20,14 @@
           <p class="qr-status" :data-status="scannerStatus">{{ scannerStatusLabel }}</p>
         </div>
 
-        <div v-if="cameraSelectionVisible" class="qr-camera-select">
+        <div class="qr-camera-select">
           <label class="qr-camera-select__label" for="qr-camera-options">Selecciona una cámara</label>
           <select
             id="qr-camera-options"
             class="qr-camera-select__input"
             :value="state.selectedCameraId"
             @change="handleCameraChange"
+            :disabled="state.isScanning"
           >
             <option disabled value="">Selecciona una cámara</option>
             <option
@@ -37,12 +38,12 @@
               {{ camera.label }}
             </option>
           </select>
+          <p v-if="state.availableCameras.length === 0" class="qr-camera-select__error">
+            No se detectaron cámaras. Verifica los permisos del navegador.
+          </p>
         </div>
 
         <div class="qr-actions" role="group" aria-label="Controles de escaneo">
-          <button type="button" class="qr-btn" @click="toggleCameraSelection">
-            {{ cameraSelectionVisible ? 'Cerrar selección' : 'Seleccionar cámara' }}
-          </button>
           <button
             type="button"
             class="qr-btn qr-btn--primary"
@@ -229,7 +230,6 @@ const state = reactive<ScannerState>({
 
 const html5QrCodeInstance = ref<Html5Qrcode | null>(null);
 const videoElementId = `qr-video-${Math.random().toString(36).slice(2)}`;
-const cameraSelectionVisible = ref(false);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const abortControllerRef = ref<AbortController | null>(null);
 
@@ -360,7 +360,6 @@ const startScanner = async (): Promise<void> => {
     );
     state.isScanning = true;
     state.isPaused = false;
-    cameraSelectionVisible.value = false;
     pushTelemetry('Escaneo iniciado.');
   } catch (error) {
     appendError('No fue posible iniciar el escaneo.');
@@ -646,10 +645,6 @@ const togglePause = async (): Promise<void> => {
   }
 };
 
-const toggleCameraSelection = (): void => {
-  cameraSelectionVisible.value = !cameraSelectionVisible.value;
-};
-
 const handleRefresh = async (): Promise<void> => {
   if (!state.lastPayload) return;
   await fetchResource(state.lastPayload);
@@ -711,10 +706,8 @@ onMounted(async () => {
     return;
   }
   await loadCameras();
-  if (state.selectedCameraId) {
-    await nextTick();
-    await startScanner();
-  }
+  // No iniciar automáticamente - el usuario debe hacer clic en "Iniciar escaneo"
+  // Esto permite que el usuario seleccione la cámara primero si lo desea
 });
 
 onBeforeUnmount(async () => {
@@ -861,6 +854,17 @@ onBeforeUnmount(async () => {
   border-radius: 0.75rem;
   border: 1px solid #c5d0f6;
   padding: 0.5rem 0.75rem;
+}
+
+.qr-camera-select__input[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.qr-camera-select__error {
+  margin: 0.5rem 0 0;
+  color: #b91c1c;
+  font-size: 0.875rem;
 }
 
 .qr-file-input {

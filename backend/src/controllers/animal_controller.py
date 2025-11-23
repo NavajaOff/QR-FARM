@@ -87,23 +87,33 @@ class GanadoController:
     @staticmethod
     def obtener_todos_ganados():
         try:
-            ganados = GanadoService.obtener_todos_ganados()
+            incluir_bajas = request.args.get('incluir_bajas', 'false').lower() == 'true'
+            print(f"[DEBUG] Controller - incluir_bajas recibido: {request.args.get('incluir_bajas')}, procesado: {incluir_bajas}")
+            ganados = GanadoService.obtener_todos_ganados(incluir_bajas=incluir_bajas)
+            print(f"[DEBUG] Controller - Animales devueltos: {len(ganados)}")
             return jsonify({
                 'status': 'success',
-                'data': [ganado.to_dict() for ganado in ganados]
+                'data': [ganado.to_dict() for ganado in ganados],
+                'success': True
             }), 200
 
         except Exception as e:
+            print(f"[ERROR] Controller - Error obteniendo animales: {e}")
+            import traceback
+            traceback.print_exc()
             return jsonify({
                 'status': 'error',
-                'message': str(e)
+                'message': str(e),
+                'success': False
             }), 500
 
     @staticmethod
     def obtener_estados_ganado():
         try:
             from ..services.animal_service import GanadoService
-            estados = GanadoService.obtener_estados_ganado()
+            solo_activos = request.args.get('solo_activos', 'false').lower() == 'true'
+            solo_bajas = request.args.get('solo_bajas', 'false').lower() == 'true'
+            estados = GanadoService.obtener_estados_ganado(solo_activos=solo_activos, solo_bajas=solo_bajas)
             return jsonify({
                 'status': 'success',
                 'data': estados
@@ -163,37 +173,134 @@ class GanadoController:
             }), 500
 
     @staticmethod
-    def eliminar_ganado(id):
+    def dar_baja_ganado(id):
+        """Da de baja lógica a un animal."""
         try:
-            result = GanadoService.eliminar_ganado(id)
-            if result is True:
-                try:
-                    emit_update('animal_deleted', {
-                        'id': id
-                    })
-                except Exception as ws_error:
-                    print(f"No se pudo emitir animal_deleted: {ws_error}")
-
-                return jsonify({
-                    'status': 'success',
-                    'message': 'Ganado eliminado exitosamente'
-                }), 200
-            elif isinstance(result, str):
-                # Specific error message from service
+            data = request.get_json()
+            causa_baja = data.get('causa_baja')
+            observaciones = data.get('observaciones')
+            
+            if not causa_baja:
                 return jsonify({
                     'status': 'error',
-                    'message': result
+                    'message': 'La causa de baja es requerida',
+                    'success': False
+                }), 400
+            
+            result = GanadoService.dar_baja_ganado(id, causa_baja, observaciones)
+            
+            if result is True:
+                try:
+                    emit_update('animal_deactivated', {'id': id})
+                except Exception as ws_error:
+                    print(f"No se pudo emitir animal_deactivated: {ws_error}")
+                
+                return jsonify({
+                    'status': 'success',
+                    'message': 'Animal dado de baja correctamente',
+                    'success': True
+                }), 200
+            elif isinstance(result, str):
+                return jsonify({
+                    'status': 'error',
+                    'message': result,
+                    'success': False
                 }), 400
             else:
                 return jsonify({
                     'status': 'error',
-                    'message': 'Ganado no encontrado o error al eliminar'
-                }), 404
-
+                    'message': 'Error al dar de baja el animal',
+                    'success': False
+                }), 500
         except Exception as e:
+            print(f"Error en dar_baja_ganado: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return jsonify({
                 'status': 'error',
-                'message': str(e)
+                'message': str(e),
+                'success': False
+            }), 500
+
+    @staticmethod
+    def reactivar_ganado(id):
+        """Reactivar un animal que estaba dado de baja."""
+        try:
+            data = request.get_json() or {}
+            nuevo_estado = data.get('nuevo_estado', 'saludable')
+            result = GanadoService.reactivar_ganado(id, nuevo_estado)
+            
+            if result is True:
+                try:
+                    emit_update('animal_reactivated', {'id': id})
+                except Exception as ws_error:
+                    print(f"No se pudo emitir animal_reactivated: {ws_error}")
+                
+                return jsonify({
+                    'status': 'success',
+                    'message': 'Animal reactivado correctamente',
+                    'success': True
+                }), 200
+            elif isinstance(result, str):
+                return jsonify({
+                    'status': 'error',
+                    'message': result,
+                    'success': False
+                }), 400
+            else:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Error al reactivar el animal',
+                    'success': False
+                }), 500
+        except Exception as e:
+            print(f"Error en reactivar_ganado: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'status': 'error',
+                'message': str(e),
+                'success': False
+            }), 500
+
+    @staticmethod
+    def eliminar_ganado(id):
+        """Método legacy - ahora redirige a dar_baja_ganado con causa 'otra'."""
+        try:
+            # Usar dar_baja_ganado directamente con causa por defecto
+            result = GanadoService.dar_baja_ganado(id, 'otra', 'Eliminación automática (método legacy)')
+            
+            if result is True:
+                try:
+                    emit_update('animal_deactivated', {'id': id})
+                except Exception as ws_error:
+                    print(f"No se pudo emitir animal_deactivated: {ws_error}")
+                
+                return jsonify({
+                    'status': 'success',
+                    'message': 'Animal dado de baja correctamente',
+                    'success': True
+                }), 200
+            elif isinstance(result, str):
+                return jsonify({
+                    'status': 'error',
+                    'message': result,
+                    'success': False
+                }), 400
+            else:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Error al dar de baja el animal',
+                    'success': False
+                }), 500
+        except Exception as e:
+            print(f"Error en eliminar_ganado: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({
+                'status': 'error',
+                'message': str(e),
+                'success': False
             }), 500
 
     @staticmethod

@@ -24,3 +24,6 @@ class Config:
 
     # Configuración de JWT
     JWT_ACCESS_TOKEN_EXPIRES: int = 24 * 60 * 60  # 24 horas en segundos
+
+# Log de configuración cargada para debug
+print("Configuración cargada exitosamente: SECRET_KEY presente, DB_HOST =", Config.DB_HOST, ", DB_NAME =", Config.DB_NAME)

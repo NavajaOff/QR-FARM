@@ -51,13 +51,17 @@ def token_required(f):
         estado_valor = None
         if estado_obj is not None:
             estado_valor = getattr(estado_obj, 'value', estado_obj)
+        elif hasattr(current_user, 'estado'):
+            estado_valor = str(current_user.estado)
 
         print(f"[AUTH] Usuario actual: id={getattr(current_user, 'id', None)}, estado={estado_valor}")
 
         if not current_user:
+            print(f"[AUTH] ERROR: Usuario con id={user_id} no encontrado")
             return _unauthorized('user_not_found', 'Token inválido o usuario no encontrado')
 
         if estado_valor != 'activo':
+            print(f"[AUTH] ERROR: Usuario con id={user_id} está inactivo (estado={estado_valor})")
             return _unauthorized('user_inactive', 'Usuario inactivo o sin autorización')
 
         g.current_user = current_user

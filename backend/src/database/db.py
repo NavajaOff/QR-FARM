@@ -63,6 +63,8 @@ class ConexionBaseDatos:
                 'charset': 'utf8mb4',
                 'ssl_disabled': True
             }
+            # Log de configuración DB para debug
+            print(f"Configuración DB cargada: host={self.configuracion['host']}, user={self.configuracion['user']}, database={self.configuracion['database']}, port={self.configuracion['port']}")
             # Probar conexión
             self._obtener_conexion()
             registrador.info("Conexión a la base de datos inicializada correctamente")
