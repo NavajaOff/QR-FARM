@@ -509,13 +509,13 @@ function validarYConstruirUpdate(animal) {
   return data;
 }
 
-function validarCapacidadPotrero(id_potrero, animal) {
+function validarCapacidadPotrero(id_potrero, animal = null) {
   const potrero = potreros.value.find(p => p.id === Number(id_potrero));
   if (!potrero || potrero.capacidad == null) return true;
 
   const capacidad = Number(potrero.capacidad);
   const ocup = Number(potrero.ocupacion || 0);
-  const esMismo = potrero.id === animal.id_potrero;
+  const esMismo = animal && potrero.id === animal.id_potrero;
   const nuevaOcupacion = esMismo ? ocup : ocup + 1;
 
   if (capacidad > 0 && nuevaOcupacion > capacidad) {

@@ -121,6 +121,7 @@ class GanadoService:
 
     @staticmethod
     def crear_ganado(ganado: Ganado) -> Optional[Ganado]:
+        print(f"[DEBUG] Intentando crear ganado: {ganado.nombre}, raza: {ganado.raza}, estado: {ganado.estado}")
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
@@ -161,6 +162,7 @@ class GanadoService:
             conn.commit()
 
             ganado.id = cursor.lastrowid
+            print(f"[DEBUG] Ganado creado exitosamente con ID: {ganado.id}")
             if ganado.id_potrero:
                 try:
                     PotreroService.sincronizar_ocupacion(ganado.id_potrero)
@@ -221,14 +223,24 @@ class GanadoService:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
+            # Log para verificar total de registros en ganado
+            cursor.execute("SELECT COUNT(*) as total FROM ganado")
+            total_count = cursor.fetchone().get('total', 0)
+            print(f"[DEBUG] Total de registros en tabla ganado: {total_count}")
+
+            # Log para ver id_estado de primeros 5 registros
+            cursor.execute("SELECT id, id_estado FROM ganado ORDER BY id DESC LIMIT 5")
+            sample_records = cursor.fetchall()
+            print(f"[DEBUG] Muestra de registros en ganado: {sample_records}")
+
             # Verificar si existe la columna estado_baja (sistema antiguo)
             column_exists = False
             try:
                 cursor.execute("""
-                    SELECT COUNT(*) as count 
-                    FROM information_schema.COLUMNS 
-                    WHERE TABLE_SCHEMA = DATABASE() 
-                    AND TABLE_NAME = 'ganado' 
+                    SELECT COUNT(*) as count
+                    FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                    AND TABLE_NAME = 'ganado'
                     AND COLUMN_NAME = 'estado_baja'
                 """)
                 result = cursor.fetchone()
