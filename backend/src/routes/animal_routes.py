@@ -26,7 +26,11 @@ animal_bp = Blueprint('animal', __name__, url_prefix='/api/animales')
 def get_estados_ganado():
     """Obtener los estados posibles del ganado usando GanadoService."""
     try:
-        estados = GanadoService.obtener_estados_ganado()
+        solo_activos = request.args.get('solo_activos', 'false').lower() == 'true'
+        solo_bajas = request.args.get('solo_bajas', 'false').lower() == 'true'
+        print(f"[DEBUG] Route get_estados_ganado - solo_activos: {solo_activos}, solo_bajas: {solo_bajas}")
+        estados = GanadoService.obtener_estados_ganado(solo_activos=solo_activos, solo_bajas=solo_bajas)
+        print(f"[DEBUG] Estados retornados por servicio: {len(estados) if estados else 0}")
         # Si no hay conexión a BD, retornar estados por defecto
         if not estados:
             estados = ESTADOS_DEFAULT

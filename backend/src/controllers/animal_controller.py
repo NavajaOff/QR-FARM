@@ -112,7 +112,9 @@ class GanadoController:
             from ..services.animal_service import GanadoService
             solo_activos = request.args.get('solo_activos', 'false').lower() == 'true'
             solo_bajas = request.args.get('solo_bajas', 'false').lower() == 'true'
+            print(f"[DEBUG] obtener_estados_ganado - solo_activos: {solo_activos}, solo_bajas: {solo_bajas}")
             estados = GanadoService.obtener_estados_ganado(solo_activos=solo_activos, solo_bajas=solo_bajas)
+            print(f"[DEBUG] Estados retornados: {len(estados)} - {estados}")
             return jsonify({
                 'status': 'success',
                 'data': estados
