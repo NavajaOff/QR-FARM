@@ -128,7 +128,6 @@ export const setUpdateCallback = (callback) => {
 // Función para cancelar peticiones pendientes
 export const cancelPendingRequests = () => {
   if (cancelTokenSource) {
-    console.log('Cancelando peticiones pendientes de animales...');
     cancelTokenSource.cancel('Navegación cancelada por el usuario');
     cancelTokenSource = null;
   }
@@ -146,109 +145,103 @@ export const cargarDatosIniciales = async () => {
     loading.value = true;
     error.value = null;
 
-    console.log('Iniciando carga de datos iniciales de animales...');
-
     // Cargar datos iniciales de potreros para que estén disponibles
     await cargarDatosInicialesPotreros();
 
     // Verificar si fue cancelado
     if (cancelTokenSource && cancelTokenSource.token.reason) {
-      console.log('Carga de datos iniciales cancelada después de potreros');
       return;
     }
 
     await Promise.all([
-      cargarEstadosGanado(),
+      cargarEstadosGanado(true, false), // Solo cargar estados activos inicialmente
       cargarPersonasUsuario()
     ]);
 
     // Verificar si fue cancelado
     if (cancelTokenSource && cancelTokenSource.token.reason) {
-      console.log('Carga de datos iniciales cancelada después de estados/personas');
       return;
     }
 
     await cargarAnimales();
-
-    console.log('Carga de datos iniciales de animales completada');
   } catch (error) {
     if (axios.isCancel(error)) {
-      console.log('Carga de datos iniciales cancelada por navegación');
-      return;
+    return;
     }
     error.value = error.message;
-    console.error('Error cargando datos iniciales:', error);
     loading.value = false;
   }
 };
 
-export const cargarEstadosGanado = async () => {
+export const cargarEstadosGanado = async (soloActivos = false, soloBajas = false) => {
   try {
-    console.log('Cargando estados de ganado desde endpoint corregido...');
-    const response = await axios.get(`${API_BASE}/animales/estados-ganado`, {
+    let url = `${API_BASE}/animales/estados-ganado`;
+    const params = [];
+    if (soloActivos) params.push('solo_activos=true');
+    if (soloBajas) params.push('solo_bajas=true');
+    if (params.length > 0) url += '?' + params.join('&');
+
+    const response = await axios.get(url, {
       cancelToken: cancelTokenSource?.token,
       timeout: 10000
     });
-    console.log('Respuesta estados ganado:', response.status);
     estadosGanado.value = response.data.success ? response.data.data : [];
-    console.log('Estados ganado cargados:', estadosGanado.value);
   } catch (error) {
     if (axios.isCancel(error)) {
-      console.log('Carga de estados ganado cancelada');
       return;
     }
-    console.error('Error cargando estados de ganado:', error.message);
+    console.error(`Error cargando estados de ganado: ${error.message}`);
     estadosGanado.value = [];
   }
 };
 
 export const cargarPersonasUsuario = async () => {
   try {
-    console.log('Cargando personas usuario desde endpoint corregido...');
     const response = await axios.get(`${API_BASE}/potreros/personas-usuario`, {
       cancelToken: cancelTokenSource?.token,
       timeout: 10000
     });
-    console.log('Respuesta personas usuario:', response.status);
     // Usar el mismo array que en potreros
     personasUsuario.value = response.data.success ? response.data.data : [];
-    console.log('Personas usuario cargadas:', personasUsuario.value.length);
   } catch (error) {
     if (axios.isCancel(error)) {
-      console.log('Carga de personas usuario cancelada');
       return;
     }
-    console.error('Error cargando personas usuario:', error.message);
     personasUsuario.value = [];
   }
 };
 
-export const mostrarBajas = ref(false);
 
 export const cargarAnimales = async (incluirBajas = false) => {
   try {
     console.log('[DEBUG] cargarAnimales - incluirBajas:', incluirBajas);
-    const url = incluirBajas
-      ? `${API_BASE}/animales/?incluir_bajas=true`
-      : `${API_BASE}/animales/`;
+    const url = `${API_BASE}/animales/`;
     console.log('[DEBUG] URL de la petición:', url);
     const response = await axios.get(url, {
       cancelToken: cancelTokenSource?.token,
       timeout: 15000  // Timeout más largo para listas grandes
     });
     console.log('[DEBUG] Respuesta HTTP ganado:', response.status);
-    console.log('[DEBUG] Cantidad de animales recibidos:', response.data?.data?.length || 0);
-    // Log adicional para verificar datos recibidos
-    if (response.data?.data) {
-      const dadosDeBajaRecibidos = response.data.data.filter(a => (a.id_estado && a.id_estado >= 4) || a.estado_baja === 'dado_de_baja');
-      console.log('[DEBUG] Animales dados de baja en respuesta:', dadosDeBajaRecibidos.length);
-      if (dadosDeBajaRecibidos.length > 0) {
-        console.log('[DEBUG] IDs dados de baja:', dadosDeBajaRecibidos.map(a => ({ id: a.id, id_estado: a.id_estado })));
-      }
-    }
+    console.log('Cantidad de animales recibidos:', response.data?.data?.length || 0);
 
     if (response.data.success && response.data.data) {
-      animales.value = response.data.data.map(animal => ({
+      // Filtrar animales según el parámetro incluirBajas
+      let animalesFiltrados = response.data.data;
+      if (incluirBajas) {
+        // Solo mostrar dados de baja (id_estado >= 4)
+        animalesFiltrados = response.data.data.filter(animal => {
+          const idEstado = parseInt(animal.id_estado);
+          return idEstado >= 4;
+        });
+      } else {
+        // Solo mostrar activos (id_estado < 4 o null)
+        animalesFiltrados = response.data.data.filter(animal => {
+          const idEstado = parseInt(animal.id_estado);
+          return !idEstado || idEstado < 4;
+        });
+      }
+
+      animales.value = animalesFiltrados.map(animal => ({
         id: animal.id,
         nombre: animal.nombre,
         peso: animal.peso,
@@ -260,25 +253,15 @@ export const cargarAnimales = async (incluirBajas = false) => {
         id_persona: animal.id_persona,
         // Determinar si está dado de baja:
         // - Sistema nuevo: por id_estado (>= 4)
-        // - Sistema antiguo: por estado_baja === 'dado_de_baja'
-        es_dado_de_baja: (animal.id_estado && animal.id_estado >= 4) || 
-                         (animal.estado_baja === 'dado_de_baja'),
+        es_dado_de_baja: (animal.id_estado && animal.id_estado >= 4),
         // Campos calculados
         estado: animal.estado_tipo || animal.estado || 'No definido',
-        // Debug info
-        _debug_id_estado: animal.id_estado,
-        _debug_estado_tipo: animal.estado_tipo,
         potreroActual: obtenerNombrePotreroDesdeEntidad(animal),
         propietario: obtenerNombrePersonaDesdeEntidad(animal),
         edad: animal.fecha_nacimiento ? calcularEdad(animal.fecha_nacimiento) : 'No definida',
         codigo_qr: animal.codigo_qr
       }));
-      console.log('[DEBUG] Animales cargados exitosamente:', animales.value.length, 'animales');
-      const dadosDeBaja = animales.value.filter(a => a.es_dado_de_baja);
-      console.log('[DEBUG] Animales dados de baja encontrados:', dadosDeBaja.length);
-      if (dadosDeBaja.length > 0) {
-        console.log('[DEBUG] Primeros animales dados de baja:', dadosDeBaja.slice(0, 3).map(a => ({ id: a.id, id_estado: a._debug_id_estado, estado: a.estado })));
-      }
+      console.log('Animales cargados exitosamente:', animales.value.length, 'animales');
     } else {
       // Si no hay datos, mostrar lista vacía (modo sin BD)
       animales.value = [];
@@ -286,11 +269,9 @@ export const cargarAnimales = async (incluirBajas = false) => {
     }
   } catch (error) {
     if (axios.isCancel(error)) {
-      console.log('Carga de animales cancelada');
       return;
     }
     error.value = error.message;
-    console.error('Error cargando animales:', error.message);
   } finally {
     loading.value = false;
   }
@@ -409,12 +390,12 @@ export const verPerfilAnimal = async (id) => {
 };
 
 // Helper functions for editarAnimal
-async function asegurarDatosFormulario() {
+async function asegurarDatosFormulario(soloEstadosActivos = true) {
   if (estadosGanado.value.length && personasUsuario.value.length) return;
 
   try {
     await Promise.all([
-      cargarEstadosGanado(),
+      cargarEstadosGanado(soloEstadosActivos, false),
       cargarPersonasUsuario()
     ]);
   } catch (error) {
@@ -509,13 +490,13 @@ function validarYConstruirUpdate(animal) {
   return data;
 }
 
-function validarCapacidadPotrero(id_potrero, animal) {
+function validarCapacidadPotrero(id_potrero, animal = null) {
   const potrero = potreros.value.find(p => p.id === Number(id_potrero));
   if (!potrero || potrero.capacidad == null) return true;
 
   const capacidad = Number(potrero.capacidad);
   const ocup = Number(potrero.ocupacion || 0);
-  const esMismo = potrero.id === animal.id_potrero;
+  const esMismo = animal && potrero.id === animal.id_potrero;
   const nuevaOcupacion = esMismo ? ocup : ocup + 1;
 
   if (capacidad > 0 && nuevaOcupacion > capacidad) {
@@ -728,15 +709,17 @@ export const agregarNuevoAnimal = async () => {
 };
 
 export const darBajaAnimal = async (id, incluirBajas = false) => {
-  const causasBaja = [
-    { value: 'muerte', label: 'Muerte' },
-    { value: 'venta', label: 'Venta' },
-    { value: 'robo', label: 'Robo' },
-    { value: 'otra', label: 'Otra causa' }
-  ];
-  
-  const causaOptions = causasBaja.map(c => 
-    `<option value="${c.value}">${c.label}</option>`
+  // Cargar estados de baja
+  try {
+    await cargarEstadosGanado(false, true);
+  } catch (error) {
+    console.error('Error cargando estados de baja:', error);
+    Swal.fire('Error', 'No se pudieron cargar los estados de baja', 'error');
+    return { success: false, message: 'Error cargando estados' };
+  }
+
+  const causaOptions = estadosGanado.value.map(e =>
+    `<option value="${e.estado}">${e.estado}</option>`
   ).join('');
   
   const result = await Swal.fire({
@@ -789,9 +772,8 @@ export const darBajaAnimal = async (id, incluirBajas = false) => {
       
       if (response.ok && data.success) {
         Swal.fire('Éxito', 'Animal dado de baja correctamente', 'success');
-        console.log('[DEBUG] darBajaAnimal - Recargando después de baja, incluirBajas:', incluirBajas);
         await cargarPotreros();
-        await cargarAnimales(incluirBajas);
+        await cargarAnimales();
         if (updateCallback) updateCallback();
         return { success: true };
       } else {
@@ -861,9 +843,8 @@ export const reactivarAnimal = async (id, incluirBajas = false) => {
         
         if (response.ok && data.success) {
           Swal.fire('Éxito', 'Animal reactivado correctamente', 'success');
-          console.log('[DEBUG] reactivarAnimal - Recargando después de reactivación, incluirBajas:', incluirBajas);
           await cargarPotreros();
-          await cargarAnimales(incluirBajas);
+          await cargarAnimales();
           if (updateCallback) updateCallback();
           return { success: true };
         } else {
@@ -891,7 +872,6 @@ export const eliminarAnimal = async (id) => {
 
 // Función para limpiar estado al cambiar de ruta
 export const resetEstado = () => {
-  console.log('Reseteando estado de animales...');
   cancelPendingRequests();
   loading.value = true;
   error.value = null;

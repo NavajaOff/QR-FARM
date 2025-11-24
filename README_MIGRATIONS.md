@@ -24,9 +24,14 @@
 ## 2. Base de datos y migraciones
 
 1. Crea la base de datos vacía con el nombre indicado en `.env` (por defecto `gestion_ganadera`).
-2. Aplica todas las migraciones versionadas:
+2. Aplica todas las migraciones versionadas desde el directorio backend:
    ```
-   flask --app app db upgrade -d backend/src/database/migrations
+   cd backend
+   alembic -c src/database/migrations/alembic.ini upgrade head
+   ```
+   O usando el script de gestión:
+   ```
+   python manage_db.py upgrade
    ```
 3. Verifica en MySQL Workbench (u otra herramienta) que:
    - La tabla `alembic_version` contiene la última revisión.
@@ -76,7 +81,7 @@
   - `seed:secure_import`
   - `team:generate_key`
 - `secure_seed.bin` debe existir y estar cifrado (contenido ilegible).
-- La tabla `alembic_version` debe tener la última revisión después de ejecutar `db upgrade`.
+- La tabla `alembic_version` debe tener la última revisión después de ejecutar `alembic upgrade head` o `python manage_db.py upgrade`.
 
 Con este flujo cada integrante puede reconstruir la base de datos de forma segura y consistente 🚀
 
