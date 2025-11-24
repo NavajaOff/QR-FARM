@@ -28,7 +28,7 @@ class Ganado:
         self.edad = kwargs.get('edad')
         self.sexo = kwargs.get('sexo', SexoGanado.MACHO)
         self.peso = kwargs.get('peso')
-        self.estado = kwargs.get('estado', EstadoGanado.SALUDABLE)
+        self.estado = kwargs.get('estado', 'saludable')
         self.estado_salud = kwargs.get('estado_salud')
         self.estado_tipo = kwargs.get('estado_tipo')
         # estado_baja ahora se determina por id_estado (si id_estado >= 4, está dado de baja)
@@ -51,7 +51,7 @@ class Ganado:
             edad=data.get('edad'),
             sexo=SexoGanado(data.get('sexo', 'macho')),
             peso=float(data.get('peso')) if data.get('peso') is not None else None,
-            estado=EstadoGanado(data.get('estado_tipo') or data.get('estado') or 'saludable'),
+            estado=data.get('estado_tipo') or data.get('estado') or 'saludable',
             estado_salud=data.get('estado_salud'),
             estado_tipo=data.get('estado_tipo'),
             created_at=data.get('created_at'),
@@ -96,7 +96,7 @@ class Ganado:
             'edad': self.edad,
             'sexo': self.sexo.value,
             'peso': self.peso,
-            'estado': self.estado.value,
+            'estado': self.estado,
             'estado_salud': self.estado_salud,
             'created_at': safe_isoformat(self.created_at),
             'updated_at': safe_isoformat(self.updated_at)

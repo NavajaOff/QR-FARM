@@ -87,9 +87,8 @@ class GanadoController:
     @staticmethod
     def obtener_todos_ganados():
         try:
-            incluir_bajas = request.args.get('incluir_bajas', 'false').lower() == 'true'
-            print(f"[DEBUG] Controller - incluir_bajas recibido: {request.args.get('incluir_bajas')}, procesado: {incluir_bajas}")
-            ganados = GanadoService.obtener_todos_ganados(incluir_bajas=incluir_bajas)
+            # Siempre devolver todos los animales para simplificar
+            ganados = GanadoService.obtener_todos_ganados()
             print(f"[DEBUG] Controller - Animales devueltos: {len(ganados)}")
             return jsonify({
                 'status': 'success',

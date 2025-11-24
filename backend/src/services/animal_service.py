@@ -148,9 +148,9 @@ class GanadoService:
             else:
                 fecha_nac = None
 
-            estado_id = GanadoService._obtener_estado_id_desde_db(ganado.estado.value)
+            estado_id = GanadoService._obtener_estado_id_desde_db(ganado.estado)
             if estado_id is None:
-                estado_id = GanadoService._mapear_estado_a_id(ganado.estado)
+                estado_id = GanadoService._mapear_estado_string_a_id(ganado.estado)
             values = (
                 ganado.nombre, ganado.raza,
                 fecha_nac, ganado.sexo.value,
@@ -218,7 +218,8 @@ class GanadoService:
                     pass
 
     @staticmethod
-    def obtener_todos_ganados(incluir_bajas: bool = False) -> List[Ganado]:
+    def obtener_todos_ganados(incluir_bajas: bool = True) -> List[Ganado]:
+        """Obtiene todos los animales siempre, para simplificar la vista."""
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
@@ -228,78 +229,29 @@ class GanadoService:
             total_count = cursor.fetchone().get('total', 0)
             print(f"[DEBUG] Total de registros en tabla ganado: {total_count}")
 
-            # Log para ver id_estado de primeros 5 registros
-            cursor.execute("SELECT id, id_estado FROM ganado ORDER BY id DESC LIMIT 5")
-            sample_records = cursor.fetchall()
-            print(f"[DEBUG] Muestra de registros en ganado: {sample_records}")
+            # Consulta simplificada: siempre devolver todos los animales
+            sql = """
+                SELECT g.*,
+                       eg.tipo_estado as estado_tipo,
+                       p.nombre as potrero_nombre,
+                       CONCAT(per.primer_nombre, ' ', COALESCE(per.segundo_nombre, ''), ' ', per.primer_apellido, ' ', COALESCE(per.segundo_apellido, '')) as persona_nombre,
+                       per.primer_nombre as persona_primer_nombre,
+                       per.primer_apellido as persona_primer_apellido,
+                       qr.codigo_qr
+                FROM ganado g
+                LEFT JOIN estado_ganado eg ON g.id_estado = eg.id
+                LEFT JOIN potrero p ON g.id_potrero = p.id
+                LEFT JOIN personas per ON g.id_persona = per.id
+                LEFT JOIN qr ON g.id = qr.id_ganado
+                ORDER BY g.id DESC LIMIT 50
+            """
 
-            # Verificar si existe la columna estado_baja (sistema antiguo)
-            column_exists = False
-            try:
-                cursor.execute("""
-                    SELECT COUNT(*) as count
-                    FROM information_schema.COLUMNS
-                    WHERE TABLE_SCHEMA = DATABASE()
-                    AND TABLE_NAME = 'ganado'
-                    AND COLUMN_NAME = 'estado_baja'
-                """)
-                result = cursor.fetchone()
-                column_exists = result and result.get('count', 0) > 0
-            except Exception:
-                column_exists = False
-
-            # Construir la consulta según el sistema disponible
-            if column_exists:
-                # Sistema antiguo: usar estado_baja
-                sql = """
-                    SELECT g.*,
-                           COALESCE(g.estado_baja, 'activo') as estado_baja,
-                           eg.tipo_estado as estado_tipo,
-                           p.nombre as potrero_nombre,
-                           CONCAT(per.primer_nombre, ' ', COALESCE(per.segundo_nombre, ''), ' ', per.primer_apellido, ' ', COALESCE(per.segundo_apellido, '')) as persona_nombre,
-                           per.primer_nombre as persona_primer_nombre,
-                           per.primer_apellido as persona_primer_apellido,
-                           qr.codigo_qr
-                    FROM ganado g
-                    LEFT JOIN estado_ganado eg ON g.id_estado = eg.id
-                    LEFT JOIN potrero p ON g.id_potrero = p.id
-                    LEFT JOIN personas per ON g.id_persona = per.id
-                    LEFT JOIN qr ON g.id = qr.id_ganado
-                """
-                if not incluir_bajas:
-                    sql += " WHERE COALESCE(g.estado_baja, 'activo') = 'activo'"
-            else:
-                # Sistema nuevo: usar id_estado
-                sql = """
-                    SELECT g.*,
-                           eg.tipo_estado as estado_tipo,
-                           p.nombre as potrero_nombre,
-                           CONCAT(per.primer_nombre, ' ', COALESCE(per.segundo_nombre, ''), ' ', per.primer_apellido, ' ', COALESCE(per.segundo_apellido, '')) as persona_nombre,
-                           per.primer_nombre as persona_primer_nombre,
-                           per.primer_apellido as persona_primer_apellido,
-                           qr.codigo_qr
-                    FROM ganado g
-                    LEFT JOIN estado_ganado eg ON g.id_estado = eg.id
-                    LEFT JOIN potrero p ON g.id_potrero = p.id
-                    LEFT JOIN personas per ON g.id_persona = per.id
-                    LEFT JOIN qr ON g.id = qr.id_ganado
-                """
-                if not incluir_bajas:
-                    sql += " WHERE g.id_estado IS NULL OR g.id_estado < 4"
-            
-            sql += " ORDER BY g.id DESC LIMIT 50"
-
-            print(f"[DEBUG] Consulta SQL con incluir_bajas={incluir_bajas}, sistema_antiguo={column_exists}: {sql}")
+            print(f"[DEBUG] Consulta SQL simplificada (siempre incluye todos): {sql}")
             cursor.execute(sql)
             results = cursor.fetchall()
             print(f"[DEBUG] Animales encontrados: {len(results)}")
             if results:
                 print(f"[DEBUG] Primeros 3 animales - id_estado: {[r.get('id_estado') for r in results[:3]]}")
-                # Log adicional para verificar estados de baja
-                estados_baja = [r for r in results if r.get('id_estado') and r.get('id_estado') >= 4]
-                print(f"[DEBUG] Animales dados de baja encontrados en consulta: {len(estados_baja)}")
-                if estados_baja:
-                    print(f"[DEBUG] IDs de animales dados de baja: {[r.get('id') for r in estados_baja[:5]]}")
 
             # Crear objetos Ganado con el estado_tipo incluido
             ganados = []
@@ -330,6 +282,16 @@ class GanadoService:
             EstadoGanado.ENFERMO: 3
         }
         return estado_mapping.get(estado, 1)  # Default: saludable
+
+    @staticmethod
+    def _mapear_estado_string_a_id(estado: str) -> int:
+        """Mapea un estado string a su ID en la base de datos."""
+        estado_mapping = {
+            'saludable': 1,
+            'revision': 2,
+            'enfermo': 3
+        }
+        return estado_mapping.get(estado.lower(), 1)  # Default: saludable
 
     @staticmethod
     def _obtener_estado_id_desde_db(estado_value: str) -> Optional[int]:
@@ -401,9 +363,9 @@ class GanadoService:
         conn = get_connection()
         cursor = conn.cursor()
         try:
-            estado_id = GanadoService._obtener_estado_id_desde_db(ganado.estado.value)
+            estado_id = GanadoService._obtener_estado_id_desde_db(ganado.estado)
             if estado_id is None:
-                estado_id = GanadoService._mapear_estado_a_id(ganado.estado)
+                estado_id = GanadoService._mapear_estado_string_a_id(ganado.estado)
             fecha_nac = GanadoService._convertir_fecha_nacimiento(ganado.fecha_nacimiento)
             sql = """
                 UPDATE ganado SET
@@ -457,54 +419,58 @@ class GanadoService:
     @staticmethod
     def dar_baja_ganado(id: int, causa_baja: str, observaciones: Optional[str] = None) -> Union[bool, str]:
         """Da de baja lógica a un animal cambiando su id_estado."""
+        print(f"[DEBUG] Intentando dar de baja animal {id} con causa: {causa_baja}")
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
-            
+
             # Verificar que el animal existe
             cursor.execute("SELECT id_estado, id_potrero FROM ganado WHERE id = %s", (id,))
             animal = cursor.fetchone()
-            
+
             if not animal:
                 cursor.close()
                 conn.close()
                 return "Animal no encontrado"
-            
+
             id_estado_actual = animal.get('id_estado')
-            
+            print(f"[DEBUG] Estado actual del animal {id}: {id_estado_actual}")
+
             # Verificar si ya está dado de baja (id_estado >= 4)
             if id_estado_actual and id_estado_actual >= 4:
                 cursor.close()
                 conn.close()
                 return "El animal ya está dado de baja"
-            
+
             # Obtener potrero_id antes de actualizar
             potrero_id = animal.get('id_potrero')
-            
+
             # Obtener el id_estado correspondiente a la causa de baja
             nuevo_id_estado = GanadoService._obtener_id_estado_por_causa(causa_baja)
-            
+            print(f"[DEBUG] Nuevo id_estado para causa '{causa_baja}': {nuevo_id_estado}")
+
             # Actualizar id_estado a uno de baja y liberar potrero
             sql = """
-                UPDATE ganado 
+                UPDATE ganado
                 SET id_estado = %s,
                     id_potrero = NULL
                 WHERE id = %s
             """
             cursor.execute(sql, (nuevo_id_estado, id))
             conn.commit()
-            
+            print(f"[DEBUG] Animal {id} dado de baja exitosamente con id_estado: {nuevo_id_estado}")
+
             # Sincronizar ocupación del potrero si tenía uno
             if potrero_id:
                 try:
                     PotreroService.sincronizar_ocupacion(potrero_id)
                 except Exception as sync_error:
                     print(f"Advertencia al sincronizar potrero {potrero_id}: {sync_error}")
-            
+
             cursor.close()
             conn.close()
             return True
-            
+
         except Exception as e:
             print(f"Error al dar de baja el animal: {e}")
             import traceback

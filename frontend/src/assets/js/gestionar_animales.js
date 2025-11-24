@@ -182,10 +182,16 @@ export const cargarDatosIniciales = async () => {
   }
 };
 
-export const cargarEstadosGanado = async () => {
+export const cargarEstadosGanado = async (soloActivos = false, soloBajas = false) => {
   try {
-    console.log('Cargando estados de ganado desde endpoint corregido...');
-    const response = await axios.get(`${API_BASE}/animales/estados-ganado`, {
+    console.log('Cargando estados de ganado desde endpoint corregido...', { soloActivos, soloBajas });
+    let url = `${API_BASE}/animales/estados-ganado`;
+    const params = [];
+    if (soloActivos) params.push('solo_activos=true');
+    if (soloBajas) params.push('solo_bajas=true');
+    if (params.length > 0) url += '?' + params.join('&');
+
+    const response = await axios.get(url, {
       cancelToken: cancelTokenSource?.token,
       timeout: 10000
     });
@@ -225,12 +231,10 @@ export const cargarPersonasUsuario = async () => {
 
 export const mostrarBajas = ref(false);
 
-export const cargarAnimales = async (incluirBajas = false) => {
+export const cargarAnimales = async () => {
   try {
-    console.log('[DEBUG] cargarAnimales - incluirBajas:', incluirBajas);
-    const url = incluirBajas
-      ? `${API_BASE}/animales/?incluir_bajas=true`
-      : `${API_BASE}/animales/`;
+    console.log('[DEBUG] cargarAnimales - siempre incluye todos los animales');
+    const url = `${API_BASE}/animales/`;
     console.log('[DEBUG] URL de la petición:', url);
     const response = await axios.get(url, {
       cancelToken: cancelTokenSource?.token,
@@ -238,14 +242,6 @@ export const cargarAnimales = async (incluirBajas = false) => {
     });
     console.log('[DEBUG] Respuesta HTTP ganado:', response.status);
     console.log('[DEBUG] Cantidad de animales recibidos:', response.data?.data?.length || 0);
-    // Log adicional para verificar datos recibidos
-    if (response.data?.data) {
-      const dadosDeBajaRecibidos = response.data.data.filter(a => (a.id_estado && a.id_estado >= 4) || a.estado_baja === 'dado_de_baja');
-      console.log('[DEBUG] Animales dados de baja en respuesta:', dadosDeBajaRecibidos.length);
-      if (dadosDeBajaRecibidos.length > 0) {
-        console.log('[DEBUG] IDs dados de baja:', dadosDeBajaRecibidos.map(a => ({ id: a.id, id_estado: a.id_estado })));
-      }
-    }
 
     if (response.data.success && response.data.data) {
       animales.value = response.data.data.map(animal => ({
@@ -260,9 +256,7 @@ export const cargarAnimales = async (incluirBajas = false) => {
         id_persona: animal.id_persona,
         // Determinar si está dado de baja:
         // - Sistema nuevo: por id_estado (>= 4)
-        // - Sistema antiguo: por estado_baja === 'dado_de_baja'
-        es_dado_de_baja: (animal.id_estado && animal.id_estado >= 4) || 
-                         (animal.estado_baja === 'dado_de_baja'),
+        es_dado_de_baja: (animal.id_estado && animal.id_estado >= 4),
         // Campos calculados
         estado: animal.estado_tipo || animal.estado || 'No definido',
         // Debug info
@@ -409,12 +403,12 @@ export const verPerfilAnimal = async (id) => {
 };
 
 // Helper functions for editarAnimal
-async function asegurarDatosFormulario() {
+async function asegurarDatosFormulario(soloEstadosActivos = true) {
   if (estadosGanado.value.length && personasUsuario.value.length) return;
 
   try {
     await Promise.all([
-      cargarEstadosGanado(),
+      cargarEstadosGanado(soloEstadosActivos, false),
       cargarPersonasUsuario()
     ]);
   } catch (error) {
@@ -728,15 +722,17 @@ export const agregarNuevoAnimal = async () => {
 };
 
 export const darBajaAnimal = async (id, incluirBajas = false) => {
-  const causasBaja = [
-    { value: 'muerte', label: 'Muerte' },
-    { value: 'venta', label: 'Venta' },
-    { value: 'robo', label: 'Robo' },
-    { value: 'otra', label: 'Otra causa' }
-  ];
-  
-  const causaOptions = causasBaja.map(c => 
-    `<option value="${c.value}">${c.label}</option>`
+  // Cargar estados de baja
+  try {
+    await cargarEstadosGanado(false, true);
+  } catch (error) {
+    console.error('Error cargando estados de baja:', error);
+    Swal.fire('Error', 'No se pudieron cargar los estados de baja', 'error');
+    return { success: false, message: 'Error cargando estados' };
+  }
+
+  const causaOptions = estadosGanado.value.map(e =>
+    `<option value="${e.estado}">${e.estado}</option>`
   ).join('');
   
   const result = await Swal.fire({
@@ -789,9 +785,9 @@ export const darBajaAnimal = async (id, incluirBajas = false) => {
       
       if (response.ok && data.success) {
         Swal.fire('Éxito', 'Animal dado de baja correctamente', 'success');
-        console.log('[DEBUG] darBajaAnimal - Recargando después de baja, incluirBajas:', incluirBajas);
+        console.log('[DEBUG] darBajaAnimal - Recargando después de baja');
         await cargarPotreros();
-        await cargarAnimales(incluirBajas);
+        await cargarAnimales();
         if (updateCallback) updateCallback();
         return { success: true };
       } else {
@@ -861,9 +857,9 @@ export const reactivarAnimal = async (id, incluirBajas = false) => {
         
         if (response.ok && data.success) {
           Swal.fire('Éxito', 'Animal reactivado correctamente', 'success');
-          console.log('[DEBUG] reactivarAnimal - Recargando después de reactivación, incluirBajas:', incluirBajas);
+          console.log('[DEBUG] reactivarAnimal - Recargando después de reactivación');
           await cargarPotreros();
-          await cargarAnimales(incluirBajas);
+          await cargarAnimales();
           if (updateCallback) updateCallback();
           return { success: true };
         } else {
