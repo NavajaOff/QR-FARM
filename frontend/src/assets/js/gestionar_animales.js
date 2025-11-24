@@ -175,25 +175,22 @@ export const cargarDatosIniciales = async () => {
 
 export const cargarEstadosGanado = async (soloActivos = false, soloBajas = false) => {
   try {
-    console.log(`[DEBUG] cargarEstadosGanado - soloActivos: ${soloActivos}, soloBajas: ${soloBajas}`);
     let url = `${API_BASE}/animales/estados-ganado`;
     const params = [];
     if (soloActivos) params.push('solo_activos=true');
     if (soloBajas) params.push('solo_bajas=true');
     if (params.length > 0) url += '?' + params.join('&');
 
-    console.log(`[DEBUG] URL para estados: ${url}`);
     const response = await axios.get(url, {
       cancelToken: cancelTokenSource?.token,
       timeout: 10000
     });
     estadosGanado.value = response.data.success ? response.data.data : [];
-    console.log(`[DEBUG] Estados cargados: ${estadosGanado.value.length} - ${estadosGanado.value.map(e => e.estado).join(', ')}`);
   } catch (error) {
     if (axios.isCancel(error)) {
       return;
     }
-    console.error(`[DEBUG] Error cargando estados: ${error}`);
+    console.error(`Error cargando estados de ganado: ${error.message}`);
     estadosGanado.value = [];
   }
 };

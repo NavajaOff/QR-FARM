@@ -108,13 +108,18 @@ class GanadoController:
 
     @staticmethod
     def obtener_estados_ganado():
+        """
+        Obtiene los estados de ganado filtrados por tipo.
+
+        Query parameters:
+        - solo_activos: boolean - Si es true, retorna solo estados activos (1-3)
+        - solo_bajas: boolean - Si es true, retorna solo estados de baja (4-8)
+        """
         try:
             from ..services.animal_service import GanadoService
             solo_activos = request.args.get('solo_activos', 'false').lower() == 'true'
             solo_bajas = request.args.get('solo_bajas', 'false').lower() == 'true'
-            print(f"[DEBUG] obtener_estados_ganado - solo_activos: {solo_activos}, solo_bajas: {solo_bajas}")
             estados = GanadoService.obtener_estados_ganado(solo_activos=solo_activos, solo_bajas=solo_bajas)
-            print(f"[DEBUG] Estados retornados: {len(estados)} - {estados}")
             return jsonify({
                 'status': 'success',
                 'data': estados

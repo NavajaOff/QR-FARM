@@ -239,7 +239,7 @@ class GanadoService:
             cursor.execute(sql)
             results = cursor.fetchall()
 
-            # Crear objetos Ganado
+            # Crear objetos Ganado desde resultados de BD
             ganados = []
             for result in results:
                 result_copy = result.copy()

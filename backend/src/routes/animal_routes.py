@@ -3,9 +3,13 @@ from src.services.potrero_service import PotreroService
 from src.services.animal_service import GanadoService
 from src.models.animal import Ganado
 import os
+
+# Constantes para mensajes de error
 ERROR_INTERNO_SERVIDOR = 'Error interno del servidor'
 DATOS_INVALIDOS = 'Datos inválidos'
 ANIMAL_NO_ENCONTRADO = 'Animal no encontrado'
+
+# Estados por defecto para fallback
 ESTADOS_DEFAULT = [
     {'id': 1, 'estado': 'activo', 'nombre_estado': 'activo'},
     {'id': 2, 'estado': 'saludable', 'nombre_estado': 'saludable'},
@@ -13,6 +17,11 @@ ESTADOS_DEFAULT = [
     {'id': 4, 'estado': 'enfermo', 'nombre_estado': 'enfermo'},
     {'id': 5, 'estado': 'vendido', 'nombre_estado': 'vendido'}
 ]
+
+# Parámetros de query string
+PARAM_SOLO_ACTIVOS = 'solo_activos'
+PARAM_SOLO_BAJAS = 'solo_bajas'
+VALOR_TRUE = 'true'
 
 try:
     from ...app import emit_update
@@ -24,13 +33,17 @@ animal_bp = Blueprint('animal', __name__, url_prefix='/api/animales')
 
 @animal_bp.route('/estados-ganado', methods=['GET'])
 def get_estados_ganado():
-    """Obtener los estados posibles del ganado usando GanadoService."""
+    """
+    Obtener los estados posibles del ganado.
+
+    Query parameters:
+    - solo_activos: boolean - Si es true, retorna solo estados activos (1-3)
+    - solo_bajas: boolean - Si es true, retorna solo estados de baja (4-8)
+    """
     try:
-        solo_activos = request.args.get('solo_activos', 'false').lower() == 'true'
-        solo_bajas = request.args.get('solo_bajas', 'false').lower() == 'true'
-        print(f"[DEBUG] Route get_estados_ganado - solo_activos: {solo_activos}, solo_bajas: {solo_bajas}")
+        solo_activos = request.args.get(PARAM_SOLO_ACTIVOS, 'false').lower() == VALOR_TRUE
+        solo_bajas = request.args.get(PARAM_SOLO_BAJAS, 'false').lower() == VALOR_TRUE
         estados = GanadoService.obtener_estados_ganado(solo_activos=solo_activos, solo_bajas=solo_bajas)
-        print(f"[DEBUG] Estados retornados por servicio: {len(estados) if estados else 0}")
         # Si no hay conexión a BD, retornar estados por defecto
         if not estados:
             estados = ESTADOS_DEFAULT

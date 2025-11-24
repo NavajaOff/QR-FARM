@@ -37,6 +37,16 @@ class Ganado:
         self.updated_at = kwargs.get('updated_at')
 
     @staticmethod
+    def es_estado_baja(id_estado: Optional[int]) -> bool:
+        """Determina si un id_estado representa un estado de baja."""
+        return id_estado is not None and id_estado >= 4
+
+    @staticmethod
+    def es_estado_activo(id_estado: Optional[int]) -> bool:
+        """Determina si un id_estado representa un estado activo."""
+        return id_estado is None or id_estado < 4
+
+    @staticmethod
     def from_dict(data: Dict[str, Any]) -> 'Ganado':
         """
         Crea una instancia de Ganado desde un diccionario
