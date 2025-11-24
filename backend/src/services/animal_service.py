@@ -103,7 +103,7 @@ class GanadoService:
             cursor.execute(query, (animal_id,))
             rows = cursor.fetchall()
         except Exception as exc:  # pylint: disable=broad-except
-            print(f"Error obteniendo vacunas para el animal {animal_id}: {exc}")
+            pass
         finally:
             cursor.close()
 
@@ -121,7 +121,6 @@ class GanadoService:
 
     @staticmethod
     def crear_ganado(ganado: Ganado) -> Optional[Ganado]:
-        print(f"[DEBUG] Intentando crear ganado: {ganado.nombre}, raza: {ganado.raza}, estado: {ganado.estado}")
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
@@ -162,16 +161,14 @@ class GanadoService:
             conn.commit()
 
             ganado.id = cursor.lastrowid
-            print(f"[DEBUG] Ganado creado exitosamente con ID: {ganado.id}")
             if ganado.id_potrero:
                 try:
                     PotreroService.sincronizar_ocupacion(ganado.id_potrero)
                 except Exception as sync_error:
-                    print(f"Advertencia al sincronizar ocupación del potrero {ganado.id_potrero} tras crear ganado: {sync_error}")
+                    pass
             return ganado
 
         except Exception as e:
-            print(f"Error al crear animal: {e}")
             return None
         finally:
             if 'conn' in locals():
@@ -207,8 +204,6 @@ class GanadoService:
 
         except Exception as e:
             print(f"Error al obtener ganado {id}: {e}")
-            import traceback
-            traceback.print_exc()
             return None
         finally:
             if 'conn' in locals() and conn is not None:
@@ -218,18 +213,13 @@ class GanadoService:
                     pass
 
     @staticmethod
-    def obtener_todos_ganados(incluir_bajas: bool = True) -> List[Ganado]:
-        """Obtiene todos los animales siempre, para simplificar la vista."""
+    def obtener_todos_ganados(incluir_bajas: bool = False) -> List[Ganado]:
+        """Obtiene todos los animales, incluyendo dados de baja si se solicita."""
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
-            # Log para verificar total de registros en ganado
-            cursor.execute("SELECT COUNT(*) as total FROM ganado")
-            total_count = cursor.fetchone().get('total', 0)
-            print(f"[DEBUG] Total de registros en tabla ganado: {total_count}")
-
-            # Consulta simplificada: siempre devolver todos los animales
+            # Consulta: todos los animales
             sql = """
                 SELECT g.*,
                        eg.tipo_estado as estado_tipo,
@@ -246,17 +236,12 @@ class GanadoService:
                 ORDER BY g.id DESC LIMIT 50
             """
 
-            print(f"[DEBUG] Consulta SQL simplificada (siempre incluye todos): {sql}")
             cursor.execute(sql)
             results = cursor.fetchall()
-            print(f"[DEBUG] Animales encontrados: {len(results)}")
-            if results:
-                print(f"[DEBUG] Primeros 3 animales - id_estado: {[r.get('id_estado') for r in results[:3]]}")
 
-            # Crear objetos Ganado con el estado_tipo incluido
+            # Crear objetos Ganado
             ganados = []
             for result in results:
-                # Agregar estado_tipo al diccionario antes de crear el objeto
                 result_copy = result.copy()
                 result_copy['estado_tipo'] = result.get('estado_tipo')
                 ganado = Ganado.from_dict(result_copy)
@@ -266,8 +251,6 @@ class GanadoService:
 
         except Exception as e:
             print(f"Error al obtener animales: {e}")
-            import traceback
-            traceback.print_exc()
             return []
         finally:
             if 'conn' in locals() and conn is not None:
@@ -305,7 +288,6 @@ class GanadoService:
             conn_temp.close()
             return result[0] if result else None
         except Exception as e:
-            print(f"Error obteniendo ID de estado: {e}")
             return None
 
     @staticmethod
@@ -327,7 +309,7 @@ class GanadoService:
             if qr_path.exists():
                 qr_path.unlink()
         except OSError as error:
-            print(f"Advertencia al eliminar archivo QR {codigo_qr}: {error}")
+            pass
 
     @staticmethod
     def _obtener_potrero_anterior(id: int) -> Optional[int]:
@@ -335,7 +317,6 @@ class GanadoService:
             registro_actual = GanadoService.obtener_ganado(id)
             return registro_actual.id_potrero if registro_actual else None
         except Exception as consulta_error:
-            print(f"Advertencia: no se pudo obtener potrero actual del ganado {id}: {consulta_error}")
             return None
 
     @staticmethod
@@ -351,12 +332,12 @@ class GanadoService:
             try:
                 PotreroService.sincronizar_ocupacion(potrero_anterior_id)
             except Exception as sync_error:
-                print(f"Advertencia al sincronizar potrero {potrero_anterior_id}: {sync_error}")
+                pass
         if nuevo_potrero_id:
             try:
                 PotreroService.sincronizar_ocupacion(nuevo_potrero_id)
             except Exception as sync_error:
-                print(f"Advertencia al sincronizar potrero {nuevo_potrero_id}: {sync_error}")
+                pass
 
     @staticmethod
     def _actualizar_ganado_en_db(id: int, ganado: Ganado) -> bool:
@@ -401,7 +382,6 @@ class GanadoService:
             GanadoService._sincronizar_potreros_despues_actualizacion(actualizado, nuevo_potrero_id, potrero_anterior_id)
             return actualizado
         except Exception as e:
-            print(f"Error al actualizar animal: {e}")
             return False
 
     @staticmethod
@@ -419,7 +399,6 @@ class GanadoService:
     @staticmethod
     def dar_baja_ganado(id: int, causa_baja: str, observaciones: Optional[str] = None) -> Union[bool, str]:
         """Da de baja lógica a un animal cambiando su id_estado."""
-        print(f"[DEBUG] Intentando dar de baja animal {id} con causa: {causa_baja}")
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
@@ -434,7 +413,6 @@ class GanadoService:
                 return "Animal no encontrado"
 
             id_estado_actual = animal.get('id_estado')
-            print(f"[DEBUG] Estado actual del animal {id}: {id_estado_actual}")
 
             # Verificar si ya está dado de baja (id_estado >= 4)
             if id_estado_actual and id_estado_actual >= 4:
@@ -447,7 +425,6 @@ class GanadoService:
 
             # Obtener el id_estado correspondiente a la causa de baja
             nuevo_id_estado = GanadoService._obtener_id_estado_por_causa(causa_baja)
-            print(f"[DEBUG] Nuevo id_estado para causa '{causa_baja}': {nuevo_id_estado}")
 
             # Actualizar id_estado a uno de baja y liberar potrero
             sql = """
@@ -458,23 +435,19 @@ class GanadoService:
             """
             cursor.execute(sql, (nuevo_id_estado, id))
             conn.commit()
-            print(f"[DEBUG] Animal {id} dado de baja exitosamente con id_estado: {nuevo_id_estado}")
 
             # Sincronizar ocupación del potrero si tenía uno
             if potrero_id:
                 try:
                     PotreroService.sincronizar_ocupacion(potrero_id)
                 except Exception as sync_error:
-                    print(f"Advertencia al sincronizar potrero {potrero_id}: {sync_error}")
+                    pass
 
             cursor.close()
             conn.close()
             return True
 
         except Exception as e:
-            print(f"Error al dar de baja el animal: {e}")
-            import traceback
-            traceback.print_exc()
             return False
         finally:
             if 'conn' in locals():
@@ -529,9 +502,6 @@ class GanadoService:
             return True
             
         except Exception as e:
-            print(f"Error al reactivar el animal: {e}")
-            import traceback
-            traceback.print_exc()
             return False
         finally:
             if 'conn' in locals():
@@ -565,7 +535,6 @@ class GanadoService:
             return [Ganado.from_dict(result) for result in results]
 
         except Exception as e:
-            print(f"Error al buscar ganados por potrero: {e}")
             return []
         finally:
             if 'conn' in locals():
@@ -586,7 +555,6 @@ class GanadoService:
             return None
 
         except Exception as e:
-            print(f"Error al buscar ganado por código QR: {e}")
             return None
         finally:
             if 'conn' in locals():
@@ -702,7 +670,6 @@ class GanadoService:
             }
             return detalle
         except Exception as ex:  # pylint: disable=broad-except
-            print(f"Error en obtener_ganado_detallado: {ex}")
             return None
         finally:
             try:
@@ -721,7 +688,6 @@ class GanadoService:
         try:
             conn = get_connection()
             if conn is None:
-                print("Advertencia: Base de datos no disponible, retornando lista vacía")
                 return []
             cursor = conn.cursor(dictionary=True)
 
@@ -743,12 +709,9 @@ class GanadoService:
                     'nombre_estado': result['tipo_estado']
                 })
 
-            print(f"Estados de ganado obtenidos: {estados_transformados}")
             return estados_transformados
 
         except Exception as e:
-            print(f"Error al obtener estados de ganado: {e}")
-            # Retornar lista vacía si hay error
             return []
         finally:
             if 'conn' in locals() and conn is not None:
