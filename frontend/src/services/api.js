@@ -66,5 +66,12 @@ export const reportAPI = {
   downloadSummaryPdf: () => api.get('/reportes/resumen/pdf', { responseType: 'blob' }),
 };
 
+export const tenantAPI = {
+  getAll: (activosOnly = true) => api.get(`/tenants?activos_only=${activosOnly}`),
+  getById: (id) => api.get(`/tenants/${id}`),
+  create: (data) => api.post('/tenants', data),
+  update: (id, data) => api.put(`/tenants/${id}`, data),
+};
+
 // Exportar instancia por defecto para uso general
 export default api;

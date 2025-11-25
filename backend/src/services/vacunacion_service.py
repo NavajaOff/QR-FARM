@@ -2,8 +2,16 @@
 from typing import List, Optional
 from src.database.db import get_connection
 from src.models.vacunacion import Vacunacion
+from src.utils.tenant import get_current_tenant_id
 
 class VacunacionService:
+    @staticmethod
+    def _obtener_tenant_id() -> Optional[int]:
+        """Obtiene el tenant_id del contexto actual."""
+        try:
+            return get_current_tenant_id()
+        except Exception:
+            return None
     @staticmethod
     def obtener_todas_vacunaciones() -> List[Vacunacion]:
         """Obtener todas las vacunaciones con información relacionada"""
@@ -11,6 +19,8 @@ class VacunacionService:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
+            tenant_id = VacunacionService._obtener_tenant_id()
+            
             query = """
                 SELECT
                     v.id,
@@ -27,10 +37,16 @@ class VacunacionService:
                 LEFT JOIN ganado g ON v.id_animal = g.id
                 LEFT JOIN personas p ON v.responsable = p.id
                 LEFT JOIN tipo_vacuna tv ON v.id_tipo_vacuna = tv.id
-                ORDER BY v.id DESC
             """
+            
+            params = ()
+            if tenant_id is not None:
+                query += " WHERE v.tenant_id = %s"
+                params = (tenant_id,)
+            
+            query += " ORDER BY v.id DESC"
 
-            cursor.execute(query)
+            cursor.execute(query, params)
             rows = cursor.fetchall()
 
             vacunaciones = []
@@ -57,6 +73,8 @@ class VacunacionService:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
+            tenant_id = VacunacionService._obtener_tenant_id()
+            
             query = """
                 SELECT
                     v.id,
@@ -75,9 +93,14 @@ class VacunacionService:
                 LEFT JOIN tipo_vacuna tv ON v.id_tipo_vacuna = tv.id
                 WHERE v.id = %s
             """
+            
+            params = (id,)
+            if tenant_id is not None:
+                query += " AND v.tenant_id = %s"
+                params = (id, tenant_id)
 
             print(f"Service: Ejecutando query para obtener vacunación: {query} con ID: {id}")
-            cursor.execute(query, (id,))
+            cursor.execute(query, params)
             row = cursor.fetchone()
             print(f"Service: Resultado de la query: {row}")
 
@@ -118,10 +141,14 @@ class VacunacionService:
             conn = get_connection()
             cursor = conn.cursor()
 
+            tenant_id = VacunacionService._obtener_tenant_id()
+            if tenant_id is None:
+                raise ValueError("Tenant requerido para crear vacunación")
+
             query = """
                 INSERT INTO vacunacion (
-                    id_animal, fecha_aplicacion, proxima_dosis, responsable, estado, id_tipo_vacuna
-                ) VALUES (%s, %s, %s, %s, %s, %s)
+                    id_animal, fecha_aplicacion, proxima_dosis, responsable, estado, id_tipo_vacuna, tenant_id
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
             """
 
             values = (
@@ -130,7 +157,8 @@ class VacunacionService:
                 proxima_dosis,
                 vacunacion.responsable,
                 vacunacion.estado.value if hasattr(vacunacion.estado, 'value') else str(vacunacion.estado),
-                vacunacion.id_tipo_vacuna
+                vacunacion.id_tipo_vacuna,
+                tenant_id
             )
 
             print(f"Service: Ejecutando query: {query}")
@@ -159,6 +187,8 @@ class VacunacionService:
             conn = get_connection()
             cursor = conn.cursor()
 
+            tenant_id = VacunacionService._obtener_tenant_id()
+            
             query = """
                 UPDATE vacunacion SET
                     id_animal = %s,
@@ -169,8 +199,8 @@ class VacunacionService:
                     id_tipo_vacuna = %s
                 WHERE id = %s
             """
-
-            values = (
+            
+            values_list = [
                 vacunacion.id_animal,
                 vacunacion.fecha_aplicacion,
                 vacunacion.proxima_dosis,
@@ -178,7 +208,13 @@ class VacunacionService:
                 vacunacion.estado.value if hasattr(vacunacion.estado, 'value') else str(vacunacion.estado),
                 vacunacion.id_tipo_vacuna,
                 id
-            )
+            ]
+            
+            if tenant_id is not None:
+                query += " AND tenant_id = %s"
+                values_list.append(tenant_id)
+            
+            values = tuple(values_list)
 
             cursor.execute(query, values)
             conn.commit()
@@ -203,9 +239,16 @@ class VacunacionService:
             cursor = conn.cursor()
             print(f"Service: Conexión a BD obtenida")
 
+            tenant_id = VacunacionService._obtener_tenant_id()
+            
             query = "DELETE FROM vacunacion WHERE id = %s"
+            params = (id,)
+            if tenant_id is not None:
+                query += " AND tenant_id = %s"
+                params = (id, tenant_id)
+            
             print(f"Service: Ejecutando query: {query} con ID: {id}")
-            cursor.execute(query, (id,))
+            cursor.execute(query, params)
             conn.commit()
             print(f"Service: Query ejecutada, rowcount: {cursor.rowcount}")
 

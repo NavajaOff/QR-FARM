@@ -3,10 +3,19 @@ from typing import List, Optional, Dict, Any
 from mysql.connector import Error
 from src.database.db import db, get_connection
 from datetime import datetime
+from src.utils.tenant import get_current_tenant_id
 
 class PotreroService:
     """Service class for handling Potrero business logic."""
     NO_DEFINIDO = 'NO_DEFINIDO'
+
+    @staticmethod
+    def _obtener_tenant_id() -> Optional[int]:
+        """Obtiene el tenant_id del contexto actual."""
+        try:
+            return get_current_tenant_id()
+        except Exception:
+            return None
 
     @staticmethod
     def _procesar_potrero(potrero: Dict[str, Any]) -> None:
@@ -40,11 +49,20 @@ class PotreroService:
                 print("Advertencia: Base de datos no disponible, retornando lista vacía")
                 return []
             cursor = conn.cursor(dictionary=True)
-            cursor.execute("""
+            tenant_id = PotreroService._obtener_tenant_id()
+            
+            sql = """
                 SELECT p.*
                 FROM potrero p
-                ORDER BY p.id DESC
-            """)
+            """
+            params = ()
+            if tenant_id is not None:
+                sql += " WHERE p.tenant_id = %s"
+                params = (tenant_id,)
+            
+            sql += " ORDER BY p.id DESC"
+            
+            cursor.execute(sql, params)
             potreros = cursor.fetchall()
 
             # Procesar cada potrero
@@ -101,7 +119,14 @@ class PotreroService:
     def _generar_nombre_potrero() -> str:
         """Genera un nombre automático para el potrero."""
         with db.get_cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) FROM potrero")
+            tenant_id = PotreroService._obtener_tenant_id()
+            sql = "SELECT COUNT(*) FROM potrero"
+            params = ()
+            if tenant_id is not None:
+                sql += " WHERE tenant_id = %s"
+                params = (tenant_id,)
+            
+            cursor.execute(sql, params)
             result = cursor.fetchone()
             numero = result['COUNT(*)'] + 1
             return f"Potrero {numero}"
@@ -137,15 +162,23 @@ class PotreroService:
         try:
             cursor = conn.cursor(dictionary=True)
 
+            tenant_id = PotreroService._obtener_tenant_id()
+            if tenant_id is None:
+                raise ValueError("Tenant requerido para crear potrero")
+
             sql = """
                 INSERT INTO potrero (
                     id_tipo_pasto, nombre, capacidad, hectareas, ocupacion,
                     fecha_ultimo_uso, responsable_persona_id, proxima_limpieza,
-                    area, ultima_limpieza, descripcion, estado
+                    area, ultima_limpieza, descripcion, estado, tenant_id
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
             """
+            
+            values_list = list(values)
+            values_list.append(tenant_id)
+            values = tuple(values_list)
 
             cursor.execute(sql, values)
             potrero_id = cursor.lastrowid
@@ -175,9 +208,14 @@ class PotreroService:
     def _obtener_potrero_completo(potrero_id: int) -> Dict[str, Any]:
         """Obtiene el potrero completo con información adicional."""
         with db.get_cursor() as select_cursor:
-            select_cursor.execute("""
-                SELECT p.* FROM potrero p WHERE p.id = %s
-            """, (potrero_id,))
+            tenant_id = PotreroService._obtener_tenant_id()
+            sql = "SELECT p.* FROM potrero p WHERE p.id = %s"
+            params = (potrero_id,)
+            if tenant_id is not None:
+                sql += " AND p.tenant_id = %s"
+                params = (potrero_id, tenant_id)
+            
+            select_cursor.execute(sql, params)
             result = select_cursor.fetchone()
 
             if not result:
@@ -281,23 +319,35 @@ class PotreroService:
         print(f"Valores: {values[:-1]}")  # No mostrar el ID al final
 
         with db.get_cursor() as cursor:
+            tenant_id = PotreroService._obtener_tenant_id()
             sql = f"""
                 UPDATE potrero
                 SET {', '.join(update_fields)}
                 WHERE id = %s
             """
-            cursor.execute(sql, values)
+            params = tuple(values)
+            if tenant_id is not None:
+                sql += " AND tenant_id = %s"
+                params = tuple(list(values) + [tenant_id])
+            
+            cursor.execute(sql, params)
             print(f"SQL ejecutado: {sql}")
             print(f"Filas afectadas: {cursor.rowcount}")
 
             # Obtener el registro actualizado
-            cursor.execute("""
+            sql = """
                 SELECT p.*,
                        CONCAT(per.primer_nombre, ' ', COALESCE(per.segundo_nombre, ''), ' ', per.primer_apellido, ' ', COALESCE(per.segundo_apellido, '')) as responsable
                 FROM potrero p
                 LEFT JOIN personas per ON p.responsable_persona_id = per.id
                 WHERE p.id = %s
-            """, (potrero_id,))
+            """
+            params = (potrero_id,)
+            if tenant_id is not None:
+                sql += " AND p.tenant_id = %s"
+                params = (potrero_id, tenant_id)
+            
+            cursor.execute(sql, params)
 
             result = cursor.fetchone()
             if not result:
@@ -468,26 +518,19 @@ class PotreroService:
     @staticmethod
     def get_tipos_pasto() -> List[Dict[str, Any]]:
         """Get all tipos de pasto."""
-        conn = None
-        cursor = None
         try:
-            conn = get_connection()
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute("""
-                SELECT id, tipo_pasto FROM tipo_pasto
-                ORDER BY tipo_pasto
-            """)
-            results = cursor.fetchall()
-            # Los resultados ya son diccionarios
-            return results
+            with db.get_cursor() as cursor:
+                cursor.execute("""
+                    SELECT id, tipo_pasto FROM tipo_pasto
+                    ORDER BY tipo_pasto
+                """)
+                results = cursor.fetchall()
+                return results if results else []
         except Exception as e:
             print(f"Error obteniendo tipos de pasto: {e}")
+            import traceback
+            traceback.print_exc()
             return []
-        finally:
-            if cursor:
-                cursor.close()
-            if conn and conn.is_connected():
-                conn.close()
 
     @staticmethod
     def get_personas_usuario() -> List[Dict[str, Any]]:
@@ -523,11 +566,28 @@ class PotreroService:
             return []
 
     @staticmethod
+    def _convertir_enum_str_a_string(enum_value: Any) -> str:
+        """Convierte valor enum a string manejando bytearray."""
+        if isinstance(enum_value, (bytes, bytearray)):
+            return enum_value.decode('utf-8')
+        if isinstance(enum_value, str):
+            return enum_value
+        return str(enum_value)
+
+    @staticmethod
+    def _parsear_valores_enum(enum_str: str) -> List[Dict[str, Any]]:
+        """Parsea string enum y retorna lista de diccionarios."""
+        if '(' not in enum_str or ')' not in enum_str:
+            return []
+        values_str = enum_str.split('(')[1].split(')')[0]
+        valores = [v.strip("'\"") for v in values_str.split(',')]
+        return [{'id': i+1, 'estado': valor, 'nombre_estado': valor} for i, valor in enumerate(valores)]
+
+    @staticmethod
     def get_estados_potrero() -> List[Dict[str, Any]]:
         """Get all estados de potrero desde el enum de la columna estado."""
         try:
             with db.get_cursor() as cursor:
-                # Obtener los valores del enum de la columna estado
                 cursor.execute("""
                     SELECT COLUMN_TYPE
                     FROM INFORMATION_SCHEMA.COLUMNS
@@ -536,24 +596,14 @@ class PotreroService:
                     AND COLUMN_NAME = 'estado'
                 """)
                 result = cursor.fetchone()
-
-                if result and result['COLUMN_TYPE']:
-                    # Extraer valores del enum, ej: enum('disponible','ocupado','limpieza')
-                    enum_str = result['COLUMN_TYPE']
-
-                    # Extraer valores entre paréntesis
-                    if '(' in enum_str and ')' in enum_str:
-                        values_str = enum_str.split('(')[1].split(')')[0]
-                        # Separar por comas y quitar comillas
-                        valores = [v.strip("'\"") for v in values_str.split(',')]
-
-                        # Retornar como lista de diccionarios con campos compatibles con frontend
-                        return [{'id': i+1, 'estado': valor, 'nombre_estado': valor} for i, valor in enumerate(valores)]
-
-                # Retornar lista vacía si no se puede obtener del enum
+                if result and result.get('COLUMN_TYPE'):
+                    enum_str = PotreroService._convertir_enum_str_a_string(result['COLUMN_TYPE'])
+                    return PotreroService._parsear_valores_enum(enum_str)
                 return []
         except Exception as e:
             print(f"Error obteniendo estados del enum: {e}")
+            import traceback
+            traceback.print_exc()
             return []
 
     # Método get_estados_ganado eliminado porque pertenece a GanadoService

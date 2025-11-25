@@ -126,69 +126,9 @@ class ConexionBaseDatos:
 def init_db():
     """Inicializar la base de datos."""
     db = ConexionBaseDatos()
-    # Crear usuario admin por defecto si no existe
-    crear_usuario_admin_por_defecto()
+    # Nota: El super_admin se crea automáticamente desde variables de entorno
+    # en app.py mediante inicializar_super_admin()
     return db
-
-def crear_usuario_admin_por_defecto():
-    """Crear usuario administrador por defecto si no existe."""
-    admin_email = _require_env('ADMIN_EMAIL')
-    admin_password = _require_env('ADMIN_PASSWORD')
-    db_name = _require_env('DB_NAME')
-    try:
-        conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
-
-        # Usar la base de datos gestion_ganadera
-        cursor.execute(f"USE `{db_name}`")
-
-        # Verificar si ya existe el usuario admin
-        cursor.execute(
-            'SELECT COUNT(*) as count FROM usuarios u JOIN personas p ON u.id_persona = p.id WHERE p.email = %s',
-            (admin_email,)
-        )
-        result = cursor.fetchone()
-
-        if result['count'] == 0:
-            # Verificar si existe el rol admin
-            cursor.execute('SELECT id FROM roles WHERE rol = %s', ('admin',))
-            rol_result = cursor.fetchone()
-
-            if not rol_result:
-                # Crear rol admin
-                cursor.execute('INSERT INTO roles (rol, descripcion) VALUES (%s, %s)', ('admin', 'Administrador del sistema'))
-                rol_id = cursor.lastrowid
-            else:
-                rol_id = rol_result['id']
-
-            # Crear persona admin
-            cursor.execute('''INSERT INTO personas (id_rol, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido, email, telefono, fecha_creacion)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())''',
-                         (rol_id, 'Admin', 'Sistema', 'QR', 'Farm', admin_email, '1234567890'))
-
-            persona_id = cursor.lastrowid
-
-            # Crear usuario admin
-            cursor.execute('''INSERT INTO usuarios (id_persona, id_rol, contrasena, estado)
-                            VALUES (%s, %s, %s, %s)''',
-                         (persona_id, rol_id, bcrypt.hash(admin_password), 'activo'))
-
-            conn.commit()
-
-            registrador.info("Usuario administrador creado exitosamente")
-            registrador.info("Email: %s", admin_email)
-            registrador.info("Contraseña establecida desde variables de entorno")
-        else:
-            registrador.info("Usuario administrador ya existe")
-
-    except Exception as e:
-        registrador.error(f"Error al crear usuario administrador por defecto: {e}")
-        raise
-    finally:
-        if 'cursor' in locals() and cursor:
-            cursor.close()
-        if 'conn' in locals() and conn:
-            conn.close()
 
 # ✅ FUNCIÓN ACTUALIZADA
 def get_connection():

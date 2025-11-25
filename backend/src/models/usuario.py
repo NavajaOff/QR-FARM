@@ -121,7 +121,8 @@ class Usuario:
                  contrasena: Optional[str] = None,
                  estado: EstadoUsuario = EstadoUsuario.ACTIVO,
                  persona: Optional[Persona] = None,
-                 rol: Optional[Rol] = None):
+                 rol: Optional[Rol] = None,
+                 tenant_id: Optional[int] = None):
 
         self.id = id
         self.id_persona = id_persona
@@ -130,6 +131,7 @@ class Usuario:
         self.estado = estado
         self.persona = persona
         self.rol = rol
+        self.tenant_id = tenant_id
 
         # Alias para compatibilidad
         self.password_hash = self.contrasena
@@ -166,7 +168,8 @@ class Usuario:
             id_persona=data.get('id_persona'),
             id_rol=data.get('id_rol'),
             contrasena=data.get('contrasena'),
-            estado=EstadoUsuario(data.get('estado', 'activo'))
+            estado=EstadoUsuario(data.get('estado', 'activo')),
+            tenant_id=data.get('tenant_id')
         )
 
         if include_persona and 'persona' in data and data['persona']:
@@ -206,7 +209,8 @@ class Usuario:
             'id': self.id,
             'id_persona': self.id_persona,
             'id_rol': self.id_rol,
-            'estado': self.estado.value
+            'estado': self.estado.value,
+            'tenant_id': self.tenant_id
         }
 
         if include_persona and self.persona:

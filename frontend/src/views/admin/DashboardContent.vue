@@ -4,6 +4,33 @@
       <div class="col-12">
         <h2 class="mb-4">Panel de Administración</h2>
 
+        <!-- Información de Rol y Tenant -->
+        <div class="row g-4 mb-4" v-if="isSuperAdmin || currentTenant">
+          <div class="col-12">
+            <div class="card border-info">
+              <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                  <div>
+                    <h5 class="mb-1">
+                      <i class="fas me-2" :class="isSuperAdmin ? 'fa-user-crown text-warning' : 'fa-building text-primary'"></i>
+                      {{ isSuperAdmin ? 'Super Administrador Global' : 'Tenant: ' + (currentTenant?.nombre || 'N/A') }}
+                    </h5>
+                    <p class="text-muted mb-0" v-if="!isSuperAdmin && currentTenant">
+                      <code>{{ currentTenant.codigo_tenant }}</code>
+                    </p>
+                    <p class="text-muted mb-0" v-if="isSuperAdmin">
+                      Acceso completo a todos los tenants y datos del sistema
+                    </p>
+                  </div>
+                  <router-link v-if="isSuperAdmin" class="btn btn-primary" to="/admin/gestionar-tenants">
+                    <i class="fas fa-building me-2"></i>Gestionar Tenants
+                  </router-link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Estadísticas -->
         <div class="row g-4 mb-4">
           <div class="col-md-3">

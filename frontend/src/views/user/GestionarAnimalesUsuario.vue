@@ -100,7 +100,9 @@
 </template>
 
 <script setup>
-import {
+import { useGestionarAnimalesUsuario } from '../../assets/js/gestionar-animales-usuario.js'
+
+const {
   busqueda,
   filtroRaza,
   filtroEstado,
@@ -115,7 +117,7 @@ import {
   estadoClass,
   verPerfilAnimal,
   editarAnimal
-} from '../../assets/js/gestionar-animales-usuario.js'
+} = useGestionarAnimalesUsuario()
 </script>
 
 <style scoped>
