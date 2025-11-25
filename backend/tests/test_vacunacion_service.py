@@ -101,13 +101,15 @@ class TestVacunacionService:
         assert result is None
 
     @patch('src.services.vacunacion_service.get_connection')
-    def test_crear_vacunacion_success(self, mock_get_connection):
+    @patch('src.services.vacunacion_service.get_current_tenant_id')
+    def test_crear_vacunacion_success(self, mock_get_tenant_id, mock_get_connection):
         """Test crear_vacunacion exitoso."""
         mock_conn = Mock()
         mock_cursor = Mock()
         mock_get_connection.return_value = mock_conn
         mock_conn.cursor.return_value = mock_cursor
         mock_conn.is_connected.return_value = True
+        mock_get_tenant_id.return_value = 1  # Mock tenant_id
 
         fecha_aplicacion = datetime(2024, 1, 1)
         vacunacion = Vacunacion(
@@ -125,13 +127,15 @@ class TestVacunacionService:
         mock_conn.commit.assert_called_once()
 
     @patch('src.services.vacunacion_service.get_connection')
-    def test_crear_vacunacion_with_string_date(self, mock_get_connection):
+    @patch('src.services.vacunacion_service.get_current_tenant_id')
+    def test_crear_vacunacion_with_string_date(self, mock_get_tenant_id, mock_get_connection):
         """Test crear_vacunacion con fecha como string."""
         mock_conn = Mock()
         mock_cursor = Mock()
         mock_get_connection.return_value = mock_conn
         mock_conn.cursor.return_value = mock_cursor
         mock_conn.is_connected.return_value = True
+        mock_get_tenant_id.return_value = 1  # Mock tenant_id
 
         vacunacion = Vacunacion(
             id_animal=1,

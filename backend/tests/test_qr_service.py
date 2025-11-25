@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch, MagicMock
 import os
 import json
 from datetime import datetime, timezone
+from flask import Flask
 
 from src.services.qr_service import QRService
 from src.services.animal_service import GanadoService
@@ -126,16 +127,20 @@ class TestQRService:
             mock_img.save.assert_called_once()
 
     @patch('src.services.qr_service.get_connection')
+    @patch('src.services.qr_service.get_current_tenant_id')
     @patch.object(GanadoService, 'obtener_ganado_detallado')
-    def test_crear_qr_ganado_success(self, mock_obtener_detalle, mock_get_connection):
+    def test_crear_qr_ganado_success(self, mock_obtener_detalle, mock_get_tenant_id, mock_get_connection):
         """Test crear_qr_ganado exitoso."""
+        app = Flask(__name__)
         mock_conn = Mock()
         mock_cursor = Mock(dictionary=True)
         mock_get_connection.return_value = mock_conn
         mock_conn.cursor.return_value = mock_cursor
+        mock_get_tenant_id.return_value = 1  # Mock tenant_id
 
         mock_cursor.fetchone.return_value = {
             'nombre': 'Test Animal',
+            'tenant_id': 1,
             'primer_nombre': 'John',
             'segundo_nombre': None,
             'primer_apellido': 'Doe',
@@ -148,12 +153,13 @@ class TestQRService:
             'potrero': {'nombre': 'Potrero 1'}
         }
 
-        with patch.object(QRService, 'generar_codigo_qr', return_value='QR_1_Test'):
-            result = QRService.crear_qr_ganado(id_ganado=1)
+        with app.app_context():
+            with patch.object(QRService, 'generar_codigo_qr', return_value='QR_1_Test'):
+                result = QRService.crear_qr_ganado(id_ganado=1)
 
-            assert result is True
-            mock_cursor.execute.assert_called()
-            mock_conn.commit.assert_called_once()
+                assert result is True
+                mock_cursor.execute.assert_called()
+                mock_conn.commit.assert_called_once()
 
     @patch('src.services.qr_service.get_connection')
     def test_crear_qr_ganado_not_found(self, mock_get_connection):
@@ -179,12 +185,15 @@ class TestQRService:
         assert result is False
 
     @patch('src.services.qr_service.get_connection')
-    def test_obtener_qr_por_ganado_success(self, mock_get_connection):
+    @patch('src.services.qr_service.get_current_tenant_id')
+    def test_obtener_qr_por_ganado_success(self, mock_get_tenant_id, mock_get_connection):
         """Test obtener_qr_por_ganado exitoso."""
+        app = Flask(__name__)
         mock_conn = Mock()
         mock_cursor = Mock(dictionary=True)
         mock_get_connection.return_value = mock_conn
         mock_conn.cursor.return_value = mock_cursor
+        mock_get_tenant_id.return_value = 1  # Mock tenant_id
 
         expected_result = {
             'id': 1,
@@ -194,10 +203,11 @@ class TestQRService:
         }
         mock_cursor.fetchone.return_value = expected_result
 
-        result = QRService.obtener_qr_por_ganado(id_ganado=1)
+        with app.app_context():
+            result = QRService.obtener_qr_por_ganado(id_ganado=1)
 
-        assert result == expected_result
-        mock_cursor.execute.assert_called_once()
+            assert result == expected_result
+            mock_cursor.execute.assert_called_once()
 
     @patch('src.services.qr_service.get_connection')
     def test_obtener_qr_por_ganado_not_found(self, mock_get_connection):
