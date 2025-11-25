@@ -468,26 +468,19 @@ class PotreroService:
     @staticmethod
     def get_tipos_pasto() -> List[Dict[str, Any]]:
         """Get all tipos de pasto."""
-        conn = None
-        cursor = None
         try:
-            conn = get_connection()
-            cursor = conn.cursor(dictionary=True)
-            cursor.execute("""
-                SELECT id, tipo_pasto FROM tipo_pasto
-                ORDER BY tipo_pasto
-            """)
-            results = cursor.fetchall()
-            # Los resultados ya son diccionarios
-            return results
+            with db.get_cursor() as cursor:
+                cursor.execute("""
+                    SELECT id, tipo_pasto FROM tipo_pasto
+                    ORDER BY tipo_pasto
+                """)
+                results = cursor.fetchall()
+                return results if results else []
         except Exception as e:
             print(f"Error obteniendo tipos de pasto: {e}")
+            import traceback
+            traceback.print_exc()
             return []
-        finally:
-            if cursor:
-                cursor.close()
-            if conn and conn.is_connected():
-                conn.close()
 
     @staticmethod
     def get_personas_usuario() -> List[Dict[str, Any]]:
@@ -523,11 +516,28 @@ class PotreroService:
             return []
 
     @staticmethod
+    def _convertir_enum_str_a_string(enum_value: Any) -> str:
+        """Convierte valor enum a string manejando bytearray."""
+        if isinstance(enum_value, (bytes, bytearray)):
+            return enum_value.decode('utf-8')
+        if isinstance(enum_value, str):
+            return enum_value
+        return str(enum_value)
+
+    @staticmethod
+    def _parsear_valores_enum(enum_str: str) -> List[Dict[str, Any]]:
+        """Parsea string enum y retorna lista de diccionarios."""
+        if '(' not in enum_str or ')' not in enum_str:
+            return []
+        values_str = enum_str.split('(')[1].split(')')[0]
+        valores = [v.strip("'\"") for v in values_str.split(',')]
+        return [{'id': i+1, 'estado': valor, 'nombre_estado': valor} for i, valor in enumerate(valores)]
+
+    @staticmethod
     def get_estados_potrero() -> List[Dict[str, Any]]:
         """Get all estados de potrero desde el enum de la columna estado."""
         try:
             with db.get_cursor() as cursor:
-                # Obtener los valores del enum de la columna estado
                 cursor.execute("""
                     SELECT COLUMN_TYPE
                     FROM INFORMATION_SCHEMA.COLUMNS
@@ -536,24 +546,14 @@ class PotreroService:
                     AND COLUMN_NAME = 'estado'
                 """)
                 result = cursor.fetchone()
-
-                if result and result['COLUMN_TYPE']:
-                    # Extraer valores del enum, ej: enum('disponible','ocupado','limpieza')
-                    enum_str = result['COLUMN_TYPE']
-
-                    # Extraer valores entre paréntesis
-                    if '(' in enum_str and ')' in enum_str:
-                        values_str = enum_str.split('(')[1].split(')')[0]
-                        # Separar por comas y quitar comillas
-                        valores = [v.strip("'\"") for v in values_str.split(',')]
-
-                        # Retornar como lista de diccionarios con campos compatibles con frontend
-                        return [{'id': i+1, 'estado': valor, 'nombre_estado': valor} for i, valor in enumerate(valores)]
-
-                # Retornar lista vacía si no se puede obtener del enum
+                if result and result.get('COLUMN_TYPE'):
+                    enum_str = PotreroService._convertir_enum_str_a_string(result['COLUMN_TYPE'])
+                    return PotreroService._parsear_valores_enum(enum_str)
                 return []
         except Exception as e:
             print(f"Error obteniendo estados del enum: {e}")
+            import traceback
+            traceback.print_exc()
             return []
 
     # Método get_estados_ganado eliminado porque pertenece a GanadoService

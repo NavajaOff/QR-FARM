@@ -47,24 +47,16 @@ export function useReportes() {
   }
 
   const renovarToken = async () => {
-    try {
-      const email = sessionStorage.getItem('lastLoginEmail')
-      const password = sessionStorage.getItem('lastLoginPassword')
+    const email = sessionStorage.getItem('lastLoginEmail')
 
-      if (!email || !password) {
-        throw new Error('No hay credenciales almacenadas para renovar el token')
-      }
-
-      const result = await authService.login({ email, password })
-      if (result?.success) {
-        return
-      }
-
-      throw new Error(result?.message || 'No fue posible renovar el token')
-    } catch (error) {
-      console.warn('[useReportes] No se pudo renovar el token automáticamente:', error.message)
-      throw error
+    if (!email) {
+      const errorMessage = 'No hay credenciales almacenadas para renovar el token. Redirigiendo a login.'
+      console.warn('[useReportes]', errorMessage)
+      window.location.href = '/login'
+      throw new Error(errorMessage)
     }
+
+    throw new Error('Token expirado. Por favor, inicia sesión nuevamente.')
   }
 
   const descargarPdf = async () => {

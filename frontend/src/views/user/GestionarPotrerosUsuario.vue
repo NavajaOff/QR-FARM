@@ -112,7 +112,10 @@
 </template>
 
 <script setup>
-import {
+import { useGestionarPotrerosUsuario } from '../../assets/js/gestionar-potreros-usuario.js'
+
+const {
+  potreros,
   loading,
   error,
   cargarPotreros,
@@ -124,7 +127,7 @@ import {
   potrerosFiltrados,
   capitalizar,
   formatearFecha
-} from '../../assets/js/gestionar-potreros-usuario.js'
+} = useGestionarPotrerosUsuario()
 </script>
 
 <style scoped>

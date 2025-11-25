@@ -72,6 +72,13 @@ class AuthService {
     return role === 'user' || role === 'usuario';
   }
 
+  // Guardar email para renovación de token
+  saveCredentialsForRenewal(email) {
+    if (email && typeof email === 'string') {
+      sessionStorage.setItem('lastLoginEmail', email);
+    }
+  }
+
   // Iniciar sesión
   async login(credentials) {
     try {
@@ -89,6 +96,11 @@ class AuthService {
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(user));
         localStorage.setItem('userRole', payload.role);
+
+        // Guardar email para renovación de token
+        if (credentials.email) {
+          this.saveCredentialsForRenewal(credentials.email);
+        }
 
         // Actualizar estado interno
         this.token = token;
@@ -111,6 +123,7 @@ class AuthService {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('userRole');
+    sessionStorage.removeItem('lastLoginEmail');
 
     this.token = null;
     this.user = null;

@@ -163,27 +163,26 @@ const renderChart = async () => {
   })
 }
 
-// Ciclo de vida del componente
-onMounted(() => {
-  cargarResumen()
-})
-
-watch([resumen, loading], () => {
-  if (!loading.value && resumen.value) {
-    renderChart()
-  }
-})
-
-onUnmounted(() => {
-  if (chartInstance) {
-    chartInstance.destroy()
-    chartInstance = null
-  }
-})
-
 export default {
   name: "ReportesUsuario",
   setup() {
+    onMounted(() => {
+      cargarResumen()
+    })
+
+    watch([resumen, loading], () => {
+      if (!loading.value && resumen.value) {
+        renderChart()
+      }
+    })
+
+    onUnmounted(() => {
+      if (chartInstance) {
+        chartInstance.destroy()
+        chartInstance = null
+      }
+    })
+
     return {
       resumen,
       loading,

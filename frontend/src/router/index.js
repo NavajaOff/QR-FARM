@@ -141,6 +141,10 @@ const routes = [
         path: 'scan-qr',
         name: 'EscanearQRUsuario',
         component: () => import('../views/user/EscanearQRUsuario.vue')
+      },
+      {
+        path: 'qr',
+        redirect: { name: 'EscanearQRUsuario' }
       }
     ]
   },
