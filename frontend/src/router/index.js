@@ -43,6 +43,12 @@ const routes = [
         component: () => import('../views/admin/GestionarUsuarios.vue')
       },
       {
+        path: 'gestionar-tenants',
+        name: 'GestionarTenants',
+        component: () => import('../views/admin/GestionarTenants.vue'),
+        meta: { requiresAuth: true, role: 'super_admin' }
+      },
+      {
         path: 'gestionar-animales',
         name: 'GestionarAnimalesAdmin',
         component: () => import('../views/admin/GestionarAnimalesAdmin.vue')
@@ -160,11 +166,13 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token');
   const userRole = localStorage.getItem('userRole');
 
-  const isAdmin = userRole === 'admin' || userRole === 'administrador';
+  const isAdmin = userRole === 'admin' || userRole === 'administrador' || userRole === 'super_admin';
+  const isSuperAdmin = userRole === 'super_admin';
   const isUser = userRole === 'usuario' || userRole === 'user';
 
   function redirectByRole() {
-    if (isAdmin) return '/admin/dashboard';
+    // Super admin y admin van al dashboard de admin
+    if (isSuperAdmin || isAdmin) return '/admin/dashboard';
     if (isUser) return '/user/dashboard';
     return '/login';
   }
@@ -174,7 +182,29 @@ router.beforeEach((to, from, next) => {
   }
 
   function invalidRole() {
-    return to.meta.role && to.meta.role !== userRole;
+    // Si no hay rol requerido, permitir
+    if (!to.meta.role) return false;
+    
+    // Super admin puede acceder a todas las rutas protegidas (excepto usuario si no es usuario)
+    if (isSuperAdmin) {
+      // Super admin puede acceder a cualquier ruta excepto las específicas de usuario
+      if (to.meta.role === 'usuario' && !isUser) return true;
+      return false;
+    }
+    
+    // Si la ruta requiere super_admin y el usuario NO es super_admin, bloquear
+    if (to.meta.role === 'super_admin' && !isSuperAdmin) return true;
+    
+    // Si la ruta requiere admin y el usuario es admin o super_admin, permitir
+    if (to.meta.role === 'admin' && isAdmin) return false;
+    
+    // Si la ruta requiere usuario y el usuario es usuario, permitir
+    if (to.meta.role === 'usuario' && isUser) return false;
+    
+    // Si el rol requerido no coincide con el rol del usuario, bloquear
+    if (to.meta.role !== userRole) return true;
+    
+    return false;
   }
 
   function isRootOrLogin(path) {

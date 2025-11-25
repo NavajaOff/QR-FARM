@@ -24,6 +24,8 @@ from src.routes.usuario_routes import usuario_bp
 from src.routes.animal_routes import animal_bp
 from src.routes.vacunacion_routes import vacunacion_bp
 from src.routes.reporte_routes import reporte_bp
+from src.routes.tenant_routes import tenant_bp
+from src.utils.init_super_admin import inicializar_super_admin
 # Constantes para mensajes de error
 INTERNAL_SERVER_ERROR_MSG = "Error interno del servidor"
 
@@ -131,7 +133,7 @@ def obtener_ganado_detallado(identifier: str):
 def log_request_info():
     print(f"PETICION: {request.method} {request.url}")
 
-def generate_token(user_id, email, role):
+def generate_token(user_id, email, role, tenant_id=None):
     """Genera un token JWT para el usuario"""
     import datetime
     payload = {
@@ -140,6 +142,8 @@ def generate_token(user_id, email, role):
         'role': role,
         'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=24)
     }
+    if tenant_id:
+        payload['tenant_id'] = tenant_id
     token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
     return token
 
@@ -253,6 +257,7 @@ def _query_user_by_email(email):
             u.id as usuario_id,
             u.contrasena,
             u.estado,
+            u.tenant_id,
             p.email,
             r.rol AS rol
         FROM usuarios u
@@ -274,7 +279,8 @@ def _process_login_success(result):
     """Procesa un login exitoso y retorna la respuesta"""
     print(f"Usuario encontrado: {result['email']} - Rol: {result['rol']}")
 
-    token = generate_token(result['usuario_id'], result['email'], result['rol'])
+    tenant_id = result.get('tenant_id')
+    token = generate_token(result['usuario_id'], result['email'], result['rol'], tenant_id)
     print("Login exitoso - Token generado")
 
     user_data = {
@@ -282,6 +288,8 @@ def _process_login_success(result):
         "email": result['email'],
         "rol": result['rol']
     }
+    if tenant_id:
+        user_data['tenant_id'] = tenant_id
 
     return _create_success_response(token, user_data)
 
@@ -350,7 +358,11 @@ app.register_blueprint(usuario_bp, url_prefix='/api/usuarios')
 app.register_blueprint(animal_bp, url_prefix='/api/animales')
 app.register_blueprint(vacunacion_bp, url_prefix='/api/vacunaciones')
 app.register_blueprint(reporte_bp, url_prefix='/api/reportes')
+app.register_blueprint(tenant_bp, url_prefix='/api/tenants')
 
+# Inicializar super_admin desde variables de entorno (se ejecuta al iniciar la app)
+print("🔐 Inicializando super_admin desde variables de entorno...")
+inicializar_super_admin()
 
 # Eventos SocketIO para actualizaciones en tiempo real
 @socketio.on('connect')
@@ -367,63 +379,9 @@ def emit_update(event_type, data):
     socketio.emit(event_type, data)
     print(f"Actualización emitida: {event_type}")
 
-def crear_usuario_admin(app):
-    """Crea el usuario administrador desde las variables de entorno"""
-    with app.app_context():
-        admin_email = _require_env("ADMIN_EMAIL")
-        admin_password = _require_env("ADMIN_PASSWORD")
-
-        if not admin_email or not admin_password:
-            raise RuntimeError("ADMIN_EMAIL y ADMIN_PASSWORD deben contener valores válidos.")
-
-        conn = None
-        cursor = None
-        try:
-            conn = get_connection()
-            cursor = conn.cursor(dictionary=True)
-
-            # Verificar si ya existe un usuario admin
-            query_check = """
-                SELECT p.id, p.email
-                FROM personas p
-                INNER JOIN usuarios u ON u.id_persona = p.id
-                WHERE u.id_rol = 1
-                LIMIT 1
-            """
-            cursor.execute(query_check)
-            admin_existente = cursor.fetchone()
-
-            if not admin_existente:
-                # Crear persona para el admin
-                insert_persona = """
-                    INSERT INTO personas (id_rol, primer_nombre, primer_apellido, email, fecha_creacion)
-                    VALUES (1, 'Administrador', 'Sistema', %s, NOW())
-                """
-                cursor.execute(insert_persona, (admin_email,))
-                persona_id = cursor.lastrowid
-
-                # Crear usuario admin con contraseña hasheada
-                password_hash = bcrypt.hash(admin_password)
-                insert_usuario = """
-                    INSERT INTO usuarios (id_persona, id_rol, contrasena, estado)
-                    VALUES (%s, 1, %s, 'activo')
-                """
-                cursor.execute(insert_usuario, (persona_id, password_hash))
-                
-                conn.commit()
-                print(f"[OK] Usuario admin creado correctamente: {admin_email}")
-            else:
-                print(f"[INFO] Usuario admin ya existe: {admin_existente['email']}")
-
-        except Exception as e:
-            print(f"[ERROR] Error al crear usuario admin: {str(e)}")
-            if conn:
-                conn.rollback()
-        finally:
-            if cursor:
-                cursor.close()
-            if conn and conn.is_connected():
-                conn.close()
+# Nota: La creación de usuarios admin (tenant_admin) se realiza cuando el super_admin
+# crea un nuevo tenant. Solo se crea automáticamente el super_admin desde variables
+# de entorno mediante inicializar_super_admin()
 
 import click
 from flask.cli import with_appcontext
@@ -483,8 +441,8 @@ if __name__ == '__main__':
         print(f"[ADVERTENCIA] No se encontro archivo .env en: {env_file}")
         print("              Configura las variables de entorno requeridas antes de iniciar el servicio")
     
-    # Crear usuario admin si no existe
-    crear_usuario_admin(app)
+    # Nota: El super_admin se crea automáticamente mediante inicializar_super_admin()
+    # que se ejecuta al cargar la aplicación (línea 365)
     
     print("\nURLs disponibles:")
     print("  - URL: http://localhost:5000")

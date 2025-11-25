@@ -5,11 +5,36 @@ from pathlib import Path
 from ..database.db import get_connection
 from ..models.animal import Ganado, EstadoGanado
 from .potrero_service import PotreroService
+from ..utils.tenant import get_current_tenant_id
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 QR_STORAGE_DIR = BASE_DIR / "qr"
 
 class GanadoService:
+    @staticmethod
+    def _obtener_tenant_id() -> Optional[int]:
+        """Obtiene el tenant_id del contexto actual."""
+        try:
+            from flask import g
+            tenant_id = get_current_tenant_id()
+            return tenant_id
+        except Exception:
+            return None
+
+    @staticmethod
+    def _agregar_filtro_tenant(sql: str, tenant_id: Optional[int], 
+                               usar_where: bool = False) -> tuple:
+        """Agrega filtro de tenant a una query SQL."""
+        if tenant_id is None:
+            return sql, ()
+        
+        if usar_where:
+            sql += f" WHERE g.tenant_id = %s"
+        else:
+            sql += f" AND g.tenant_id = %s"
+        
+        return sql, (tenant_id,)
+
     @staticmethod
     def _to_iso_string(value: Any) -> Optional[str]:
         if value is None:
@@ -128,12 +153,16 @@ class GanadoService:
             if ganado.id_potrero:
                 PotreroService.verificar_capacidad_disponible(ganado.id_potrero)
 
+            tenant_id = GanadoService._obtener_tenant_id()
+            if tenant_id is None:
+                raise ValueError("Tenant requerido para crear ganado")
+
             sql = """
                 INSERT INTO ganado (
                     nombre, raza, fecha_nacimiento,
-                    sexo, peso, id_estado, id_potrero, id_persona
+                    sexo, peso, id_estado, id_potrero, id_persona, tenant_id
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
             """
 
@@ -154,7 +183,7 @@ class GanadoService:
                 ganado.nombre, ganado.raza,
                 fecha_nac, ganado.sexo.value,
                 ganado.peso, estado_id,
-                ganado.id_potrero, ganado.id_persona
+                ganado.id_potrero, ganado.id_persona, tenant_id
             )
 
             cursor.execute(sql, values)
@@ -181,7 +210,9 @@ class GanadoService:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
-            cursor.execute("""
+            tenant_id = GanadoService._obtener_tenant_id()
+            
+            sql = """
                 SELECT g.*,
                        eg.tipo_estado as estado_tipo,
                        p.nombre as potrero_nombre,
@@ -195,7 +226,14 @@ class GanadoService:
                 LEFT JOIN personas per ON g.id_persona = per.id
                 LEFT JOIN qr ON g.id = qr.id_ganado
                 WHERE g.id = %s
-            """, (id,))
+            """
+            params = (id,)
+            
+            if tenant_id is not None:
+                sql += " AND g.tenant_id = %s"
+                params = (id, tenant_id)
+            
+            cursor.execute(sql, params)
 
             result = cursor.fetchone()
             if result:
@@ -219,6 +257,8 @@ class GanadoService:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
+            tenant_id = GanadoService._obtener_tenant_id()
+
             # Consulta: todos los animales
             sql = """
                 SELECT g.*,
@@ -233,10 +273,16 @@ class GanadoService:
                 LEFT JOIN potrero p ON g.id_potrero = p.id
                 LEFT JOIN personas per ON g.id_persona = per.id
                 LEFT JOIN qr ON g.id = qr.id_ganado
-                ORDER BY g.id DESC LIMIT 50
             """
+            
+            params = ()
+            if tenant_id is not None:
+                sql += " WHERE g.tenant_id = %s"
+                params = (tenant_id,)
+            
+            sql += " ORDER BY g.id DESC LIMIT 50"
 
-            cursor.execute(sql)
+            cursor.execute(sql, params)
             results = cursor.fetchall()
 
             # Crear objetos Ganado desde resultados de BD
@@ -348,6 +394,8 @@ class GanadoService:
             if estado_id is None:
                 estado_id = GanadoService._mapear_estado_string_a_id(ganado.estado)
             fecha_nac = GanadoService._convertir_fecha_nacimiento(ganado.fecha_nacimiento)
+            tenant_id = GanadoService._obtener_tenant_id()
+            
             sql = """
                 UPDATE ganado SET
                     nombre = %s,
@@ -360,13 +408,18 @@ class GanadoService:
                     id_persona = %s
                 WHERE id = %s
             """
-            values = (
+            values = [
                 ganado.nombre, ganado.raza,
                 fecha_nac, ganado.sexo.value,
                 ganado.peso, estado_id,
                 ganado.id_potrero, ganado.id_persona, id
-            )
-            cursor.execute(sql, values)
+            ]
+            
+            if tenant_id is not None:
+                sql += " AND tenant_id = %s"
+                values.append(tenant_id)
+            
+            cursor.execute(sql, tuple(values))
             conn.commit()
             return cursor.rowcount > 0
         finally:
@@ -403,14 +456,27 @@ class GanadoService:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
-            # Verificar que el animal existe
-            cursor.execute("SELECT id_estado, id_potrero FROM ganado WHERE id = %s", (id,))
+            # Verificar que el animal existe y pertenece al tenant
+            tenant_id = GanadoService._obtener_tenant_id()
+            sql = "SELECT id_estado, id_potrero, tenant_id FROM ganado WHERE id = %s"
+            params = (id,)
+            if tenant_id is not None:
+                sql += " AND tenant_id = %s"
+                params = (id, tenant_id)
+            
+            cursor.execute(sql, params)
             animal = cursor.fetchone()
 
             if not animal:
                 cursor.close()
                 conn.close()
                 return "Animal no encontrado"
+            
+            # Validar tenant
+            if tenant_id is not None and animal.get('tenant_id') != tenant_id:
+                cursor.close()
+                conn.close()
+                return "No tiene acceso a este animal"
 
             id_estado_actual = animal.get('id_estado')
 
@@ -433,7 +499,12 @@ class GanadoService:
                     id_potrero = NULL
                 WHERE id = %s
             """
-            cursor.execute(sql, (nuevo_id_estado, id))
+            params = (nuevo_id_estado, id)
+            if tenant_id is not None:
+                sql += " AND tenant_id = %s"
+                params = (nuevo_id_estado, id, tenant_id)
+            
+            cursor.execute(sql, params)
             conn.commit()
 
             # Sincronizar ocupación del potrero si tenía uno
@@ -463,14 +534,27 @@ class GanadoService:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
             
-            # Verificar que el animal existe
-            cursor.execute("SELECT id_estado FROM ganado WHERE id = %s", (id,))
+            # Verificar que el animal existe y pertenece al tenant
+            tenant_id = GanadoService._obtener_tenant_id()
+            sql = "SELECT id_estado, tenant_id FROM ganado WHERE id = %s"
+            params = (id,)
+            if tenant_id is not None:
+                sql += " AND tenant_id = %s"
+                params = (id, tenant_id)
+            
+            cursor.execute(sql, params)
             animal = cursor.fetchone()
             
             if not animal:
                 cursor.close()
                 conn.close()
                 return "Animal no encontrado"
+            
+            # Validar tenant
+            if tenant_id is not None and animal.get('tenant_id') != tenant_id:
+                cursor.close()
+                conn.close()
+                return "No tiene acceso a este animal"
             
             id_estado_actual = animal.get('id_estado')
             
@@ -494,7 +578,12 @@ class GanadoService:
                 SET id_estado = %s
                 WHERE id = %s
             """
-            cursor.execute(sql, (nuevo_id_estado, id))
+            params = (nuevo_id_estado, id)
+            if tenant_id is not None:
+                sql += " AND tenant_id = %s"
+                params = (nuevo_id_estado, id, tenant_id)
+            
+            cursor.execute(sql, params)
             conn.commit()
             
             cursor.close()
@@ -567,6 +656,8 @@ class GanadoService:
             print("No se pudo obtener conexión a la base de datos.")
             return None
 
+        tenant_id = GanadoService._obtener_tenant_id()
+        
         main_query = """
             SELECT
                 g.id,
@@ -579,6 +670,7 @@ class GanadoService:
                 g.id_persona,
                 g.id_revision,
                 g.id_estado,
+                g.tenant_id,
                 q.codigo_qr,
                 eg.tipo_estado AS estado_principal,
                 NULL AS estado_salud,
@@ -599,15 +691,26 @@ class GanadoService:
             LEFT JOIN tipo_pasto tp ON tp.id = p.id_tipo_pasto
             LEFT JOIN personas per ON per.id = g.id_persona
             LEFT JOIN roles ON roles.id = per.id_rol
-            WHERE g.id = %s OR q.codigo_qr = %s
-            LIMIT 1
+            WHERE (g.id = %s OR q.codigo_qr = %s)
         """
+        
+        params = (identifier, identifier)
+        if tenant_id is not None:
+            main_query += " AND g.tenant_id = %s"
+            params = (identifier, identifier, tenant_id)
+        
+        main_query += " LIMIT 1"
 
         try:
             cursor = connection.cursor(dictionary=True)
             try:
-                cursor.execute(main_query, (identifier, identifier))
+                cursor.execute(main_query, params)
                 row = cursor.fetchone()
+                
+                # Validar que el ganado pertenece al tenant
+                if row and tenant_id is not None:
+                    if row.get('tenant_id') != tenant_id:
+                        return None
             finally:
                 cursor.close()
 

@@ -1,4 +1,5 @@
-import { ganadoAPI, potreroAPI, userAPI } from '../../services/api.js';
+import { ganadoAPI, potreroAPI, userAPI, tenantAPI } from '../../services/api.js';
+import authService from '../../services/authService.js';
 
 const secureRandomInt = (min, max) => {
   const lower = Number(min);
@@ -27,13 +28,37 @@ export default {
         ganado: 0,
         potreros: 0,
         salud: 0
-      }
+      },
+      currentTenant: null,
+      isSuperAdmin: false
     };
   },
   mounted() {
+    this.checkUserRole();
     this.cargarEstadisticas();
+    if (!this.isSuperAdmin) {
+      this.cargarTenantActual();
+    }
   },
   methods: {
+    checkUserRole() {
+      this.isSuperAdmin = authService.getRole() === 'super_admin';
+    },
+    async cargarTenantActual() {
+      try {
+        const user = authService.getUser();
+        const tenantId = user?.tenant_id;
+        
+        if (tenantId) {
+          const response = await tenantAPI.getById(tenantId);
+          if (response.data?.status === 'success') {
+            this.currentTenant = response.data.data;
+          }
+        }
+      } catch (error) {
+        console.warn('Error cargando tenant actual:', error);
+      }
+    },
     async cargarEstadisticas() {
       try {
         // Cargar estadísticas de usuarios (con manejo de errores)

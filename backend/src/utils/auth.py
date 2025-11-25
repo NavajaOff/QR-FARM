@@ -64,8 +64,18 @@ def token_required(f):
             print(f"[AUTH] ERROR: Usuario con id={user_id} está inactivo (estado={estado_valor})")
             return _unauthorized('user_inactive', 'Usuario inactivo o sin autorización')
 
+        # Obtener tenant_id del usuario
+        tenant_id = None
+        if current_user and hasattr(current_user, 'tenant_id'):
+            tenant_id = current_user.tenant_id
+        
+        # Incluir tenant_id en payload si existe
+        if tenant_id:
+            payload['tenant_id'] = tenant_id
+        
         g.current_user = current_user
         g.jwt_payload = payload
+        g.tenant_id = tenant_id
 
         return f(*args, **kwargs)
 

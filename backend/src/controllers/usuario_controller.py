@@ -438,7 +438,18 @@ class UsuarioController:
 
         if 'id_rol' in data:
             try:
-                int(data['id_rol'])
+                rol_id = int(data['id_rol'])
+                # BLOQUEO: No permitir asignar rol super_admin desde la API
+                from ..database.db import get_connection
+                conn = get_connection()
+                cursor = conn.cursor(dictionary=True)
+                cursor.execute("SELECT rol FROM roles WHERE id = %s", (rol_id,))
+                rol = cursor.fetchone()
+                cursor.close()
+                conn.close()
+                
+                if rol and rol.get('rol') == 'super_admin':
+                    return UsuarioController._error('No se puede asignar el rol super_admin. Este rol solo se crea desde variables de entorno.', 403)
             except (TypeError, ValueError):
                 return UsuarioController._error('El id_rol debe ser numérico', 400)
 

@@ -27,10 +27,12 @@
           <!-- Información del usuario -->
           <div class="d-flex align-items-center me-3">
             <div class="d-flex align-items-center text-white">
-              <i class="fas fa-user-shield me-2"></i>
+              <i class="fas me-2" :class="isSuperAdmin ? 'fa-user-crown' : 'fa-user-shield'"></i>
               <div class="d-none d-sm-block">
                 <div class="fw-semibold small">{{ userName }}</div>
-                <div class="badge bg-light text-primary small">Administrador</div>
+                <div class="badge small" :class="isSuperAdmin ? 'bg-warning text-dark' : 'bg-light text-primary'">
+                  {{ userRoleDisplay }}
+                </div>
               </div>
             </div>
           </div>
@@ -70,6 +72,9 @@
             <i class="fas fa-chevron-down transition-all"></i>
           </a>
           <div class="collapse ps-4" id="gestionMenu">
+            <router-link v-if="isSuperAdmin" class="nav-link mb-1 small" to="/admin/gestionar-tenants">
+              <i class="fas fa-building me-2"></i>Tenants
+            </router-link>
             <router-link class="nav-link mb-1 small" to="/admin/gestionar-usuarios">
               <i class="fas fa-users me-2"></i>Usuarios
             </router-link>
@@ -113,6 +118,17 @@ export default {
     return {
       userName: ''
     };
+  },
+  computed: {
+    isSuperAdmin() {
+      return authService.getRole() === 'super_admin';
+    },
+    userRoleDisplay() {
+      const role = authService.getRole();
+      if (role === 'super_admin') return 'Super Admin';
+      if (role === 'admin' || role === 'administrador') return 'Administrador';
+      return 'Admin';
+    }
   },
   mounted() {
     console.log("Componente AdminLayout montado");

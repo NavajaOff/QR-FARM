@@ -8,6 +8,7 @@ import qrcode
 
 from ..database.db import get_connection
 from .animal_service import GanadoService
+from ..utils.tenant import get_current_tenant_id
 
 
 class QRService:
@@ -28,7 +29,8 @@ class QRService:
         nombre_ganado: str,
         nombre_propietario: str,
         contacto: str,
-        datos_extra: Optional[Dict[str, Any]] = None
+        datos_extra: Optional[Dict[str, Any]] = None,
+        tenant_id: Optional[int] = None
     ) -> Dict[str, Any]:
         datos_extra = datos_extra or {}
         base_url = QRService._build_base_url()
@@ -50,6 +52,9 @@ class QRService:
             "url": online_url,
             "generado_en": datetime.now(timezone.utc).isoformat()
         }
+        
+        if tenant_id:
+            payload["tenant_id"] = tenant_id
 
         if datos_extra.get('peso') is not None:
             payload["peso"] = datos_extra.get('peso')
@@ -76,7 +81,8 @@ class QRService:
         nombre_ganado: str,
         nombre_propietario: str = "",
         contacto: str = "",
-        datos_extra: Optional[Dict[str, Any]] = None
+        datos_extra: Optional[Dict[str, Any]] = None,
+        tenant_id: Optional[int] = None
     ) -> str:
         """Generar un código QR único para un ganado con datos embebidos."""
         codigo_qr = f"QR_{id_ganado}_{nombre_ganado.replace(' ', '_')}"
@@ -88,6 +94,7 @@ class QRService:
             nombre_propietario=nombre_propietario,
             contacto=contacto,
             datos_extra=datos_extra,
+            tenant_id=tenant_id
         )
 
         texto = json.dumps(offline_payload, separators=(',', ':'))
@@ -120,13 +127,17 @@ class QRService:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
+            tenant_id = get_current_tenant_id()
+            if tenant_id is None:
+                raise ValueError("Tenant requerido para crear QR")
+
             # Obtener datos del ganado
             cursor.execute("""
-                SELECT g.nombre, p.primer_nombre, p.segundo_nombre, p.primer_apellido, p.segundo_apellido, p.telefono
+                SELECT g.nombre, g.tenant_id, p.primer_nombre, p.segundo_nombre, p.primer_apellido, p.segundo_apellido, p.telefono
                 FROM ganado g
                 LEFT JOIN personas p ON g.id_persona = p.id
-                WHERE g.id = %s
-            """, (id_ganado,))
+                WHERE g.id = %s AND g.tenant_id = %s
+            """, (id_ganado, tenant_id))
 
             ganado_data = cursor.fetchone()
             if not ganado_data:
@@ -168,14 +179,15 @@ class QRService:
                 nombre_ganado=ganado_data['nombre'],
                 nombre_propietario=nombre_propietario,
                 contacto=ganado_data['telefono'] or "",
-                datos_extra=datos_extra
+                datos_extra=datos_extra,
+                tenant_id=tenant_id
             )
 
             # Insertar en tabla QR
             cursor.execute("""
-                INSERT INTO qr (id_ganado, id_persona_encargado, id_persona_dueno, codigo_qr)
-                VALUES (%s, %s, %s, %s)
-            """, (id_ganado, id_persona_encargado, id_persona_dueno, codigo_qr))
+                INSERT INTO qr (id_ganado, id_persona_encargado, id_persona_dueno, codigo_qr, tenant_id)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (id_ganado, id_persona_encargado, id_persona_dueno, codigo_qr, tenant_id))
 
             conn.commit()
             return True
@@ -194,7 +206,9 @@ class QRService:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
-            cursor.execute("""
+            tenant_id = get_current_tenant_id()
+            
+            sql = """
                 SELECT qr.*, g.nombre as nombre_ganado,
                        p_enc.primer_nombre as enc_primer_nom, p_enc.primer_apellido as enc_primer_ape,
                        p_dueno.primer_nombre as dueno_primer_nom, p_dueno.primer_apellido as dueno_primer_ape
@@ -203,7 +217,13 @@ class QRService:
                 LEFT JOIN personas p_enc ON qr.id_persona_encargado = p_enc.id
                 LEFT JOIN personas p_dueno ON qr.id_persona_dueno = p_dueno.id
                 WHERE qr.id_ganado = %s
-            """, (id_ganado,))
+            """
+            params = (id_ganado,)
+            if tenant_id is not None:
+                sql += " AND qr.tenant_id = %s"
+                params = (id_ganado, tenant_id)
+            
+            cursor.execute(sql, params)
 
             return cursor.fetchone()
 

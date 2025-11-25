@@ -127,7 +127,17 @@ async function handleLoginSuccess() {
   }
 
   const redirectPath = authService.getRedirectPath();
-  router.push(redirectPath);
+  console.log('[LOGIN] Redirigiendo a:', redirectPath);
+  console.log('[LOGIN] Rol del usuario:', authService.getRole());
+  router.push(redirectPath).catch(err => {
+    console.error('[LOGIN] Error en redirección:', err);
+    // Si hay error, intentar redirigir al dashboard de admin por defecto para super_admin
+    if (authService.isAdmin() || authService.getRole() === 'super_admin') {
+      router.push('/admin/dashboard');
+    } else {
+      router.push('/user/inicio');
+    }
+  });
 }
 
 async function handleLoginError(result) {

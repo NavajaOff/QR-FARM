@@ -35,6 +35,15 @@ class UsuarioService:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
+            # BLOQUEO: No permitir crear super_admin desde la API
+            if persona.id_rol or usuario.id_rol:
+                # Verificar si el rol es super_admin
+                rol_id = persona.id_rol or usuario.id_rol
+                cursor.execute("SELECT rol FROM roles WHERE id = %s", (rol_id,))
+                rol = cursor.fetchone()
+                if rol and rol.get('rol') == 'super_admin':
+                    return None, "No se puede crear usuarios super_admin desde la API. Use el script de inicialización."
+
             # Verificar si el email ya existe
             cursor.execute("SELECT id FROM personas WHERE email = %s", (persona.email,))
             if cursor.fetchone():
@@ -460,6 +469,14 @@ class UsuarioService:
             print(f"DEBUG - Conexión obtenida: {conn}")
             print(f"DEBUG - Autocommit: {conn.autocommit}")
 
+            # BLOQUEO: No permitir crear super_admin desde el registro público
+            if persona.id_rol or usuario.id_rol:
+                rol_id = persona.id_rol or usuario.id_rol
+                cursor.execute("SELECT rol FROM roles WHERE id = %s", (rol_id,))
+                rol = cursor.fetchone()
+                if rol and rol.get('rol') == 'super_admin':
+                    return None, "No se puede crear usuarios super_admin desde el registro público."
+
             # Verificar si el email ya existe
             cursor.execute("SELECT id FROM personas WHERE email = %s", (persona.email,))
             if cursor.fetchone():
@@ -578,7 +595,8 @@ class UsuarioService:
                     contrasena=result['contrasena'],
                     estado=EstadoUsuario(result['estado']),
                     persona=persona,
-                    rol=rol
+                    rol=rol,
+                    tenant_id=result.get('tenant_id')
                 )
 
                 return usuario
@@ -641,7 +659,8 @@ class UsuarioService:
                     contrasena=result.get('contrasena'),
                     estado=EstadoUsuario(result['estado']),
                     persona=persona,
-                    rol=rol
+                    rol=rol,
+                    tenant_id=result.get('tenant_id')
                 )
 
                 usuarios.append(usuario)

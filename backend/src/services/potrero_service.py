@@ -3,10 +3,19 @@ from typing import List, Optional, Dict, Any
 from mysql.connector import Error
 from src.database.db import db, get_connection
 from datetime import datetime
+from src.utils.tenant import get_current_tenant_id
 
 class PotreroService:
     """Service class for handling Potrero business logic."""
     NO_DEFINIDO = 'NO_DEFINIDO'
+
+    @staticmethod
+    def _obtener_tenant_id() -> Optional[int]:
+        """Obtiene el tenant_id del contexto actual."""
+        try:
+            return get_current_tenant_id()
+        except Exception:
+            return None
 
     @staticmethod
     def _procesar_potrero(potrero: Dict[str, Any]) -> None:
@@ -40,11 +49,20 @@ class PotreroService:
                 print("Advertencia: Base de datos no disponible, retornando lista vacía")
                 return []
             cursor = conn.cursor(dictionary=True)
-            cursor.execute("""
+            tenant_id = PotreroService._obtener_tenant_id()
+            
+            sql = """
                 SELECT p.*
                 FROM potrero p
-                ORDER BY p.id DESC
-            """)
+            """
+            params = ()
+            if tenant_id is not None:
+                sql += " WHERE p.tenant_id = %s"
+                params = (tenant_id,)
+            
+            sql += " ORDER BY p.id DESC"
+            
+            cursor.execute(sql, params)
             potreros = cursor.fetchall()
 
             # Procesar cada potrero
@@ -101,7 +119,14 @@ class PotreroService:
     def _generar_nombre_potrero() -> str:
         """Genera un nombre automático para el potrero."""
         with db.get_cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) FROM potrero")
+            tenant_id = PotreroService._obtener_tenant_id()
+            sql = "SELECT COUNT(*) FROM potrero"
+            params = ()
+            if tenant_id is not None:
+                sql += " WHERE tenant_id = %s"
+                params = (tenant_id,)
+            
+            cursor.execute(sql, params)
             result = cursor.fetchone()
             numero = result['COUNT(*)'] + 1
             return f"Potrero {numero}"
@@ -137,15 +162,23 @@ class PotreroService:
         try:
             cursor = conn.cursor(dictionary=True)
 
+            tenant_id = PotreroService._obtener_tenant_id()
+            if tenant_id is None:
+                raise ValueError("Tenant requerido para crear potrero")
+
             sql = """
                 INSERT INTO potrero (
                     id_tipo_pasto, nombre, capacidad, hectareas, ocupacion,
                     fecha_ultimo_uso, responsable_persona_id, proxima_limpieza,
-                    area, ultima_limpieza, descripcion, estado
+                    area, ultima_limpieza, descripcion, estado, tenant_id
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
             """
+            
+            values_list = list(values)
+            values_list.append(tenant_id)
+            values = tuple(values_list)
 
             cursor.execute(sql, values)
             potrero_id = cursor.lastrowid
@@ -175,9 +208,14 @@ class PotreroService:
     def _obtener_potrero_completo(potrero_id: int) -> Dict[str, Any]:
         """Obtiene el potrero completo con información adicional."""
         with db.get_cursor() as select_cursor:
-            select_cursor.execute("""
-                SELECT p.* FROM potrero p WHERE p.id = %s
-            """, (potrero_id,))
+            tenant_id = PotreroService._obtener_tenant_id()
+            sql = "SELECT p.* FROM potrero p WHERE p.id = %s"
+            params = (potrero_id,)
+            if tenant_id is not None:
+                sql += " AND p.tenant_id = %s"
+                params = (potrero_id, tenant_id)
+            
+            select_cursor.execute(sql, params)
             result = select_cursor.fetchone()
 
             if not result:
@@ -281,23 +319,35 @@ class PotreroService:
         print(f"Valores: {values[:-1]}")  # No mostrar el ID al final
 
         with db.get_cursor() as cursor:
+            tenant_id = PotreroService._obtener_tenant_id()
             sql = f"""
                 UPDATE potrero
                 SET {', '.join(update_fields)}
                 WHERE id = %s
             """
-            cursor.execute(sql, values)
+            params = tuple(values)
+            if tenant_id is not None:
+                sql += " AND tenant_id = %s"
+                params = tuple(list(values) + [tenant_id])
+            
+            cursor.execute(sql, params)
             print(f"SQL ejecutado: {sql}")
             print(f"Filas afectadas: {cursor.rowcount}")
 
             # Obtener el registro actualizado
-            cursor.execute("""
+            sql = """
                 SELECT p.*,
                        CONCAT(per.primer_nombre, ' ', COALESCE(per.segundo_nombre, ''), ' ', per.primer_apellido, ' ', COALESCE(per.segundo_apellido, '')) as responsable
                 FROM potrero p
                 LEFT JOIN personas per ON p.responsable_persona_id = per.id
                 WHERE p.id = %s
-            """, (potrero_id,))
+            """
+            params = (potrero_id,)
+            if tenant_id is not None:
+                sql += " AND p.tenant_id = %s"
+                params = (potrero_id, tenant_id)
+            
+            cursor.execute(sql, params)
 
             result = cursor.fetchone()
             if not result:

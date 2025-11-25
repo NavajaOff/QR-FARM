@@ -62,7 +62,13 @@ class AuthService {
   isAdmin() {
     const role = this.getRole();
     console.log("Verificando si es admin - Rol actual:", role);
-    return role === 'admin' || role === 'administrador';
+    return role === 'admin' || role === 'administrador' || role === 'super_admin';
+  }
+
+  // Verificar si es super admin
+  isSuperAdmin() {
+    const role = this.getRole();
+    return role === 'super_admin';
   }
 
   // Verificar si es usuario normal
@@ -136,6 +142,11 @@ class AuthService {
 
     const userRole = this.getRole();
 
+    // Super admin tiene todos los permisos
+    if (userRole === 'super_admin') {
+      return true;
+    }
+
     if (requiredRole === 'admin') {
       return userRole === 'admin' || userRole === 'administrador';
     } else if (requiredRole === 'user') {
@@ -147,11 +158,15 @@ class AuthService {
 
   // Redirigir según rol después del login
   getRedirectPath() {
-    if (this.isAdmin()) {
+    const role = this.getRole();
+    
+    // Super admin puede acceder a admin dashboard
+    if (role === 'super_admin' || this.isAdmin()) {
       return '/admin/dashboard';
     } else if (this.isUser()) {
       return '/user/inicio';
     }
+    
     return '/login';
   }
 }
