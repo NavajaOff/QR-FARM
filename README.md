@@ -1,5 +1,12 @@
 # QR-FARM
 
+## Equipo de Desarrollo
+
+Este proyecto fue desarrollado por el equipo conformado por:
+- **Juan David Castro Villarreal**
+- **Jose David Hernandez Navaja**
+- **Ronald Bejarano Barbosa**
+
 ## Descripción General
 
 QR-FARM es una plataforma integral para la gestión ganadera que combina un backend desarrollado con Flask y un frontend en Vue 3. El sistema permite administrar usuarios, potreros, animales, vacunaciones y lectura de códigos QR, ofreciendo herramientas específicas para administradores y usuarios finales.
@@ -39,6 +46,239 @@ QR-FARM es una plataforma integral para la gestión ganadera que combina un back
   - Generación y actualización de códigos QR para identificar animales.
   - Archivos disponibles en `backend/qr`.
 
+## Configuración del Super Admin
+
+### 📋 Resumen
+
+El sistema **QR-FARM** utiliza un sistema de super administrador único y seguro que:
+
+- ✅ **Solo puede crearse desde variables de entorno** (no desde la API)
+- ✅ **Se inicializa automáticamente** al iniciar el backend
+- ✅ **Compartido para todo el equipo** (3 personas)
+- ✅ **Bloquea cualquier intento** de crear super_admin desde la API
+
+### 🔐 Configuración
+
+#### 1. Agregar variables al archivo `.env`
+
+Agrega estas variables a tu archivo `.env` en la raíz del proyecto:
+
+```env
+# Super Admin Global (COMPARTIDO)
+ROOT_SUPER_ADMIN_EMAIL=superadmin@qrfarm.com
+ROOT_SUPER_ADMIN_PASSWORD=TuContrasenaMuySegura123!
+ROOT_SUPER_ADMIN_NOMBRE=Super Administrador QR-Farm
+```
+
+#### 2. El super_admin se crea automáticamente
+
+Al iniciar el backend con `python app.py`, el sistema:
+
+1. Verifica si ya existe un super_admin con ese email
+2. Si no existe, lo crea automáticamente
+3. Si ya existe, no hace nada (no lo sobrescribe)
+
+### 🔒 Seguridad
+
+#### ¿Cómo funciona el bloqueo?
+
+1. **En el Servicio de Usuarios** (`usuario_service.py`):
+   - Bloquea la creación de usuarios con rol `super_admin`
+   - Retorna error: "No se puede crear usuarios super_admin desde la API"
+
+2. **En el Controlador** (`usuario_controller.py`):
+   - Bloquea la asignación del rol `super_admin` al actualizar usuarios
+   - Retorna error: "No se puede asignar el rol super_admin. Este rol solo se crea desde variables de entorno."
+
+3. **Solo desde `.env`**:
+   - El único lugar donde se puede definir el super_admin es en el archivo `.env`
+   - Se crea automáticamente al iniciar la aplicación
+
+### 📝 Notas Importantes
+
+1. **Un solo super_admin**: Solo debe haber un super_admin en el sistema (el definido en `.env`)
+
+2. **Compartido para el equipo**: Los 3 miembros del equipo usan las mismas credenciales definidas en `.env`
+
+3. **No cambiar desde la UI**: No intentes cambiar el rol de un usuario a `super_admin` desde la interfaz, estará bloqueado
+
+4. **Seguridad del `.env**:
+   - Nunca subas el archivo `.env` al repositorio
+   - Mantén las credenciales seguras
+   - Cambia la contraseña después de la primera configuración
+
+### 🔄 Flujo de Trabajo
+
+1. Configurar variables en `.env`
+2. Iniciar el backend: `python app.py`
+3. El super_admin se crea automáticamente (si no existe)
+4. Usar las credenciales para iniciar sesión
+
+### ✅ Verificación
+
+Para verificar que el super_admin se creó correctamente:
+
+1. Inicia sesión con el email y password definidos en `.env`
+2. Debes ver el badge "Super Admin" en la barra superior
+3. Debes ver el menú "Tenants" en el sidebar
+4. Puedes acceder a `/admin/gestionar-tenants`
+
+---
+
+**Última actualización**: Sistema de super_admin único desde variables de entorno
+
+## Migraciones y Seeders Cifrados
+
+### 📚 Guía de Migraciones y Seeders Cifrados - QR-FARM
+### 🔄 Basado en Flask-Migrate + Seeders Seguros Fernet
+
+#### 1. Preparar el entorno local
+
+1. Clona el repositorio y sitúate en la raíz del proyecto.
+2. Crea el entorno virtual:
+   - Windows: `python -m venv venv`
+   - macOS/Linux: `python3 -m venv venv`
+3. Activa el entorno virtual.
+4. Instala dependencias del backend:
+   ```
+   cd backend
+   pip install -r requirements.txt
+   ```
+5. Copia la configuración de ejemplo desde la raíz del proyecto:
+   - Windows: `copy .env.example .env`
+   - macOS/Linux: `cp .env.example .env`
+6. Genera tu `SECRET_KEY` personal (se actualiza el `.env` local, nunca el ejemplo):
+   ```
+   flask --app app generate-secret-key
+   ```
+
+#### 2. Base de datos y migraciones
+
+1. Crea la base de datos vacía con el nombre indicado en `.env` (por defecto `gestion_ganadera`).
+2. Aplica todas las migraciones versionadas desde el directorio backend:
+   ```
+   cd backend
+   
+   alembic -c alembic.ini upgrade head
+   ```
+   O usando el script de gestión:
+   ```
+   python manage_db.py upgrade
+   ```
+3. Verifica en MySQL Workbench (u otra herramienta) que:
+   - La tabla `alembic_version` contiene la última revisión.
+   - Las tablas `roles`, `personas`, `potrero`, `ganado`, `vacunacion`, etc. fueron creadas.
+
+#### 3. Generar y compartir la TEAM_KEY
+
+1. Solo el líder del equipo ejecuta:
+   ```
+   flask --app app team:generate_key
+   ```
+2. La clave generada (`token_hex(32)`) se comparte manualmente por un canal seguro (gestor de contraseñas, Slack privado, Signal, etc.).
+3. Cada integrante copia esa `TEAM_KEY` en su archivo `.env` local. **Nunca** hagas commit de `.env`.
+
+#### 4. Exportar datos base cifrados
+
+1. Asegúrate de que la base de datos contenga los datos iniciales que deseas compartir (roles, personas, usuarios, potreros, ganado, vacunaciones, catálogos).
+2. Ejecuta:
+   ```
+   flask --app app seed:secure_export
+   ```
+3. Se generará `backend/src/database/seeders/secure_seed.bin`. Sube este archivo al repositorio: está cifrado con Fernet y no expone datos en texto plano.
+4. Comprueba que el archivo no sea legible abriéndolo con un editor hexadecimal o cualquier visor: debe verse como datos binarios.
+
+#### 5. Importar datos en otras máquinas
+
+1. Cada integrante coloca la misma `TEAM_KEY` en su `.env`.
+2. Ejecuta:
+   ```
+   flask --app app seed:secure_import
+   ```
+3. El script realiza inserciones idempotentes (`ON DUPLICATE KEY UPDATE`) para evitar duplicados. Revisa que los datos se hayan creado consultando las tablas en MySQL Workbench.
+
+#### 6. Rotación y mantenimiento
+
+- Si sospechas que la `TEAM_KEY` se filtró:
+  1. Exporta con la clave actual para no perder los datos.
+  2. Genera una nueva clave con `flask --app app team:generate_key`.
+  3. Distribuye la nueva clave de forma segura.
+  4. Vuelve a exportar con la clave renovada y sube el `secure_seed.bin` actualizado.
+- Cada vez que actualices el script o la estructura de datos, repite el proceso de exportar y avisar al equipo.
+
+#### 7. Validaciones rápidas
+
+- `flask --help` debe listar los comandos:
+  - `seed:secure_export`
+  - `seed:secure_import`
+  - `team:generate_key`
+- `secure_seed.bin` debe existir y estar cifrado (contenido ilegible).
+- La tabla `alembic_version` debe tener la última revisión después de ejecutar `alembic upgrade head` o `python manage_db.py upgrade`.
+
+Con este flujo cada integrante puede reconstruir la base de datos de forma segura y consistente 🚀
+
+## Escáner de códigos QR
+
+Este frontend Vue 3 incluye ahora el componente reutilizable `QrScanner.vue`, compatible con rutas `/admin/scan-qr` y `/user/scan-qr`. El escáner activa la cámara del dispositivo, detecta códigos QR mediante `html5-qrcode` y consulta el backend para mostrar la información del recurso sin abandonar la página.
+
+### Integración en rutas
+
+- Administrador: `frontend/src/views/admin/EscanearQRAdmin.vue` usa `<QrScanner role="admin" resource-endpoint="/ganado/{id}" />`.
+- Usuario: `frontend/src/views/user/EscanearQRUsuario.vue` usa `<QrScanner role="user" resource-endpoint="/ganado/{id}" />`.
+- Las rutas están declaradas en `frontend/src/router/index.js`.
+
+
+### QR con datos embebidos
+
+- Cada QR generado incluye un payload JSON con la estructura `schema: "qr-farm.v1"` que contiene datos básicos del ganado (ID, nombre, propietario, potrero, estado y URL).
+- Define la variable de entorno `QR_FARM_WEB_URL` (o `QR_FARM_FRONTEND_URL`) en el backend para que el QR apunte a la ficha en línea correcta.
+- El QR mantiene compatibilidad con códigos antiguos: si solo incluye texto, el escáner extrae el ID y consulta la API como antes.
+
+### Flujo offline / online
+
+- Si el QR aporta el JSON embebido y el navegador está sin conexión, `QrScanner.vue` renderiza la tarjeta con esa información inmediata.
+- Cuando hay conexión, el escáner muestra los datos embebidos y sincroniza con la API; si la actualización falla, se mantiene la información offline y se muestra una alerta suave.
+- Si el QR no incluye datos embebidos y no hay conexión, se informa claramente al usuario que no es posible obtener la información.
+
+### Pruebas manuales
+
+1. **Permisos**: al entrar por primera vez al escáner, aceptar el acceso a la cámara.
+2. **Dispositivos**: probar en iPhone (Safari), Android (Chrome) y escritorio (Chrome/Firefox con webcam).
+3. **Escenarios**:
+   - QR con JSON `{ "id": 123 }`.
+   - QR con texto `ID:123`.
+   - QR con URL (el componente avisa si no contiene ID).
+   - Fallback cargando una imagen (`Subir imagen (fallback)`).
+4. **Errores esperados**:
+   - 404 → "QR no reconocido. Verifica que el código exista."
+   - 403 → "No autorizado para consultar este recurso."
+   - 500 → "Error del servidor al consultar el recurso."
+
+### Requisitos de permisos
+
+- Cámara: `navigator.mediaDevices.getUserMedia({ video: true })`.
+- HTTPS recomendado para habilitar cámaras en móviles.
+- Token JWT enviado automáticamente por `src/services/api.js` en el encabezado `Authorization`.
+
+### Telemetría
+
+El componente registra en consola todos los intentos de lectura (exitosos y fallidos) y conserva un historial visible en la interfaz para auditoría básica. Para extenderlo, envía los eventos capturados en `QrScanner.vue` al backend.
+
+### Tarjeta detallada del ganado
+
+- La información se presenta en `GanadoDetailCard.vue` con pestañas: **Información general**, **Potrero**, **Vacunas** y **Historial**.
+- Cada sección incluye íconos de FontAwesome, disposición responsive (grid en escritorio, bloques en móvil) y mensajes amigables cuando faltan datos.
+- Las dosis próximas a vencer (<= 10 días) y vencidas se resaltan con chips de color.
+- El botón `Volver a escanear` reactiva la cámara sin recargar la vista; acciones extra (`Ver historial completo`, `Descargar ficha`) se emiten hacia la vista que consume el componente.
+- Cuando los datos provienen del QR (modo offline) se muestra un banner amarillo. Si hay conexión, el botón **Actualizar datos** sincroniza la ficha con `/api/ganado/{id}`.
+
+### Modo offline
+
+- El backend genera QR con un payload JSON `qr-farm.v1` que incluye datos esenciales (ID, nombre, estado, propietario, potrero, peso, URL).
+- `QrScanner.vue` detecta este payload embebido y muestra la ficha sin necesidad de una llamada HTTP cuando `navigator.onLine === false`.
+- Al recuperar la conexión, el sistema intenta sincronizar automáticamente; el usuario también puede forzar la actualización desde la tarjeta.
+- Los QR antiguos que contienen solo la URL siguen funcionando: el escáner extrae el ID numérico de la ruta y consulta la API como antes.
+
 ## Puesta en Marcha
 
 1. **Backend**
@@ -74,29 +314,3 @@ QR-FARM es una plataforma integral para la gestión ganadera que combina un back
 - Añadir manejo de roles granular en el frontend (guardas de ruta) y el backend (autorización detallada).
 - Mejorar la gestión de errores globales mostrando mensajes consistentes en la interfaz.
 - Documentar los esquemas de base de datos y los contratos de la API para facilitar integraciones futuras.
-
-## Migraciones y Seeders Cifrados
-
-- **Inicializar el entorno**  
-  - Clona el repositorio y crea tu entorno virtual.  
-  - Copia `.env.example` a `.env` y rellena credenciales de base de datos.  
-  - Genera tu `SECRET_KEY` personal con `flask --app app generate-secret-key` desde `backend/`.  
-  - Ejecuta `flask --app app db upgrade -d backend/src/database/migrations` para aplicar las migraciones.
-
-- **Clave del equipo (`TEAM_KEY`)**  
-  - Solo el líder del equipo ejecuta `flask --app app team:generate_key` para generar una clave hex segura (`token_hex(32)`).  
-  - Comparte la `TEAM_KEY` con el equipo usando un canal seguro (gestor de contraseñas, Slack privado, Signal, etc.).  
-  - Cada integrante agrega esa `TEAM_KEY` a su archivo `.env`.
-
-- **Exportar e importar datos base**  
-  - Con datos de referencia en la base, ejecuta `flask --app app seed:secure_export` para crear `backend/src/database/seeders/secure_seed.bin`.  
-  - Sube el archivo `secure_seed.bin` al repositorio: está cifrado y no expone datos legibles sin la `TEAM_KEY`.  
-  - En otra máquina, coloca la misma `TEAM_KEY` en `.env` y ejecuta `flask --app app seed:secure_import` para poblar la base de datos sin duplicados.
-
-- **Verificación y mantenimiento**  
-  - Revisa que la tabla `alembic_version` contenga la última migración y que las tablas claves (`roles`, `personas`, `potrero`, `ganado`, `vacunacion`, etc.) tengan datos.  
-  - Confirma que `secure_seed.bin` existe y no es legible en texto plano.  
-  - Si la `TEAM_KEY` se expone, genera una nueva, comparte la actualización y vuelve a cifrar los datos con `seed:secure_export`.
-
-Estas herramientas sustituyen los seeders en texto plano y permiten mantener datos iniciales consistentes sin comprometer información sensible.
-
