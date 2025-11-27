@@ -83,7 +83,9 @@ ALLOWED_CORS_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:5174",
-    "http://127.0.0.1:5174"
+    "http://127.0.0.1:5174",
+    "http://localhost:80",
+    "http://127.0.0.1:80"
 ]
 
 socketio = SocketIO(app, cors_allowed_origins=ALLOWED_CORS_ORIGINS)
