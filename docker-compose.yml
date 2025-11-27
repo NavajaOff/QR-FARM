@@ -6,13 +6,10 @@ services:
     container_name: qr-farm-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: ${DB_NAME}
-      MYSQL_USER: ${DB_USER}
-      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: gestion_ganadera
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./backend/src/database/migrations:/docker-entrypoint-initdb.d
     ports:
       - "3306:3306"
     networks:
@@ -28,14 +25,16 @@ services:
       dockerfile: Dockerfile.backend
     container_name: qr-farm-backend
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       - FLASK_ENV=production
       - SECRET_KEY=${SECRET_KEY}
       - DB_HOST=mysql
       - DB_PORT=3306
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=gestion_ganadera
+      - DB_USER=root
+      - DB_PASSWORD=
       - DB_POOL_SIZE=10
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - JWT_ACCESS_TOKEN_EXPIRES=86400
@@ -44,9 +43,6 @@ services:
       - ROOT_SUPER_ADMIN_NOMBRE=${ROOT_SUPER_ADMIN_NOMBRE}
     ports:
       - "5000:5000"
-    depends_on:
-      mysql:
-        condition: service_healthy
     volumes:
       - ./qr:/app/qr
     networks:

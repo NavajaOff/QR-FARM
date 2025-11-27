@@ -455,4 +455,4 @@ if __name__ == '__main__':
     print("=" * 60)
 
     # Iniciar el servidor Flask con SocketIO
-    socketio.run(app, host='0.0.0.0', port=5000, debug=app.config['DEBUG'])
+    socketio.run(app, host='0.0.0.0', port=5000, debug=app.config['DEBUG'], allow_unsafe_werkzeug=True)

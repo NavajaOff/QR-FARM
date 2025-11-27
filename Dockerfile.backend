@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     default-libmysqlclient-dev \
     pkg-config \
+    default-mysql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar requirements e instalar dependencias Python
@@ -18,11 +19,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar código del backend
 COPY backend/ .
 
+# Copiar archivo de configuración .env
+COPY .env .
+
+# Copiar script de entrypoint
+COPY backend/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Crear directorio para códigos QR
 RUN mkdir -p qr
 
 # Exponer puerto
 EXPOSE 5000
 
-# Comando para ejecutar la aplicación
-CMD ["python", "app.py"]
+# Usar entrypoint para inicialización automática
+ENTRYPOINT ["/entrypoint.sh"]

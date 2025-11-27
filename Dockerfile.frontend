@@ -1,7 +1,7 @@
 # Dockerfile para el frontend de QR-Farm
 
 # Etapa de build
-FROM node:18-alpine AS build-stage
+FROM node:20-alpine AS build-stage
 
 # Establecer directorio de trabajo
 WORKDIR /app
