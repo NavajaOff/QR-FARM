@@ -1,39 +1,74 @@
-# QR-Farm - Docker Setup
+# 🐳 QR-Farm - Guía Docker
 
-Esta guía explica cómo ejecutar QR-Farm completamente dockerizado.
+Esta guía explica cómo ejecutar QR-Farm **completamente dockerizado** para producción o demostraciones.
 
-## Requisitos Previos
+**Para desarrollo local, consulta el [`README.md`](README.md) principal del proyecto.**
 
+## 🐳 ¿Por qué Docker?
+
+Docker permite ejecutar QR-Farm de forma **aislada y reproducible** en cualquier máquina con Docker instalado. Es ideal para:
+
+- ✅ **Demostraciones** rápidas del proyecto
+- ✅ **Desarrollo** consistente entre el equipo
+- ✅ **Producción** con configuración optimizada
+- ✅ **Distribución** fácil del proyecto completo
+
+### ⚡ Ventajas de Docker vs Desarrollo Local
+
+| Aspecto | Desarrollo Local | Docker |
+|---------|------------------|--------|
+| **Configuración inicial** | 15-20 minutos | 2-3 minutos |
+| **Dependencias** | Instalar Python, MySQL, Node.js | Solo Docker |
+| **Base de datos** | Configurar MySQL local | MySQL en contenedor |
+| **Compatibilidad** | Solo tu máquina | Cualquier máquina |
+| **Persistencia** | Manual | Volúmenes automáticos |
+| **Limpieza** | Manual | `docker-compose down -v` |
+
+### Requisitos Previos
 - Docker y Docker Compose instalados
 - WSL (si usas Windows)
 - Al menos 4GB de RAM disponible
 
-## Archivos de Configuración
+### Archivos de Configuración Docker
 
 1. **Dockerfile.backend**: Contenedor para el backend Python/Flask
 2. **Dockerfile.frontend**: Contenedor para el frontend Vue.js con Nginx
 3. **docker-compose.yml**: Orquestación de servicios
 4. **nginx.conf**: Configuración de Nginx para SPA
-5. **.env.docker**: Variables de entorno configuradas para Docker
-6. **.env.docker.example**: Plantilla de respaldo (segura para repositorio)
+5. **backend/entrypoint.sh**: Script de inicialización automática
+6. **.env.docker**: Variables de entorno configuradas para Docker
+7. **.env.docker.example**: Plantilla de respaldo (segura para repositorio)
 
-## Servicios
+### Servicios Docker
 
 - **MySQL 8.0**: Base de datos persistente (usuario root, sin contraseña, BD: gestion_ganadera)
 - **Backend (Flask)**: API REST en puerto 5000
 - **Frontend (Vue.js)**: Interfaz en puerto 80
 
-## Configuración de Base de Datos
+### Configuración de Base de Datos Docker
 
 **MySQL está configurado con:**
 - Usuario:tu_usuario
-- Contraseña:tu_contraseña 
+- Contraseña:tu_contraseña
 - Base de datos: `gestion_ganadera`
 - Puerto interno: `3306`
 
-**El backend se conecta usando estas credenciales hardcodeadas en docker-compose.yml**
+**El backend se conecta usando credenciales hardcodeadas en docker-compose.yml**
 
-## Instrucciones de Instalación
+### Archivo .env.docker para Docker
+```bash
+# Copia de .env.docker.example y configura:
+FLASK_ENV=production
+SECRET_KEY=tu_clave_secreta_aqui
+JWT_SECRET_KEY=tu_jwt_secret_aqui
+# ⚠️  NOTA: Las variables DB_* están HARDCODEADAS en docker-compose.yml
+# MySQL: root/(vacía)/gestion_ganadera - NO se usan las variables DB_* de este archivo
+ROOT_SUPER_ADMIN_EMAIL=superadmin@qrfarm.com
+ROOT_SUPER_ADMIN_PASSWORD=tu_contraseña_segura_aqui
+ROOT_SUPER_ADMIN_NOMBRE=Super Administrador QR-Farm
+```
+
+## Instrucciones de Instalación con Docker
 
 ### 1. Preparar Variables de Entorno
 
@@ -144,9 +179,45 @@ docker-compose up -d backend
 ### Error Werkzeug en producción
 Ya está corregido en el código, pero si persiste, verifica que uses `--build`.
 
+## 🎯 Después de la Instalación
+
+### Credenciales de Acceso
+
+**Super Administrador (creado automáticamente):**
+- **Email**: `superadmin@qrfarm.com`
+- **Contraseña**: `tu_contraseña_segura`
+
+### Verificación de Funcionamiento
+
+1. **Accede al frontend**: http://localhost
+2. **Haz login** con las credenciales arriba
+3. **Verifica la API**: http://localhost:5000/api/health
+4. **Revisa logs**: `docker-compose logs -f`
+
+### Próximos Pasos
+
+- **Para desarrollo**: Modifica código y reconstruye con `docker-compose up --build`
+- **Para producción**: Configura dominios, HTTPS, y escalado
+- **Para equipo**: Comparte el repositorio (sin archivos .env)
+
 ## Optimizaciones para Producción
 
 - Cambia `SECRET_KEY` y contraseñas en `.env`
-- Configura HTTPS con Nginx
+- Configura HTTPS con Nginx (certbot + Let's Encrypt)
 - Usa Docker Swarm o Kubernetes para escalado
 - Configura backups automáticos de la base de datos
+- Implementa monitoring (Prometheus + Grafana)
+- Configura logs centralizados (ELK stack)
+
+---
+
+## 📞 Soporte
+
+Si encuentras problemas:
+
+1. **Revisa logs**: `docker-compose logs -f`
+2. **Verifica estado**: `docker-compose ps`
+3. **Reinicia servicios**: `docker-compose restart`
+4. **Reconstruye**: `docker-compose up --build -d`
+
+**¡Tu aplicación QR-Farm está lista para usar!** 🎉

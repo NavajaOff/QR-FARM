@@ -279,19 +279,160 @@ El componente registra en consola todos los intentos de lectura (exitosos y fall
 - Al recuperar la conexión, el sistema intenta sincronizar automáticamente; el usuario también puede forzar la actualización desde la tarjeta.
 - Los QR antiguos que contienen solo la URL siguen funcionando: el escáner extrae el ID numérico de la ruta y consulta la API como antes.
 
-## Puesta en Marcha
+## 🚀 Instalación y Configuración
 
-1. **Backend**
-   - Crear y activar un entorno virtual en `backend/`.
-   - Instalar dependencias con `pip install -r requirements.txt`.
-   - Copiar el archivo de ejemplo `cp .env.example .env` (o `copy .env.example .env` en Windows) desde la raíz del proyecto.
-   - Generar una `SECRET_KEY` personal ejecutando `flask --app app generate-secret-key` dentro de `backend/`.
-   - Aplicar las migraciones con `flask --app app db upgrade -d backend/src/database/migrations`.
-   - Ejecutar `python app.py` para iniciar el servidor Flask con SocketIO en `http://localhost:5000`.
+### 📋 Opciones de Instalación
 
-2. **Frontend**
-   - Acceder a `frontend/` y ejecutar `npm install`.
-   - Levantar el entorno con `npm run dev`, disponible en `http://localhost:5173`.
+Este proyecto se puede ejecutar de **dos formas**:
+
+#### 🔧 **Opción A: Desarrollo Local** (Recomendado para desarrollo)
+Sigue las instrucciones a continuación para configurar el entorno de desarrollo.
+
+#### 🐳 **Opción B: Docker** (Recomendado para producción/demo)
+Si prefieres usar Docker, consulta el archivo [`README_DOCKER.md`](README_DOCKER.md) para instrucciones completas.
+
+---
+
+### 🔧 Desarrollo Local
+
+#### Requisitos Previos
+- **Python 3.12+**
+- **MySQL 8.0+** (o MariaDB)
+- **Node.js 18+**
+- **Git**
+
+#### 1. Clonar el Repositorio
+```bash
+git clone <url-del-repo>
+cd QR-FARM
+```
+
+#### 2. Configurar Variables de Entorno
+```bash
+# Copiar archivo de ejemplo
+cp .env.example .env
+
+# Editar .env con tus configuraciones locales
+nano .env  # o notepad .env en Windows
+
+
+#### 3. Configurar Base de Datos MySQL
+
+Crea la base de datos vacía:
+```sql
+-- Ejecutar en MySQL Workbench o terminal MySQL
+CREATE DATABASE gestion_ganadera;
+
+-- Crear usuario (opcional, puedes usar 'root')
+CREATE USER 'tu_usuario'@'localhost' IDENTIFIED BY 'tu_password';
+GRANT ALL PRIVILEGES ON gestion_ganadera.* TO 'tu_usuario'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+#### 4. Instalar Dependencias del Backend
+```bash
+cd backend
+
+# Crear entorno virtual
+python -m venv venv
+
+# Activar entorno virtual
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
+
+# Instalar dependencias
+pip install -r requirements.txt
+```
+
+#### 5. Ejecutar Migraciones
+```bash
+# Desde el directorio backend/
+alembic -c alembic.ini upgrade head
+```
+
+#### 6. Instalar Dependencias del Frontend
+```bash
+cd ../frontend
+npm install
+```
+
+#### 7. Iniciar Servicios
+
+**Terminal 1 - Backend:**
+```bash
+cd backend
+python app.py
+```
+**Servidor disponible en:** http://localhost:5000
+
+**Terminal 2 - Frontend:**
+```bash
+cd frontend
+npm run dev
+```
+**Aplicación disponible en:** http://localhost:5173
+
+#### 8. Verificar Instalación
+
+1. **Accede al frontend:** http://localhost:5173
+2. **Inicia sesión** con las credenciales del super admin definidas en `.env`
+3. **Verifica la API:** http://localhost:5000/api/health
+
+### 🔧 Comandos Útiles para Desarrollo
+
+```bash
+# Backend
+cd backend
+python app.py                    # Iniciar servidor
+alembic -c alembic.ini upgrade head  # Aplicar migraciones
+flask --app app generate-secret-key  # Generar nueva SECRET_KEY
+
+# Frontend
+cd frontend
+npm run dev                     # Desarrollo con hot reload
+npm run build                   # Build para producción
+npm run preview                 # Vista previa del build
+```
+
+### 🐛 Solución de Problemas (Desarrollo Local)
+
+#### Error: "Can't connect to MySQL server"
+- Verifica que MySQL esté ejecutándose
+- Confirma las credenciales en `.env`
+- Asegúrate de que la base de datos `gestion_ganadera` existe
+
+#### Error: "Module not found" en frontend
+```bash
+cd frontend
+rm -rf node_modules package-lock.json
+npm install
+```
+
+#### Error: "SECRET_KEY not found"
+```bash
+cd backend
+flask --app app generate-secret-key
+```
+
+---
+
+### 🐳 Docker (Producción/Demo)
+
+Para usar Docker en lugar del desarrollo local, consulta el archivo [`README_DOCKER.md`](README_DOCKER.md) que contiene:
+
+- ✅ Instrucciones completas de instalación con Docker
+- ✅ Configuración automática de servicios
+- ✅ Comparación entre desarrollo local y Docker
+- ✅ Solución de problemas específicos de Docker
+- ✅ Optimizaciones para producción
+
+**Comando rápido para Docker:**
+```bash
+cp .env.docker .env
+docker-compose up --build -d
+```
 
 ## Flujo de Trabajo
 
@@ -314,3 +455,21 @@ El componente registra en consola todos los intentos de lectura (exitosos y fall
 - Añadir manejo de roles granular en el frontend (guardas de ruta) y el backend (autorización detallada).
 - Mejorar la gestión de errores globales mostrando mensajes consistentes en la interfaz.
 - Documentar los esquemas de base de datos y los contratos de la API para facilitar integraciones futuras.
+
+---
+
+## 🐳 Opción Docker (Rápida)
+
+Si prefieres una **configuración instantánea** sin instalar dependencias locales, usa Docker:
+
+```bash
+# Copiar configuración
+cp .env.docker .env
+
+# Iniciar todo automáticamente
+docker-compose up --build -d
+
+# Acceder: http://localhost
+```
+
+**Documentación completa en [`README_DOCKER.md`](README_DOCKER.md)**
