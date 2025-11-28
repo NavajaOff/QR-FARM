@@ -20,7 +20,7 @@
                 type="checkbox" 
                 id="mostrarInactivos"
                 v-model="mostrarInactivos"
-                @change="cargarTenants"
+                @change="handleToggleInactivos"
               >
               <label class="form-check-label" for="mostrarInactivos">
                 Mostrar tenants inactivos
@@ -44,7 +44,14 @@
 
             <div v-else-if="tenants.length === 0" class="text-center py-4 text-muted">
               <i class="fas fa-inbox fa-3x mb-3"></i>
-              <p>No hay tenants registrados</p>
+              <p v-if="mostrarInactivos">
+                <strong>No hay tenants inactivos</strong><br>
+                <small>Todos los tenants están activos actualmente.</small>
+              </p>
+              <p v-else>
+                <strong>No hay tenants registrados</strong><br>
+                <small>Comienza creando tu primer tenant.</small>
+              </p>
             </div>
 
             <div v-else class="table-responsive">
@@ -229,10 +236,12 @@ const saveTenant = async () => {
   try {
     let result
     if (editMode.value) {
+      // Pasar el filtro actual para mantener el estado después de actualizar
+      const activosOnly = !mostrarInactivos.value
       result = await actualizarTenant(form.value.id, {
         nombre: form.value.nombre,
         estado: form.value.estado
-      })
+      }, activosOnly)
     } else {
       result = await crearTenant({
         nombre: form.value.nombre,
@@ -249,7 +258,10 @@ const saveTenant = async () => {
         showConfirmButton: false
       })
       closeModal()
-      await cargarTenants(!mostrarInactivos.value)
+      // Recargar con el filtro actual (mantener el estado del switch)
+      const activosOnly = !mostrarInactivos.value
+      console.log('[GestionarTenants] Recargando después de guardar - activosOnly:', activosOnly)
+      await cargarTenants(activosOnly)
     } else {
       errorMessage.value = result.message || 'Error al guardar el tenant'
     }
@@ -258,6 +270,17 @@ const saveTenant = async () => {
   } finally {
     saving.value = false
   }
+}
+
+const handleToggleInactivos = () => {
+  // Si mostrarInactivos es true, cargar todos incluyendo inactivos (activosOnly = false)
+  // Si mostrarInactivos es false, cargar solo activos (activosOnly = true)
+  const activosOnly = !mostrarInactivos.value
+  console.log('[GestionarTenants] Cambiando filtro:')
+  console.log('  - mostrarInactivos:', mostrarInactivos.value)
+  console.log('  - activosOnly (parámetro a enviar):', activosOnly)
+  console.log('  - URL será: /tenants?activos_only=' + activosOnly)
+  cargarTenants(activosOnly)
 }
 
 const formatearFecha = (fecha) => {
@@ -271,7 +294,8 @@ const formatearFecha = (fecha) => {
 }
 
 onMounted(() => {
-  cargarTenants(!mostrarInactivos.value)
+  // Al montar, cargar solo activos (mostrarInactivos = false, activosOnly = true)
+  cargarTenants(true)
 })
 </script>
 

@@ -102,6 +102,5 @@ export default reportesUsuario;
 </script>
 
 <style scoped>
-@import '../../assets/css/reportes-usuario.css';
 </style>
 

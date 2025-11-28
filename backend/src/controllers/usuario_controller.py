@@ -125,7 +125,7 @@ class UsuarioController:
                 if not data.get(field):
                     return jsonify({
                         'status': 'error',
-                        'message': MSG_FIELD_REQUIRED.format(field=field)
+                        'message': UsuarioController.MSG_FIELD_REQUIRED.format(field=field)
                     }), 400
 
             # Validar formato de email básico
@@ -133,7 +133,7 @@ class UsuarioController:
             if not _validar_email(email):
                 return jsonify({
                     'status': 'error',
-                    'message': MSG_INVALID_EMAIL_FORMAT
+                    'message': UsuarioController.MSG_INVALID_EMAIL_FORMAT
                 }), 400
 
             # Validar longitud de contraseña
@@ -141,14 +141,14 @@ class UsuarioController:
             if len(password) < 6:
                 return jsonify({
                     'status': 'error',
-                    'message': MSG_CLAVE_CORTA
+                    'message': UsuarioController.MSG_CLAVE_CORTA
                 }), 400
 
             # Verificar si el email ya existe
             if UsuarioService.buscar_por_email(email):
                 return jsonify({
                     'status': 'error',
-                    'message': MSG_EMAIL_ALREADY_REGISTERED
+                    'message': UsuarioController.MSG_EMAIL_ALREADY_REGISTERED
                 }), 400
 
             # Verificar si hay token y cargar usuario si existe (para permitir super admin crear usuarios con tenant)
@@ -295,7 +295,7 @@ class UsuarioController:
             else:
                 return jsonify({
                     'status': 'error',
-                    'message': MSG_USER_NOT_FOUND
+                    'message': UsuarioController.MSG_USER_NOT_FOUND
                 }), 404
 
         except Exception as e:
@@ -343,7 +343,7 @@ class UsuarioController:
                 print(f"[USUARIO] ERROR: Usuario con id={id} no encontrado")
                 return jsonify({
                     'status': 'error',
-                    'message': MSG_USER_NOT_FOUND
+                    'message': UsuarioController.MSG_USER_NOT_FOUND
                 }), 404
 
             print(f"[USUARIO] Usuario encontrado: id={usuario_existente.id}, estado_actual={usuario_existente.estado}")
@@ -381,7 +381,7 @@ class UsuarioController:
             if not usuario:
                 return jsonify({
                     'status': 'error',
-                    'message': MSG_NOT_AUTHENTICATED
+                    'message': UsuarioController.MSG_NOT_AUTHENTICATED
                 }), 401
 
             persona = usuario.persona.to_dict() if usuario.persona else {}
@@ -451,7 +451,7 @@ class UsuarioController:
 
             usuario = UsuarioService.obtener_usuario(id, incluir_inactivos=True)
             if not usuario:
-                return UsuarioController._error(MSG_USER_NOT_FOUND, 404)
+                return UsuarioController._error(UsuarioController.MSG_USER_NOT_FOUND, 404)
 
             # Validaciones
             error = UsuarioController._validar_campos(data, usuario)
@@ -493,17 +493,17 @@ class UsuarioController:
 
         for field in required_fields:
             if field in data and not data[field]:
-                return UsuarioController._error(MSG_FIELD_REQUIRED.format(field=field), 400)
+                return UsuarioController._error(UsuarioController.MSG_FIELD_REQUIRED.format(field=field), 400)
 
         if 'email' in data:
             email = data['email'].strip()
             if not _validar_email(email):
-                return UsuarioController._error(MSG_INVALID_EMAIL_FORMAT, 400)
+                return UsuarioController._error(UsuarioController.MSG_INVALID_EMAIL_FORMAT, 400)
             if email != usuario.persona.email and UsuarioService.buscar_por_email(email):
-                return UsuarioController._error(MSG_EMAIL_ALREADY_REGISTERED, 400)
+                return UsuarioController._error(UsuarioController.MSG_EMAIL_ALREADY_REGISTERED, 400)
 
         if 'password' in data and len(data['password']) < 6:
-            return UsuarioController._error(MSG_CLAVE_CORTA, 400)
+            return UsuarioController._error(UsuarioController.MSG_CLAVE_CORTA, 400)
 
         if 'id_rol' in data:
             try:
@@ -573,7 +573,7 @@ class UsuarioController:
             else:
                 return jsonify({
                     'status': 'error',
-                    'message': MSG_USER_NOT_FOUND
+                    'message': UsuarioController.MSG_USER_NOT_FOUND
                 }), 404
                 
         except Exception as e:

@@ -128,7 +128,12 @@ export const reportAPI = {
 };
 
 export const tenantAPI = {
-  getAll: (activosOnly = true) => api.get(`/tenants?activos_only=${activosOnly}`),
+  getAll: (activosOnly = true) => {
+    // Asegurar que el parámetro sea un booleano convertido a string 'true' o 'false'
+    const activosOnlyStr = activosOnly === true || activosOnly === 'true' ? 'true' : 'false'
+    console.log('[tenantAPI] getAll - activosOnly:', activosOnly, 'convertido a:', activosOnlyStr)
+    return api.get(`/tenants?activos_only=${activosOnlyStr}`)
+  },
   getById: (id) => api.get(`/tenants/${id}`),
   create: (data) => api.post('/tenants', data),
   update: (id, data) => api.put(`/tenants/${id}`, data),
