@@ -161,16 +161,27 @@ class PotreroService:
         nombre = data.get('nombre') or PotreroService._generar_nombre_potrero()
         fecha_ultimo_uso = datetime.now().date().isoformat()
 
+        # Auto-calcular área si se proporciona hectáreas
+        hectareas = data.get('hectareas')
+        area = data.get('area')
+
+        if hectareas is not None and area is None:
+            # Calcular metros cuadrados automáticamente: 1 hectárea = 10,000 m²
+            area = float(hectareas) * 10000
+        elif area is not None and hectareas is None:
+            # Calcular hectáreas automáticamente si se proporciona área
+            hectareas = float(area) / 10000
+
         values = (
             data.get('id_tipo_pasto'),
             nombre,
             data.get('capacidad'),
-            data.get('hectareas'),
+            hectareas,
             data.get('ocupacion', 0),
             fecha_ultimo_uso,
             data.get('responsable_persona_id'),
             data.get('proxima_limpieza'),
-            data.get('area'),
+            area,
             data.get('ultima_limpieza'),
             data.get('descripcion'),
             data.get('estado', 'disponible')
@@ -317,6 +328,19 @@ class PotreroService:
         """Prepara los campos y valores para la actualización."""
         update_fields = []
         values = []
+
+        # Auto-calcular área/hectáreas si se proporciona uno pero no el otro
+        hectareas = data.get('hectareas')
+        area = data.get('area')
+
+        if 'hectareas' in data and 'area' not in data and hectareas is not None:
+            # Calcular metros cuadrados automáticamente: 1 hectárea = 10,000 m²
+            data = data.copy()  # No modificar el original
+            data['area'] = float(hectareas) * 10000
+        elif 'area' in data and 'hectareas' not in data and area is not None:
+            # Calcular hectáreas automáticamente si se proporciona área
+            data = data.copy()  # No modificar el original
+            data['hectareas'] = float(area) / 10000
 
         for key, value in data.items():
             if key in ['id']:

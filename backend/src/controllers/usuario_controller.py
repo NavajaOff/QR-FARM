@@ -308,7 +308,73 @@ class UsuarioController:
     @staticmethod
     def obtener_todos_usuarios():
         try:
-            usuarios = UsuarioService.obtener_todos_usuarios(incluir_inactivos=True)
+            current_user = _obtener_usuario_actual()
+            print(f"[USUARIO] obtener_todos_usuarios llamado por user_id={getattr(current_user, 'id', None)}")
+
+            if not current_user:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Usuario no autenticado'
+                }), 401
+
+            tenant_id = None
+            es_super_admin = False
+
+            # Obtener rol del usuario actual
+            rol_nombre = None
+            if hasattr(current_user, 'rol') and current_user.rol:
+                if hasattr(current_user.rol, 'nombre_rol'):
+                    rol_nombre = current_user.rol.nombre_rol
+                elif hasattr(current_user.rol, 'rol'):
+                    rol_nombre = current_user.rol.rol
+
+            tenant_id = getattr(current_user, 'tenant_id', None)
+            print(f"[USUARIO] Usuario actual: rol={rol_nombre}, tenant_id={tenant_id}")
+
+            if rol_nombre == 'super_admin':
+                es_super_admin = True
+                print(f"[USUARIO] Usuario es SUPER_ADMIN")
+
+                # Super admin puede filtrar por tenant_id usando query param
+                tenant_id_param = request.args.get('tenant_id')
+                if tenant_id_param:
+                    try:
+                        tenant_id = int(tenant_id_param)
+                        print(f"[USUARIO] Super admin filtrando por tenant_id={tenant_id}")
+                    except (ValueError, TypeError):
+                        print(f"[USUARIO] WARNING: tenant_id inválido en query param: {tenant_id_param}")
+                        tenant_id = None
+            else:
+                # Administradores normales SOLO pueden ver usuarios de su mismo tenant
+                if not tenant_id:
+                    print(f"[USUARIO] ERROR: Administrador sin tenant_id, no puede listar usuarios")
+                    return jsonify({
+                        'status': 'error',
+                        'message': 'No se puede determinar el tenant del usuario'
+                    }), 403
+                print(f"[USUARIO] Administrador normal, filtrando por tenant_id={tenant_id}")
+
+            # El servicio ahora maneja automáticamente la exclusión de super_admin para usuarios no privilegiados
+            usuarios = UsuarioService.obtener_todos_usuarios(
+                incluir_inactivos=True,
+                tenant_id=tenant_id  # None para super_admin sin filtro, o tenant_id específico
+            )
+
+            print(f"[USUARIO] Total usuarios retornados: {len(usuarios)}")
+
+            # Log roles and tenants of returned users
+            for usuario in usuarios:
+                u_rol = getattr(usuario, 'rol', None)
+                u_rol_nombre = None
+                if u_rol:
+                    if hasattr(u_rol, 'nombre_rol'):
+                        u_rol_nombre = u_rol.nombre_rol
+                    elif hasattr(u_rol, 'rol'):
+                        u_rol_nombre = u_rol.rol
+                u_tenant = getattr(usuario, 'tenant_id', None)
+                u_email = getattr(usuario.persona, 'email', None) if usuario.persona else None
+                print(f"[USUARIO] Usuario retornado: id={usuario.id}, email={u_email}, rol={u_rol_nombre}, tenant_id={u_tenant}")
+
             return jsonify({
                 'status': 'success',
                 'data': [usuario.to_dict() for usuario in usuarios]

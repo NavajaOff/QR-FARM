@@ -13,7 +13,14 @@ export function useUsuarios() {
       error.value = null
       const response = await userAPI.getAll()
       if (response.data?.status === 'success') {
-        usuarios.value = response.data.data
+        // Filtrar usuarios con rol super_admin para seguridad adicional en frontend
+        const usuariosFiltrados = (response.data.data || []).filter(usuario => {
+          // Verificar diferentes formas de obtener el rol
+          const rol = usuario?.rol?.nombre_rol || usuario?.rol?.rol || usuario?.rol
+          return rol !== 'super_admin'
+        })
+        usuarios.value = usuariosFiltrados
+        console.log(`[useUsuarios] Cargados ${usuariosFiltrados.length} usuarios (filtrados de ${response.data.data?.length || 0} total)`)
       }
     } catch (err) {
       error.value = err.message

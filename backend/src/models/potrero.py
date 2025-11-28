@@ -26,6 +26,7 @@ class PotreroData:
     ultima_limpieza: Optional[datetime] = None
     proxima_limpieza: Optional[datetime] = None
     ocupacion: int = 0
+    tenant_id: Optional[int] = None
 
 
 class Potrero:
@@ -54,6 +55,7 @@ class Potrero:
         self.ultima_limpieza = datos.ultima_limpieza
         self.descripcion = datos.descripcion
         self.propietario_persona_id = datos.propietario_persona_id
+        self.tenant_id = datos.tenant_id
 
     @classmethod
     def from_params(
@@ -83,7 +85,8 @@ class Potrero:
             area=Decimal(str(area_value)) if area_value is not None else None,
             ultima_limpieza=row.get('ultima_limpieza'),
             descripcion=row.get('descripcion'),
-            propietario_persona_id=row.get('propietario_persona_id')
+            propietario_persona_id=row.get('propietario_persona_id'),
+            tenant_id=row.get('tenant_id')
         )
         return Potrero(
             datos=datos,
@@ -106,7 +109,8 @@ class Potrero:
             'area': float(self.area) if self.area else None,
             'ultima_limpieza': self.ultima_limpieza.isoformat() if self.ultima_limpieza else None,
             'descripcion': self.descripcion,
-            'propietario_persona_id': self.propietario_persona_id
+            'propietario_persona_id': self.propietario_persona_id,
+            'tenant_id': self.tenant_id
         }
 
     @staticmethod
@@ -126,7 +130,8 @@ class Potrero:
             area=Decimal(str(area_value)) if area_value is not None else None,
             ultima_limpieza=data.get('ultima_limpieza'),
             descripcion=data.get('descripcion'),
-            propietario_persona_id=data.get('propietario_persona_id')
+            propietario_persona_id=data.get('propietario_persona_id'),
+            tenant_id=data.get('tenant_id')
         )
         return Potrero(
             datos=datos,

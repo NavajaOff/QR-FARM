@@ -646,7 +646,33 @@ class UsuarioService:
                 conn.close()
 
     @staticmethod
-    def obtener_todos_usuarios(incluir_inactivos: bool = False) -> List[Usuario]:
+    def obtener_todos_usuarios(incluir_inactivos: bool = False, tenant_id: Optional[int] = None, excluir_super_admin: bool = False) -> List[Usuario]:
+        """
+        Obtener todos los usuarios con filtrado automático de super admin para usuarios no privilegiados.
+
+        Args:
+            incluir_inactivos: Incluir usuarios inactivos
+            tenant_id: Filtrar por tenant específico (None para super admin)
+            excluir_super_admin: Forzar exclusión de super admin (siempre True para no super admin)
+        """
+        print(f"[USUARIO_SERVICE] obtener_todos_usuarios called with incluir_inactivos={incluir_inactivos}, tenant_id={tenant_id}, excluir_super_admin={excluir_super_admin}")
+
+        # DETERMINAR SI EL USUARIO ACTUAL ES SUPER ADMIN
+        from ..utils.tenant import get_current_tenant_id
+        try:
+            current_tenant_id = get_current_tenant_id()
+            # Si get_current_tenant_id() retorna None, el usuario actual es super_admin
+            es_super_admin_actual = (current_tenant_id is None)
+        except Exception:
+            es_super_admin_actual = False
+
+        print(f"[USUARIO_SERVICE] Usuario actual es super_admin: {es_super_admin_actual}")
+
+        # SI NO ES SUPER ADMIN, SIEMPRE EXCLUIR SUPER ADMINS
+        if not es_super_admin_actual:
+            excluir_super_admin = True
+            print(f"[USUARIO_SERVICE] Usuario no es super_admin, forzando excluir_super_admin=True")
+
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
@@ -658,20 +684,49 @@ class UsuarioService:
                 LEFT JOIN roles r ON u.id_rol = r.id
             """
 
-            if not incluir_inactivos:
-                sql += " WHERE u.estado = 'activo'"
+            conditions = []
+            params = []
 
-            cursor.execute(sql)
+            if not incluir_inactivos:
+                conditions.append("u.estado = 'activo'")
+
+            if tenant_id is not None:
+                # Filtrar SOLO usuarios con ese tenant_id específico (excluir NULL y otros tenants)
+                # Esto asegura que usuarios con tenant_id NULL (como super_admin) NO se incluyan
+                conditions.append("u.tenant_id = %s")
+                params.append(tenant_id)
+
+            if excluir_super_admin:
+                # Excluir super_admin de forma explícita y robusta
+                # Verificar tanto el rol como el nombre del rol en la tabla roles
+                # Usar LOWER para comparación case-insensitive
+                conditions.append("(r.rol IS NULL OR LOWER(TRIM(r.rol)) != 'super_admin')")
+
+            if conditions:
+                sql += " WHERE " + " AND ".join(conditions)
+
+            print(f"[USUARIO_SERVICE] SQL: {sql}, params: {params}")
+            print(f"[USUARIO_SERVICE] Condiciones aplicadas: tenant_id={tenant_id}, excluir_super_admin={excluir_super_admin}")
+            cursor.execute(sql, params)
             results = cursor.fetchall()
+            print(f"[USUARIO_SERVICE] Resultados obtenidos: {len(results)} usuarios")
 
             usuarios = []
             for result in results:
+                # Obtener rol del resultado
+                rol_nombre = result.get('rol_nombre')
+
+                # VALIDACIÓN ADICIONAL: Si excluir_super_admin está activo, filtrar super_admins aquí también
+                if excluir_super_admin and rol_nombre and rol_nombre.lower() == 'super_admin':
+                    print(f"[USUARIO_SERVICE] FILTRANDO super_admin con id={result.get('id')}, email={result.get('email')}")
+                    continue
+
                 # Crear rol
                 rol = None
-                if result.get('rol_nombre'):
+                if rol_nombre:
                     rol = Rol(
                         id=result['id_rol'],
-                        nombre_rol=result['rol_nombre']
+                        nombre_rol=rol_nombre
                     )
 
                 # Crear persona
@@ -700,6 +755,7 @@ class UsuarioService:
                 )
 
                 usuarios.append(usuario)
+                print(f"[USUARIO_SERVICE] Usuario agregado: id={usuario.id}, email={persona.email}, rol={rol_nombre}, tenant_id={usuario.tenant_id}")
 
             return usuarios
 

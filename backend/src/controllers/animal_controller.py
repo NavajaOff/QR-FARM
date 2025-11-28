@@ -3,6 +3,9 @@ from datetime import datetime
 from flask import jsonify, request
 from ..models.animal import Ganado
 from ..services.animal_service import GanadoService
+from ..utils.auth import token_required
+from ..utils.tenant import tenant_required
+from ..utils.permissions import permission_required
 
 try:
     from ...app import emit_update
@@ -15,6 +18,9 @@ GANADO_NO_ENCONTRADO = 'Ganado no encontrado'
 
 class GanadoController:
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('crear_ganado')
     def crear_ganado():
         try:
             data = request.get_json()
@@ -58,6 +64,9 @@ class GanadoController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('ver_ganado')
     def obtener_ganado(id):
         """Obtener ganado por ID. Acepta tenant_id como query param para super admin."""
         try:
@@ -95,6 +104,9 @@ class GanadoController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('ver_ganado')
     def obtener_todos_ganados():
         """Obtener todos los ganados. Acepta tenant_id como query param para super admin."""
         try:
@@ -106,9 +118,8 @@ class GanadoController:
                     tenant_id = int(tenant_id_param)
                 except (ValueError, TypeError):
                     pass
-            
+
             ganados = GanadoService.obtener_todos_ganados(tenant_id_override=tenant_id)
-            print(f"[DEBUG] Controller - Animales devueltos: {len(ganados)}")
             return jsonify({
                 'status': 'success',
                 'data': [ganado.to_dict() for ganado in ganados],
@@ -151,6 +162,9 @@ class GanadoController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('editar_ganado')
     def actualizar_ganado(id):
         """Actualizar ganado. Acepta tenant_id como query param para super admin."""
         try:
@@ -208,6 +222,9 @@ class GanadoController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('eliminar_ganado')
     def dar_baja_ganado(id):
         """Da de baja lógica a un animal. Acepta tenant_id como query param para super admin."""
         try:
@@ -267,6 +284,9 @@ class GanadoController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('editar_ganado')
     def reactivar_ganado(id):
         """Reactivar un animal que estaba dado de baja. Acepta tenant_id como query param para super admin."""
         try:
@@ -318,6 +338,9 @@ class GanadoController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('eliminar_ganado')
     def eliminar_ganado(id):
         """Elimina un ganado usando GanadoService.eliminar_ganado()."""
         try:
@@ -353,6 +376,9 @@ class GanadoController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('ver_ganado')
     def obtener_ganados_por_potrero(potrero_id):
         try:
             ganados = GanadoService.buscar_por_potrero(potrero_id)
@@ -368,6 +394,9 @@ class GanadoController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('ver_ganado')
     def buscar_por_codigo_qr(codigo_qr):
         """Buscar ganado por código QR. Acepta tenant_id como query param para super admin."""
         try:

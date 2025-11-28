@@ -3,12 +3,18 @@ from typing import Tuple, Any
 from flask import request, jsonify
 from src.services.vacunacion_service import VacunacionService
 from src.models.vacunacion import Vacunacion
+from src.utils.auth import token_required
+from src.utils.tenant import tenant_required
+from src.utils.permissions import permission_required
 
 class VacunacionController:
     # Error message constants
     ERROR_INTERNO_SERVIDOR = 'Error interno del servidor'
     VACUNACION_NO_ENCONTRADA = 'Vacunación no encontrada'
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('ver_vacunaciones')
     def obtener_todas_vacunaciones() -> Tuple[Any, int]:
         """Obtener todas las vacunaciones. Acepta tenant_id como query param para super admin."""
         try:
@@ -57,6 +63,9 @@ class VacunacionController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('ver_vacunaciones')
     def obtener_vacunacion_por_id(vacunacion_id: int) -> Tuple[Any, int]:
         """Obtener una vacunación por ID. Acepta tenant_id como query param para super admin."""
         try:
@@ -91,6 +100,9 @@ class VacunacionController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('crear_vacunaciones')
     def crear_vacunacion() -> Tuple[Any, int]:
         """Crear una nueva vacunación"""
         try:
@@ -136,6 +148,9 @@ class VacunacionController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('editar_vacunaciones')
     def actualizar_vacunacion(vacunacion_id: int) -> Tuple[Any, int]:
         """Actualizar una vacunación existente. Acepta tenant_id como query param para super admin."""
         try:
@@ -191,6 +206,9 @@ class VacunacionController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('eliminar_vacunaciones')
     def eliminar_vacunacion(vacunacion_id: int) -> Tuple[Any, int]:
         """Eliminar una vacunación. Acepta tenant_id como query param para super admin."""
         try:

@@ -18,7 +18,8 @@ class Vacunacion:
                  estado: EstadoVacunacion = EstadoVacunacion.pendiente,
                  id_tipo_vacuna: Optional[int] = None,
                  nombre_tipo_vacuna: Optional[str] = None,
-                 nombre_responsable: Optional[str] = None):
+                 nombre_responsable: Optional[str] = None,
+                 tenant_id: Optional[int] = None):
         self.id = id
         self.id_animal = id_animal
         self.nombre_animal = nombre_animal
@@ -29,6 +30,7 @@ class Vacunacion:
         self.id_tipo_vacuna = id_tipo_vacuna
         self.nombre_tipo_vacuna = nombre_tipo_vacuna
         self.nombre_responsable = nombre_responsable
+        self.tenant_id = tenant_id
 
     @staticmethod
     def from_dict(data: Dict[str, Any]) -> 'Vacunacion':
@@ -43,7 +45,8 @@ class Vacunacion:
             estado=EstadoVacunacion(data.get('estado', 'pendiente')),
             id_tipo_vacuna=data.get('id_tipo_vacuna'),
             nombre_tipo_vacuna=data.get('nombre_tipo_vacuna'),
-            nombre_responsable=data.get('nombre_responsable')
+            nombre_responsable=data.get('nombre_responsable'),
+            tenant_id=data.get('tenant_id')
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -65,5 +68,6 @@ class Vacunacion:
             "estado": self.estado.value if hasattr(self.estado, 'value') else str(self.estado),
             "id_tipo_vacuna": self.id_tipo_vacuna,
             "nombre_tipo_vacuna": self.nombre_tipo_vacuna,
-            "nombre_responsable": self.nombre_responsable
+            "nombre_responsable": self.nombre_responsable,
+            "tenant_id": self.tenant_id
         }

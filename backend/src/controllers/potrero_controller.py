@@ -3,6 +3,9 @@ from typing import Tuple, Any
 from flask import jsonify, request
 from src.database.db import DatabaseError
 from src.services.potrero_service import PotreroService
+from src.utils.auth import token_required
+from src.utils.tenant import tenant_required
+from src.utils.permissions import permission_required
 
 class PotreroController:
     """Controller handling Potrero HTTP requests."""
@@ -15,6 +18,9 @@ class PotreroController:
     WEBSOCKET_NO_DISPONIBLE = 'WebSocket no disponible, omitiendo emisión'
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('ver_potreros')
     def get_all() -> Tuple[Any, int]:
         """Get all potreros endpoint. Acepta tenant_id como query param para super admin."""
         try:
@@ -40,6 +46,9 @@ class PotreroController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('ver_potreros')
     def get_by_id(potrero_id: int) -> Tuple[Any, int]:
         """Get potrero by ID endpoint. Acepta tenant_id como query param para super admin."""
         try:
@@ -74,6 +83,9 @@ class PotreroController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('crear_potreros')
     def create() -> Tuple[Any, int]:
         """Create potrero endpoint."""
         try:
@@ -129,6 +141,9 @@ class PotreroController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('editar_potreros')
     def update(potrero_id: int) -> Tuple[Any, int]:
         """Update potrero endpoint. Acepta tenant_id como query param para super admin."""
         try:
@@ -184,6 +199,9 @@ class PotreroController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('eliminar_potreros')
     def delete(potrero_id: int) -> Tuple[Any, int]:
         """Delete potrero endpoint. Acepta tenant_id como query param para super admin."""
         try:
@@ -229,6 +247,9 @@ class PotreroController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('ver_potreros')
     def get_by_estado(estado: str) -> Tuple[Any, int]:
         """Get potreros by estado endpoint. Acepta tenant_id como query param para super admin."""
         try:
@@ -263,6 +284,9 @@ class PotreroController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('editar_potreros')
     def actualizar_ocupacion(potrero_id: int) -> Tuple[Any, int]:
         """Update potrero ocupacion endpoint."""
         try:
