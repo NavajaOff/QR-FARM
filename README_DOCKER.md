@@ -95,11 +95,12 @@ docker-compose up -d --build
 **¡Ahora es completamente automático!** Solo ejecuta:
 
 ```bash
-# Construir e iniciar todos los servicios
-docker-compose up --build
+# Construir los servicios
+docker compose build
 
-# O en background (recomendado)
-docker-compose up -d --build
+# iniciar todos los servicios
+docker compose up -d
+
 ```
 
 **Lo que sucede automáticamente:**
@@ -199,6 +200,54 @@ Ya está corregido en el código, pero si persiste, verifica que uses `--build`.
 - **Para desarrollo**: Modifica código y reconstruye con `docker-compose up --build`
 - **Para producción**: Configura dominios, HTTPS, y escalado
 - **Para equipo**: Comparte el repositorio (sin archivos .env)
+
+## Reconstrucción Después de Cambios en el Código
+
+### Cómo Funciona Docker en el Proyecto
+
+En QR-Farm, los contenedores están configurados para producción, lo que significa que el código fuente se copia en las imágenes durante la construcción. Los cambios en el código no se reflejan automáticamente en los contenedores en ejecución. Para ver los cambios, es necesario reconstruir las imágenes y reiniciar los contenedores.
+
+- **Backend**: Ejecuta la API REST en el puerto 5000.
+- **Frontend**: Sirve la interfaz de usuario en el puerto 80 usando Nginx.
+- **Base de datos MySQL**: Corre en su propio contenedor con persistencia en un volumen dedicado.
+
+### Pasos para Reconstruir y Levantar Contenedores
+
+Después de hacer cambios en el código del backend o frontend, sigue estos pasos:
+
+1. **Reconstruir la imagen del backend**:
+   ```bash
+   docker-compose build backend
+   ```
+   *Explicación*: Este comando reconstruye la imagen del backend con los últimos cambios en el código fuente.
+
+2. **Reconstruir la imagen del frontend**:
+   ```bash
+   docker-compose build frontend
+   ```
+   *Explicación*: Este comando reconstruye la imagen del frontend con los últimos cambios en el código fuente.
+
+3. **Levantar el contenedor del backend**:
+   ```bash
+   docker-compose up -d backend
+   ```
+   *Explicación*: Este comando inicia o reinicia el contenedor del backend en segundo plano con la nueva imagen.
+
+4. **Levantar el contenedor del frontend**:
+   ```bash
+   docker-compose up -d frontend
+   ```
+   *Explicación*: Este comando inicia o reinicia el contenedor del frontend en segundo plano con la nueva imagen.
+
+### Buenas Prácticas
+
+- Cada desarrollador debe ejecutar estos comandos manualmente después de hacer `git pull` para ver los cambios en su entorno local.
+- No automatizar la reconstrucción con hooks de pre-pull, ya que podría romper entornos de desarrollo o causar conflictos.
+- Mantén el archivo `.env` seguro y nunca subas credenciales sensibles al repositorio.
+
+Sigue estos pasos paso a paso para asegurar que tus cambios se vean reflejados en la aplicación Docker.
+
+
 
 ## Optimizaciones para Producción
 

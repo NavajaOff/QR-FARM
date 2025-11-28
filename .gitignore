@@ -115,3 +115,9 @@ logs/
 
 # Configuración local de VS Code
 .vscode/
+
+
+# Archivos y carpetas de SonarScanner
+.scannerwork/
+.sonar_lock
+report-task.txt
