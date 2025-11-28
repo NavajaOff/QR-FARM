@@ -9,23 +9,55 @@ from src.models.animal import Ganado, EstadoGanado
 from src.services.animal_service import GanadoService
 
 
+def _setup_mock_user():
+    """Helper para configurar un usuario mock en g."""
+    mock_user = Mock()
+    mock_user.id = 1
+    mock_user.tenant_id = 1
+    mock_user.estado = Mock()
+    mock_user.estado.value = 'activo'
+    mock_rol = Mock()
+    mock_rol.nombre_rol = 'admin'
+    mock_user.rol = mock_rol
+    g.current_user = mock_user
+    g.tenant_id = 1
+    g.jwt_payload = {'user_id': 1, 'role': 'admin'}
+
+
 class TestGanadoController:
     """Tests para GanadoController."""
 
-    @patch('src.controllers.animal_controller.token_required')
-    @patch('src.controllers.animal_controller.tenant_required')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.jwt')
     @patch.object(Ganado, 'from_dict')
     @patch.object(GanadoService, 'crear_ganado')
     @patch('src.controllers.animal_controller.emit_update')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_crear_ganado_success(self, mock_jsonify, mock_emit, mock_crear, mock_from_dict, mock_tenant_required, mock_token_required):
+    def test_crear_ganado_success(self, mock_jsonify, mock_emit, mock_crear, mock_from_dict, mock_jwt, mock_usuario_service):
         """Test crear_ganado exitoso."""
-        # Make decorators return the function unchanged
-        mock_token_required.return_value = lambda f: f
-        mock_tenant_required.return_value = lambda f: f
+        # Mock JWT decode
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
+        
+        # Mock UsuarioService.obtener_usuario
+        mock_user = Mock()
+        mock_user.id = 1
+        mock_user.tenant_id = 1
+        mock_user.estado = Mock()
+        mock_user.estado.value = 'activo'
+        mock_rol = Mock()
+        mock_rol.nombre_rol = 'admin'
+        mock_rol.rol = 'admin'
+        mock_user.rol = mock_rol
+        mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
-        with app.test_request_context(json={'nombre': 'Test Animal', 'fecha_nacimiento': '2020-01-01', 'estado': 'activo'}):
+        app.config['SECRET_KEY'] = 'test-secret-key'
+        with app.test_request_context(
+            json={'nombre': 'Test Animal', 'fecha_nacimiento': '2020-01-01', 'estado': 'activo'},
+            headers={'Authorization': 'Bearer fake_token'},
+            query_string={'tenant_id': '1'}
+        ):
+            _setup_mock_user()
             # Mock Ganado.from_dict
             mock_ganado_obj = Mock()
             mock_ganado_obj.to_dict.return_value = {'id': 1, 'nombre': 'Test Animal'}
@@ -49,17 +81,31 @@ class TestGanadoController:
             mock_crear.assert_called_once()
             mock_jsonify.assert_called_once()
 
-    @patch('src.controllers.animal_controller.token_required')
-    @patch('src.controllers.animal_controller.tenant_required')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.jwt')
     @patch.object(GanadoService, 'crear_ganado')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_crear_ganado_error(self, mock_jsonify, mock_crear, mock_tenant_required, mock_token_required):
+    def test_crear_ganado_error(self, mock_jsonify, mock_crear, mock_jwt, mock_usuario_service):
         """Test crear_ganado con error."""
-        mock_token_required.return_value = lambda f: f
-        mock_tenant_required.return_value = lambda f: f
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
+        mock_user = Mock()
+        mock_user.id = 1
+        mock_user.tenant_id = 1
+        mock_user.estado = Mock()
+        mock_user.estado.value = 'activo'
+        mock_rol = Mock()
+        mock_rol.nombre_rol = 'admin'
+        mock_user.rol = mock_rol
+        mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
-        with app.test_request_context(json={'nombre': 'Test Animal'}):
+        app.config['SECRET_KEY'] = 'test-secret-key'
+        with app.test_request_context(
+            json={'nombre': 'Test Animal'},
+            headers={'Authorization': 'Bearer fake_token'},
+            query_string={'tenant_id': '1'}
+        ):
+            _setup_mock_user()
             mock_crear.return_value = None
 
             mock_response = Mock()
@@ -70,16 +116,30 @@ class TestGanadoController:
 
             assert status == 400
 
-    @patch('src.controllers.animal_controller.token_required')
-    @patch('src.controllers.animal_controller.tenant_required')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.jwt')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_crear_ganado_value_error(self, mock_jsonify, mock_tenant_required, mock_token_required):
+    def test_crear_ganado_value_error(self, mock_jsonify, mock_jwt, mock_usuario_service):
         """Test crear_ganado con ValueError."""
-        mock_token_required.return_value = lambda f: f
-        mock_tenant_required.return_value = lambda f: f
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
+        mock_user = Mock()
+        mock_user.id = 1
+        mock_user.tenant_id = 1
+        mock_user.estado = Mock()
+        mock_user.estado.value = 'activo'
+        mock_rol = Mock()
+        mock_rol.nombre_rol = 'admin'
+        mock_user.rol = mock_rol
+        mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
-        with app.test_request_context(json={'nombre': 'Test Animal', 'fecha_nacimiento': 'invalid-date'}):
+        app.config['SECRET_KEY'] = 'test-secret-key'
+        with app.test_request_context(
+            json={'nombre': 'Test Animal', 'fecha_nacimiento': 'invalid-date'},
+            headers={'Authorization': 'Bearer fake_token'},
+            query_string={'tenant_id': '1'}
+        ):
+            _setup_mock_user()
             mock_response = Mock()
             mock_response.json = {'status': 'error', 'message': 'Invalid date'}
             mock_jsonify.return_value = (mock_response, 400)
@@ -89,17 +149,30 @@ class TestGanadoController:
 
                 assert status == 400
 
-    @patch('src.controllers.animal_controller.token_required')
-    @patch('src.controllers.animal_controller.tenant_required')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.jwt')
     @patch.object(GanadoService, 'obtener_ganado_detallado')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_obtener_ganado_success(self, mock_jsonify, mock_obtener, mock_tenant_required, mock_token_required):
+    def test_obtener_ganado_success(self, mock_jsonify, mock_obtener, mock_jwt, mock_usuario_service):
         """Test obtener_ganado exitoso."""
-        mock_token_required.return_value = lambda f: f
-        mock_tenant_required.return_value = lambda f: f
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
+        mock_user = Mock()
+        mock_user.id = 1
+        mock_user.tenant_id = 1
+        mock_user.estado = Mock()
+        mock_user.estado.value = 'activo'
+        mock_rol = Mock()
+        mock_rol.nombre_rol = 'admin'
+        mock_user.rol = mock_rol
+        mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
-        with app.test_request_context():
+        app.config['SECRET_KEY'] = 'test-secret-key'
+        with app.test_request_context(
+            headers={'Authorization': 'Bearer fake_token'},
+            query_string={'tenant_id': '1'}
+        ):
+            _setup_mock_user()
             mock_obtener.return_value = {'id': 1, 'nombre': 'Test Animal'}
 
             mock_response = Mock()
@@ -110,17 +183,30 @@ class TestGanadoController:
 
             assert status == 200
 
-    @patch('src.controllers.animal_controller.token_required')
-    @patch('src.controllers.animal_controller.tenant_required')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.jwt')
     @patch.object(GanadoService, 'obtener_ganado_detallado')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_obtener_ganado_not_found(self, mock_jsonify, mock_obtener, mock_tenant_required, mock_token_required):
+    def test_obtener_ganado_not_found(self, mock_jsonify, mock_obtener, mock_jwt, mock_usuario_service):
         """Test obtener_ganado cuando no existe."""
-        mock_token_required.return_value = lambda f: f
-        mock_tenant_required.return_value = lambda f: f
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
+        mock_user = Mock()
+        mock_user.id = 1
+        mock_user.tenant_id = 1
+        mock_user.estado = Mock()
+        mock_user.estado.value = 'activo'
+        mock_rol = Mock()
+        mock_rol.nombre_rol = 'admin'
+        mock_user.rol = mock_rol
+        mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
-        with app.test_request_context():
+        app.config['SECRET_KEY'] = 'test-secret-key'
+        with app.test_request_context(
+            headers={'Authorization': 'Bearer fake_token'},
+            query_string={'tenant_id': '1'}
+        ):
+            _setup_mock_user()
             mock_obtener.return_value = None
 
             mock_response = Mock()
@@ -131,17 +217,30 @@ class TestGanadoController:
 
             assert status == 404
 
-    @patch('src.controllers.animal_controller.token_required')
-    @patch('src.controllers.animal_controller.tenant_required')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.jwt')
     @patch.object(GanadoService, 'obtener_todos_ganados')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_obtener_todos_ganados_success(self, mock_jsonify, mock_obtener, mock_tenant_required, mock_token_required):
+    def test_obtener_todos_ganados_success(self, mock_jsonify, mock_obtener, mock_jwt, mock_usuario_service):
         """Test obtener_todos_ganados exitoso."""
-        mock_token_required.return_value = lambda f: f
-        mock_tenant_required.return_value = lambda f: f
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
+        mock_user = Mock()
+        mock_user.id = 1
+        mock_user.tenant_id = 1
+        mock_user.estado = Mock()
+        mock_user.estado.value = 'activo'
+        mock_rol = Mock()
+        mock_rol.nombre_rol = 'admin'
+        mock_user.rol = mock_rol
+        mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
-        with app.test_request_context():
+        app.config['SECRET_KEY'] = 'test-secret-key'
+        with app.test_request_context(
+            headers={'Authorization': 'Bearer fake_token'},
+            query_string={'tenant_id': '1'}
+        ):
+            _setup_mock_user()
             mock_ganado1 = Mock()
             mock_ganado1.to_dict.return_value = {'id': 1, 'nombre': 'Animal 1'}
             mock_ganado2 = Mock()
@@ -181,19 +280,33 @@ class TestGanadoController:
 
             assert status == 200
 
-    @patch('src.controllers.animal_controller.token_required')
-    @patch('src.controllers.animal_controller.tenant_required')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.jwt')
     @patch.object(GanadoService, 'obtener_ganado')
     @patch.object(GanadoService, 'actualizar_ganado')
     @patch('src.controllers.animal_controller.emit_update')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_actualizar_ganado_success(self, mock_jsonify, mock_emit, mock_actualizar, mock_obtener, mock_tenant_required, mock_token_required):
+    def test_actualizar_ganado_success(self, mock_jsonify, mock_emit, mock_actualizar, mock_obtener, mock_jwt, mock_usuario_service):
         """Test actualizar_ganado exitoso."""
-        mock_token_required.return_value = lambda f: f
-        mock_tenant_required.return_value = lambda f: f
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
+        mock_user = Mock()
+        mock_user.id = 1
+        mock_user.tenant_id = 1
+        mock_user.estado = Mock()
+        mock_user.estado.value = 'activo'
+        mock_rol = Mock()
+        mock_rol.nombre_rol = 'admin'
+        mock_user.rol = mock_rol
+        mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
-        with app.test_request_context(json={'nombre': 'Updated Animal'}):
+        app.config['SECRET_KEY'] = 'test-secret-key'
+        with app.test_request_context(
+            json={'nombre': 'Updated Animal'},
+            headers={'Authorization': 'Bearer fake_token'},
+            query_string={'tenant_id': '1'}
+        ):
+            _setup_mock_user()
             mock_ganado = Mock()
             mock_ganado.to_dict.return_value = {'id': 1, 'nombre': 'Updated Animal'}
             mock_obtener.return_value = mock_ganado
@@ -207,17 +320,31 @@ class TestGanadoController:
 
             assert status == 200
 
-    @patch('src.controllers.animal_controller.token_required')
-    @patch('src.controllers.animal_controller.tenant_required')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.jwt')
     @patch.object(GanadoService, 'obtener_ganado')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_actualizar_ganado_not_found(self, mock_jsonify, mock_obtener, mock_tenant_required, mock_token_required):
+    def test_actualizar_ganado_not_found(self, mock_jsonify, mock_obtener, mock_jwt, mock_usuario_service):
         """Test actualizar_ganado cuando no existe."""
-        mock_token_required.return_value = lambda f: f
-        mock_tenant_required.return_value = lambda f: f
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
+        mock_user = Mock()
+        mock_user.id = 1
+        mock_user.tenant_id = 1
+        mock_user.estado = Mock()
+        mock_user.estado.value = 'activo'
+        mock_rol = Mock()
+        mock_rol.nombre_rol = 'admin'
+        mock_user.rol = mock_rol
+        mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
-        with app.test_request_context(json={'nombre': 'Updated Animal'}):
+        app.config['SECRET_KEY'] = 'test-secret-key'
+        with app.test_request_context(
+            json={'nombre': 'Updated Animal'},
+            headers={'Authorization': 'Bearer fake_token'},
+            query_string={'tenant_id': '1'}
+        ):
+            _setup_mock_user()
             mock_obtener.return_value = None
 
             mock_response = Mock()
@@ -228,18 +355,31 @@ class TestGanadoController:
 
             assert status == 404
 
-    @patch('src.controllers.animal_controller.token_required')
-    @patch('src.controllers.animal_controller.tenant_required')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.jwt')
     @patch.object(GanadoService, 'eliminar_ganado')
     @patch('src.controllers.animal_controller.emit_update')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_eliminar_ganado_success(self, mock_jsonify, mock_emit, mock_eliminar, mock_tenant_required, mock_token_required):
+    def test_eliminar_ganado_success(self, mock_jsonify, mock_emit, mock_eliminar, mock_jwt, mock_usuario_service):
         """Test eliminar_ganado exitoso."""
-        mock_token_required.return_value = lambda f: f
-        mock_tenant_required.return_value = lambda f: f
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
+        mock_user = Mock()
+        mock_user.id = 1
+        mock_user.tenant_id = 1
+        mock_user.estado = Mock()
+        mock_user.estado.value = 'activo'
+        mock_rol = Mock()
+        mock_rol.nombre_rol = 'admin'
+        mock_user.rol = mock_rol
+        mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
-        with app.test_request_context():
+        app.config['SECRET_KEY'] = 'test-secret-key'
+        with app.test_request_context(
+            headers={'Authorization': 'Bearer fake_token'},
+            query_string={'tenant_id': '1'}
+        ):
+            _setup_mock_user()
             mock_eliminar.return_value = True
 
             mock_response = Mock()
@@ -250,17 +390,30 @@ class TestGanadoController:
 
             assert status == 200
 
-    @patch('src.controllers.animal_controller.token_required')
-    @patch('src.controllers.animal_controller.tenant_required')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.jwt')
     @patch.object(GanadoService, 'eliminar_ganado')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_eliminar_ganado_error_message(self, mock_jsonify, mock_eliminar, mock_tenant_required, mock_token_required):
+    def test_eliminar_ganado_error_message(self, mock_jsonify, mock_eliminar, mock_jwt, mock_usuario_service):
         """Test eliminar_ganado con mensaje de error."""
-        mock_token_required.return_value = lambda f: f
-        mock_tenant_required.return_value = lambda f: f
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
+        mock_user = Mock()
+        mock_user.id = 1
+        mock_user.tenant_id = 1
+        mock_user.estado = Mock()
+        mock_user.estado.value = 'activo'
+        mock_rol = Mock()
+        mock_rol.nombre_rol = 'admin'
+        mock_user.rol = mock_rol
+        mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
-        with app.test_request_context():
+        app.config['SECRET_KEY'] = 'test-secret-key'
+        with app.test_request_context(
+            headers={'Authorization': 'Bearer fake_token'},
+            query_string={'tenant_id': '1'}
+        ):
+            _setup_mock_user()
             mock_eliminar.return_value = "Error message"
 
             mock_response = Mock()
@@ -271,17 +424,30 @@ class TestGanadoController:
 
             assert status == 400
 
-    @patch('src.controllers.animal_controller.token_required')
-    @patch('src.controllers.animal_controller.tenant_required')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.jwt')
     @patch.object(GanadoService, 'eliminar_ganado')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_eliminar_ganado_not_found(self, mock_jsonify, mock_eliminar, mock_tenant_required, mock_token_required):
+    def test_eliminar_ganado_not_found(self, mock_jsonify, mock_eliminar, mock_jwt, mock_usuario_service):
         """Test eliminar_ganado cuando no existe."""
-        mock_token_required.return_value = lambda f: f
-        mock_tenant_required.return_value = lambda f: f
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
+        mock_user = Mock()
+        mock_user.id = 1
+        mock_user.tenant_id = 1
+        mock_user.estado = Mock()
+        mock_user.estado.value = 'activo'
+        mock_rol = Mock()
+        mock_rol.nombre_rol = 'admin'
+        mock_user.rol = mock_rol
+        mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
-        with app.test_request_context():
+        app.config['SECRET_KEY'] = 'test-secret-key'
+        with app.test_request_context(
+            headers={'Authorization': 'Bearer fake_token'},
+            query_string={'tenant_id': '1'}
+        ):
+            _setup_mock_user()
             mock_eliminar.return_value = False
 
             mock_response = Mock()
@@ -292,17 +458,30 @@ class TestGanadoController:
 
             assert status == 404
 
-    @patch('src.controllers.animal_controller.token_required')
-    @patch('src.controllers.animal_controller.tenant_required')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.jwt')
     @patch.object(GanadoService, 'buscar_por_potrero')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_obtener_ganados_por_potrero_success(self, mock_jsonify, mock_buscar, mock_tenant_required, mock_token_required):
+    def test_obtener_ganados_por_potrero_success(self, mock_jsonify, mock_buscar, mock_jwt, mock_usuario_service):
         """Test obtener_ganados_por_potrero exitoso."""
-        mock_token_required.return_value = lambda f: f
-        mock_tenant_required.return_value = lambda f: f
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
+        mock_user = Mock()
+        mock_user.id = 1
+        mock_user.tenant_id = 1
+        mock_user.estado = Mock()
+        mock_user.estado.value = 'activo'
+        mock_rol = Mock()
+        mock_rol.nombre_rol = 'admin'
+        mock_user.rol = mock_rol
+        mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
-        with app.test_request_context():
+        app.config['SECRET_KEY'] = 'test-secret-key'
+        with app.test_request_context(
+            headers={'Authorization': 'Bearer fake_token'},
+            query_string={'tenant_id': '1'}
+        ):
+            _setup_mock_user()
             mock_ganado1 = Mock()
             mock_ganado1.to_dict.return_value = {'id': 1, 'nombre': 'Animal 1'}
             mock_ganado2 = Mock()
@@ -318,18 +497,31 @@ class TestGanadoController:
 
             assert status == 200
 
-    @patch('src.controllers.animal_controller.token_required')
-    @patch('src.controllers.animal_controller.tenant_required')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.jwt')
     @patch.object(GanadoService, 'buscar_por_codigo_qr')
     @patch.object(GanadoService, 'obtener_ganado_detallado')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_buscar_por_codigo_qr_success(self, mock_jsonify, mock_detalle, mock_buscar, mock_tenant_required, mock_token_required):
+    def test_buscar_por_codigo_qr_success(self, mock_jsonify, mock_detalle, mock_buscar, mock_jwt, mock_usuario_service):
         """Test buscar_por_codigo_qr exitoso."""
-        mock_token_required.return_value = lambda f: f
-        mock_tenant_required.return_value = lambda f: f
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
+        mock_user = Mock()
+        mock_user.id = 1
+        mock_user.tenant_id = 1
+        mock_user.estado = Mock()
+        mock_user.estado.value = 'activo'
+        mock_rol = Mock()
+        mock_rol.nombre_rol = 'admin'
+        mock_user.rol = mock_rol
+        mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
-        with app.test_request_context():
+        app.config['SECRET_KEY'] = 'test-secret-key'
+        with app.test_request_context(
+            headers={'Authorization': 'Bearer fake_token'},
+            query_string={'tenant_id': '1'}
+        ):
+            _setup_mock_user()
             mock_ganado = Mock()
             mock_ganado.id = 1
             mock_buscar.return_value = mock_ganado
@@ -343,17 +535,30 @@ class TestGanadoController:
 
             assert status == 200
 
-    @patch('src.controllers.animal_controller.token_required')
-    @patch('src.controllers.animal_controller.tenant_required')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.jwt')
     @patch.object(GanadoService, 'buscar_por_codigo_qr')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_buscar_por_codigo_qr_not_found(self, mock_jsonify, mock_buscar, mock_tenant_required, mock_token_required):
+    def test_buscar_por_codigo_qr_not_found(self, mock_jsonify, mock_buscar, mock_jwt, mock_usuario_service):
         """Test buscar_por_codigo_qr cuando no existe."""
-        mock_token_required.return_value = lambda f: f
-        mock_tenant_required.return_value = lambda f: f
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
+        mock_user = Mock()
+        mock_user.id = 1
+        mock_user.tenant_id = 1
+        mock_user.estado = Mock()
+        mock_user.estado.value = 'activo'
+        mock_rol = Mock()
+        mock_rol.nombre_rol = 'admin'
+        mock_user.rol = mock_rol
+        mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
-        with app.test_request_context():
+        app.config['SECRET_KEY'] = 'test-secret-key'
+        with app.test_request_context(
+            headers={'Authorization': 'Bearer fake_token'},
+            query_string={'tenant_id': '1'}
+        ):
+            _setup_mock_user()
             mock_buscar.return_value = None
 
             mock_response = Mock()
