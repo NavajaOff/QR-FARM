@@ -1,9 +1,24 @@
 from __future__ import with_statement
 import logging
+import os
+from pathlib import Path
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
+
+# Load environment variables from .env file if available
+try:
+    from dotenv import load_dotenv
+    # Search for .env file in project root
+    # env.py is at: backend/src/database/migrations/env.py
+    # .env is at: project_root/.env
+    env_path = Path(__file__).parent.parent.parent.parent.parent / '.env'
+    if env_path.exists():
+        load_dotenv(dotenv_path=env_path)
+except ImportError:
+    # python-dotenv not available, continue without it
+    pass
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -19,6 +34,27 @@ logger = logging.getLogger('alembic.env')
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 target_metadata = None
+
+# Build database URL from environment variables
+# This allows running migrations both from Docker (DB_HOST=mysql) and locally (DB_HOST=localhost)
+def _build_database_url() -> str:
+    """Build SQLAlchemy database URL from environment variables."""
+    db_host = os.getenv('DB_HOST', 'localhost')
+    db_user = os.getenv('DB_USER', 'root')
+    db_password = os.getenv('DB_PASSWORD', '')
+    db_name = os.getenv('DB_NAME', 'gestion_ganadera')
+    db_port = os.getenv('DB_PORT', '3306')
+    
+    # Construct URL: mysql+mysqlconnector://user:password@host:port/database
+    password_part = f":{db_password}" if db_password else ""
+    url = f"mysql+mysqlconnector://{db_user}{password_part}@{db_host}:{db_port}/{db_name}"
+    
+    logger.info(f"Database URL constructed from environment variables (host: {db_host})")
+    return url
+
+# Override sqlalchemy.url with environment-based URL
+database_url = _build_database_url()
+config.set_main_option('sqlalchemy.url', database_url)
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

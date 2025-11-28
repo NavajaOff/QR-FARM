@@ -11,15 +11,19 @@ export function useTenants() {
     try {
       loading.value = true
       error.value = null
+      console.log('[useTenants] Cargando tenants - activosOnly:', activosOnly)
       const response = await tenantAPI.getAll(activosOnly)
+      console.log('[useTenants] Respuesta recibida:', response.data)
+      
       if (response.data?.status === 'success') {
-        tenants.value = response.data.data
+        tenants.value = response.data.data || []
+        console.log('[useTenants] Tenants cargados:', tenants.value.length)
       } else {
         error.value = response.data?.message || 'Error al cargar tenants'
       }
     } catch (err) {
       error.value = err.response?.data?.message || err.message || 'Error al cargar tenants'
-      console.error('Error cargando tenants:', err)
+      console.error('[useTenants] Error cargando tenants:', err)
     } finally {
       loading.value = false
     }
@@ -44,13 +48,14 @@ export function useTenants() {
     }
   }
 
-  const actualizarTenant = async (id, data) => {
+  const actualizarTenant = async (id, data, activosOnly = false) => {
     try {
       loading.value = true
       error.value = null
       const response = await tenantAPI.update(id, data)
       if (response.data?.status === 'success') {
-        await cargarTenants(false) // Recargar lista
+        // Recargar lista manteniendo el filtro actual (por defecto todos para ver cambios)
+        await cargarTenants(activosOnly)
         return { success: true, data: response.data.data }
       }
       return { success: false, message: response.data?.message || 'Error al actualizar tenant' }

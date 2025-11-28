@@ -1,4 +1,5 @@
 import { useUsuarios } from '../../composables/useUsuarios.js';
+import { useTenants } from '../../composables/useTenants.js';
 import authService from '../../services/authService.js';
 import { authAPI } from '../../services/api.js';
 import Swal from 'sweetalert2';
@@ -16,6 +17,12 @@ export default {
       actualizarUsuario,
       cambiarEstadoUsuario
     } = useUsuarios();
+    
+    const {
+      tenants,
+      loading: tenantsLoading,
+      cargarTenants
+    } = useTenants();
 
     return {
       usuarios,
@@ -23,7 +30,10 @@ export default {
       error,
       cargarUsuarios,
       actualizarUsuario,
-      cambiarEstadoUsuario
+      cambiarEstadoUsuario,
+      tenants,
+      tenantsLoading,
+      cargarTenants
     };
   },
   data() {
@@ -39,7 +49,9 @@ export default {
         email: '',
         telefono: '',
         password: '',
-        confirm_password: ''
+        confirm_password: '',
+        id_rol: 2,
+        tenant_id: null
       },
       editForm: {
         primer_nombre: '',
@@ -58,10 +70,16 @@ export default {
   computed: {
     isCurrentUserAdmin() {
       return authService.isAdmin();
+    },
+    isSuperAdmin() {
+      return authService.getRole() === 'super_admin';
     }
   },
   mounted() {
     this.cargarUsuarios();
+    if (this.isSuperAdmin) {
+      this.cargarTenants(true);
+    }
   },
   beforeUnmount() {
     console.log('GestionarUsuarios desmontándose...');
@@ -123,7 +141,9 @@ export default {
         email: '',
         telefono: '',
         password: '',
-        confirm_password: ''
+        confirm_password: '',
+        id_rol: 2,
+        tenant_id: null
       };
     },
 
@@ -169,6 +189,16 @@ export default {
           telefono: this.addForm.telefono.trim() || null,
           password: this.addForm.password
         };
+        
+        // Agregar campos adicionales si es super admin
+        if (this.isSuperAdmin) {
+          if (this.addForm.id_rol) {
+            payload.id_rol = this.addForm.id_rol;
+          }
+          if (this.addForm.tenant_id) {
+            payload.tenant_id = this.addForm.tenant_id;
+          }
+        }
 
         const response = await authAPI.register(payload);
         if (response.data?.status === 'success') {

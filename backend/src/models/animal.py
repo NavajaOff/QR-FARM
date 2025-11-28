@@ -33,6 +33,7 @@ class Ganado:
         self.estado_salud = kwargs.get('estado_salud')
         self.estado_tipo = kwargs.get('estado_tipo')
         # estado_baja ahora se determina por id_estado (si id_estado >= 4, está dado de baja)
+        self.tenant_id = kwargs.get('tenant_id')
         self.created_at = kwargs.get('created_at')
         self.updated_at = kwargs.get('updated_at')
 
@@ -66,6 +67,7 @@ class Ganado:
             estado=data.get('estado_tipo') or data.get('estado') or 'saludable',
             estado_salud=data.get('estado_salud'),
             estado_tipo=data.get('estado_tipo'),
+            tenant_id=data.get('tenant_id'),
             created_at=data.get('created_at'),
             updated_at=data.get('updated_at')
         )
@@ -112,6 +114,7 @@ class Ganado:
             'estado': self.estado,
             'estado_salud': self.estado_salud,
             'estado_tipo': self.estado_tipo,
+            'tenant_id': self.tenant_id,
             'created_at': safe_isoformat(self.created_at),
             'updated_at': safe_isoformat(self.updated_at)
         }

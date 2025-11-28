@@ -13,13 +13,18 @@ class VacunacionService:
         except Exception:
             return None
     @staticmethod
-    def obtener_todas_vacunaciones() -> List[Vacunacion]:
-        """Obtener todas las vacunaciones con información relacionada"""
+    def obtener_todas_vacunaciones(tenant_id_override: Optional[int] = None) -> List[Vacunacion]:
+        """
+        Obtener todas las vacunaciones con información relacionada.
+        
+        Args:
+            tenant_id_override: Si se proporciona, filtra por este tenant
+        """
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
-            tenant_id = VacunacionService._obtener_tenant_id()
+            tenant_id = tenant_id_override if tenant_id_override is not None else VacunacionService._obtener_tenant_id()
             
             query = """
                 SELECT
@@ -66,14 +71,20 @@ class VacunacionService:
                 conn.close()
 
     @staticmethod
-    def obtener_vacunacion_por_id(id: int) -> Optional[Vacunacion]:
-        """Obtener una vacunación por ID"""
+    def obtener_vacunacion_por_id(id: int, tenant_id_override: Optional[int] = None) -> Optional[Vacunacion]:
+        """
+        Obtener una vacunación por ID.
+        
+        Args:
+            id: ID de la vacunación
+            tenant_id_override: Si se proporciona, valida que la vacunación pertenezca a este tenant
+        """
         try:
             print(f"Service: Buscando vacunación con ID: {id}")
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
-            tenant_id = VacunacionService._obtener_tenant_id()
+            tenant_id = tenant_id_override if tenant_id_override is not None else VacunacionService._obtener_tenant_id()
             
             query = """
                 SELECT
@@ -181,13 +192,20 @@ class VacunacionService:
                 conn.close()
 
     @staticmethod
-    def actualizar_vacunacion(id: int, vacunacion: Vacunacion) -> bool:
-        """Actualizar una vacunación existente"""
+    def actualizar_vacunacion(id: int, vacunacion: Vacunacion, tenant_id_override: Optional[int] = None) -> bool:
+        """
+        Actualizar una vacunación existente.
+        
+        Args:
+            id: ID de la vacunación
+            vacunacion: Objeto Vacunacion con datos actualizados
+            tenant_id_override: Si se proporciona, valida que la vacunación pertenezca a este tenant
+        """
         try:
             conn = get_connection()
             cursor = conn.cursor()
 
-            tenant_id = VacunacionService._obtener_tenant_id()
+            tenant_id = tenant_id_override if tenant_id_override is not None else VacunacionService._obtener_tenant_id()
             
             query = """
                 UPDATE vacunacion SET
@@ -231,15 +249,21 @@ class VacunacionService:
                 conn.close()
 
     @staticmethod
-    def eliminar_vacunacion(id: int) -> bool:
-        """Eliminar una vacunación"""
+    def eliminar_vacunacion(id: int, tenant_id_override: Optional[int] = None) -> bool:
+        """
+        Eliminar una vacunación.
+        
+        Args:
+            id: ID de la vacunación
+            tenant_id_override: Si se proporciona, valida que la vacunación pertenezca a este tenant
+        """
         try:
             print(f"Service: Intentando eliminar vacunación con ID: {id}")
             conn = get_connection()
             cursor = conn.cursor()
             print(f"Service: Conexión a BD obtenida")
 
-            tenant_id = VacunacionService._obtener_tenant_id()
+            tenant_id = tenant_id_override if tenant_id_override is not None else VacunacionService._obtener_tenant_id()
             
             query = "DELETE FROM vacunacion WHERE id = %s"
             params = (id,)

@@ -1,5 +1,5 @@
 <template>
-  <div class="container-fluid py-4">
+  <div>
     <div class="row">
       <div class="col-12">
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
@@ -158,6 +158,30 @@
                     v-model="addForm.confirm_password"
                     required
                   >
+                </div>
+              </div>
+              <!-- Campos adicionales para super admin -->
+              <div v-if="isSuperAdmin" class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="add_id_rol" class="form-label">Rol</label>
+                  <select class="form-select" id="add_id_rol" v-model.number="addForm.id_rol">
+                    <option :value="1">Administrador</option>
+                    <option :value="2">Usuario</option>
+                  </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="add_tenant_id" class="form-label">Tenant (Opcional)</label>
+                  <select class="form-select" id="add_tenant_id" v-model.number="addForm.tenant_id">
+                    <option :value="null">-- Sin asignar --</option>
+                    <option
+                      v-for="tenant in tenants"
+                      :key="tenant.id"
+                      :value="tenant.id"
+                    >
+                      {{ tenant.nombre }} ({{ tenant.codigo_tenant }})
+                    </option>
+                  </select>
+                  <div class="form-text">Asignar tenant al usuario (solo super admin)</div>
                 </div>
               </div>
             </form>

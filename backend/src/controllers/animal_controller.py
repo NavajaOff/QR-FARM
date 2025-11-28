@@ -3,6 +3,9 @@ from datetime import datetime
 from flask import jsonify, request
 from ..models.animal import Ganado
 from ..services.animal_service import GanadoService
+from ..utils.auth import token_required
+from ..utils.tenant import tenant_required
+from ..utils.permissions import permission_required
 
 try:
     from ...app import emit_update
@@ -15,6 +18,9 @@ GANADO_NO_ENCONTRADO = 'Ganado no encontrado'
 
 class GanadoController:
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('crear_ganado')
     def crear_ganado():
         try:
             data = request.get_json()
@@ -58,9 +64,22 @@ class GanadoController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('ver_ganado')
     def obtener_ganado(id):
+        """Obtener ganado por ID. Acepta tenant_id como query param para super admin."""
         try:
-            ganado = GanadoService.obtener_ganado_detallado(id)
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
+            ganado = GanadoService.obtener_ganado_detallado(id, tenant_id_override=tenant_id)
 
             if ganado:
                 return jsonify({
@@ -85,11 +104,22 @@ class GanadoController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('ver_ganado')
     def obtener_todos_ganados():
+        """Obtener todos los ganados. Acepta tenant_id como query param para super admin."""
         try:
-            # Siempre devolver todos los animales para simplificar
-            ganados = GanadoService.obtener_todos_ganados()
-            print(f"[DEBUG] Controller - Animales devueltos: {len(ganados)}")
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+
+            ganados = GanadoService.obtener_todos_ganados(tenant_id_override=tenant_id)
             return jsonify({
                 'status': 'success',
                 'data': [ganado.to_dict() for ganado in ganados],
@@ -132,12 +162,25 @@ class GanadoController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('editar_ganado')
     def actualizar_ganado(id):
+        """Actualizar ganado. Acepta tenant_id como query param para super admin."""
         try:
             data = request.get_json()
 
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+
             # Obtener el ganado existente
-            ganado_existente = GanadoService.obtener_ganado(id)
+            ganado_existente = GanadoService.obtener_ganado(id, tenant_id_override=tenant_id)
             if not ganado_existente:
                 return jsonify({
                     'status': 'error',
@@ -151,7 +194,7 @@ class GanadoController:
                 setattr(ganado_existente, key, value)
 
             # Intentar actualizar en la base de datos
-            if GanadoService.actualizar_ganado(id, ganado_existente):
+            if GanadoService.actualizar_ganado(id, ganado_existente, tenant_id_override=tenant_id):
                 payload = ganado_existente.to_dict()
                 try:
                     emit_update('animal_updated', {
@@ -179,8 +222,11 @@ class GanadoController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('eliminar_ganado')
     def dar_baja_ganado(id):
-        """Da de baja lógica a un animal."""
+        """Da de baja lógica a un animal. Acepta tenant_id como query param para super admin."""
         try:
             data = request.get_json()
             causa_baja = data.get('causa_baja')
@@ -193,7 +239,16 @@ class GanadoController:
                     'success': False
                 }), 400
             
-            result = GanadoService.dar_baja_ganado(id, causa_baja, observaciones)
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
+            result = GanadoService.dar_baja_ganado(id, causa_baja, observaciones, tenant_id_override=tenant_id)
             
             if result is True:
                 try:
@@ -229,12 +284,25 @@ class GanadoController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('editar_ganado')
     def reactivar_ganado(id):
-        """Reactivar un animal que estaba dado de baja."""
+        """Reactivar un animal que estaba dado de baja. Acepta tenant_id como query param para super admin."""
         try:
             data = request.get_json() or {}
             nuevo_estado = data.get('nuevo_estado', 'saludable')
-            result = GanadoService.reactivar_ganado(id, nuevo_estado)
+            
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
+            result = GanadoService.reactivar_ganado(id, nuevo_estado, tenant_id_override=tenant_id)
             
             if result is True:
                 try:
@@ -270,6 +338,9 @@ class GanadoController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('eliminar_ganado')
     def eliminar_ganado(id):
         """Elimina un ganado usando GanadoService.eliminar_ganado()."""
         try:
@@ -305,6 +376,9 @@ class GanadoController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('ver_ganado')
     def obtener_ganados_por_potrero(potrero_id):
         try:
             ganados = GanadoService.buscar_por_potrero(potrero_id)
@@ -320,12 +394,25 @@ class GanadoController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('ver_ganado')
     def buscar_por_codigo_qr(codigo_qr):
+        """Buscar ganado por código QR. Acepta tenant_id como query param para super admin."""
         try:
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
             ganado = GanadoService.buscar_por_codigo_qr(codigo_qr)
 
             if ganado:
-                detalle = GanadoService.obtener_ganado_detallado(ganado.id) if ganado.id else None
+                detalle = GanadoService.obtener_ganado_detallado(ganado.id, tenant_id_override=tenant_id) if ganado.id else None
                 return jsonify({
                     'status': 'success',
                     'data': detalle if detalle else ganado.to_dict()

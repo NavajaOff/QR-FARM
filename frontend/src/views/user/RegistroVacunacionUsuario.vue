@@ -105,5 +105,4 @@ export default registroVacunacionUsuario;
 </script>
 
 <style scoped>
-@import '../../assets/css/registro-vacunacion-usuario.css';
 </style>

@@ -4,7 +4,6 @@ from typing import Dict, Any, Generator, Optional
 from contextlib import contextmanager
 import logging
 import mysql.connector
-from passlib.hash import bcrypt
 from mysql.connector import Error
 from mysql.connector.connection import MySQLConnection
 from mysql.connector.cursor import MySQLCursor

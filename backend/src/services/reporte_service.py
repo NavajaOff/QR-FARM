@@ -49,6 +49,7 @@ class ReporteService:
         tabla: str,
         columna_fecha: str,
         dias: int = 10,
+        tenant_id: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """Obtiene conteos diarios de registros para la tabla dada."""
         try:
@@ -57,10 +58,13 @@ class ReporteService:
                 FROM {tabla}
                 WHERE {columna_fecha} IS NOT NULL
                   AND {columna_fecha} >= DATE_SUB(CURDATE(), INTERVAL %s DAY)
-                GROUP BY DATE({columna_fecha})
-                ORDER BY fecha
             """
-            cursor.execute(query, (dias,))
+            params = (dias,)
+            if tenant_id is not None:
+                query += " AND tenant_id = %s"
+                params = (dias, tenant_id)
+            query += " GROUP BY DATE({columna_fecha}) ORDER BY fecha"
+            cursor.execute(query, params)
             return cursor.fetchall()
         except Exception as exc:
             print(f"Error obteniendo tendencia para {tabla}.{columna_fecha}: {exc}")
@@ -99,10 +103,11 @@ class ReporteService:
         tabla: str,
         columnas_fecha: Iterable[str],
         fallback_total: int = 0,
+        tenant_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Construye un payload de tendencia usando la primera columna disponible."""
         for columna in columnas_fecha:
-            resultados = ReporteService._fetch_daily_counts(cursor, tabla, columna)
+            resultados = ReporteService._fetch_daily_counts(cursor, tabla, columna, tenant_id=tenant_id)
             if resultados:
                 serie: List[Dict[str, Any]] = []
                 total_periodo = 0
@@ -162,6 +167,8 @@ class ReporteService:
     @staticmethod
     def obtener_resumen() -> Dict[str, Any]:
         """Obtiene métricas generales del sistema."""
+        from ..utils.tenant import get_current_tenant_id
+
         conn = None
         cursor = None
 
@@ -169,46 +176,114 @@ class ReporteService:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
+            tenant_id = get_current_tenant_id()
+
             # Usuarios
-            cursor.execute(
-                """
+            usuarios_query = """
                 SELECT
                     COUNT(*) AS total,
                     SUM(CASE WHEN estado = 'activo' THEN 1 ELSE 0 END) AS activos,
                     SUM(CASE WHEN estado = 'inactivo' THEN 1 ELSE 0 END) AS inactivos
                 FROM usuarios
-                """
-            )
+            """
+            if tenant_id is not None:
+                usuarios_query += " WHERE tenant_id = %s"
+                cursor.execute(usuarios_query, (tenant_id,))
+            else:
+                cursor.execute(usuarios_query)
             usuarios = cursor.fetchone() or {"total": 0, "activos": 0, "inactivos": 0}
-            usuarios_breakdown = ReporteService._fetch_estado_breakdown(cursor, "usuarios")
+
+            usuarios_breakdown_query = "SELECT COALESCE(estado, 'sin_estado') AS estado, COUNT(*) AS cantidad FROM usuarios"
+            if tenant_id is not None:
+                usuarios_breakdown_query += " WHERE tenant_id = %s"
+                usuarios_breakdown_query += " GROUP BY COALESCE(estado, 'sin_estado') ORDER BY cantidad DESC"
+                cursor.execute(usuarios_breakdown_query, (tenant_id,))
+            else:
+                usuarios_breakdown_query += " GROUP BY COALESCE(estado, 'sin_estado') ORDER BY cantidad DESC"
+                cursor.execute(usuarios_breakdown_query)
+            usuarios_breakdown = cursor.fetchall()
 
             # Ganado
-            cursor.execute("SELECT COUNT(*) AS total FROM ganado")
+            ganado_query = "SELECT COUNT(*) AS total FROM ganado"
+            if tenant_id is not None:
+                ganado_query += " WHERE tenant_id = %s"
+                cursor.execute(ganado_query, (tenant_id,))
+            else:
+                cursor.execute(ganado_query)
             ganado_total = cursor.fetchone() or {"total": 0}
-            ganado_breakdown = ReporteService._fetch_estado_breakdown(
-                cursor,
-                "ganado g",
-                campo_estado="eg.tipo_estado",
-                joins="LEFT JOIN estado_ganado eg ON g.id_estado = eg.id",
-            )
+
+            ganado_breakdown_query = """
+                SELECT
+                    COALESCE(eg.tipo_estado, 'sin_estado') AS estado,
+                    COUNT(*) AS cantidad
+                FROM ganado g
+                LEFT JOIN estado_ganado eg ON g.id_estado = eg.id
+            """
+            if tenant_id is not None:
+                ganado_breakdown_query += " WHERE g.tenant_id = %s"
+                ganado_breakdown_query += " GROUP BY COALESCE(eg.tipo_estado, 'sin_estado') ORDER BY cantidad DESC"
+                cursor.execute(ganado_breakdown_query, (tenant_id,))
+            else:
+                ganado_breakdown_query += " GROUP BY COALESCE(eg.tipo_estado, 'sin_estado') ORDER BY cantidad DESC"
+                cursor.execute(ganado_breakdown_query)
+            ganado_breakdown = cursor.fetchall()
 
             # Potreros
-            cursor.execute("SELECT COUNT(*) AS total FROM potrero")
+            potreros_query = "SELECT COUNT(*) AS total FROM potrero"
+            if tenant_id is not None:
+                potreros_query += " WHERE tenant_id = %s"
+                cursor.execute(potreros_query, (tenant_id,))
+            else:
+                cursor.execute(potreros_query)
             potreros_total = cursor.fetchone() or {"total": 0}
-            potreros_breakdown = ReporteService._fetch_estado_breakdown(cursor, "potrero")
 
-            # Vacunaciones
-            cursor.execute("SELECT COUNT(*) AS total FROM vacunacion")
+            potreros_breakdown_query = "SELECT COALESCE(estado, 'sin_estado') AS estado, COUNT(*) AS cantidad FROM potrero"
+            if tenant_id is not None:
+                potreros_breakdown_query += " WHERE tenant_id = %s"
+                potreros_breakdown_query += " GROUP BY COALESCE(estado, 'sin_estado') ORDER BY cantidad DESC"
+                cursor.execute(potreros_breakdown_query, (tenant_id,))
+            else:
+                potreros_breakdown_query += " GROUP BY COALESCE(estado, 'sin_estado') ORDER BY cantidad DESC"
+                cursor.execute( potreros_breakdown_query)
+            potreros_breakdown = cursor.fetchall()
+
+            # Vacunaciones - filtrar por tenant del ganado
+            vacunacion_query = """
+                SELECT COUNT(*) AS total FROM vacunacion v
+                INNER JOIN ganado g ON v.id_animal = g.id
+            """
+            if tenant_id is not None:
+                vacunacion_query += " WHERE g.tenant_id = %s"
+                cursor.execute(vacunacion_query, (tenant_id,))
+            else:
+                cursor.execute(vacunacion_query)
             vacunacion_total = cursor.fetchone() or {"total": 0}
-            vacunacion_breakdown = ReporteService._fetch_estado_breakdown(cursor, "vacunacion")
 
-            cursor.execute(
-                """
+            vacunacion_breakdown_query = """
+                SELECT COALESCE(v.estado, 'sin_estado') AS estado, COUNT(*) AS cantidad
+                FROM vacunacion v
+                INNER JOIN ganado g ON v.id_animal = g.id
+            """
+            if tenant_id is not None:
+                vacunacion_breakdown_query += " WHERE g.tenant_id = %s"
+                vacunacion_breakdown_query += " GROUP BY COALESCE(v.estado, 'sin_estado') ORDER BY cantidad DESC"
+                cursor.execute(vacunacion_breakdown_query, (tenant_id,))
+            else:
+                vacunacion_breakdown_query += " GROUP BY COALESCE(v.estado, 'sin_estado') ORDER BY cantidad DESC"
+                cursor.execute(vacunacion_breakdown_query)
+            vacunacion_breakdown = cursor.fetchall()
+
+            proximas_query = """
                 SELECT COUNT(*) AS proximas
-                FROM vacunacion
-                WHERE proxima_dosis IS NOT NULL AND proxima_dosis >= CURDATE()
-                """
-            )
+                FROM vacunacion v
+                INNER JOIN ganado g ON v.id_animal = g.id
+                WHERE v.proxima_dosis IS NOT NULL AND v.proxima_dosis >= CURDATE()
+            """
+            if tenant_id is not None:
+                proximas_query += " AND g.tenant_id = %s"
+                cursor.execute(proximas_query, (tenant_id,))
+            else:
+                cursor.execute(proximas_query)
             vacunacion_proximas = cursor.fetchone() or {"proximas": 0}
 
             usuarios_total = int(usuarios.get("total", 0))
@@ -222,24 +297,28 @@ class ReporteService:
                     "usuarios",
                     (),  # La tabla no cuenta con campos de fecha
                     fallback_total=usuarios_total,
+                    tenant_id=tenant_id,
                 ),
                 "ganado": ReporteService._build_trend_payload(
                     cursor,
                     "ganado",
                     ("fecha_nacimiento",),
                     fallback_total=ganado_total_count,
+                    tenant_id=tenant_id,
                 ),
                 "potreros": ReporteService._build_trend_payload(
                     cursor,
                     "potrero",
                     ("fecha_ultimo_uso", "proxima_limpieza", "ultima_limpieza"),
                     fallback_total=potreros_total_count,
+                    tenant_id=tenant_id,
                 ),
                 "vacunaciones": ReporteService._build_trend_payload(
                     cursor,
-                    "vacunacion",
-                    ("fecha_aplicacion", "proxima_dosis"),
+                    "vacunacion v INNER JOIN ganado g ON v.id_animal = g.id",
+                    ("v.fecha_aplicacion", "v.proxima_dosis"),
                     fallback_total=vacunaciones_total_count,
+                    tenant_id=tenant_id,
                 ),
             }
 

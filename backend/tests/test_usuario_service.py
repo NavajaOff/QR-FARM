@@ -55,8 +55,9 @@ class TestUsuarioService:
 
         assert result is None
 
+    @patch('src.utils.tenant.get_current_tenant_id')
     @patch('src.services.usuario_service.get_connection')
-    def test_crear_usuario_success(self, mock_get_connection):
+    def test_crear_usuario_success(self, mock_get_connection, mock_get_tenant):
         """Test crear_usuario exitoso."""
         mock_conn = Mock()
         mock_cursor = Mock(dictionary=True)
@@ -65,6 +66,7 @@ class TestUsuarioService:
         mock_cursor.lastrowid = 1
 
         mock_cursor.fetchone.return_value = None
+        mock_get_tenant.return_value = 1
 
         persona = Persona(
             id_rol=1,
@@ -86,8 +88,9 @@ class TestUsuarioService:
         assert result_msg == "Usuario creado exitosamente"
         mock_conn.commit.assert_called_once()
 
+    @patch('src.utils.tenant.get_current_tenant_id')
     @patch('src.services.usuario_service.get_connection')
-    def test_crear_usuario_email_duplicado(self, mock_get_connection):
+    def test_crear_usuario_email_duplicado(self, mock_get_connection, mock_get_tenant):
         """Test crear_usuario con email duplicado."""
         mock_conn = Mock()
         mock_cursor = Mock(dictionary=True)
@@ -95,6 +98,7 @@ class TestUsuarioService:
         mock_conn.cursor.return_value = mock_cursor
 
         mock_cursor.fetchone.return_value = {'id': 1}
+        mock_get_tenant.return_value = 1
 
         persona = Persona(
             id_rol=1,
