@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
-from flask import Flask
+from flask import Flask, g
 
 from src.controllers.animal_controller import GanadoController
 from src.models.animal import Ganado, EstadoGanado
@@ -12,19 +12,25 @@ from src.services.animal_service import GanadoService
 class TestGanadoController:
     """Tests para GanadoController."""
 
+    @patch('src.controllers.animal_controller.token_required')
+    @patch('src.controllers.animal_controller.tenant_required')
     @patch.object(Ganado, 'from_dict')
     @patch.object(GanadoService, 'crear_ganado')
     @patch('src.controllers.animal_controller.emit_update')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_crear_ganado_success(self, mock_jsonify, mock_emit, mock_crear, mock_from_dict):
+    def test_crear_ganado_success(self, mock_jsonify, mock_emit, mock_crear, mock_from_dict, mock_tenant_required, mock_token_required):
         """Test crear_ganado exitoso."""
+        # Make decorators return the function unchanged
+        mock_token_required.return_value = lambda f: f
+        mock_tenant_required.return_value = lambda f: f
+
         app = Flask(__name__)
         with app.test_request_context(json={'nombre': 'Test Animal', 'fecha_nacimiento': '2020-01-01', 'estado': 'activo'}):
             # Mock Ganado.from_dict
             mock_ganado_obj = Mock()
             mock_ganado_obj.to_dict.return_value = {'id': 1, 'nombre': 'Test Animal'}
             mock_from_dict.return_value = mock_ganado_obj
-            
+
             # Mock GanadoService.crear_ganado
             mock_ganado = Mock()
             mock_ganado.to_dict.return_value = {'id': 1, 'nombre': 'Test Animal'}
@@ -43,10 +49,15 @@ class TestGanadoController:
             mock_crear.assert_called_once()
             mock_jsonify.assert_called_once()
 
+    @patch('src.controllers.animal_controller.token_required')
+    @patch('src.controllers.animal_controller.tenant_required')
     @patch.object(GanadoService, 'crear_ganado')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_crear_ganado_error(self, mock_jsonify, mock_crear):
+    def test_crear_ganado_error(self, mock_jsonify, mock_crear, mock_tenant_required, mock_token_required):
         """Test crear_ganado con error."""
+        mock_token_required.return_value = lambda f: f
+        mock_tenant_required.return_value = lambda f: f
+
         app = Flask(__name__)
         with app.test_request_context(json={'nombre': 'Test Animal'}):
             mock_crear.return_value = None
@@ -59,9 +70,14 @@ class TestGanadoController:
 
             assert status == 400
 
+    @patch('src.controllers.animal_controller.token_required')
+    @patch('src.controllers.animal_controller.tenant_required')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_crear_ganado_value_error(self, mock_jsonify):
+    def test_crear_ganado_value_error(self, mock_jsonify, mock_tenant_required, mock_token_required):
         """Test crear_ganado con ValueError."""
+        mock_token_required.return_value = lambda f: f
+        mock_tenant_required.return_value = lambda f: f
+
         app = Flask(__name__)
         with app.test_request_context(json={'nombre': 'Test Animal', 'fecha_nacimiento': 'invalid-date'}):
             mock_response = Mock()
@@ -73,10 +89,15 @@ class TestGanadoController:
 
                 assert status == 400
 
+    @patch('src.controllers.animal_controller.token_required')
+    @patch('src.controllers.animal_controller.tenant_required')
     @patch.object(GanadoService, 'obtener_ganado_detallado')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_obtener_ganado_success(self, mock_jsonify, mock_obtener):
+    def test_obtener_ganado_success(self, mock_jsonify, mock_obtener, mock_tenant_required, mock_token_required):
         """Test obtener_ganado exitoso."""
+        mock_token_required.return_value = lambda f: f
+        mock_tenant_required.return_value = lambda f: f
+
         app = Flask(__name__)
         with app.test_request_context():
             mock_obtener.return_value = {'id': 1, 'nombre': 'Test Animal'}
@@ -89,10 +110,15 @@ class TestGanadoController:
 
             assert status == 200
 
+    @patch('src.controllers.animal_controller.token_required')
+    @patch('src.controllers.animal_controller.tenant_required')
     @patch.object(GanadoService, 'obtener_ganado_detallado')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_obtener_ganado_not_found(self, mock_jsonify, mock_obtener):
+    def test_obtener_ganado_not_found(self, mock_jsonify, mock_obtener, mock_tenant_required, mock_token_required):
         """Test obtener_ganado cuando no existe."""
+        mock_token_required.return_value = lambda f: f
+        mock_tenant_required.return_value = lambda f: f
+
         app = Flask(__name__)
         with app.test_request_context():
             mock_obtener.return_value = None
@@ -105,10 +131,15 @@ class TestGanadoController:
 
             assert status == 404
 
+    @patch('src.controllers.animal_controller.token_required')
+    @patch('src.controllers.animal_controller.tenant_required')
     @patch.object(GanadoService, 'obtener_todos_ganados')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_obtener_todos_ganados_success(self, mock_jsonify, mock_obtener):
+    def test_obtener_todos_ganados_success(self, mock_jsonify, mock_obtener, mock_tenant_required, mock_token_required):
         """Test obtener_todos_ganados exitoso."""
+        mock_token_required.return_value = lambda f: f
+        mock_tenant_required.return_value = lambda f: f
+
         app = Flask(__name__)
         with app.test_request_context():
             mock_ganado1 = Mock()
@@ -126,10 +157,15 @@ class TestGanadoController:
 
             assert status == 200
 
+    @patch('src.controllers.animal_controller.token_required')
+    @patch('src.controllers.animal_controller.tenant_required')
     @patch.object(GanadoService, 'obtener_estados_ganado')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_obtener_estados_ganado_success(self, mock_jsonify, mock_obtener):
+    def test_obtener_estados_ganado_success(self, mock_jsonify, mock_obtener, mock_tenant_required, mock_token_required):
         """Test obtener_estados_ganado exitoso."""
+        mock_token_required.return_value = lambda f: f
+        mock_tenant_required.return_value = lambda f: f
+
         app = Flask(__name__)
         with app.test_request_context():
             mock_obtener.return_value = [
@@ -145,12 +181,17 @@ class TestGanadoController:
 
             assert status == 200
 
+    @patch('src.controllers.animal_controller.token_required')
+    @patch('src.controllers.animal_controller.tenant_required')
     @patch.object(GanadoService, 'obtener_ganado')
     @patch.object(GanadoService, 'actualizar_ganado')
     @patch('src.controllers.animal_controller.emit_update')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_actualizar_ganado_success(self, mock_jsonify, mock_emit, mock_actualizar, mock_obtener):
+    def test_actualizar_ganado_success(self, mock_jsonify, mock_emit, mock_actualizar, mock_obtener, mock_tenant_required, mock_token_required):
         """Test actualizar_ganado exitoso."""
+        mock_token_required.return_value = lambda f: f
+        mock_tenant_required.return_value = lambda f: f
+
         app = Flask(__name__)
         with app.test_request_context(json={'nombre': 'Updated Animal'}):
             mock_ganado = Mock()
@@ -166,10 +207,15 @@ class TestGanadoController:
 
             assert status == 200
 
+    @patch('src.controllers.animal_controller.token_required')
+    @patch('src.controllers.animal_controller.tenant_required')
     @patch.object(GanadoService, 'obtener_ganado')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_actualizar_ganado_not_found(self, mock_jsonify, mock_obtener):
+    def test_actualizar_ganado_not_found(self, mock_jsonify, mock_obtener, mock_tenant_required, mock_token_required):
         """Test actualizar_ganado cuando no existe."""
+        mock_token_required.return_value = lambda f: f
+        mock_tenant_required.return_value = lambda f: f
+
         app = Flask(__name__)
         with app.test_request_context(json={'nombre': 'Updated Animal'}):
             mock_obtener.return_value = None
@@ -182,11 +228,16 @@ class TestGanadoController:
 
             assert status == 404
 
+    @patch('src.controllers.animal_controller.token_required')
+    @patch('src.controllers.animal_controller.tenant_required')
     @patch.object(GanadoService, 'eliminar_ganado')
     @patch('src.controllers.animal_controller.emit_update')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_eliminar_ganado_success(self, mock_jsonify, mock_emit, mock_eliminar):
+    def test_eliminar_ganado_success(self, mock_jsonify, mock_emit, mock_eliminar, mock_tenant_required, mock_token_required):
         """Test eliminar_ganado exitoso."""
+        mock_token_required.return_value = lambda f: f
+        mock_tenant_required.return_value = lambda f: f
+
         app = Flask(__name__)
         with app.test_request_context():
             mock_eliminar.return_value = True
@@ -199,10 +250,15 @@ class TestGanadoController:
 
             assert status == 200
 
+    @patch('src.controllers.animal_controller.token_required')
+    @patch('src.controllers.animal_controller.tenant_required')
     @patch.object(GanadoService, 'eliminar_ganado')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_eliminar_ganado_error_message(self, mock_jsonify, mock_eliminar):
+    def test_eliminar_ganado_error_message(self, mock_jsonify, mock_eliminar, mock_tenant_required, mock_token_required):
         """Test eliminar_ganado con mensaje de error."""
+        mock_token_required.return_value = lambda f: f
+        mock_tenant_required.return_value = lambda f: f
+
         app = Flask(__name__)
         with app.test_request_context():
             mock_eliminar.return_value = "Error message"
@@ -215,10 +271,15 @@ class TestGanadoController:
 
             assert status == 400
 
+    @patch('src.controllers.animal_controller.token_required')
+    @patch('src.controllers.animal_controller.tenant_required')
     @patch.object(GanadoService, 'eliminar_ganado')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_eliminar_ganado_not_found(self, mock_jsonify, mock_eliminar):
+    def test_eliminar_ganado_not_found(self, mock_jsonify, mock_eliminar, mock_tenant_required, mock_token_required):
         """Test eliminar_ganado cuando no existe."""
+        mock_token_required.return_value = lambda f: f
+        mock_tenant_required.return_value = lambda f: f
+
         app = Flask(__name__)
         with app.test_request_context():
             mock_eliminar.return_value = False
@@ -231,10 +292,15 @@ class TestGanadoController:
 
             assert status == 404
 
+    @patch('src.controllers.animal_controller.token_required')
+    @patch('src.controllers.animal_controller.tenant_required')
     @patch.object(GanadoService, 'buscar_por_potrero')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_obtener_ganados_por_potrero_success(self, mock_jsonify, mock_buscar):
+    def test_obtener_ganados_por_potrero_success(self, mock_jsonify, mock_buscar, mock_tenant_required, mock_token_required):
         """Test obtener_ganados_por_potrero exitoso."""
+        mock_token_required.return_value = lambda f: f
+        mock_tenant_required.return_value = lambda f: f
+
         app = Flask(__name__)
         with app.test_request_context():
             mock_ganado1 = Mock()
@@ -252,11 +318,16 @@ class TestGanadoController:
 
             assert status == 200
 
+    @patch('src.controllers.animal_controller.token_required')
+    @patch('src.controllers.animal_controller.tenant_required')
     @patch.object(GanadoService, 'buscar_por_codigo_qr')
     @patch.object(GanadoService, 'obtener_ganado_detallado')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_buscar_por_codigo_qr_success(self, mock_jsonify, mock_detalle, mock_buscar):
+    def test_buscar_por_codigo_qr_success(self, mock_jsonify, mock_detalle, mock_buscar, mock_tenant_required, mock_token_required):
         """Test buscar_por_codigo_qr exitoso."""
+        mock_token_required.return_value = lambda f: f
+        mock_tenant_required.return_value = lambda f: f
+
         app = Flask(__name__)
         with app.test_request_context():
             mock_ganado = Mock()
@@ -272,10 +343,15 @@ class TestGanadoController:
 
             assert status == 200
 
+    @patch('src.controllers.animal_controller.token_required')
+    @patch('src.controllers.animal_controller.tenant_required')
     @patch.object(GanadoService, 'buscar_por_codigo_qr')
     @patch('src.controllers.animal_controller.jsonify')
-    def test_buscar_por_codigo_qr_not_found(self, mock_jsonify, mock_buscar):
+    def test_buscar_por_codigo_qr_not_found(self, mock_jsonify, mock_buscar, mock_tenant_required, mock_token_required):
         """Test buscar_por_codigo_qr cuando no existe."""
+        mock_token_required.return_value = lambda f: f
+        mock_tenant_required.return_value = lambda f: f
+
         app = Flask(__name__)
         with app.test_request_context():
             mock_buscar.return_value = None
