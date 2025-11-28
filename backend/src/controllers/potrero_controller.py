@@ -16,9 +16,18 @@ class PotreroController:
 
     @staticmethod
     def get_all() -> Tuple[Any, int]:
-        """Get all potreros endpoint."""
+        """Get all potreros endpoint. Acepta tenant_id como query param para super admin."""
         try:
-            potreros = PotreroService.get_all()
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
+            potreros = PotreroService.get_all(tenant_id_override=tenant_id)
             return jsonify({'data': potreros, 'success': True}), 200
         except Exception as e:
             print(f"Error en get_all potreros controller: {str(e)}")
@@ -32,9 +41,18 @@ class PotreroController:
 
     @staticmethod
     def get_by_id(potrero_id: int) -> Tuple[Any, int]:
-        """Get potrero by ID endpoint."""
+        """Get potrero by ID endpoint. Acepta tenant_id como query param para super admin."""
         try:
-            potrero = PotreroService.get_by_id(potrero_id)
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
+            potrero = PotreroService.get_by_id(potrero_id, tenant_id_override=tenant_id)
             return jsonify({'data': potrero, 'success': True}), 200
         except ValueError as e:
             return jsonify({
@@ -112,7 +130,7 @@ class PotreroController:
 
     @staticmethod
     def update(potrero_id: int) -> Tuple[Any, int]:
-        """Update potrero endpoint."""
+        """Update potrero endpoint. Acepta tenant_id como query param para super admin."""
         try:
             data = request.get_json()
             if not data:
@@ -122,7 +140,16 @@ class PotreroController:
                     'success': False
                 }), 400
             
-            potrero = PotreroService.update(potrero_id, data)
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
+            potrero = PotreroService.update(potrero_id, data, tenant_id_override=tenant_id)
             # Emitir actualización en tiempo real para potrero actualizado
             try:
                 from ...app import emit_update
@@ -158,9 +185,18 @@ class PotreroController:
 
     @staticmethod
     def delete(potrero_id: int) -> Tuple[Any, int]:
-        """Delete potrero endpoint."""
+        """Delete potrero endpoint. Acepta tenant_id como query param para super admin."""
         try:
-            PotreroService.delete(potrero_id)
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
+            PotreroService.delete(potrero_id, tenant_id_override=tenant_id)
             # Emitir actualización en tiempo real para potrero eliminado
             try:
                 from ...app import emit_update
@@ -194,9 +230,18 @@ class PotreroController:
 
     @staticmethod
     def get_by_estado(estado: str) -> Tuple[Any, int]:
-        """Get potreros by estado endpoint."""
+        """Get potreros by estado endpoint. Acepta tenant_id como query param para super admin."""
         try:
-            potreros = PotreroService.get_by_estado(estado)
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
+            potreros = PotreroService.get_by_estado(estado, tenant_id_override=tenant_id)
             return jsonify({'data': potreros, 'success': True}), 200
         except ValueError as e:
             return jsonify({

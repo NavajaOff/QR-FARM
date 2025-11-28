@@ -59,8 +59,18 @@ class GanadoController:
 
     @staticmethod
     def obtener_ganado(id):
+        """Obtener ganado por ID. Acepta tenant_id como query param para super admin."""
         try:
-            ganado = GanadoService.obtener_ganado_detallado(id)
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
+            ganado = GanadoService.obtener_ganado_detallado(id, tenant_id_override=tenant_id)
 
             if ganado:
                 return jsonify({
@@ -86,9 +96,18 @@ class GanadoController:
 
     @staticmethod
     def obtener_todos_ganados():
+        """Obtener todos los ganados. Acepta tenant_id como query param para super admin."""
         try:
-            # Siempre devolver todos los animales para simplificar
-            ganados = GanadoService.obtener_todos_ganados()
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
+            ganados = GanadoService.obtener_todos_ganados(tenant_id_override=tenant_id)
             print(f"[DEBUG] Controller - Animales devueltos: {len(ganados)}")
             return jsonify({
                 'status': 'success',
@@ -133,11 +152,21 @@ class GanadoController:
 
     @staticmethod
     def actualizar_ganado(id):
+        """Actualizar ganado. Acepta tenant_id como query param para super admin."""
         try:
             data = request.get_json()
 
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+
             # Obtener el ganado existente
-            ganado_existente = GanadoService.obtener_ganado(id)
+            ganado_existente = GanadoService.obtener_ganado(id, tenant_id_override=tenant_id)
             if not ganado_existente:
                 return jsonify({
                     'status': 'error',
@@ -151,7 +180,7 @@ class GanadoController:
                 setattr(ganado_existente, key, value)
 
             # Intentar actualizar en la base de datos
-            if GanadoService.actualizar_ganado(id, ganado_existente):
+            if GanadoService.actualizar_ganado(id, ganado_existente, tenant_id_override=tenant_id):
                 payload = ganado_existente.to_dict()
                 try:
                     emit_update('animal_updated', {
@@ -180,7 +209,7 @@ class GanadoController:
 
     @staticmethod
     def dar_baja_ganado(id):
-        """Da de baja lógica a un animal."""
+        """Da de baja lógica a un animal. Acepta tenant_id como query param para super admin."""
         try:
             data = request.get_json()
             causa_baja = data.get('causa_baja')
@@ -193,7 +222,16 @@ class GanadoController:
                     'success': False
                 }), 400
             
-            result = GanadoService.dar_baja_ganado(id, causa_baja, observaciones)
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
+            result = GanadoService.dar_baja_ganado(id, causa_baja, observaciones, tenant_id_override=tenant_id)
             
             if result is True:
                 try:
@@ -230,11 +268,21 @@ class GanadoController:
 
     @staticmethod
     def reactivar_ganado(id):
-        """Reactivar un animal que estaba dado de baja."""
+        """Reactivar un animal que estaba dado de baja. Acepta tenant_id como query param para super admin."""
         try:
             data = request.get_json() or {}
             nuevo_estado = data.get('nuevo_estado', 'saludable')
-            result = GanadoService.reactivar_ganado(id, nuevo_estado)
+            
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
+            result = GanadoService.reactivar_ganado(id, nuevo_estado, tenant_id_override=tenant_id)
             
             if result is True:
                 try:
@@ -321,11 +369,21 @@ class GanadoController:
 
     @staticmethod
     def buscar_por_codigo_qr(codigo_qr):
+        """Buscar ganado por código QR. Acepta tenant_id como query param para super admin."""
         try:
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
             ganado = GanadoService.buscar_por_codigo_qr(codigo_qr)
 
             if ganado:
-                detalle = GanadoService.obtener_ganado_detallado(ganado.id) if ganado.id else None
+                detalle = GanadoService.obtener_ganado_detallado(ganado.id, tenant_id_override=tenant_id) if ganado.id else None
                 return jsonify({
                     'status': 'success',
                     'data': detalle if detalle else ganado.to_dict()

@@ -6,17 +6,78 @@ const api = axios.create({
 });
 
 api.interceptors.request.use(config => {
+  // Agregar token de autenticación
   const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+    console.log('[API] Token agregado a petición:', config.url);
+  } else {
+    console.warn('[API] No hay token disponible para petición:', config.url);
+  }
+  
+  // Agregar tenant_id a query params si está seleccionado (para super admin)
+  try {
+    const selectedTenantId = localStorage.getItem('qr_farm_selected_tenant_id');
+    if (selectedTenantId) {
+      const tenantId = parseInt(selectedTenantId, 10);
+      if (!isNaN(tenantId)) {
+        // Solo agregar tenant_id a rutas que no sean de tenants
+        const url = config.url || '';
+        if (!url.includes('/tenants') && !url.includes('/usuarios/login') && !url.includes('/usuarios/register')) {
+          config.params = config.params || {};
+          config.params.tenant_id = tenantId;
+          console.log('[API] Tenant ID agregado a petición:', config.url, 'tenant_id:', tenantId);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[API] Error agregando tenant_id a query params:', error);
+  }
+  
+  console.log('[API] Petición configurada:', {
+    url: config.url,
+    method: config.method,
+    hasToken: !!token,
+    headers: config.headers
+  });
+  
   return config;
+}, error => {
+  console.error('[API] Error en interceptor de request:', error);
+  return Promise.reject(error);
 });
 
 api.interceptors.response.use(
-  response => response,
+  response => {
+    console.log('[API] Respuesta exitosa:', {
+      url: response.config.url,
+      status: response.status,
+      statusText: response.statusText
+    });
+    return response;
+  },
   error => {
+    console.error('[API] Error en respuesta:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      message: error.message,
+      code: error.code,
+      data: error.response?.data
+    });
+    
     if (error.code === 'ERR_NETWORK') {
+      console.error('[API] Error de red - No se pudo conectar al servidor');
       alert('⚠️ No se pudo conectar al servidor Flask. Verifica que esté corriendo en el puerto 5000.');
+    } else if (error.response?.status === 401) {
+      console.warn('[API] Error 401 - No autorizado, posible token expirado o inválido');
+    } else if (error.response?.status === 403) {
+      console.warn('[API] Error 403 - Acceso prohibido');
+    } else if (error.response?.status >= 500) {
+      console.error('[API] Error del servidor:', error.response?.status);
     }
+    
     return Promise.reject(error);
   }
 );

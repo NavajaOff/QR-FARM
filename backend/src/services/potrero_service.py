@@ -39,8 +39,14 @@ class PotreroService:
             potrero['tipo_pasto_nombre'] = 'NO_DEFINIDO'
 
     @staticmethod
-    def get_all() -> List[Dict[str, Any]]:
-        """Get all potreros."""
+    def get_all(tenant_id_override: Optional[int] = None) -> List[Dict[str, Any]]:
+        """
+        Get all potreros.
+        
+        Args:
+            tenant_id_override: Si se proporciona, usa este tenant_id en lugar del del contexto
+                               (útil para super admin filtrando por tenant específico)
+        """
         conn = None
         cursor = None
         try:
@@ -49,7 +55,9 @@ class PotreroService:
                 print("Advertencia: Base de datos no disponible, retornando lista vacía")
                 return []
             cursor = conn.cursor(dictionary=True)
-            tenant_id = PotreroService._obtener_tenant_id()
+            
+            # Usar override si se proporciona, sino obtener del contexto
+            tenant_id = tenant_id_override if tenant_id_override is not None else PotreroService._obtener_tenant_id()
             
             sql = """
                 SELECT p.*
@@ -82,14 +90,29 @@ class PotreroService:
                 conn.close()
 
     @staticmethod
-    def get_by_id(potrero_id: int) -> Optional[Dict[str, Any]]:
-        """Get potrero by ID."""
+    def get_by_id(potrero_id: int, tenant_id_override: Optional[int] = None) -> Optional[Dict[str, Any]]:
+        """
+        Get potrero by ID.
+        
+        Args:
+            potrero_id: ID del potrero
+            tenant_id_override: Si se proporciona, valida que el potrero pertenezca a este tenant
+        """
+        tenant_id = tenant_id_override if tenant_id_override is not None else PotreroService._obtener_tenant_id()
+        
         with db.get_cursor() as cursor:
-            cursor.execute("""
+            sql = """
                 SELECT p.*
                 FROM potrero p
                 WHERE p.id = %s
-            """, (potrero_id,))
+            """
+            params = (potrero_id,)
+            
+            if tenant_id is not None:
+                sql += " AND p.tenant_id = %s"
+                params = (potrero_id, tenant_id)
+            
+            cursor.execute(sql, params)
             result = cursor.fetchone()
             if not result:
                 raise ValueError(f"Potrero with id {potrero_id} not found")
@@ -373,10 +396,17 @@ class PotreroService:
             potrero['tipo_pasto'] = 'NO_DEFINIDO'
 
     @staticmethod
-    def update(potrero_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Update existing potrero."""
+    def update(potrero_id: int, data: Dict[str, Any], tenant_id_override: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Update existing potrero.
+        
+        Args:
+            potrero_id: ID del potrero
+            data: Datos a actualizar
+            tenant_id_override: Si se proporciona, valida que el potrero pertenezca a este tenant
+        """
         # Verificar que el potrero existe
-        PotreroService.get_by_id(potrero_id)
+        PotreroService.get_by_id(potrero_id, tenant_id_override)
 
         update_fields, values = PotreroService._preparar_campos_actualizacion(data)
 
@@ -386,28 +416,50 @@ class PotreroService:
         return PotreroService._ejecutar_actualizacion(potrero_id, update_fields, values)
 
     @staticmethod
-    def delete(potrero_id: int) -> bool:
-        """Delete potrero by ID."""
+    def delete(potrero_id: int, tenant_id_override: Optional[int] = None) -> bool:
+        """
+        Delete potrero by ID.
+        
+        Args:
+            potrero_id: ID del potrero
+            tenant_id_override: Si se proporciona, valida que el potrero pertenezca a este tenant
+        """
         # First check if potrero exists
-        PotreroService.get_by_id(potrero_id)
+        PotreroService.get_by_id(potrero_id, tenant_id_override)
 
+        tenant_id = tenant_id_override if tenant_id_override is not None else PotreroService._obtener_tenant_id()
+        
         with db.get_cursor() as cursor:
-            cursor.execute("""
+            sql = """
                 DELETE FROM potrero
                 WHERE id = %s
-            """, (potrero_id,))
+            """
+            params = (potrero_id,)
+            
+            if tenant_id is not None:
+                sql += " AND tenant_id = %s"
+                params = (potrero_id, tenant_id)
+            
+            cursor.execute(sql, params)
             return True
 
     @staticmethod
-    def _obtener_potreros_por_estado(estado: str) -> List[Dict[str, Any]]:
+    def _obtener_potreros_por_estado(estado: str, tenant_id: Optional[int] = None) -> List[Dict[str, Any]]:
         """Obtiene los potreros básicos por estado."""
         with db.get_cursor() as cursor:
-            cursor.execute("""
+            sql = """
                 SELECT p.*
                 FROM potrero p
                 WHERE p.estado = %s
-                ORDER BY p.id DESC
-            """, (estado,))
+            """
+            params = (estado,)
+            
+            if tenant_id is not None:
+                sql += " AND p.tenant_id = %s"
+                params = (estado, tenant_id)
+            
+            sql += " ORDER BY p.id DESC"
+            cursor.execute(sql, params)
             return cursor.fetchall()
 
     @staticmethod
@@ -464,9 +516,16 @@ class PotreroService:
         print(f"Potrero {potrero['id']}: responsable_id={potrero.get('responsable_persona_id')}, nombre={potrero.get('responsable_nombre')}")
 
     @staticmethod
-    def get_by_estado(estado: str) -> List[Dict[str, Any]]:
-        """Get potreros by estado."""
-        potreros = PotreroService._obtener_potreros_por_estado(estado)
+    def get_by_estado(estado: str, tenant_id_override: Optional[int] = None) -> List[Dict[str, Any]]:
+        """
+        Get potreros by estado.
+        
+        Args:
+            estado: Estado del potrero
+            tenant_id_override: Si se proporciona, filtra por este tenant
+        """
+        tenant_id = tenant_id_override if tenant_id_override is not None else PotreroService._obtener_tenant_id()
+        potreros = PotreroService._obtener_potreros_por_estado(estado, tenant_id)
         return PotreroService._enriquecer_potreros_con_informacion(potreros)
 
     @staticmethod

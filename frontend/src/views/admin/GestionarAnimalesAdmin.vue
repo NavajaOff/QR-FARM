@@ -1,7 +1,10 @@
 <template>
-  <div class="container-fluid py-4">
+  <div>
     <div class="row">
       <div class="col-12">
+        <!-- Selector de Tenant para Super Admin -->
+        <TenantSelector v-if="isSuperAdmin" @tenant-changed="onTenantChanged" />
+
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h2 class="mb-0">Gestión de Ganado</h2>
           <div class="d-flex gap-3 align-items-center">
@@ -123,6 +126,8 @@
 
 <script>
 import Swal from 'sweetalert2';
+import TenantSelector from '../../components/TenantSelector.vue';
+import authService from '../../services/authService.js';
 import {
   cargarDatosIniciales,
   animales,
@@ -143,6 +148,9 @@ import {
 
 export default {
   name: 'GestionarAnimalesAdmin',
+  components: {
+    TenantSelector
+  },
   data() {
     return {
       ganado: [],
@@ -170,6 +178,11 @@ export default {
     cancelPendingRequests();
     resetEstado();
     next();
+  },
+  computed: {
+    isSuperAdmin() {
+      return authService.getRole() === 'super_admin';
+    }
   },
   methods: {
     async cargarGanado() {
@@ -231,6 +244,10 @@ export default {
     addAnimal() {
       // Usar la función del archivo JS existente
       agregarNuevoAnimal();
+    },
+    onTenantChanged() {
+      // Recargar animales cuando cambia el tenant
+      this.cargarGanado();
     }
   }
 };

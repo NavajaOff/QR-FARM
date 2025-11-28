@@ -205,12 +205,19 @@ class GanadoService:
 
 
     @staticmethod
-    def obtener_ganado(id: int) -> Optional[Ganado]:
+    def obtener_ganado(id: int, tenant_id_override: Optional[int] = None) -> Optional[Ganado]:
+        """
+        Obtener ganado por ID.
+        
+        Args:
+            id: ID del ganado
+            tenant_id_override: Si se proporciona, valida que el ganado pertenezca a este tenant
+        """
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
-            tenant_id = GanadoService._obtener_tenant_id()
+            tenant_id = tenant_id_override if tenant_id_override is not None else GanadoService._obtener_tenant_id()
             
             sql = """
                 SELECT g.*,
@@ -251,13 +258,19 @@ class GanadoService:
                     pass
 
     @staticmethod
-    def obtener_todos_ganados(incluir_bajas: bool = False) -> List[Ganado]:
-        """Obtiene todos los animales, incluyendo dados de baja si se solicita."""
+    def obtener_todos_ganados(incluir_bajas: bool = False, tenant_id_override: Optional[int] = None) -> List[Ganado]:
+        """
+        Obtiene todos los animales, incluyendo dados de baja si se solicita.
+        
+        Args:
+            incluir_bajas: Si incluir animales dados de baja
+            tenant_id_override: Si se proporciona, filtra por este tenant
+        """
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
-            tenant_id = GanadoService._obtener_tenant_id()
+            tenant_id = tenant_id_override if tenant_id_override is not None else GanadoService._obtener_tenant_id()
 
             # Consulta: todos los animales
             sql = """
@@ -386,7 +399,7 @@ class GanadoService:
                 pass
 
     @staticmethod
-    def _actualizar_ganado_en_db(id: int, ganado: Ganado) -> bool:
+    def _actualizar_ganado_en_db(id: int, ganado: Ganado, tenant_id_override: Optional[int] = None) -> bool:
         conn = get_connection()
         cursor = conn.cursor()
         try:
@@ -394,7 +407,7 @@ class GanadoService:
             if estado_id is None:
                 estado_id = GanadoService._mapear_estado_string_a_id(ganado.estado)
             fecha_nac = GanadoService._convertir_fecha_nacimiento(ganado.fecha_nacimiento)
-            tenant_id = GanadoService._obtener_tenant_id()
+            tenant_id = tenant_id_override if tenant_id_override is not None else GanadoService._obtener_tenant_id()
             
             sql = """
                 UPDATE ganado SET
@@ -426,12 +439,25 @@ class GanadoService:
             conn.close()
 
     @staticmethod
-    def actualizar_ganado(id: int, ganado: Ganado) -> bool:
+    def actualizar_ganado(id: int, ganado: Ganado, tenant_id_override: Optional[int] = None) -> bool:
+        """
+        Actualizar ganado.
+        
+        Args:
+            id: ID del ganado
+            ganado: Objeto Ganado con datos actualizados
+            tenant_id_override: Si se proporciona, valida que el ganado pertenezca a este tenant
+        """
         try:
+            # Verificar que el ganado existe y pertenece al tenant
+            ganado_existente = GanadoService.obtener_ganado(id, tenant_id_override)
+            if not ganado_existente:
+                return False
+            
             potrero_anterior_id = GanadoService._obtener_potrero_anterior(id)
             nuevo_potrero_id = ganado.id_potrero
             GanadoService._verificar_cambio_potrero(nuevo_potrero_id, potrero_anterior_id)
-            actualizado = GanadoService._actualizar_ganado_en_db(id, ganado)
+            actualizado = GanadoService._actualizar_ganado_en_db(id, ganado, tenant_id_override)
             GanadoService._sincronizar_potreros_despues_actualizacion(actualizado, nuevo_potrero_id, potrero_anterior_id)
             return actualizado
         except Exception as e:
@@ -450,14 +476,22 @@ class GanadoService:
         return mapeo_causas.get(causa_baja.lower(), 8)  # Por defecto 'otra'
     
     @staticmethod
-    def dar_baja_ganado(id: int, causa_baja: str, observaciones: Optional[str] = None) -> Union[bool, str]:
-        """Da de baja lógica a un animal cambiando su id_estado."""
+    def dar_baja_ganado(id: int, causa_baja: str, observaciones: Optional[str] = None, tenant_id_override: Optional[int] = None) -> Union[bool, str]:
+        """
+        Da de baja lógica a un animal cambiando su id_estado.
+        
+        Args:
+            id: ID del ganado
+            causa_baja: Causa de la baja
+            observaciones: Observaciones opcionales
+            tenant_id_override: Si se proporciona, valida que el ganado pertenezca a este tenant
+        """
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
             # Verificar que el animal existe y pertenece al tenant
-            tenant_id = GanadoService._obtener_tenant_id()
+            tenant_id = tenant_id_override if tenant_id_override is not None else GanadoService._obtener_tenant_id()
             sql = "SELECT id_estado, id_potrero, tenant_id FROM ganado WHERE id = %s"
             params = (id,)
             if tenant_id is not None:
@@ -528,14 +562,21 @@ class GanadoService:
                     pass
 
     @staticmethod
-    def reactivar_ganado(id: int, nuevo_estado: str = 'saludable') -> Union[bool, str]:
-        """Reactivar un animal cambiando su id_estado a uno activo."""
+    def reactivar_ganado(id: int, nuevo_estado: str = 'saludable', tenant_id_override: Optional[int] = None) -> Union[bool, str]:
+        """
+        Reactivar un animal cambiando su id_estado a uno activo.
+        
+        Args:
+            id: ID del ganado
+            nuevo_estado: Nuevo estado del animal
+            tenant_id_override: Si se proporciona, valida que el ganado pertenezca a este tenant
+        """
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
             
             # Verificar que el animal existe y pertenece al tenant
-            tenant_id = GanadoService._obtener_tenant_id()
+            tenant_id = tenant_id_override if tenant_id_override is not None else GanadoService._obtener_tenant_id()
             sql = "SELECT id_estado, tenant_id FROM ganado WHERE id = %s"
             params = (id,)
             if tenant_id is not None:
@@ -650,13 +691,20 @@ class GanadoService:
                 conn.close()
 
     @staticmethod
-    def obtener_ganado_detallado(identifier: Union[int, str]) -> Optional[Dict[str, Any]]:
+    def obtener_ganado_detallado(identifier: Union[int, str], tenant_id_override: Optional[int] = None) -> Optional[Dict[str, Any]]:
+        """
+        Obtener ganado detallado por ID o código QR.
+        
+        Args:
+            identifier: ID del ganado o código QR
+            tenant_id_override: Si se proporciona, valida que el ganado pertenezca a este tenant
+        """
         connection = get_connection()
         if connection is None:
             print("No se pudo obtener conexión a la base de datos.")
             return None
 
-        tenant_id = GanadoService._obtener_tenant_id()
+        tenant_id = tenant_id_override if tenant_id_override is not None else GanadoService._obtener_tenant_id()
         
         main_query = """
             SELECT

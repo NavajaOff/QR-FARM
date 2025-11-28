@@ -1,5 +1,5 @@
 <template>
-  <div class="container-fluid py-4 py-md-5">
+  <div>
     <div class="row justify-content-center g-4">
       <div class="col-12">
         <div class="mb-4 text-center">
@@ -8,6 +8,9 @@
           </h2>
           <p class="lead text-muted">Administra y controla tus potreros de manera eficiente</p>
         </div>
+
+        <!-- Selector de Tenant para Super Admin -->
+        <TenantSelector v-if="isSuperAdmin" @tenant-changed="onTenantChanged" />
 
         <!-- Loading State -->
         <div v-if="loading" class="text-center py-5">
@@ -87,8 +90,28 @@
 
 <script>
 import gestionarPotrerosAdmin from '../../assets/js/gestionar-potreros-admin.js';
+import TenantSelector from '../../components/TenantSelector.vue';
+import authService from '../../services/authService.js';
 
-export default gestionarPotrerosAdmin;
+export default {
+  ...gestionarPotrerosAdmin,
+  components: {
+    TenantSelector
+  },
+  computed: {
+    ...gestionarPotrerosAdmin.computed,
+    isSuperAdmin() {
+      return authService.getRole() === 'super_admin';
+    }
+  },
+  methods: {
+    ...gestionarPotrerosAdmin.methods,
+    onTenantChanged() {
+      // Recargar potreros cuando cambia el tenant
+      this.cargarPotreros();
+    }
+  }
+};
 </script>
 
 <style scoped>

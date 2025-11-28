@@ -104,7 +104,14 @@ class UsuarioController:
     MSG_FIELD_REQUIRED = 'El campo {field} es requerido'
     @staticmethod
     def registrar_usuario():
+        """
+        Registrar un nuevo usuario.
+        Si el usuario actual es super admin, puede asignar tenant_id al nuevo usuario.
+        """
         try:
+            from flask import g
+            from ..utils.tenant import get_current_tenant_id
+            
             data = request.get_json()
 
             if not data:
@@ -144,11 +151,73 @@ class UsuarioController:
                     'message': MSG_EMAIL_ALREADY_REGISTERED
                 }), 400
 
+            # Verificar si hay token y cargar usuario si existe (para permitir super admin crear usuarios con tenant)
+            es_super_admin = False
+            tenant_id_override = None
+            
+            # Intentar obtener token del header (opcional)
+            auth_header = request.headers.get('Authorization', '').strip()
+            current_user = None
+            
+            if auth_header:
+                try:
+                    from flask import current_app
+                    import jwt
+                    parts = auth_header.split()
+                    if len(parts) == 2 and parts[0].lower() == 'bearer':
+                        token = parts[1]
+                        payload = jwt.decode(
+                            token,
+                            current_app.config['SECRET_KEY'],
+                            algorithms=['HS256']
+                        )
+                        user_id = payload.get('user_id')
+                        if user_id:
+                            current_user = UsuarioService.obtener_usuario(user_id, incluir_inactivos=True)
+                except Exception:
+                    # Si falla la autenticación, continuar como registro público
+                    pass
+            
+            if current_user and hasattr(current_user, 'rol') and current_user.rol:
+                rol_nombre = None
+                if hasattr(current_user.rol, 'nombre_rol'):
+                    rol_nombre = current_user.rol.nombre_rol
+                elif hasattr(current_user.rol, 'rol'):
+                    rol_nombre = current_user.rol.rol
+                
+                if rol_nombre == 'super_admin':
+                    es_super_admin = True
+                    # Permitir asignar tenant_id si viene en los datos
+                    if 'tenant_id' in data and data['tenant_id']:
+                        try:
+                            tenant_id_override = int(data['tenant_id'])
+                        except (ValueError, TypeError):
+                            return jsonify({
+                                'status': 'error',
+                                'message': 'tenant_id debe ser un número válido'
+                            }), 400
+
             # Crear persona y usuario desde los datos de registro
             persona, usuario = Usuario.from_registration_data(data)
+            
+            # Si hay id_rol en los datos, asignarlo (solo para super admin)
+            if es_super_admin and 'id_rol' in data and data['id_rol']:
+                try:
+                    persona.id_rol = int(data['id_rol'])
+                    usuario.id_rol = int(data['id_rol'])
+                except (ValueError, TypeError):
+                    pass
 
             # Crear el usuario en la base de datos
-            nuevo_usuario, mensaje = UsuarioService.registrar_usuario(persona, usuario)
+            # Si es super admin y hay tenant_id, usar crear_usuario, sino usar registrar_usuario
+            if es_super_admin and tenant_id_override is not None:
+                nuevo_usuario, mensaje = UsuarioService.crear_usuario(
+                    persona, usuario, 
+                    tenant_id_override=tenant_id_override, 
+                    es_super_admin=True
+                )
+            else:
+                nuevo_usuario, mensaje = UsuarioService.registrar_usuario(persona, usuario)
 
             if nuevo_usuario:
                 return jsonify({

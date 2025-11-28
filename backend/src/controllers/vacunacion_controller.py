@@ -10,11 +10,20 @@ class VacunacionController:
     VACUNACION_NO_ENCONTRADA = 'Vacunación no encontrada'
     @staticmethod
     def obtener_todas_vacunaciones() -> Tuple[Any, int]:
-        """Obtener todas las vacunaciones"""
+        """Obtener todas las vacunaciones. Acepta tenant_id como query param para super admin."""
         try:
             print("Obteniendo lista de vacunaciones desde la base de datos...")
 
-            vacunaciones = VacunacionService.obtener_todas_vacunaciones()
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+
+            vacunaciones = VacunacionService.obtener_todas_vacunaciones(tenant_id_override=tenant_id)
 
             # Convertir a formato compatible con el frontend
             vacunaciones_data = []
@@ -49,9 +58,18 @@ class VacunacionController:
 
     @staticmethod
     def obtener_vacunacion_por_id(vacunacion_id: int) -> Tuple[Any, int]:
-        """Obtener una vacunación por ID"""
+        """Obtener una vacunación por ID. Acepta tenant_id como query param para super admin."""
         try:
-            vacunacion = VacunacionService.obtener_vacunacion_por_id(vacunacion_id)
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
+            vacunacion = VacunacionService.obtener_vacunacion_por_id(vacunacion_id, tenant_id_override=tenant_id)
 
             if not vacunacion:
                 return jsonify({
@@ -119,7 +137,7 @@ class VacunacionController:
 
     @staticmethod
     def actualizar_vacunacion(vacunacion_id: int) -> Tuple[Any, int]:
-        """Actualizar una vacunación existente"""
+        """Actualizar una vacunación existente. Acepta tenant_id como query param para super admin."""
         try:
             data = request.get_json()
 
@@ -129,8 +147,17 @@ class VacunacionController:
                     "message": "Se requieren datos JSON"
                 }), 400
 
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+
             # Verificar que la vacunación existe
-            existing_vacunacion = VacunacionService.obtener_vacunacion_por_id(vacunacion_id)
+            existing_vacunacion = VacunacionService.obtener_vacunacion_por_id(vacunacion_id, tenant_id_override=tenant_id)
             if not existing_vacunacion:
                 return jsonify({
                     "status": "error",
@@ -143,7 +170,7 @@ class VacunacionController:
             vacunacion = Vacunacion.from_dict(updated_data)
 
             # Actualizar en la base de datos
-            success = VacunacionService.actualizar_vacunacion(vacunacion_id, vacunacion)
+            success = VacunacionService.actualizar_vacunacion(vacunacion_id, vacunacion, tenant_id_override=tenant_id)
 
             if success:
                 return jsonify({
@@ -165,11 +192,21 @@ class VacunacionController:
 
     @staticmethod
     def eliminar_vacunacion(vacunacion_id: int) -> Tuple[Any, int]:
-        """Eliminar una vacunación"""
+        """Eliminar una vacunación. Acepta tenant_id como query param para super admin."""
         try:
             print(f"Controller: Intentando eliminar vacunación con ID: {vacunacion_id}")
+            
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
             # Verificar que la vacunación existe
-            existing_vacunacion = VacunacionService.obtener_vacunacion_por_id(vacunacion_id)
+            existing_vacunacion = VacunacionService.obtener_vacunacion_por_id(vacunacion_id, tenant_id_override=tenant_id)
             print(f"Controller: Vacunación encontrada: {existing_vacunacion is not None}")
             if not existing_vacunacion:
                 print(f"Controller: Vacunación con ID {vacunacion_id} no encontrada")
@@ -180,7 +217,7 @@ class VacunacionController:
 
             # Eliminar de la base de datos
             print(f"Controller: Llamando a VacunacionService.eliminar_vacunacion con ID: {vacunacion_id}")
-            success = VacunacionService.eliminar_vacunacion(vacunacion_id)
+            success = VacunacionService.eliminar_vacunacion(vacunacion_id, tenant_id_override=tenant_id)
             print(f"Controller: Resultado de eliminar_vacunacion: {success}")
 
             if success:

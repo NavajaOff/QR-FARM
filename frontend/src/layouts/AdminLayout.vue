@@ -131,40 +131,100 @@ export default {
     }
   },
   mounted() {
-    console.log("Componente AdminLayout montado");
+    console.log("[AdminLayout] Componente montado");
 
     try {
-      // Verificar autenticación y rol
+      // Verificar autenticación y rol con validación explícita
       const isAuth = authService.isAuthenticated();
-      const isAdmin = authService.isAdmin();
       const token = authService.getToken();
       const role = authService.getRole();
+      const isAdmin = authService.isAdmin();
+      const isSuperAdmin = role === 'super_admin';
 
-      console.log("Verificación en AdminLayout:");
-      console.log("- isAuthenticated:", isAuth);
-      console.log("- isAdmin:", isAdmin);
-      console.log("- Token presente:", !!token);
-      console.log("- Rol actual:", role);
+      console.log("[AdminLayout] Verificación de autenticación:");
+      console.log("  - isAuthenticated:", isAuth);
+      console.log("  - Token presente:", !!token);
+      console.log("  - Rol actual:", role);
+      console.log("  - isAdmin():", isAdmin);
+      console.log("  - isSuperAdmin:", isSuperAdmin);
 
-      if (!isAuth || !isAdmin) {
-        console.log("Usuario no autenticado o no es admin, redirigiendo a login");
+      // Validar que el usuario esté autenticado
+      if (!isAuth) {
+        console.warn("[AdminLayout] Usuario no autenticado, redirigiendo a login");
         this.$router.push('/login');
         return;
       }
 
+      // Validar que el usuario tenga rol de admin o super_admin
+      if (!isAdmin && !isSuperAdmin) {
+        console.warn("[AdminLayout] Usuario no tiene permisos de administrador, redirigiendo a login");
+        console.warn("[AdminLayout] Rol recibido:", role);
+        this.$router.push('/login');
+        return;
+      }
+
+      // Cargar información del usuario
       const user = authService.getUser();
-      console.log('Usuario en AdminLayout:', user);
-      this.userName = user?.persona?.primer_nombre || user?.primer_nombre || 'Administrador';
-      console.log("AdminLayout inicializado correctamente para:", this.userName);
+      console.log("[AdminLayout] Datos del usuario:", user);
+      
+      if (user) {
+        this.userName = user?.persona?.primer_nombre || user?.primer_nombre || user?.email || 'Administrador';
+        console.log("[AdminLayout] Nombre de usuario establecido:", this.userName);
+      } else {
+        console.warn("[AdminLayout] No se encontraron datos del usuario, usando valor por defecto");
+        this.userName = 'Administrador';
+      }
+
+      console.log("[AdminLayout] Inicialización completada correctamente");
     } catch (error) {
-      console.error('Error en AdminLayout mounted:', error);
+      console.error('[AdminLayout] Error en mounted:', error);
+      console.error('[AdminLayout] Stack trace:', error.stack);
       this.$router.push('/login');
     }
   },
   methods: {
-    logout() {
-      authService.logout();
-      this.$router.push('/login');
+    logout(event) {
+      try {
+        // Prevenir comportamiento por defecto si es un evento
+        if (event) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+
+        console.log('[AdminLayout] Iniciando proceso de logout...');
+        
+        // Limpiar servicio de autenticación
+        authService.logout();
+        console.log('[AdminLayout] authService.logout() ejecutado');
+
+        // Limpiar cualquier estado adicional
+        localStorage.clear();
+        sessionStorage.clear();
+        console.log('[AdminLayout] localStorage y sessionStorage limpiados');
+
+        // Intentar redirigir con router
+        this.$router.push('/login').then(() => {
+          console.log('[AdminLayout] Redirección a login exitosa');
+        }).catch(err => {
+          console.warn('[AdminLayout] Error en router.push, usando window.location:', err);
+          // Forzar recarga si el router falla
+          window.location.href = '/login';
+        });
+      } catch (error) {
+        console.error('[AdminLayout] Error crítico en logout:', error);
+        console.error('[AdminLayout] Stack trace:', error.stack);
+        
+        // Forzar limpieza y redirección en caso de error
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+          window.location.href = '/login';
+        } catch (cleanupError) {
+          console.error('[AdminLayout] Error en limpieza de emergencia:', cleanupError);
+          // Último recurso: recargar la página
+          window.location.reload();
+        }
+      }
     }
   }
 };
@@ -331,6 +391,10 @@ export default {
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   padding-top: calc(2rem + 76px);
   margin-top: 0;
+  position: relative;
+  z-index: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Animaciones */

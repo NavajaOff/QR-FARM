@@ -30,7 +30,19 @@ class UsuarioService:
                 conn.close()
 
     @staticmethod
-    def crear_usuario(persona: Persona, usuario: Usuario) -> Tuple[Optional[Usuario], str]:
+    def crear_usuario(persona: Persona, usuario: Usuario, tenant_id_override: Optional[int] = None, es_super_admin: bool = False) -> Tuple[Optional[Usuario], str]:
+        """
+        Crear un nuevo usuario.
+        
+        Args:
+            persona: Objeto Persona con datos de la persona
+            usuario: Objeto Usuario con datos del usuario
+            tenant_id_override: ID del tenant a asignar (solo si es_super_admin es True)
+            es_super_admin: Si True, permite asignar tenant_id_override
+        
+        Returns:
+            Tuple con el usuario creado y mensaje, o (None, mensaje_error)
+        """
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
@@ -44,6 +56,24 @@ class UsuarioService:
                 if rol and rol.get('rol') == 'super_admin':
                     return None, "No se puede crear usuarios super_admin desde la API. Use el script de inicialización."
 
+            # Validar tenant_id si se proporciona
+            tenant_id_final = None
+            if tenant_id_override is not None:
+                if not es_super_admin:
+                    return None, "Solo el super administrador puede asignar tenant_id al crear usuarios"
+                
+                # Verificar que el tenant existe
+                cursor.execute("SELECT id FROM tenants WHERE id = %s AND estado = 'activo'", (tenant_id_override,))
+                tenant = cursor.fetchone()
+                if not tenant:
+                    return None, f"El tenant con ID {tenant_id_override} no existe o está inactivo"
+                
+                tenant_id_final = tenant_id_override
+            else:
+                # Si no es super admin, obtener tenant_id del contexto
+                from ..utils.tenant import get_current_tenant_id
+                tenant_id_final = get_current_tenant_id()
+
             # Verificar si el email ya existe
             cursor.execute("SELECT id FROM personas WHERE email = %s", (persona.email,))
             if cursor.fetchone():
@@ -55,37 +85,37 @@ class UsuarioService:
                 # Iniciar transacción
                 conn.start_transaction()
 
-                # Insertar persona
+                # Insertar persona con tenant_id
                 sql_persona = """
                     INSERT INTO personas (
                         id_rol, primer_nombre, segundo_nombre, primer_apellido,
-                        segundo_apellido, email, telefono, fecha_creacion
+                        segundo_apellido, email, telefono, fecha_creacion, tenant_id
                     ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, NOW()
+                        %s, %s, %s, %s, %s, %s, %s, NOW(), %s
                     )
                 """
 
                 values_persona = (
                     persona.id_rol, persona.primer_nombre, persona.segundo_nombre,
                     persona.primer_apellido, persona.segundo_apellido,
-                    persona.email, persona.telefono
+                    persona.email, persona.telefono, tenant_id_final
                 )
 
                 cursor.execute(sql_persona, values_persona)
                 id_persona = cursor.lastrowid
 
-                # Luego crear el usuario
+                # Luego crear el usuario con tenant_id
                 sql_usuario = """
                     INSERT INTO usuarios (
-                        id_persona, id_rol, contrasena, estado
+                        id_persona, id_rol, contrasena, estado, tenant_id
                     ) VALUES (
-                        %s, %s, %s, %s
+                        %s, %s, %s, %s, %s
                     )
                 """
 
                 values_usuario = (
                     id_persona, usuario.id_rol or 1, usuario.contrasena,
-                    usuario.estado.value
+                    usuario.estado.value, tenant_id_final
                 )
 
                 cursor.execute(sql_usuario, values_usuario)
@@ -95,6 +125,7 @@ class UsuarioService:
 
                 usuario.id = cursor.lastrowid
                 usuario.id_persona = id_persona
+                usuario.tenant_id = tenant_id_final
                 persona.id = id_persona
                 usuario.persona = persona
 
@@ -488,37 +519,41 @@ class UsuarioService:
 
                 conn.start_transaction()
 
-                # Insertar persona
+                # Obtener tenant_id del contexto (para tenant_admin creando usuarios)
+                from ..utils.tenant import get_current_tenant_id
+                tenant_id_contexto = get_current_tenant_id()
+
+                # Insertar persona con tenant_id
                 sql_persona = """
                     INSERT INTO personas (
                         id_rol, primer_nombre, segundo_nombre, primer_apellido,
-                        segundo_apellido, email, telefono, fecha_creacion
+                        segundo_apellido, email, telefono, fecha_creacion, tenant_id
                     ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, NOW()
+                        %s, %s, %s, %s, %s, %s, %s, NOW(), %s
                     )
                 """
 
                 values_persona = (
                     persona.id_rol, persona.primer_nombre, persona.segundo_nombre,
                     persona.primer_apellido, persona.segundo_apellido,
-                    persona.email, persona.telefono
+                    persona.email, persona.telefono, tenant_id_contexto
                 )
 
                 cursor.execute(sql_persona, values_persona)
                 id_persona = cursor.lastrowid
 
-                # Luego crear el usuario
+                # Luego crear el usuario con tenant_id
                 sql_usuario = """
                     INSERT INTO usuarios (
-                        id_persona, id_rol, contrasena, estado
+                        id_persona, id_rol, contrasena, estado, tenant_id
                     ) VALUES (
-                        %s, %s, %s, %s
+                        %s, %s, %s, %s, %s
                     )
                 """
 
                 values_usuario = (
                     id_persona, usuario.id_rol or 1, usuario.contrasena,
-                    usuario.estado.value
+                    usuario.estado.value, tenant_id_contexto
                 )
 
                 cursor.execute(sql_usuario, values_usuario)
@@ -528,6 +563,7 @@ class UsuarioService:
 
                 usuario.id = cursor.lastrowid
                 usuario.id_persona = id_persona
+                usuario.tenant_id = tenant_id_contexto
                 persona.id = id_persona
                 usuario.persona = persona
 

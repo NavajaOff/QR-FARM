@@ -1,5 +1,5 @@
 <template>
-  <div class="container-fluid py-4">
+  <div>
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
       <div>
         <h2 class="mb-1">Reportes y Analítica</h2>

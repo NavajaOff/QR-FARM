@@ -50,10 +50,13 @@ class AuthService {
     return this.user;
   }
 
-  // Obtener rol del usuario
+  // Obtener rol del usuario (siempre obtener del localStorage para asegurar valor actualizado)
   getRole() {
-    if (!this.role) {
-      this.role = localStorage.getItem('userRole');
+    const roleFromStorage = localStorage.getItem('userRole');
+    // Actualizar estado interno si cambió
+    if (roleFromStorage !== this.role) {
+      this.role = roleFromStorage;
+      console.log('[AuthService] Rol actualizado desde localStorage:', this.role);
     }
     return this.role;
   }
@@ -61,8 +64,9 @@ class AuthService {
   // Verificar si es administrador
   isAdmin() {
     const role = this.getRole();
-    console.log("Verificando si es admin - Rol actual:", role);
-    return role === 'admin' || role === 'administrador' || role === 'super_admin';
+    const isAdminResult = role === 'admin' || role === 'administrador' || role === 'super_admin';
+    console.log('[AuthService] isAdmin() - Rol:', role, 'Resultado:', isAdminResult);
+    return isAdminResult;
   }
 
   // Verificar si es super admin
@@ -126,14 +130,23 @@ class AuthService {
 
   // Cerrar sesión
   logout() {
+    console.log('[AuthService] Iniciando logout...');
+    
+    // Limpiar localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('userRole');
+    localStorage.removeItem('qr_farm_selected_tenant_id'); // Limpiar tenant seleccionado
+    
+    // Limpiar sessionStorage
     sessionStorage.removeItem('lastLoginEmail');
 
+    // Limpiar estado interno
     this.token = null;
     this.user = null;
     this.role = null;
+    
+    console.log('[AuthService] Logout completado - Estado limpiado');
   }
 
   // Verificar permisos para una ruta

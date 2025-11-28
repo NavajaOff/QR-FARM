@@ -1,7 +1,10 @@
 <template>
-  <div class="container-fluid py-4 py-md-5">
+  <div>
     <div class="row justify-content-center g-4">
       <div class="col-12">
+        <!-- Selector de Tenant para Super Admin -->
+        <TenantSelector v-if="isSuperAdmin" @tenant-changed="onTenantChanged" />
+
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h2 class="fw-bold text-dark mb-0">
             <i class="fas fa-syringe me-2 text-success"></i>Registro de Vacunación
@@ -100,8 +103,30 @@
 
 <script>
 import registroVacunacionAdmin from '../../assets/js/registro-vacunacion-admin.js';
+import TenantSelector from '../../components/TenantSelector.vue';
+import authService from '../../services/authService.js';
 
-export default registroVacunacionAdmin;
+export default {
+  ...registroVacunacionAdmin,
+  components: {
+    TenantSelector
+  },
+  computed: {
+    ...registroVacunacionAdmin.computed,
+    isSuperAdmin() {
+      return authService.getRole() === 'super_admin';
+    }
+  },
+  methods: {
+    ...registroVacunacionAdmin.methods,
+    onTenantChanged() {
+      // Recargar vacunaciones cuando cambia el tenant
+      if (this.cargarVacunaciones) {
+        this.cargarVacunaciones();
+      }
+    }
+  }
+};
 </script>
 
 <style scoped>
