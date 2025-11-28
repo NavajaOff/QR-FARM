@@ -10,6 +10,9 @@ WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm install
 
+# Copiar archivo .env para variables de entorno en build
+COPY .env ./
+
 # Copiar código fuente
 COPY frontend/ .
 

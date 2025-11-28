@@ -1,9 +1,8 @@
-# Ignorar archivos de entorno (pero mantener .env.example)
+# Ignorar archivos de entorno (mantener .env.example)
 .env
 .env.local
 .env.development
 .env.production
-.env.docker
 
 # Python cache
 __pycache__/
