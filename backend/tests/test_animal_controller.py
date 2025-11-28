@@ -9,19 +9,28 @@ from src.models.animal import Ganado, EstadoGanado
 from src.services.animal_service import GanadoService
 
 
-def _setup_mock_user():
-    """Helper para configurar un usuario mock en g."""
+def _create_mock_user():
+    """Helper para crear un usuario mock con todas las propiedades necesarias."""
     mock_user = Mock()
     mock_user.id = 1
     mock_user.tenant_id = 1
     mock_user.estado = Mock()
     mock_user.estado.value = 'activo'
     mock_rol = Mock()
-    mock_rol.nombre_rol = 'admin'
+    mock_rol.nombre_rol = 'tenant_admin'  # Cambiar a tenant_admin para que permission_required no bloquee
+    mock_rol.rol = 'tenant_admin'
     mock_user.rol = mock_rol
+    # Asegurar que tenant_id sea un atributo real
+    type(mock_user).tenant_id = 1
+    return mock_user
+
+
+def _setup_mock_user():
+    """Helper para configurar un usuario mock en g."""
+    mock_user = _create_mock_user()
     g.current_user = mock_user
     g.tenant_id = 1
-    g.jwt_payload = {'user_id': 1, 'role': 'admin'}
+    g.jwt_payload = {'user_id': 1, 'role': 'tenant_admin', 'tenant_id': 1}
 
 
 class TestGanadoController:
@@ -39,15 +48,7 @@ class TestGanadoController:
         mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
         
         # Mock UsuarioService.obtener_usuario
-        mock_user = Mock()
-        mock_user.id = 1
-        mock_user.tenant_id = 1
-        mock_user.estado = Mock()
-        mock_user.estado.value = 'activo'
-        mock_rol = Mock()
-        mock_rol.nombre_rol = 'admin'
-        mock_rol.rol = 'admin'
-        mock_user.rol = mock_rol
+        mock_user = _create_mock_user()
         mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
@@ -87,15 +88,8 @@ class TestGanadoController:
     @patch('src.controllers.animal_controller.jsonify')
     def test_crear_ganado_error(self, mock_jsonify, mock_crear, mock_jwt, mock_usuario_service):
         """Test crear_ganado con error."""
-        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
-        mock_user = Mock()
-        mock_user.id = 1
-        mock_user.tenant_id = 1
-        mock_user.estado = Mock()
-        mock_user.estado.value = 'activo'
-        mock_rol = Mock()
-        mock_rol.nombre_rol = 'admin'
-        mock_user.rol = mock_rol
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'tenant_admin'}
+        mock_user = _create_mock_user()
         mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
@@ -121,15 +115,8 @@ class TestGanadoController:
     @patch('src.controllers.animal_controller.jsonify')
     def test_crear_ganado_value_error(self, mock_jsonify, mock_jwt, mock_usuario_service):
         """Test crear_ganado con ValueError."""
-        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
-        mock_user = Mock()
-        mock_user.id = 1
-        mock_user.tenant_id = 1
-        mock_user.estado = Mock()
-        mock_user.estado.value = 'activo'
-        mock_rol = Mock()
-        mock_rol.nombre_rol = 'admin'
-        mock_user.rol = mock_rol
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'tenant_admin'}
+        mock_user = _create_mock_user()
         mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
@@ -155,15 +142,8 @@ class TestGanadoController:
     @patch('src.controllers.animal_controller.jsonify')
     def test_obtener_ganado_success(self, mock_jsonify, mock_obtener, mock_jwt, mock_usuario_service):
         """Test obtener_ganado exitoso."""
-        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
-        mock_user = Mock()
-        mock_user.id = 1
-        mock_user.tenant_id = 1
-        mock_user.estado = Mock()
-        mock_user.estado.value = 'activo'
-        mock_rol = Mock()
-        mock_rol.nombre_rol = 'admin'
-        mock_user.rol = mock_rol
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'tenant_admin'}
+        mock_user = _create_mock_user()
         mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
@@ -189,15 +169,8 @@ class TestGanadoController:
     @patch('src.controllers.animal_controller.jsonify')
     def test_obtener_ganado_not_found(self, mock_jsonify, mock_obtener, mock_jwt, mock_usuario_service):
         """Test obtener_ganado cuando no existe."""
-        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
-        mock_user = Mock()
-        mock_user.id = 1
-        mock_user.tenant_id = 1
-        mock_user.estado = Mock()
-        mock_user.estado.value = 'activo'
-        mock_rol = Mock()
-        mock_rol.nombre_rol = 'admin'
-        mock_user.rol = mock_rol
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'tenant_admin'}
+        mock_user = _create_mock_user()
         mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
@@ -223,15 +196,8 @@ class TestGanadoController:
     @patch('src.controllers.animal_controller.jsonify')
     def test_obtener_todos_ganados_success(self, mock_jsonify, mock_obtener, mock_jwt, mock_usuario_service):
         """Test obtener_todos_ganados exitoso."""
-        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
-        mock_user = Mock()
-        mock_user.id = 1
-        mock_user.tenant_id = 1
-        mock_user.estado = Mock()
-        mock_user.estado.value = 'activo'
-        mock_rol = Mock()
-        mock_rol.nombre_rol = 'admin'
-        mock_user.rol = mock_rol
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'tenant_admin'}
+        mock_user = _create_mock_user()
         mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
@@ -288,15 +254,8 @@ class TestGanadoController:
     @patch('src.controllers.animal_controller.jsonify')
     def test_actualizar_ganado_success(self, mock_jsonify, mock_emit, mock_actualizar, mock_obtener, mock_jwt, mock_usuario_service):
         """Test actualizar_ganado exitoso."""
-        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
-        mock_user = Mock()
-        mock_user.id = 1
-        mock_user.tenant_id = 1
-        mock_user.estado = Mock()
-        mock_user.estado.value = 'activo'
-        mock_rol = Mock()
-        mock_rol.nombre_rol = 'admin'
-        mock_user.rol = mock_rol
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'tenant_admin'}
+        mock_user = _create_mock_user()
         mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
@@ -326,15 +285,8 @@ class TestGanadoController:
     @patch('src.controllers.animal_controller.jsonify')
     def test_actualizar_ganado_not_found(self, mock_jsonify, mock_obtener, mock_jwt, mock_usuario_service):
         """Test actualizar_ganado cuando no existe."""
-        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
-        mock_user = Mock()
-        mock_user.id = 1
-        mock_user.tenant_id = 1
-        mock_user.estado = Mock()
-        mock_user.estado.value = 'activo'
-        mock_rol = Mock()
-        mock_rol.nombre_rol = 'admin'
-        mock_user.rol = mock_rol
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'tenant_admin'}
+        mock_user = _create_mock_user()
         mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
@@ -362,15 +314,8 @@ class TestGanadoController:
     @patch('src.controllers.animal_controller.jsonify')
     def test_eliminar_ganado_success(self, mock_jsonify, mock_emit, mock_eliminar, mock_jwt, mock_usuario_service):
         """Test eliminar_ganado exitoso."""
-        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
-        mock_user = Mock()
-        mock_user.id = 1
-        mock_user.tenant_id = 1
-        mock_user.estado = Mock()
-        mock_user.estado.value = 'activo'
-        mock_rol = Mock()
-        mock_rol.nombre_rol = 'admin'
-        mock_user.rol = mock_rol
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'tenant_admin'}
+        mock_user = _create_mock_user()
         mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
@@ -396,15 +341,8 @@ class TestGanadoController:
     @patch('src.controllers.animal_controller.jsonify')
     def test_eliminar_ganado_error_message(self, mock_jsonify, mock_eliminar, mock_jwt, mock_usuario_service):
         """Test eliminar_ganado con mensaje de error."""
-        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
-        mock_user = Mock()
-        mock_user.id = 1
-        mock_user.tenant_id = 1
-        mock_user.estado = Mock()
-        mock_user.estado.value = 'activo'
-        mock_rol = Mock()
-        mock_rol.nombre_rol = 'admin'
-        mock_user.rol = mock_rol
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'tenant_admin'}
+        mock_user = _create_mock_user()
         mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
@@ -430,15 +368,8 @@ class TestGanadoController:
     @patch('src.controllers.animal_controller.jsonify')
     def test_eliminar_ganado_not_found(self, mock_jsonify, mock_eliminar, mock_jwt, mock_usuario_service):
         """Test eliminar_ganado cuando no existe."""
-        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
-        mock_user = Mock()
-        mock_user.id = 1
-        mock_user.tenant_id = 1
-        mock_user.estado = Mock()
-        mock_user.estado.value = 'activo'
-        mock_rol = Mock()
-        mock_rol.nombre_rol = 'admin'
-        mock_user.rol = mock_rol
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'tenant_admin'}
+        mock_user = _create_mock_user()
         mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
@@ -464,15 +395,8 @@ class TestGanadoController:
     @patch('src.controllers.animal_controller.jsonify')
     def test_obtener_ganados_por_potrero_success(self, mock_jsonify, mock_buscar, mock_jwt, mock_usuario_service):
         """Test obtener_ganados_por_potrero exitoso."""
-        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
-        mock_user = Mock()
-        mock_user.id = 1
-        mock_user.tenant_id = 1
-        mock_user.estado = Mock()
-        mock_user.estado.value = 'activo'
-        mock_rol = Mock()
-        mock_rol.nombre_rol = 'admin'
-        mock_user.rol = mock_rol
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'tenant_admin'}
+        mock_user = _create_mock_user()
         mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
@@ -504,15 +428,8 @@ class TestGanadoController:
     @patch('src.controllers.animal_controller.jsonify')
     def test_buscar_por_codigo_qr_success(self, mock_jsonify, mock_detalle, mock_buscar, mock_jwt, mock_usuario_service):
         """Test buscar_por_codigo_qr exitoso."""
-        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
-        mock_user = Mock()
-        mock_user.id = 1
-        mock_user.tenant_id = 1
-        mock_user.estado = Mock()
-        mock_user.estado.value = 'activo'
-        mock_rol = Mock()
-        mock_rol.nombre_rol = 'admin'
-        mock_user.rol = mock_rol
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'tenant_admin'}
+        mock_user = _create_mock_user()
         mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
@@ -541,15 +458,8 @@ class TestGanadoController:
     @patch('src.controllers.animal_controller.jsonify')
     def test_buscar_por_codigo_qr_not_found(self, mock_jsonify, mock_buscar, mock_jwt, mock_usuario_service):
         """Test buscar_por_codigo_qr cuando no existe."""
-        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
-        mock_user = Mock()
-        mock_user.id = 1
-        mock_user.tenant_id = 1
-        mock_user.estado = Mock()
-        mock_user.estado.value = 'activo'
-        mock_rol = Mock()
-        mock_rol.nombre_rol = 'admin'
-        mock_user.rol = mock_rol
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'tenant_admin'}
+        mock_user = _create_mock_user()
         mock_usuario_service.obtener_usuario.return_value = mock_user
 
         app = Flask(__name__)
