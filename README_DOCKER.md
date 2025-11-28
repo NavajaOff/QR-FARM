@@ -249,7 +249,93 @@ Después de hacer cambios en el código del backend o frontend, sigue estos paso
 
 Sigue estos pasos paso a paso para asegurar que tus cambios se vean reflejados en la aplicación Docker.
 
+## Ejecutar Migraciones de Alembic
 
+### 🔄 Migraciones desde Docker (Automático)
+
+Las migraciones se ejecutan automáticamente cuando el contenedor del backend inicia, gracias al script `entrypoint.sh`. No necesitas hacer nada adicional.
+
+### 💻 Migraciones desde Windows (Desarrollo Local)
+
+Si necesitas ejecutar migraciones manualmente desde Windows (fuera de Docker), el sistema ahora detecta automáticamente el entorno y usa la configuración correcta.
+
+#### Opción 1: Usar el Script PowerShell (Recomendado)
+
+```powershell
+cd backend
+.\run-migrations.ps1
+```
+
+Este script:
+- ✅ Detecta automáticamente si MySQL está corriendo en Docker
+- ✅ Configura las variables de entorno necesarias
+- ✅ Inicia MySQL si no está corriendo
+- ✅ Ejecuta las migraciones
+
+#### Opción 2: Configuración Manual
+
+Si prefieres configurar las variables manualmente:
+
+```powershell
+cd backend
+$env:DB_HOST="localhost"
+$env:DB_USER="root"
+$env:DB_PASSWORD=""
+$env:DB_NAME="gestion_ganadera"
+$env:DB_PORT="3306"
+alembic -c alembic.ini upgrade head
+```
+
+#### Opción 3: Usar Archivo .env
+
+Si tienes un archivo `.env` en la raíz del proyecto con las variables configuradas, simplemente ejecuta:
+
+```powershell
+cd backend
+alembic -c alembic.ini upgrade head
+```
+
+El sistema cargará automáticamente las variables desde el archivo `.env`.
+
+### 🐧 Migraciones desde Linux/Mac
+
+```bash
+cd backend
+chmod +x run-migrations.sh
+./run-migrations.sh
+```
+
+O manualmente:
+
+```bash
+cd backend
+export DB_HOST=localhost
+export DB_USER=root
+export DB_PASSWORD=""
+export DB_NAME=gestion_ganadera
+export DB_PORT=3306
+alembic -c alembic.ini upgrade head
+```
+
+### ⚙️ Cómo Funciona
+
+El archivo `backend/src/database/migrations/env.py` ha sido modificado para:
+
+1. **Cargar variables desde `.env`**: Si existe un archivo `.env` en la raíz del proyecto, lo carga automáticamente
+2. **Usar variables de entorno**: Prioriza las variables de entorno del sistema
+3. **Valores por defecto**: Si no hay configuración, usa valores seguros para desarrollo local
+4. **Detección automática**: Funciona tanto desde Docker (`DB_HOST=mysql`) como desde Windows/Linux (`DB_HOST=localhost`)
+
+### 🔧 Solución de Problemas
+
+**Error: "Unknown MySQL server host 'mysql'"**
+- ✅ **Solucionado**: El sistema ahora detecta automáticamente el entorno
+- Si persiste, verifica que MySQL esté corriendo: `docker-compose up -d mysql`
+
+**Error: "Can't connect to MySQL server"**
+- Verifica que MySQL esté corriendo: `docker ps | grep mysql`
+- Verifica el puerto: `docker-compose ps`
+- Revisa las credenciales en tu archivo `.env`
 
 ## Optimizaciones para Producción
 
