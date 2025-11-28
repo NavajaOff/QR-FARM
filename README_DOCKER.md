@@ -68,6 +68,12 @@ ROOT_SUPER_ADMIN_PASSWORD=tu_contraseña_segura_aqui
 ROOT_SUPER_ADMIN_NOMBRE=Super Administrador QR-Farm
 ```
 
+**Nota:** Para generar una clave segura para JWT, ejecuta el siguiente comando y reemplaza `tu_jwt_secret_aqui` con el resultado:
+
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
 ## Instrucciones de Instalación con Docker
 
 ### 1. Preparar Variables de Entorno
@@ -78,23 +84,19 @@ cp .env.docker .env
 # Las variables DB_* están hardcodeadas en docker-compose.yml para consistencia
 ```
 
-### 2. Construir e Iniciar Servicios
 
-```bash
-# Construir imágenes y iniciar servicios
-docker-compose up --build
-
-# O en background (recomendado)
-docker-compose up -d --build
-```
 
 **Nota:** Si has hecho cambios en los Dockerfiles (como la instalación de mysql-client), usa `--build` para reconstruir las imágenes.
 
-### 3. Iniciar Todos los Servicios
+### 2. Iniciar Todos los Servicios
 
 **¡Ahora es completamente automático!** Solo ejecuta:
 
 ```bash
+# Corregir finales de línea en entrypoint.sh
+# Esto es necesario para que el script funcione correctamente en Windows ejecutalo antes de construir los contenedores (en consola de wsl)
+sed -i 's/\r$//' backend/entrypoint.sh
+
 # Construir los servicios
 docker compose build
 
@@ -111,7 +113,7 @@ docker compose up -d
 5. ✅ Se inicia la aplicación Flask sin errores de Werkzeug
 6. ✅ Frontend se conecta al backend
 
-### 4. Acceder a la Aplicación
+### 3. Acceder a la Aplicación
 
 - **Frontend**: http://localhost
 - **Backend API**: http://localhost:5000

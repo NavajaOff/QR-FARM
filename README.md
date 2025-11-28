@@ -315,6 +315,11 @@ cp .env.example .env
 # Editar .env con tus configuraciones locales
 nano .env  # o notepad .env en Windows
 
+**Nota:** Para generar una clave segura para JWT, ejecuta el siguiente comando y asigna el resultado a `JWT_SECRET_KEY` en tu archivo `.env`:
+
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
 
 #### 3. Configurar Base de Datos MySQL
 
