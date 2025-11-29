@@ -100,3 +100,166 @@ class TestPotreroService:
         result = PotreroService._obtener_ocupacion_real(1)
 
         assert result == 0
+
+    @patch('src.services.potrero_service.get_connection')
+    def test_get_all_success(self, mock_get_connection):
+        """Test get_all exitoso."""
+        mock_conn = Mock()
+        mock_cursor = Mock(dictionary=True)
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_conn.is_connected.return_value = True
+
+        mock_cursor.fetchall.return_value = [
+            {'id': 1, 'nombre': 'Potrero 1', 'id_tipo_pasto': 1}
+        ]
+
+        with patch('src.services.potrero_service.get_current_tenant_id', return_value=1), \
+             patch('src.services.potrero_service.PotreroService._obtener_ocupacion_real', return_value=0), \
+             patch('src.services.potrero_service.PotreroService._actualizar_ocupacion_en_db'), \
+             patch('src.services.potrero_service.PotreroService.get_tipos_pasto', return_value=[{'id': 1, 'tipo_pasto': 'Césped'}]):
+            result = PotreroService.get_all()
+
+            assert isinstance(result, list)
+
+    @patch('src.services.potrero_service.db')
+    def test_get_by_id_success(self, mock_db):
+        """Test get_by_id exitoso."""
+        mock_cursor = Mock()
+        mock_db.get_cursor.return_value.__enter__.return_value = mock_cursor
+        mock_cursor.fetchone.return_value = {
+            'id': 1,
+            'nombre': 'Potrero 1',
+            'id_tipo_pasto': 1,
+            'ocupacion': 0
+        }
+
+        with patch('src.services.potrero_service.get_current_tenant_id', return_value=1), \
+             patch('src.services.potrero_service.PotreroService._obtener_ocupacion_real', return_value=0), \
+             patch('src.services.potrero_service.PotreroService.get_tipos_pasto', return_value=[{'id': 1, 'tipo_pasto': 'Césped'}]):
+            result = PotreroService.get_by_id(1)
+
+            assert result is not None
+            assert result['id'] == 1
+
+    @patch('src.services.potrero_service.db')
+    def test_get_by_id_not_found(self, mock_db):
+        """Test get_by_id cuando no existe."""
+        mock_cursor = Mock()
+        mock_db.get_cursor.return_value.__enter__.return_value = mock_cursor
+        mock_cursor.fetchone.return_value = None
+
+        with patch('src.services.potrero_service.get_current_tenant_id', return_value=1):
+            with pytest.raises(ValueError):
+                PotreroService.get_by_id(999)
+
+    @patch('src.services.potrero_service.get_connection')
+    def test_create_success(self, mock_get_connection):
+        """Test create exitoso."""
+        mock_conn = Mock()
+        mock_cursor = Mock(dictionary=True)
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_conn.is_connected.return_value = True
+        mock_cursor.lastrowid = 1
+
+        with patch('src.services.potrero_service.get_current_tenant_id', return_value=1), \
+             patch('src.services.potrero_service.db') as mock_db:
+            mock_select_cursor = Mock()
+            mock_db.get_cursor.return_value.__enter__.return_value = mock_select_cursor
+            mock_select_cursor.fetchone.return_value = {
+                'id': 1,
+                'nombre': 'Potrero 1',
+                'id_tipo_pasto': 1
+            }
+
+            data = {
+                'nombre': 'Potrero Test',
+                'capacidad': 10,
+                'id_tipo_pasto': 1
+            }
+
+            with patch('src.services.potrero_service.PotreroService._agregar_tipo_pasto'), \
+                 patch('src.services.potrero_service.PotreroService._agregar_responsable'):
+                result = PotreroService.create(data)
+
+                assert result is not None
+
+    @patch('src.services.potrero_service.db')
+    def test_update_success(self, mock_db):
+        """Test update exitoso."""
+        mock_cursor = Mock()
+        mock_db.get_cursor.return_value.__enter__.return_value = mock_cursor
+        mock_cursor.fetchone.return_value = {
+            'id': 1,
+            'nombre': 'Potrero 1',
+            'id_tipo_pasto': 1,
+            'ocupacion': 0
+        }
+
+        with patch('src.services.potrero_service.get_current_tenant_id', return_value=1), \
+             patch('src.services.potrero_service.PotreroService._obtener_ocupacion_real', return_value=0), \
+             patch('src.services.potrero_service.PotreroService.get_tipos_pasto', return_value=[{'id': 1, 'tipo_pasto': 'Césped'}]):
+            data = {'nombre': 'Potrero Actualizado'}
+
+            with patch('src.services.potrero_service.PotreroService._agregar_tipo_pasto_actualizado'):
+                result = PotreroService.update(1, data)
+
+                assert result is not None
+
+    @patch('src.services.potrero_service.db')
+    def test_delete_success(self, mock_db):
+        """Test delete exitoso."""
+        mock_cursor = Mock()
+        mock_db.get_cursor.return_value.__enter__.return_value = mock_cursor
+        mock_cursor.fetchone.return_value = {
+            'id': 1,
+            'nombre': 'Potrero 1',
+            'id_tipo_pasto': 1
+        }
+
+        with patch('src.services.potrero_service.get_current_tenant_id', return_value=1), \
+             patch('src.services.potrero_service.PotreroService._obtener_ocupacion_real', return_value=0), \
+             patch('src.services.potrero_service.PotreroService.get_tipos_pasto', return_value=[{'id': 1, 'tipo_pasto': 'Césped'}]):
+            result = PotreroService.delete(1)
+
+            assert result is True
+
+    @patch('src.services.potrero_service.db')
+    def test_sincronizar_ocupacion(self, mock_db):
+        """Test sincronizar_ocupacion."""
+        mock_cursor = Mock()
+        mock_db.get_cursor.return_value.__enter__.return_value = mock_cursor
+        mock_cursor.fetchone.return_value = {'total': 5}
+
+        with patch('src.services.potrero_service.PotreroService._actualizar_ocupacion_en_db') as mock_actualizar, \
+             patch('src.services.potrero_service.PotreroService.get_by_id') as mock_get:
+            mock_get.return_value = {'id': 1, 'nombre': 'Potrero 1'}
+            mock_actualizar.return_value = {'id': 1, 'ocupacion': 5}
+
+            result = PotreroService.sincronizar_ocupacion(1)
+
+            assert result is not None
+
+    @patch('src.services.potrero_service.db')
+    def test_verificar_capacidad_disponible(self, mock_db):
+        """Test verificar_capacidad_disponible."""
+        with patch('src.services.potrero_service.PotreroService.get_by_id') as mock_get, \
+             patch('src.services.potrero_service.PotreroService._obtener_ocupacion_real', return_value=5), \
+             patch('src.services.potrero_service.PotreroService._actualizar_ocupacion_en_db'):
+            mock_get.return_value = {'id': 1, 'nombre': 'Potrero 1', 'capacidad': 10, 'ocupacion': 5}
+
+            result = PotreroService.verificar_capacidad_disponible(1, 3)
+
+            assert result is not None
+
+    @patch('src.services.potrero_service.db')
+    def test_verificar_capacidad_disponible_exceeded(self, mock_db):
+        """Test verificar_capacidad_disponible cuando se excede capacidad."""
+        with patch('src.services.potrero_service.PotreroService.get_by_id') as mock_get, \
+             patch('src.services.potrero_service.PotreroService._obtener_ocupacion_real', return_value=8), \
+             patch('src.services.potrero_service.PotreroService._actualizar_ocupacion_en_db'):
+            mock_get.return_value = {'id': 1, 'nombre': 'Potrero 1', 'capacidad': 10, 'ocupacion': 8}
+
+            with pytest.raises(ValueError):
+                PotreroService.verificar_capacidad_disponible(1, 5)
