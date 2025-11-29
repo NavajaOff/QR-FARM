@@ -55,9 +55,20 @@ class TestVacunacionController:
             g.current_user = mock_user
             g.tenant_id = 1
             
-            mock_service.obtener_todas_vacunaciones.return_value = [
-                {'id': 1, 'tipo_vacuna': 'Fiebre Aftosa'}
-            ]
+            mock_vacunacion = Mock()
+            mock_vacunacion.to_dict.return_value = {
+                'id': 1,
+                'id_animal': 1,
+                'nombre_animal': 'Animal 1',
+                'id_tipo_vacuna': 1,
+                'nombre_tipo_vacuna': 'Fiebre Aftosa',
+                'fecha_aplicacion': '2023-01-01',
+                'proxima_dosis': None,
+                'responsable': 1,
+                'nombre_responsable': 'Responsable 1',
+                'estado': 'aplicado'
+            }
+            mock_service.obtener_todas_vacunaciones.return_value = [mock_vacunacion]
 
             result = VacunacionController.obtener_todas_vacunaciones()
 
@@ -102,15 +113,25 @@ class TestVacunacionController:
             g.current_user = mock_user
             g.tenant_id = 1
             
-            mock_service.obtener_vacunacion_por_id.return_value = {
+            mock_vacunacion = Mock()
+            mock_vacunacion.to_dict.return_value = {
                 'id': 1,
-                'tipo_vacuna': 'Fiebre Aftosa'
+                'id_animal': 1,
+                'nombre_animal': 'Animal 1',
+                'id_tipo_vacuna': 1,
+                'nombre_tipo_vacuna': 'Fiebre Aftosa',
+                'fecha_aplicacion': '2023-01-01',
+                'proxima_dosis': None,
+                'responsable': 1,
+                'nombre_responsable': 'Responsable 1',
+                'estado': 'aplicado'
             }
+            mock_service.obtener_vacunacion_por_id.return_value = mock_vacunacion
 
             result = VacunacionController.obtener_vacunacion_por_id(1)
 
             assert result[1] == 200
-            mock_service.obtener_vacunacion_por_id.assert_called_once_with(1)
+            mock_service.obtener_vacunacion_por_id.assert_called_once_with(1, tenant_id_override=None)
 
     @patch('src.utils.auth.UsuarioService')
     @patch('src.utils.auth.jwt')
@@ -146,19 +167,17 @@ class TestVacunacionController:
         app.config['SECRET_KEY'] = 'test-secret-key'
         with app.test_request_context(
             json={
-                'id_ganado': 1,
+                'id_animal': 1,
                 'id_tipo_vacuna': 1,
-                'fecha_vacunacion': '2023-01-01'
+                'responsable': 1
             },
+            content_type='application/json',
             headers={'Authorization': 'Bearer fake_token'}
         ):
             g.current_user = mock_user
             g.tenant_id = 1
             
-            mock_service.crear_vacunacion.return_value = {
-                'id': 1,
-                'tipo_vacuna': 'Fiebre Aftosa'
-            }
+            mock_service.crear_vacunacion.return_value = True
 
             result = VacunacionController.crear_vacunacion()
 
@@ -176,6 +195,8 @@ class TestVacunacionController:
         
         app.config['SECRET_KEY'] = 'test-secret-key'
         with app.test_request_context(
+            data='{}',
+            content_type='application/json',
             headers={'Authorization': 'Bearer fake_token'}
         ):
             g.current_user = mock_user
@@ -196,7 +217,8 @@ class TestVacunacionController:
         
         app.config['SECRET_KEY'] = 'test-secret-key'
         with app.test_request_context(
-            json={'id_ganado': 1},
+            json={'id_animal': 1, 'id_tipo_vacuna': 1, 'responsable': 1},
+            content_type='application/json',
             headers={'Authorization': 'Bearer fake_token'}
         ):
             g.current_user = mock_user
@@ -220,15 +242,29 @@ class TestVacunacionController:
         app.config['SECRET_KEY'] = 'test-secret-key'
         with app.test_request_context(
             json={'tipo_vacuna': 'Fiebre Aftosa Actualizada'},
+            content_type='application/json',
             headers={'Authorization': 'Bearer fake_token'}
         ):
             g.current_user = mock_user
             g.tenant_id = 1
             
-            mock_service.actualizar_vacunacion.return_value = {
+            from src.models.vacunacion import EstadoVacunacion
+            mock_vacunacion = Mock()
+            mock_vacunacion.estado = EstadoVacunacion.aplicado
+            mock_vacunacion.to_dict.return_value = {
                 'id': 1,
-                'tipo_vacuna': 'Fiebre Aftosa Actualizada'
+                'id_animal': 1,
+                'nombre_animal': 'Animal 1',
+                'id_tipo_vacuna': 1,
+                'nombre_tipo_vacuna': 'Fiebre Aftosa Actualizada',
+                'fecha_aplicacion': '2023-01-01',
+                'proxima_dosis': None,
+                'responsable': 1,
+                'nombre_responsable': 'Responsable 1',
+                'estado': 'aplicado'
             }
+            mock_service.obtener_vacunacion_por_id.return_value = mock_vacunacion
+            mock_service.actualizar_vacunacion.return_value = True
 
             result = VacunacionController.actualizar_vacunacion(1)
 
@@ -247,12 +283,13 @@ class TestVacunacionController:
         app.config['SECRET_KEY'] = 'test-secret-key'
         with app.test_request_context(
             json={'tipo_vacuna': 'Actualizada'},
+            content_type='application/json',
             headers={'Authorization': 'Bearer fake_token'}
         ):
             g.current_user = mock_user
             g.tenant_id = 1
             
-            mock_service.actualizar_vacunacion.return_value = None
+            mock_service.obtener_vacunacion_por_id.return_value = None
 
             result = VacunacionController.actualizar_vacunacion(999)
 
@@ -279,7 +316,7 @@ class TestVacunacionController:
             result = VacunacionController.eliminar_vacunacion(1)
 
             assert result[1] == 200
-            mock_service.eliminar_vacunacion.assert_called_once_with(1)
+            mock_service.eliminar_vacunacion.assert_called_once_with(1, tenant_id_override=None)
 
     @patch('src.utils.auth.UsuarioService')
     @patch('src.utils.auth.jwt')
@@ -297,7 +334,7 @@ class TestVacunacionController:
             g.current_user = mock_user
             g.tenant_id = 1
             
-            mock_service.eliminar_vacunacion.return_value = False
+            mock_service.obtener_vacunacion_por_id.return_value = None
 
             result = VacunacionController.eliminar_vacunacion(999)
 

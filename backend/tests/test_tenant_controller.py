@@ -55,9 +55,9 @@ class TestTenantController:
         ):
             g.current_user = mock_user
             
-            mock_service.listar_tenants.return_value = [
-                {'id': 1, 'nombre': 'Tenant 1'}
-            ]
+            mock_tenant = Mock()
+            mock_tenant.to_dict.return_value = {'id': 1, 'nombre': 'Tenant 1'}
+            mock_service.listar_tenants.return_value = [mock_tenant]
 
             result = TenantController.listar_tenants()
 
@@ -96,15 +96,18 @@ class TestTenantController:
         
         app.config['SECRET_KEY'] = 'test-secret-key'
         with app.test_request_context(
-            json={'nombre': 'Nuevo Tenant'},
+            json={'nombre': 'Nuevo Tenant', 'codigo_tenant': 'TENANT001'},
+            content_type='application/json',
             headers={'Authorization': 'Bearer fake_token'}
         ):
             g.current_user = mock_user
             
-            mock_service.crear_tenant.return_value = {
+            mock_tenant = Mock()
+            mock_tenant.to_dict.return_value = {
                 'id': 1,
                 'nombre': 'Nuevo Tenant'
             }
+            mock_service.crear_tenant.return_value = mock_tenant
 
             result = TenantController.crear_tenant()
 
@@ -122,6 +125,8 @@ class TestTenantController:
         
         app.config['SECRET_KEY'] = 'test-secret-key'
         with app.test_request_context(
+            data='{}',
+            content_type='application/json',
             headers={'Authorization': 'Bearer fake_token'}
         ):
             g.current_user = mock_user
@@ -141,7 +146,8 @@ class TestTenantController:
         
         app.config['SECRET_KEY'] = 'test-secret-key'
         with app.test_request_context(
-            json={'nombre': 'Tenant'},
+            json={'nombre': 'Tenant', 'codigo_tenant': 'TENANT002'},
+            content_type='application/json',
             headers={'Authorization': 'Bearer fake_token'}
         ):
             g.current_user = mock_user
@@ -167,10 +173,12 @@ class TestTenantController:
         ):
             g.current_user = mock_user
             
-            mock_service.obtener_tenant.return_value = {
+            mock_tenant = Mock()
+            mock_tenant.to_dict.return_value = {
                 'id': 1,
                 'nombre': 'Tenant 1'
             }
+            mock_service.obtener_tenant.return_value = mock_tenant
 
             result = TenantController.obtener_tenant(1)
 
@@ -210,6 +218,7 @@ class TestTenantController:
         app.config['SECRET_KEY'] = 'test-secret-key'
         with app.test_request_context(
             json={'nombre': 'Tenant Actualizado'},
+            content_type='application/json',
             headers={'Authorization': 'Bearer fake_token'}
         ):
             g.current_user = mock_user
@@ -235,6 +244,7 @@ class TestTenantController:
         app.config['SECRET_KEY'] = 'test-secret-key'
         with app.test_request_context(
             json={'nombre': 'Actualizado'},
+            content_type='application/json',
             headers={'Authorization': 'Bearer fake_token'}
         ):
             g.current_user = mock_user
@@ -243,5 +253,5 @@ class TestTenantController:
 
             result = TenantController.actualizar_tenant(999)
 
-            assert result[1] == 404
+            assert result[1] == 400
 

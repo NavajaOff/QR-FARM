@@ -43,47 +43,6 @@ class TestPotreroController:
     @patch('src.utils.auth.UsuarioService')
     @patch('src.utils.auth.jwt')
     @patch('src.controllers.potrero_controller.PotreroService')
-    def test_get_all_success(self, mock_service, mock_jwt, mock_usuario_service, app_context, mock_request):
-        """Test get_all exitoso."""
-        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
-        mock_user = _create_mock_user()
-        mock_usuario_service.obtener_usuario.return_value = mock_user
-        g.current_user = mock_user
-        g.tenant_id = 1
-        
-        mock_service.get_all.return_value = [{'id': 1, 'nombre': 'Potrero 1'}]
-        mock_request.args = {}
-
-        result = PotreroController.get_all()
-
-        assert result[1] == 200
-        mock_service.get_all.assert_called_once()
-
-class TestPotreroController:
-    """Tests para PotreroController."""
-
-    @patch('src.utils.auth.UsuarioService')
-    @patch('src.utils.auth.jwt')
-    @patch('src.controllers.potrero_controller.PotreroService')
-    def test_get_all_success(self, mock_service, mock_jwt, mock_usuario_service, app_context, mock_request):
-        """Test get_all exitoso."""
-        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
-        mock_user = _create_mock_user()
-        mock_usuario_service.obtener_usuario.return_value = mock_user
-        g.current_user = mock_user
-        g.tenant_id = 1
-        
-        mock_service.get_all.return_value = [{'id': 1, 'nombre': 'Potrero 1'}]
-        mock_request.args = {}
-
-        result = PotreroController.get_all()
-
-        assert result[1] == 200
-        mock_service.get_all.assert_called_once()
-
-    @patch('src.utils.auth.UsuarioService')
-    @patch('src.utils.auth.jwt')
-    @patch('src.controllers.potrero_controller.PotreroService')
     def test_get_all_with_tenant_id(self, mock_service, mock_jwt, mock_usuario_service, app):
         """Test get_all con tenant_id."""
         mock_jwt.decode.return_value = {'user_id': 1, 'role': 'admin'}
@@ -206,6 +165,7 @@ class TestPotreroController:
         app.config['SECRET_KEY'] = 'test-secret-key'
         with app.test_request_context(
             json={'nombre': 'Nuevo Potrero', 'capacidad': 10},
+            content_type='application/json',
             headers={'Authorization': 'Bearer fake_token'}
         ):
             g.current_user = mock_user
@@ -229,6 +189,8 @@ class TestPotreroController:
         
         app.config['SECRET_KEY'] = 'test-secret-key'
         with app.test_request_context(
+            data='{}',
+            content_type='application/json',
             headers={'Authorization': 'Bearer fake_token'}
         ):
             g.current_user = mock_user
@@ -329,7 +291,7 @@ class TestPotreroController:
             result = PotreroController.delete(1)
 
             assert result[1] == 200
-            mock_service.delete.assert_called_once_with(1)
+            mock_service.delete.assert_called_once_with(1, tenant_id_override=None)
 
     @patch('src.utils.auth.UsuarioService')
     @patch('src.utils.auth.jwt')
@@ -369,11 +331,12 @@ class TestPotreroController:
             g.current_user = mock_user
             g.tenant_id = 1
             
-            mock_service.get_all.return_value = [{'id': 1, 'estado': 'disponible'}]
+            mock_service.get_by_estado.return_value = [{'id': 1, 'estado': 'disponible'}]
 
             result = PotreroController.get_by_estado('disponible')
 
             assert result[1] == 200
+            mock_service.get_by_estado.assert_called_once_with('disponible', tenant_id_override=None)
 
     @patch('src.utils.auth.UsuarioService')
     @patch('src.utils.auth.jwt')
@@ -386,17 +349,19 @@ class TestPotreroController:
         
         app.config['SECRET_KEY'] = 'test-secret-key'
         with app.test_request_context(
+            json={'delta': 1},
+            content_type='application/json',
             headers={'Authorization': 'Bearer fake_token'}
         ):
             g.current_user = mock_user
             g.tenant_id = 1
             
-            mock_service.sincronizar_ocupacion.return_value = {'id': 1, 'ocupacion': 5}
+            mock_service.actualizar_ocupacion.return_value = {'id': 1, 'ocupacion': 5}
 
             result = PotreroController.actualizar_ocupacion(1)
 
             assert result[1] == 200
-            mock_service.sincronizar_ocupacion.assert_called_once_with(1)
+            mock_service.actualizar_ocupacion.assert_called_once_with(1, 1)
 
     @patch('src.utils.auth.UsuarioService')
     @patch('src.utils.auth.jwt')
