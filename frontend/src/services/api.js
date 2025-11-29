@@ -6,6 +6,11 @@ const api = axios.create({
 });
 
 api.interceptors.request.use(config => {
+  // Crear headers object si no existe
+  if (!config.headers) {
+    config.headers = {};
+  }
+  
   // Agregar token de autenticación
   const token = localStorage.getItem('token');
   if (token) {

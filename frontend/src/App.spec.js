@@ -46,7 +46,10 @@ describe('App', () => {
   it('should render router-view', () => {
     const wrapper = mount(App, {
       global: {
-        plugins: [router]
+        plugins: [router],
+        stubs: {
+          'router-view': true
+        }
       }
     })
     // Check for router-view stub or actual router-view
@@ -67,12 +70,16 @@ describe('App', () => {
   it('should render template correctly', () => {
     const wrapper = mount(App, {
       global: {
-        plugins: [router]
+        plugins: [router],
+        stubs: {
+          'router-view': { template: '<div>Router View</div>' }
+        }
       }
     })
     // Verify template is rendered
-    expect(wrapper.html()).toBeTruthy()
-    expect(wrapper.html().length).toBeGreaterThan(0)
+    const html = wrapper.html()
+    expect(html).toBeTruthy()
+    expect(html.length).toBeGreaterThan(0)
   })
 
   it('should work with router navigation', async () => {
@@ -123,21 +130,31 @@ describe('App', () => {
   it('should render without errors on initial mount', () => {
     const wrapper = mount(App, {
       global: {
-        plugins: [router]
+        plugins: [router],
+        stubs: {
+          'router-view': { template: '<div>Router View</div>' }
+        }
       }
     })
     expect(() => wrapper.html()).not.toThrow()
-    expect(wrapper.html()).toBeTruthy()
+    const html = wrapper.html()
+    expect(html).toBeTruthy()
+    expect(html.length).toBeGreaterThan(0)
   })
 
   it('should have scoped styles applied', () => {
     const wrapper = mount(App, {
       global: {
-        plugins: [router]
+        plugins: [router],
+        stubs: {
+          'router-view': { template: '<div>Router View</div>' }
+        }
       }
     })
     // Component should render with styles
-    expect(wrapper.html()).toBeTruthy()
+    const html = wrapper.html()
+    expect(html).toBeTruthy()
+    expect(html.length).toBeGreaterThan(0)
   })
 
   it('should unmount without errors', () => {
@@ -169,7 +186,7 @@ describe('App', () => {
 
   it('should work with different router configurations', () => {
     const customRouter = createRouter({
-      history: createWebHistory(),
+      history: createMemoryHistory(),
       routes: [
         {
           path: '/test',

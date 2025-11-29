@@ -14,7 +14,10 @@ describe('api', () => {
   describe('API Instance', () => {
     it('should export api service', () => {
       expect(api).toBeDefined()
-      expect(typeof api).toBe('object')
+      // api is an axios instance, which has methods like get, post, etc.
+      expect(api).toBeTruthy()
+      expect(typeof api.get).toBe('function')
+      expect(typeof api.post).toBe('function')
     })
 
     it('should have expected methods', () => {
@@ -405,148 +408,178 @@ describe('api', () => {
       const userData = { email: 'test@test.com', password: '123' }
       const result = authAPI.register(userData)
       expect(result).toBeDefined()
+      // Handle promise rejection to avoid unhandled rejection warnings
+      result.catch(() => {})
     })
 
     it('should call authAPI.login with correct parameters', () => {
       const credentials = { email: 'test@test.com', password: '123' }
       const result = authAPI.login(credentials)
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call authAPI.getProfile', () => {
       const result = authAPI.getProfile()
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call authAPI.updateProfile with correct parameters', () => {
       const data = { nombre: 'Test' }
       const result = authAPI.updateProfile(data)
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call userAPI.getAll', () => {
       const result = userAPI.getAll()
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call userAPI.getById with id', () => {
       const result = userAPI.getById(1)
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call userAPI.update with id and data', () => {
       const result = userAPI.update(1, { nombre: 'Test' })
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call userAPI.delete with id', () => {
       const result = userAPI.delete(1)
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call userAPI.changeStatus with id and status', () => {
       const result = userAPI.changeStatus(1, 'activo')
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call ganadoAPI.getAll', () => {
       const result = ganadoAPI.getAll()
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call ganadoAPI.getById with id', () => {
       const result = ganadoAPI.getById(1)
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call ganadoAPI.create with data', () => {
       const result = ganadoAPI.create({ nombre: 'Test' })
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call ganadoAPI.update with id and data', () => {
       const result = ganadoAPI.update(1, { nombre: 'Test' })
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call ganadoAPI.delete with id', () => {
       const result = ganadoAPI.delete(1)
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call potreroAPI.getAll', () => {
       const result = potreroAPI.getAll()
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call potreroAPI.getById with id', () => {
       const result = potreroAPI.getById(1)
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call potreroAPI.create with data', () => {
       const result = potreroAPI.create({ nombre: 'Test' })
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call potreroAPI.update with id and data', () => {
       const result = potreroAPI.update(1, { nombre: 'Test' })
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call potreroAPI.delete with id', () => {
       const result = potreroAPI.delete(1)
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call vacunacionAPI.getAll', () => {
       const result = vacunacionAPI.getAll()
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call vacunacionAPI.getById with id', () => {
       const result = vacunacionAPI.getById(1)
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call vacunacionAPI.create with data', () => {
       const result = vacunacionAPI.create({ nombre: 'Test' })
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call vacunacionAPI.update with id and data', () => {
       const result = vacunacionAPI.update(1, { nombre: 'Test' })
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call vacunacionAPI.delete with id', () => {
       const result = vacunacionAPI.delete(1)
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call reportAPI.getSummary', () => {
       const result = reportAPI.getSummary()
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call reportAPI.downloadSummaryPdf', () => {
       const result = reportAPI.downloadSummaryPdf()
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call tenantAPI.getById with id', () => {
       const result = tenantAPI.getById(1)
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call tenantAPI.create with data', () => {
       const result = tenantAPI.create({ nombre: 'Test' })
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
 
     it('should call tenantAPI.update with id and data', () => {
       const result = tenantAPI.update(1, { nombre: 'Test' })
       expect(result).toBeDefined()
+      result.catch(() => {})
     })
   })
 })

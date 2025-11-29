@@ -59,6 +59,9 @@ describe('dashboard-content.js', () => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn()
     }
+    // Also mock globalThis.addEventListener directly
+    globalThis.addEventListener = vi.fn()
+    globalThis.removeEventListener = vi.fn()
 
     // Crear router mock con createMemoryHistory
     router = createRouter({
@@ -70,7 +73,7 @@ describe('dashboard-content.js', () => {
   })
 
   const createWrapper = (options = {}) => {
-    return mount(dashboardContent, {
+    const wrapper = mount(dashboardContent, {
       global: {
         plugins: [router],
         mocks: {
@@ -79,6 +82,16 @@ describe('dashboard-content.js', () => {
       },
       ...options
     })
+    // Reset component state
+    wrapper.vm.currentTenant = null
+    wrapper.vm.estadisticas = {
+      usuarios: 0,
+      ganado: 0,
+      potreros: 0,
+      salud: 0,
+      tenants: 0
+    }
+    return wrapper
   }
 
   describe('Component Definition', () => {
@@ -301,6 +314,8 @@ describe('dashboard-content.js', () => {
   describe('cargarTenantActual Method', () => {
     beforeEach(() => {
       wrapper = createWrapper()
+      wrapper.vm.currentTenant = null
+      tenantAPI.getById.mockClear()
     })
 
     it('should load current tenant successfully', async () => {
@@ -311,11 +326,15 @@ describe('dashboard-content.js', () => {
 
       await wrapper.vm.cargarTenantActual()
 
+      expect(tenantAPI.getById).toHaveBeenCalledWith(1)
       expect(wrapper.vm.currentTenant).toEqual({ id: 1, nombre: 'Tenant 1' })
     })
 
     it('should not load tenant if user has no tenant_id', async () => {
+      // Ensure clean state
+      wrapper.vm.currentTenant = null
       authService.getUser.mockReturnValue({})
+      tenantAPI.getById.mockClear()
 
       await wrapper.vm.cargarTenantActual()
 
@@ -596,18 +615,26 @@ describe('dashboard-content.js', () => {
     })
 
     it('should handle errors and set default values', async () => {
+      wrapper = createWrapper()
+      // Reset statistics to ensure clean state
+      wrapper.vm.estadisticas = {
+        usuarios: 0,
+        ganado: 0,
+        potreros: 0,
+        salud: 0,
+        tenants: 0
+      }
       wrapper.vm.isSuperAdmin = false
       wrapper.vm._cargarEstadisticasAdminNormal = vi.fn().mockRejectedValue(new Error('Test error'))
 
       await wrapper.vm.cargarEstadisticas()
 
-      expect(wrapper.vm.estadisticas).toEqual({
-        usuarios: 0,
-        ganado: 0,
-        potreros: 0,
-        salud: 85,
-        tenants: 0
-      })
+      // When there's an error, the component sets default values
+      expect(wrapper.vm.estadisticas.usuarios).toBe(0)
+      expect(wrapper.vm.estadisticas.ganado).toBe(0)
+      expect(wrapper.vm.estadisticas.potreros).toBe(0)
+      expect(wrapper.vm.estadisticas.salud).toBe(85)
+      expect(wrapper.vm.estadisticas.tenants).toBe(0)
       expect(console.error).toHaveBeenCalled()
     })
   })
@@ -627,9 +654,10 @@ describe('dashboard-content.js', () => {
       expect(Number.isInteger(wrapper.vm.estadisticas.salud)).toBe(true)
     })
 
-    it('should return lower value when crypto is not available', () => {
+    it('should return lower value when crypto is not available', async () => {
       const originalWindow = globalThis.window
-      globalThis.window = undefined
+      // Set window to an object without crypto instead of undefined
+      globalThis.window = {}
 
       wrapper = createWrapper()
       wrapper.vm.isSuperAdmin = false
@@ -637,9 +665,10 @@ describe('dashboard-content.js', () => {
       ganadoAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
       potreroAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
 
-      wrapper.vm._cargarEstadisticasAdminNormal().then(() => {
-        expect(wrapper.vm.estadisticas.salud).toBe(80)
-      })
+      await wrapper.vm._cargarEstadisticasAdminNormal()
+
+      // When crypto is not available, should return lower value (80)
+      expect(wrapper.vm.estadisticas.salud).toBe(80)
 
       globalThis.window = originalWindow
     })
