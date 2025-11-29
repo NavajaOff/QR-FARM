@@ -1,8 +1,7 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [vue()],
   resolve: {
@@ -18,15 +17,14 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     setupFiles: ['./src/test-setup.js'],
     coverage: {
-      provider: 'v8',
-      all: true,
-      include: ['src/**/*.{vue,js,ts}'],
-      exclude: ['node_modules/', 'dist/', '.git/', 'coverage/', 'src/**/*.spec.{js,ts}', 'src/**/*.test.{js,ts}'],
-      reportsDirectory: './coverage',
-      reporter: ['text', 'lcov']
+      provider: 'v8',                     
+      reporter: ['text', 'lcov', 'json'],
+      reportsDirectory: './coverage',     
+      include: ['src/**/*.{js,ts,vue}'], 
+      exclude: ['node_modules', '**/icov-report/**'], 
+      tempDirectory: './node_modules/.vitest-coverage-temp'
     }
   }
 })
