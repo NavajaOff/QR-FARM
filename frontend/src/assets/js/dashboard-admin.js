@@ -11,7 +11,7 @@ const secureRandomInt = (min, max) => {
   if (globalThis.window?.crypto?.getRandomValues) {
     const range = upper - lower + 1;
     const buffer = new Uint32Array(1);
-    globalThis.window.crypto.getRandomValues(buffer);
+    globalThis.window?.crypto?.getRandomValues(buffer);
     const randomFraction = buffer[0] / 0x100000000;
     return lower + Math.floor(randomFraction * range);
   }
