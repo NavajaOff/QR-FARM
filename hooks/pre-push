@@ -25,12 +25,22 @@ cd frontend
 npx vitest --coverage --run || true
 echo "✅ Cobertura de frontend generada (o sin tests)."
 
+# Copiar cobertura-coverage.xml a coverage.xml si existe
+if [ -f coverage-frontend/cobertura-coverage.xml ]; then
+    cp coverage-frontend/cobertura-coverage.xml coverage-frontend/coverage.xml
+    echo "✅ Archivo coverage.xml copiado desde cobertura-coverage.xml."
+else
+    echo "⚠️  No se encontró cobertura-coverage.xml, creando archivo vacío..."
+    mkdir -p coverage-frontend
+    echo '<?xml version="1.0" ?><!DOCTYPE coverage SYSTEM "http://cobertura.sourceforge.net/xml/coverage-04.dtd"><coverage lines-valid="0" lines-covered="0" line-rate="0" branches-valid="0" branches-covered="0" branch-rate="0"><sources><source>src</source></sources><packages></packages></coverage>' > coverage-frontend/coverage.xml
+fi
+
 # Ajustar el source en frontend/coverage-frontend/coverage.xml
 if [ -f coverage-frontend/coverage.xml ]; then
     sed -i '' 's|<source>.*</source>|<source>src</source>|g' coverage-frontend/coverage.xml
     echo "✅ Archivo frontend/coverage-frontend/coverage.xml ajustado."
 else
-    echo "❌ Error: No se encontró frontend/coverage-frontend/coverage.xml"
+    echo "❌ Error: No se pudo crear frontend/coverage-frontend/coverage.xml"
     cd ..
     exit 1
 fi
