@@ -11,7 +11,7 @@ fi
 
 # Ajustar el source en coverage.xml
 if [ -f coverage.xml ]; then
-    sed -i 's|<source>.*</source>|<source>src</source>|g' coverage.xml
+    sed -i 's|<source>.*</source>|<source>backend/src</source>|g' coverage.xml
     echo "✅ Archivo coverage.xml ajustado y guardado en la raíz del repositorio."
 else
     echo "❌ Error: No se encontró coverage.xml"
