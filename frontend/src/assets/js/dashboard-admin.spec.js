@@ -31,11 +31,15 @@ vi.mock('../../services/api.js', () => ({
 describe('dashboard-admin.js', () => {
   let router
   let wrapper
+  // Deterministic counter for crypto mock (resets in beforeEach)
+  let mockRandomCounter = 0
 
   beforeEach(() => {
     vi.clearAllMocks()
     console.error = vi.fn()
     console.log = vi.fn()
+    // Reset counter for each test
+    mockRandomCounter = 0
 
     // Mock de location para createMemoryHistory
     globalThis.location = {
@@ -54,10 +58,14 @@ describe('dashboard-admin.js', () => {
     })
 
     // Mock de globalThis.window.crypto
+    // Using deterministic values for tests instead of Math.random() for security
     globalThis.window = {
       crypto: {
         getRandomValues: vi.fn((buffer) => {
-          buffer[0] = Math.floor(Math.random() * 0x100000000)
+          // Use deterministic counter-based values for reproducible tests
+          // This avoids using Math.random() which is not cryptographically secure
+          mockRandomCounter += 1
+          buffer[0] = (mockRandomCounter * 0x12345678) % 0x100000000
           return buffer
         })
       }

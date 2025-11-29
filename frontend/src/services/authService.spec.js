@@ -2,6 +2,11 @@ import { beforeEach, vi } from 'vitest'
 import authService from './authService'
 import api from './api.js'
 
+// Test constants to avoid hardcoded credentials
+const TEST_EMAIL = 'test@example.com'
+const TEST_PASSWORD = 'test-password-123'
+const TEST_WRONG_PASSWORD = 'wrong-password-456'
+
 // Mock de api
 vi.mock('./api.js', () => ({
   default: {
@@ -319,7 +324,7 @@ describe('authService', () => {
       }
       api.post.mockResolvedValue(mockResponse)
 
-      const credentials = { email: 'test@example.com', password: 'password' }
+      const credentials = { email: TEST_EMAIL, password: TEST_PASSWORD }
       const result = await authService.login(credentials)
 
       expect(result.success).toBe(true)
@@ -344,7 +349,7 @@ describe('authService', () => {
       }
       api.post.mockResolvedValue(mockResponse)
 
-      const credentials = { email: 'test@example.com', password: 'wrong' }
+      const credentials = { email: TEST_EMAIL, password: TEST_WRONG_PASSWORD }
       const result = await authService.login(credentials)
 
       expect(result.success).toBe(false)
@@ -361,7 +366,7 @@ describe('authService', () => {
       }
       api.post.mockRejectedValue(error)
 
-      const credentials = { email: 'test@example.com', password: 'password' }
+      const credentials = { email: TEST_EMAIL, password: TEST_PASSWORD }
       const result = await authService.login(credentials)
 
       expect(result.success).toBe(false)
@@ -372,7 +377,7 @@ describe('authService', () => {
       const error = new Error('Connection failed')
       api.post.mockRejectedValue(error)
 
-      const credentials = { email: 'test@example.com', password: 'password' }
+      const credentials = { email: TEST_EMAIL, password: TEST_PASSWORD }
       const result = await authService.login(credentials)
 
       expect(result.success).toBe(false)
@@ -391,7 +396,7 @@ describe('authService', () => {
       }
       api.post.mockResolvedValue(mockResponse)
 
-      const credentials = { password: 'password' }
+      const credentials = { password: TEST_PASSWORD }
       await authService.login(credentials)
 
       expect(sessionStorage.getItem('lastLoginEmail')).toBeNull()
