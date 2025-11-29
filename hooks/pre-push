@@ -1,8 +1,10 @@
 #!/bin/bash
 
-echo "🔄 Ejecutando hook pre-push: Generando reporte de cobertura..."
+echo "🔄 Ejecutando hook pre-push: Generando reportes de cobertura..."
 
+# ==========================
 # Backend coverage
+# ==========================
 if pytest --cov=src --cov-report=xml:backend/coverage.xml --cov-report=term; then
     echo "✅ Pruebas de backend ejecutadas exitosamente."
 else
@@ -10,48 +12,38 @@ else
     exit 1
 fi
 
-# Ajustar el source en backend/coverage.xml
+# Ajustar source en backend/coverage.xml
 if [ -f backend/coverage.xml ]; then
-    sed -i '' 's|<source>.*</source>|<source>src</source>|g' backend/coverage.xml
+    sed -i.bak 's|<source>.*</source>|<source>src</source>|g' backend/coverage.xml
+    rm backend/coverage.xml.bak
     echo "✅ Archivo backend/coverage.xml ajustado."
 else
     echo "❌ Error: No se encontró backend/coverage.xml"
     exit 1
 fi
 
+# ==========================
 # Frontend coverage
-echo "🔄 Generando cobertura de frontend..."
+# ==========================
+echo "🔄 Ejecutando pruebas de frontend con Vitest..."
 cd frontend
 
 # Ejecutar pruebas con cobertura
-npx vitest run --coverage || true
-
-# Recrear archivo LCOV después de los tests (Vitest puede eliminarlo)
-echo "📁 Recreando carpeta coverage y archivo LCOV..."
-mkdir -p coverage
-cat > coverage/lcov.info << 'EOF'
-TN:
-SF:src/App.vue
-DA:1,1
-DA:2,0
-end_of_record
-EOF
-echo "✅ Archivo frontend/coverage/lcov.info recreado después de los tests."
-
-cd ..
-
-# Mostrar reportes de cobertura
-echo "📊 Reporte de cobertura - Backend:"
-cd backend && python -m coverage report
-cd ..
-
-echo "📊 Reporte de cobertura - Frontend:"
-echo "Archivo de cobertura: frontend/coverage/lcov.info"
-if [ -f frontend/coverage/lcov.info ]; then
-    echo "✅ Archivo de cobertura frontend existe"
-else
-    echo "❌ Archivo de cobertura frontend no encontrado"
+npx vitest run --coverage
+if [ $? -ne 0 ]; then
+    echo "❌ Error en pruebas frontend. Abortando push."
+    exit 1
 fi
+
+# Confirmar existencia de lcov.info
+if [ -f coverage/lcov.info ]; then
+    echo "✅ Archivo frontend/coverage/lcov.info generado correctamente."
+else
+    echo "❌ Archivo frontend/coverage/lcov.info no encontrado."
+    exit 1
+fi
+
+cd ..
 
 echo "🎉 Hook pre-push completado exitosamente."
 exit 0
