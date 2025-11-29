@@ -120,3 +120,5 @@ logs/
 .scannerwork/
 .sonar_lock
 report-task.txt
+# Hooks locales de Git (no versionados)
+.git/hooks/
