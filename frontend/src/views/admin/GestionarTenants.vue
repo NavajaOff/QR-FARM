@@ -33,8 +33,8 @@
         <div class="card">
           <div class="card-body">
             <div v-if="loading" class="text-center py-4">
-              <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Cargando...</span>
+              <div class="spinner-border text-primary">
+                <output class="visually-hidden">Cargando...</output>
               </div>
             </div>
             
@@ -143,11 +143,11 @@
               </div>
 
               <div class="mb-3" v-if="editMode">
-                <label for="codigo_tenant" class="form-label">Código del Tenant</label>
+                <label for="codigo_tenant_edit" class="form-label">Código del Tenant</label>
                 <input
                   type="text"
                   class="form-control"
-                  id="codigo_tenant"
+                  id="codigo_tenant_edit"
                   :value="form.codigo_tenant"
                   disabled
                 >
@@ -245,7 +245,7 @@ const saveTenant = async () => {
     } else {
       result = await crearTenant({
         nombre: form.value.nombre,
-        codigo_tenant: form.value.codigo_tenant.toLowerCase().replace(/\s+/g, '-')
+        codigo_tenant: form.value.codigo_tenant.toLowerCase().replaceAll(' ', '-').replaceAll('--', '-')
       })
     }
 

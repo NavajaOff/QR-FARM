@@ -257,14 +257,7 @@ export default {
       this.editingUserId = null;
     },
 
-    async updateUser() {
-      if (!this.editingUserId) return;
-
-      if (this.editForm.password && this.editForm.password.length < 6) {
-        Swal.fire('Error', 'La contraseña debe tener al menos 6 caracteres', 'error');
-        return;
-      }
-
+    _procesarCamposActualizacion() {
       const fieldsToProcess = [
         'primer_nombre',
         'segundo_nombre',
@@ -292,7 +285,7 @@ export default {
         }
 
         if (!value) {
-          return;
+          return null;
         }
 
         const comparableOriginal = originalValue ?? '';
@@ -301,10 +294,14 @@ export default {
         }
       }
 
+      return updateData;
+    },
+    _agregarPasswordSiExiste(updateData) {
       if (this.editForm.password.trim()) {
         updateData.password = this.editForm.password;
       }
-
+    },
+    _agregarRolSiEsAdmin(updateData) {
       if (this.isCurrentUserAdmin) {
         const currentRoleId = Number(this.editForm.id_rol);
         const originalRoleId = Number(this.originalEditData?.id_rol);
@@ -312,17 +309,37 @@ export default {
           updateData.id_rol = currentRoleId;
         }
       }
+    },
+    _validarEmail(updateData) {
+      if (updateData.email && !SAFE_EMAIL_REGEX.test(updateData.email)) {
+        Swal.fire('Error', 'El formato del email no es válido', 'error');
+        return false;
+      }
+      return true;
+    },
+    async updateUser() {
+      if (!this.editingUserId) return;
+
+      if (this.editForm.password && this.editForm.password.length < 6) {
+        Swal.fire('Error', 'La contraseña debe tener al menos 6 caracteres', 'error');
+        return;
+      }
+
+      const updateData = this._procesarCamposActualizacion();
+      if (!updateData) {
+        return;
+      }
+
+      this._agregarPasswordSiExiste(updateData);
+      this._agregarRolSiEsAdmin(updateData);
 
       if (Object.keys(updateData).length === 0) {
         Swal.fire('Información', 'No hay cambios para guardar', 'info');
         return;
       }
 
-      if (updateData.email) {
-        if (!SAFE_EMAIL_REGEX.test(updateData.email)) {
-          Swal.fire('Error', 'El formato del email no es válido', 'error');
-          return;
-        }
+      if (!this._validarEmail(updateData)) {
+        return;
       }
 
       const result = await this.actualizarUsuario(this.editingUserId, updateData);
