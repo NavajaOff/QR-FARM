@@ -19,11 +19,11 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.js'],
     coverage: {
-      provider: 'v8',                     
-      reporter: ['text', 'lcov', 'json'],
-      reportsDirectory: './coverage',     
-      include: ['src/**/*.{js,ts,vue}'], 
-      exclude: ['node_modules', '**/icov-report/**'], 
+      provider: 'v8',
+      reporter: ['text', 'lcov', 'json', 'cobertura'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.{js,ts,vue}'],
+      exclude: ['node_modules', '**/icov-report/**'],
       tempDirectory: './node_modules/.vitest-coverage-temp'
     }
   }
