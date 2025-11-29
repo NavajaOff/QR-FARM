@@ -1,10 +1,13 @@
 """Controlador Usuario."""
 from datetime import datetime, timedelta
+import logging
 import re
 import jwt
 from flask import jsonify, request, current_app, g
 from ..models.usuario import Usuario, EstadoUsuario
 from ..services.usuario_service import UsuarioService
+
+logger = logging.getLogger(__name__)
 
 EMAIL_REGEX = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
 
@@ -92,7 +95,7 @@ try:
     from ...app import emit_update
 except ImportError:
     def emit_update(event, data=None):
-        print(f"WebSocket no disponible, evento omitido: {event}")
+        logger.debug("WebSocket no disponible, evento omitido: %s", event)
 
 class UsuarioController:
     # Error message constants
@@ -102,6 +105,137 @@ class UsuarioController:
     MSG_CLAVE_CORTA = 'La contraseña debe tener al menos 6 caracteres'
     MSG_NOT_AUTHENTICATED = 'No autenticado'
     MSG_FIELD_REQUIRED = 'El campo {field} es requerido'
+    
+    @staticmethod
+    def _validar_datos_registro(data):
+        """Valida los datos de registro y retorna error si hay algún problema."""
+        if not data:
+            return None, 'No se recibieron datos JSON válidos', 400
+        
+        required_fields = ['primer_nombre', 'primer_apellido', 'email', 'password']
+        for field in required_fields:
+            if not data.get(field):
+                return None, UsuarioController.MSG_FIELD_REQUIRED.format(field=field), 400
+        
+        email = data.get('email', '').strip()
+        if not _validar_email(email):
+            return None, UsuarioController.MSG_INVALID_EMAIL_FORMAT, 400
+        
+        password = data.get('password', '')
+        if len(password) < 6:
+            return None, UsuarioController.MSG_CLAVE_CORTA, 400
+        
+        if UsuarioService.buscar_por_email(email):
+            return None, UsuarioController.MSG_EMAIL_ALREADY_REGISTERED, 400
+        
+        return {'email': email, 'password': password}, None, None
+    
+    @staticmethod
+    def _obtener_usuario_desde_token():
+        """Obtiene el usuario actual desde el token JWT si existe."""
+        auth_header = request.headers.get('Authorization', '').strip()
+        if not auth_header:
+            return None
+        
+        try:
+            parts = auth_header.split()
+            if len(parts) != 2 or parts[0].lower() != 'bearer':
+                return None
+            
+            token = parts[1]
+            payload = jwt.decode(
+                token,
+                current_app.config['SECRET_KEY'],
+                algorithms=['HS256']
+            )
+            user_id = payload.get('user_id')
+            if not user_id:
+                return None
+            
+            return UsuarioService.obtener_usuario(user_id, incluir_inactivos=True)
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as e:
+            logger.debug("Token inválido o expirado: %s", e)
+            return None
+        except Exception as e:
+            logger.warning("Error al obtener usuario desde token: %s", e)
+            return None
+    
+    @staticmethod
+    def _obtener_nombre_rol(usuario):
+        """Obtiene el nombre del rol de un usuario."""
+        if not usuario or not hasattr(usuario, 'rol') or not usuario.rol:
+            return None
+        
+        if hasattr(usuario.rol, 'nombre_rol'):
+            return usuario.rol.nombre_rol
+        
+        if hasattr(usuario.rol, 'rol'):
+            return usuario.rol.rol
+        
+        return None
+    
+    @staticmethod
+    def _obtener_nombre_rol_por_id(rol_id):
+        """Obtiene el nombre del rol por su ID."""
+        try:
+            from ..database.db import get_connection
+            conn = get_connection()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT rol FROM roles WHERE id = %s", (rol_id,))
+            rol = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            
+            return rol.get('rol') if rol else None
+        except Exception as e:
+            logger.warning("Error al obtener rol por ID: %s", e)
+            return None
+    
+    @staticmethod
+    def _es_super_admin(usuario):
+        """Verifica si un usuario es super admin."""
+        rol_nombre = UsuarioController._obtener_nombre_rol(usuario)
+        return rol_nombre == 'super_admin'
+    
+    @staticmethod
+    def _obtener_tenant_id_override(es_super_admin, data):
+        """Obtiene y valida el tenant_id override de los datos si es super admin."""
+        if not es_super_admin:
+            return None, None
+        
+        if 'tenant_id' not in data or not data['tenant_id']:
+            return None, None
+        
+        try:
+            return int(data['tenant_id']), None
+        except (ValueError, TypeError):
+            return None, 'tenant_id debe ser un número válido'
+    
+    @staticmethod
+    def _asignar_rol_si_es_super_admin(es_super_admin, data, persona, usuario):
+        """Asigna el rol a persona y usuario si es super admin."""
+        if not es_super_admin or 'id_rol' not in data or not data['id_rol']:
+            return
+        
+        try:
+            rol_id = int(data['id_rol'])
+            persona.id_rol = rol_id
+            usuario.id_rol = rol_id
+        except (ValueError, TypeError):
+            pass
+    
+    @staticmethod
+    def _crear_usuario_en_bd(es_super_admin, tenant_id_override, persona, usuario):
+        """Crea el usuario en la base de datos usando el servicio apropiado."""
+        if es_super_admin and tenant_id_override is not None:
+            return UsuarioService.crear_usuario(
+                persona, usuario, 
+                tenant_id_override=tenant_id_override, 
+                es_super_admin=True
+            )
+        
+        return UsuarioService.registrar_usuario(persona, usuario)
+    
     @staticmethod
     def registrar_usuario():
         """
@@ -109,136 +243,37 @@ class UsuarioController:
         Si el usuario actual es super admin, puede asignar tenant_id al nuevo usuario.
         """
         try:
-            from flask import g
-            from ..utils.tenant import get_current_tenant_id
-            
             data = request.get_json()
-
-            if not data:
-                return jsonify({
-                    'status': 'error',
-                    'message': 'No se recibieron datos JSON válidos'
-                }), 400
-
-            required_fields = ['primer_nombre', 'primer_apellido', 'email', 'password']
-            for field in required_fields:
-                if not data.get(field):
-                    return jsonify({
-                        'status': 'error',
-                        'message': UsuarioController.MSG_FIELD_REQUIRED.format(field=field)
-                    }), 400
-
-            # Validar formato de email básico
-            email = data.get('email', '').strip()
-            if not _validar_email(email):
-                return jsonify({
-                    'status': 'error',
-                    'message': UsuarioController.MSG_INVALID_EMAIL_FORMAT
-                }), 400
-
-            # Validar longitud de contraseña
-            password = data.get('password', '')
-            if len(password) < 6:
-                return jsonify({
-                    'status': 'error',
-                    'message': UsuarioController.MSG_CLAVE_CORTA
-                }), 400
-
-            # Verificar si el email ya existe
-            if UsuarioService.buscar_por_email(email):
-                return jsonify({
-                    'status': 'error',
-                    'message': UsuarioController.MSG_EMAIL_ALREADY_REGISTERED
-                }), 400
-
-            # Verificar si hay token y cargar usuario si existe (para permitir super admin crear usuarios con tenant)
-            es_super_admin = False
-            tenant_id_override = None
+            datos_validos, error_msg, error_status = UsuarioController._validar_datos_registro(data)
+            if datos_validos is None:
+                return UsuarioController._error(error_msg, error_status)
             
-            # Intentar obtener token del header (opcional)
-            auth_header = request.headers.get('Authorization', '').strip()
-            current_user = None
+            current_user = UsuarioController._obtener_usuario_desde_token()
+            es_super_admin = UsuarioController._es_super_admin(current_user)
             
-            if auth_header:
-                try:
-                    from flask import current_app
-                    import jwt
-                    parts = auth_header.split()
-                    if len(parts) == 2 and parts[0].lower() == 'bearer':
-                        token = parts[1]
-                        payload = jwt.decode(
-                            token,
-                            current_app.config['SECRET_KEY'],
-                            algorithms=['HS256']
-                        )
-                        user_id = payload.get('user_id')
-                        if user_id:
-                            current_user = UsuarioService.obtener_usuario(user_id, incluir_inactivos=True)
-                except Exception:
-                    # Si falla la autenticación, continuar como registro público
-                    pass
+            tenant_id_override, tenant_error = UsuarioController._obtener_tenant_id_override(es_super_admin, data)
+            if tenant_error:
+                return UsuarioController._error(tenant_error, 400)
             
-            if current_user and hasattr(current_user, 'rol') and current_user.rol:
-                rol_nombre = None
-                if hasattr(current_user.rol, 'nombre_rol'):
-                    rol_nombre = current_user.rol.nombre_rol
-                elif hasattr(current_user.rol, 'rol'):
-                    rol_nombre = current_user.rol.rol
-                
-                if rol_nombre == 'super_admin':
-                    es_super_admin = True
-                    # Permitir asignar tenant_id si viene en los datos
-                    if 'tenant_id' in data and data['tenant_id']:
-                        try:
-                            tenant_id_override = int(data['tenant_id'])
-                        except (ValueError, TypeError):
-                            return jsonify({
-                                'status': 'error',
-                                'message': 'tenant_id debe ser un número válido'
-                            }), 400
-
-            # Crear persona y usuario desde los datos de registro
             persona, usuario = Usuario.from_registration_data(data)
+            UsuarioController._asignar_rol_si_es_super_admin(es_super_admin, data, persona, usuario)
             
-            # Si hay id_rol en los datos, asignarlo (solo para super admin)
-            if es_super_admin and 'id_rol' in data and data['id_rol']:
-                try:
-                    persona.id_rol = int(data['id_rol'])
-                    usuario.id_rol = int(data['id_rol'])
-                except (ValueError, TypeError):
-                    pass
-
-            # Crear el usuario en la base de datos
-            # Si es super admin y hay tenant_id, usar crear_usuario, sino usar registrar_usuario
-            if es_super_admin and tenant_id_override is not None:
-                nuevo_usuario, mensaje = UsuarioService.crear_usuario(
-                    persona, usuario, 
-                    tenant_id_override=tenant_id_override, 
-                    es_super_admin=True
-                )
-            else:
-                nuevo_usuario, mensaje = UsuarioService.registrar_usuario(persona, usuario)
-
+            nuevo_usuario, mensaje = UsuarioController._crear_usuario_en_bd(
+                es_super_admin, tenant_id_override, persona, usuario
+            )
+            
             if nuevo_usuario:
                 return jsonify({
                     'status': 'success',
                     'message': mensaje,
                     'data': nuevo_usuario.to_dict()
                 }), 201
-            else:
-                return jsonify({
-                    'status': 'error',
-                    'message': mensaje
-                }), 400
+            
+            return UsuarioController._error(mensaje, 400)
 
         except Exception as e:
-            print(f"ERROR inesperado en registro: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return jsonify({
-                'status': 'error',
-                'message': f'Error interno del servidor: {str(e)}'
-            }), 500
+            logger.error("Error inesperado en registro: %s", e, exc_info=True)
+            return UsuarioController._error('Error interno del servidor', 500)
 
     @staticmethod
     def login():
@@ -277,9 +312,10 @@ class UsuarioController:
                 }), 401
 
         except Exception as e:
+            logger.error("Error en login: %s", e, exc_info=True)
             return jsonify({
                 'status': 'error',
-                'message': str(e)
+                'message': 'Error al procesar la solicitud'
             }), 500
 
     @staticmethod
@@ -299,91 +335,71 @@ class UsuarioController:
                 }), 404
 
         except Exception as e:
-            print(f"ERROR en login: {str(e)}")
+            logger.error("Error en login: %s", e, exc_info=True)
             return jsonify({
                 'status': 'error',
-                'message': str(e)
+                'message': 'Error al procesar la solicitud'
             }), 500
 
     @staticmethod
+    def _validar_autenticacion_para_listado():
+        """Valida que haya un usuario autenticado y retorna error si no existe."""
+        current_user = _obtener_usuario_actual()
+        if not current_user:
+            return None, jsonify({
+                'status': 'error',
+                'message': 'Usuario no autenticado'
+            }), 401
+        return current_user, None, None
+    
+    @staticmethod
+    def _obtener_tenant_id_filtrado(current_user):
+        """Obtiene el tenant_id según el tipo de usuario (super_admin o normal)."""
+        tenant_id = getattr(current_user, 'tenant_id', None)
+        
+        if UsuarioController._es_super_admin(current_user):
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    return int(tenant_id_param), None
+                except (ValueError, TypeError):
+                    return None, None
+            return None, None
+        
+        if not tenant_id:
+            return None, 'No se puede determinar el tenant del usuario'
+        
+        return tenant_id, None
+    
+    @staticmethod
     def obtener_todos_usuarios():
         try:
-            current_user = _obtener_usuario_actual()
-            print(f"[USUARIO] obtener_todos_usuarios llamado por user_id={getattr(current_user, 'id', None)}")
-
-            if not current_user:
+            current_user, error_response, error_status = UsuarioController._validar_autenticacion_para_listado()
+            if error_response:
+                return error_response, error_status
+            
+            tenant_id, tenant_error = UsuarioController._obtener_tenant_id_filtrado(current_user)
+            if tenant_error:
                 return jsonify({
                     'status': 'error',
-                    'message': 'Usuario no autenticado'
-                }), 401
-
-            tenant_id = None
-            es_super_admin = False
-
-            # Obtener rol del usuario actual
-            rol_nombre = None
-            if hasattr(current_user, 'rol') and current_user.rol:
-                if hasattr(current_user.rol, 'nombre_rol'):
-                    rol_nombre = current_user.rol.nombre_rol
-                elif hasattr(current_user.rol, 'rol'):
-                    rol_nombre = current_user.rol.rol
-
-            tenant_id = getattr(current_user, 'tenant_id', None)
-            print(f"[USUARIO] Usuario actual: rol={rol_nombre}, tenant_id={tenant_id}")
-
-            if rol_nombre == 'super_admin':
-                es_super_admin = True
-                print(f"[USUARIO] Usuario es SUPER_ADMIN")
-
-                # Super admin puede filtrar por tenant_id usando query param
-                tenant_id_param = request.args.get('tenant_id')
-                if tenant_id_param:
-                    try:
-                        tenant_id = int(tenant_id_param)
-                        print(f"[USUARIO] Super admin filtrando por tenant_id={tenant_id}")
-                    except (ValueError, TypeError):
-                        print(f"[USUARIO] WARNING: tenant_id inválido en query param: {tenant_id_param}")
-                        tenant_id = None
-            else:
-                # Administradores normales SOLO pueden ver usuarios de su mismo tenant
-                if not tenant_id:
-                    print(f"[USUARIO] ERROR: Administrador sin tenant_id, no puede listar usuarios")
-                    return jsonify({
-                        'status': 'error',
-                        'message': 'No se puede determinar el tenant del usuario'
-                    }), 403
-                print(f"[USUARIO] Administrador normal, filtrando por tenant_id={tenant_id}")
-
-            # El servicio ahora maneja automáticamente la exclusión de super_admin para usuarios no privilegiados
+                    'message': tenant_error
+                }), 403
+            
             usuarios = UsuarioService.obtener_todos_usuarios(
                 incluir_inactivos=True,
-                tenant_id=tenant_id  # None para super_admin sin filtro, o tenant_id específico
+                tenant_id=tenant_id
             )
-
-            print(f"[USUARIO] Total usuarios retornados: {len(usuarios)}")
-
-            # Log roles and tenants of returned users
-            for usuario in usuarios:
-                u_rol = getattr(usuario, 'rol', None)
-                u_rol_nombre = None
-                if u_rol:
-                    if hasattr(u_rol, 'nombre_rol'):
-                        u_rol_nombre = u_rol.nombre_rol
-                    elif hasattr(u_rol, 'rol'):
-                        u_rol_nombre = u_rol.rol
-                u_tenant = getattr(usuario, 'tenant_id', None)
-                u_email = getattr(usuario.persona, 'email', None) if usuario.persona else None
-                print(f"[USUARIO] Usuario retornado: id={usuario.id}, email={u_email}, rol={u_rol_nombre}, tenant_id={u_tenant}")
-
+            
             return jsonify({
                 'status': 'success',
                 'data': [usuario.to_dict() for usuario in usuarios]
             }), 200
 
         except Exception as e:
+            logger.error("Error en obtener_todos_usuarios: %s", e, exc_info=True)
             return jsonify({
                 'status': 'error',
-                'message': str(e)
+                'message': 'Error al procesar la solicitud'
             }), 500
 
     @staticmethod
@@ -392,52 +408,39 @@ class UsuarioController:
             data = request.get_json()
             nuevo_estado = data.get('estado')
 
-            current_user = getattr(g, 'current_user', None)
-            print(f"[USUARIO] Petición cambio estado realizada por user_id={getattr(current_user, 'id', None)}")
-            print(f"[USUARIO] Cambiando estado del usuario id={id} a estado={nuevo_estado}")
-
             if nuevo_estado not in ['activo', 'inactivo']:
-                print(f"[USUARIO] ERROR: Estado inválido: {nuevo_estado}")
                 return jsonify({
                     'status': 'error',
                     'message': 'Estado inválido. Debe ser "activo" o "inactivo"'
                 }), 400
 
-            # Verificar que el usuario existe
             usuario_existente = UsuarioService.obtener_usuario(id, incluir_inactivos=True)
             if not usuario_existente:
-                print(f"[USUARIO] ERROR: Usuario con id={id} no encontrado")
                 return jsonify({
                     'status': 'error',
                     'message': UsuarioController.MSG_USER_NOT_FOUND
                 }), 404
 
-            print(f"[USUARIO] Usuario encontrado: id={usuario_existente.id}, estado_actual={usuario_existente.estado}")
-
-            # Actualizar estado
             from ..models.usuario import EstadoUsuario
             usuario_existente.estado = EstadoUsuario(nuevo_estado)
 
             if UsuarioService.actualizar_usuario(id, usuario_existente):
-                print(f"[USUARIO] Estado actualizado exitosamente")
+                mensaje = 'Usuario activado exitosamente' if nuevo_estado == 'activo' else 'Usuario desactivado exitosamente'
                 return jsonify({
                     'status': 'success',
-                    'message': f'Usuario {"activado" if nuevo_estado == "activo" else "desactivado"} exitosamente'
+                    'message': mensaje
                 }), 200
-            else:
-                print(f"[USUARIO] ERROR: No se pudo actualizar el estado del usuario")
-                return jsonify({
-                    'status': 'error',
-                    'message': 'Error al actualizar el estado del usuario'
-                }), 400
-
-        except Exception as e:
-            print(f"[USUARIO] EXCEPCIÓN en cambiar_estado_usuario: {str(e)}")
-            import traceback
-            traceback.print_exc()
+            
             return jsonify({
                 'status': 'error',
-                'message': str(e)
+                'message': 'Error al actualizar el estado del usuario'
+            }), 400
+
+        except Exception as e:
+            logger.error("Error en cambiar_estado_usuario: %s", e, exc_info=True)
+            return jsonify({
+                'status': 'error',
+                'message': 'Error al procesar la solicitud'
             }), 500
 
     @staticmethod
@@ -464,7 +467,8 @@ class UsuarioController:
             }), 200
 
         except Exception as e:
-            return _respuesta_error(str(e), 500)
+            logger.error("Error en obtener_perfil_actual: %s", e, exc_info=True)
+            return _respuesta_error('Error al procesar la solicitud', 500)
 
     @staticmethod
     def actualizar_perfil_actual():
@@ -504,13 +508,13 @@ class UsuarioController:
             }), 400
 
         except Exception as e:
-            return _respuesta_error(str(e), 500)
+            logger.error("Error en obtener_perfil_actual: %s", e, exc_info=True)
+            return _respuesta_error('Error al procesar la solicitud', 500)
 
     @staticmethod
     def actualizar_usuario(id):
         try:
             data = request.get_json()
-            print(f"[USUARIO][PUT] Datos recibidos para id={id}: {data}")
 
             if not data:
                 return UsuarioController._error("No se recibieron datos para actualizar", 400)
@@ -519,16 +523,13 @@ class UsuarioController:
             if not usuario:
                 return UsuarioController._error(UsuarioController.MSG_USER_NOT_FOUND, 404)
 
-            # Validaciones
             error = UsuarioController._validar_campos(data, usuario)
             if error:
                 return error
 
-            # Actualizaciones
             UsuarioController._actualizar_datos_persona(usuario, data)
             UsuarioController._actualizar_datos_usuario(usuario, data)
 
-            # Persistencia
             if UsuarioService.actualizar_usuario_completo(id, usuario):
                 UsuarioController._emitir_actualizacion(id, usuario)
                 return jsonify({
@@ -542,8 +543,8 @@ class UsuarioController:
             )
 
         except Exception as e:
-            print(f"[USUARIO][PUT] Error inesperado: {e}")
-            return UsuarioController._error(str(e), 500)
+            logger.error("Error en actualizar_usuario: %s", e, exc_info=True)
+            return UsuarioController._error('Error al procesar la solicitud', 500)
 
     # --------------------------
     # Métodos auxiliares privados
@@ -574,16 +575,8 @@ class UsuarioController:
         if 'id_rol' in data:
             try:
                 rol_id = int(data['id_rol'])
-                # BLOQUEO: No permitir asignar rol super_admin desde la API
-                from ..database.db import get_connection
-                conn = get_connection()
-                cursor = conn.cursor(dictionary=True)
-                cursor.execute("SELECT rol FROM roles WHERE id = %s", (rol_id,))
-                rol = cursor.fetchone()
-                cursor.close()
-                conn.close()
-                
-                if rol and rol.get('rol') == 'super_admin':
+                rol_nombre = UsuarioController._obtener_nombre_rol_por_id(rol_id)
+                if rol_nombre == 'super_admin':
                     return UsuarioController._error('No se puede asignar el rol super_admin. Este rol solo se crea desde variables de entorno.', 403)
             except (TypeError, ValueError):
                 return UsuarioController._error('El id_rol debe ser numérico', 400)
@@ -619,7 +612,7 @@ class UsuarioController:
         try:
             emit_update('usuario_updated', {'id': id, 'data': usuario.to_dict()})
         except NameError:
-            print("WebSocket no disponible, omitiendo emisión")
+            logger.debug("WebSocket no disponible, omitiendo emisión")
 
     @staticmethod
     def eliminar_usuario(id):
@@ -631,7 +624,7 @@ class UsuarioController:
                         'id': id
                     })
                 except NameError:
-                    print("WebSocket no disponible, omitiendo emisión")
+                    logger.debug("WebSocket no disponible, omitiendo emisión")
                 return jsonify({
                     'status': 'success',
                     'message': 'Usuario eliminado exitosamente'
@@ -643,7 +636,8 @@ class UsuarioController:
                 }), 404
                 
         except Exception as e:
+            logger.error("Error en eliminar_usuario: %s", e, exc_info=True)
             return jsonify({
                 'status': 'error',
-                'message': str(e)
+                'message': 'Error al procesar la solicitud'
             }), 500
