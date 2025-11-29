@@ -1,7 +1,6 @@
 import { beforeEach, vi, describe, it, expect } from 'vitest'
 import { fetchQrResource, transformEmbeddedPayload } from './qr'
 import api from './api.js'
-import axios from 'axios'
 
 vi.mock('./api.js', () => ({
   default: {

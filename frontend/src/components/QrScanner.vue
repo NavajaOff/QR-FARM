@@ -304,7 +304,7 @@ const clearError = (): void => {
 
 const ensureHtml5QrCodeInstance = async (): Promise<void> => {
   if (html5QrCodeInstance.value) return;
-  if (typeof globalThis.window === 'undefined') {
+  if (globalThis.window === undefined) {
     appendError('La ventana del navegador no está disponible.');
     return;
   }

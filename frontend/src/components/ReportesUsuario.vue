@@ -2,7 +2,7 @@
   <div class="reportes-usuario">
     <!-- Loading state -->
     <div v-if="loading" class="text-center py-5">
-      <div class="spinner-border text-success" role="status">
+      <div class="spinner-border text-success" aria-live="polite" aria-label="Cargando">
         <span class="visually-hidden">Cargando...</span>
       </div>
       <p class="mt-2 text-muted">Cargando reportes...</p>
