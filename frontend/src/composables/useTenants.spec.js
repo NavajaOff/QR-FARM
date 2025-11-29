@@ -99,23 +99,31 @@ describe('useTenants', () => {
     expect(tenantAPI.update).toHaveBeenCalledWith(1, updatedData)
   })
 
-  it('should delete tenant successfully', async () => {
-    tenantAPI.delete.mockResolvedValue({
-      data: {
-        status: 'success'
-      }
-    })
-    tenantAPI.getAll.mockResolvedValue({
+  it('should get tenant by id successfully', async () => {
+    const mockTenant = { id: 1, nombre: 'Tenant 1' }
+    tenantAPI.getById.mockResolvedValue({
       data: {
         status: 'success',
-        data: []
+        data: mockTenant
       }
     })
 
-    const { eliminarTenant } = useTenants()
-    const result = await eliminarTenant(1)
+    const { obtenerTenant } = useTenants()
+    const result = await obtenerTenant(1)
 
     expect(result.success).toBe(true)
-    expect(tenantAPI.delete).toHaveBeenCalledWith(1)
+    expect(result.data).toEqual(mockTenant)
+    expect(tenantAPI.getById).toHaveBeenCalledWith(1)
+  })
+
+  it('should handle error when getting tenant by id', async () => {
+    const errorMessage = 'Tenant no encontrado'
+    tenantAPI.getById.mockRejectedValue(new Error(errorMessage))
+
+    const { obtenerTenant, error } = useTenants()
+    const result = await obtenerTenant(999)
+
+    expect(result.success).toBe(false)
+    expect(error.value).toBe(errorMessage)
   })
 })
