@@ -216,7 +216,7 @@ export default {
                   } else if (typeof rawValue === 'object') {
                     value = JSON.stringify(rawValue)
                   } else {
-                    value = String(rawValue)
+                    value = rawValue.toString()
                   }
                   return `${label}: ${value}`
                 }
