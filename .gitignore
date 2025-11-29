@@ -46,7 +46,7 @@ coverage.xml
 .pytest_cache/
 
 # cobertura de Vitest
-coverage/icov-report/
+frontend/coverage/lcov-report/
 
 
 # Jupyter Notebook
