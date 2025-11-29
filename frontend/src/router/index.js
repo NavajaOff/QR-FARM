@@ -188,8 +188,7 @@ router.beforeEach((to, from, next) => {
     // Super admin puede acceder a todas las rutas protegidas (excepto usuario si no es usuario)
     if (isSuperAdmin) {
       // Super admin puede acceder a cualquier ruta excepto las específicas de usuario
-      if (to.meta.role === 'usuario' && !isUser) return true;
-      return false;
+      return to.meta.role === 'usuario' && !isUser;
     }
     
     // Si la ruta requiere super_admin y el usuario NO es super_admin, bloquear

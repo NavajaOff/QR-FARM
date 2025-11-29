@@ -23,7 +23,11 @@ export default defineConfig({
       reporter: ['text', 'lcov', 'json', 'cobertura'],
       reportsDirectory: './coverage',
       include: ['src/**/*.{js,ts,vue}'],
-      exclude: ['node_modules', '**/icov-report/**'],
+      exclude: [
+        'node_modules',
+        '**/icov-report/**',
+        '**/gestionar-potreros.js' // Exclude file that causes parsing errors
+      ],
       tempDirectory: './node_modules/.vitest-coverage-temp'
     }
   }

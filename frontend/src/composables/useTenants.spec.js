@@ -1,19 +1,20 @@
+import { beforeEach, vi } from 'vitest'
 import { useTenants } from './useTenants'
 import { tenantAPI } from '../services/api.js'
 
-jest.mock('../services/api.js', () => ({
+vi.mock('../services/api.js', () => ({
   tenantAPI: {
-    getAll: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
-    delete: jest.fn(),
-    getById: jest.fn()
+    getAll: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    getById: vi.fn()
   }
 }))
 
 describe('useTenants', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
   })
 
   it('should export useTenants composable', () => {

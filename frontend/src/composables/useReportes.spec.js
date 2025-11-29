@@ -1,21 +1,22 @@
+import { beforeEach, vi } from 'vitest'
 import { useReportes } from './useReportes'
 import { reportAPI } from '../services/api.js'
 
-jest.mock('../services/api.js', () => ({
+vi.mock('../services/api.js', () => ({
   reportAPI: {
-    getSummary: jest.fn(),
-    downloadSummaryPdf: jest.fn()
+    getSummary: vi.fn(),
+    downloadSummaryPdf: vi.fn()
   }
 }))
 
 describe('useReportes', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     sessionStorage.clear()
     globalThis.location = { href: '' }
     globalThis.URL = {
-      createObjectURL: jest.fn(() => 'blob:url'),
-      revokeObjectURL: jest.fn()
+      createObjectURL: vi.fn(() => 'blob:url'),
+      revokeObjectURL: vi.fn()
     }
     document.body.innerHTML = ''
   })

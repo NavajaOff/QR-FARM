@@ -226,7 +226,7 @@ export const cargarAnimales = async (incluirBajas = false) => {
 
     if (response.data.success && response.data.data) {
       // Filtrar animales según el parámetro incluirBajas
-      let animalesFiltrados = response.data.data;
+      let animalesFiltrados;
       if (incluirBajas) {
         // Solo mostrar dados de baja (id_estado >= 4)
         animalesFiltrados = response.data.data.filter(animal => {

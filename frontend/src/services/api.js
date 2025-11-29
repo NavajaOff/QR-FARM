@@ -6,6 +6,11 @@ const api = axios.create({
 });
 
 api.interceptors.request.use(config => {
+  // Crear headers object si no existe
+  if (!config.headers) {
+    config.headers = {};
+  }
+  
   // Agregar token de autenticación
   const token = localStorage.getItem('token');
   if (token) {
@@ -130,7 +135,7 @@ export const reportAPI = {
 export const tenantAPI = {
   getAll: (activosOnly = true) => {
     // Asegurar que el parámetro sea un booleano convertido a string 'true' o 'false'
-    const activosOnlyStr = activosOnly === true || activosOnly === 'true' ? 'true' : 'false'
+    const activosOnlyStr = (activosOnly === true || String(activosOnly) === 'true') ? 'true' : 'false'
     console.log('[tenantAPI] getAll - activosOnly:', activosOnly, 'convertido a:', activosOnlyStr)
     return api.get(`/tenants?activos_only=${activosOnlyStr}`)
   },

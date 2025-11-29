@@ -243,7 +243,7 @@ class GanadoService:
             params = (id,)
             
             if tenant_id is not None:
-                sql += " AND g.tenant_id = %s"
+                sql += SQL_AND_G_TENANT_ID
                 params = (id, tenant_id)
             
             cursor.execute(sql, params)
@@ -697,6 +697,70 @@ class GanadoService:
                 conn.close()
 
     @staticmethod
+    def _validar_tenant_ganado(row: Dict[str, Any], tenant_id: Optional[int]) -> bool:
+        """Valida que el ganado pertenece al tenant especificado."""
+        if tenant_id is None:
+            return True
+        return row.get('tenant_id') == tenant_id
+
+    @staticmethod
+    def _procesar_propietario(row: Dict[str, Any]) -> Dict[str, Any]:
+        """Procesa y retorna los datos del propietario desde el row."""
+        propietario = GanadoService._empty_propietario()
+        propietario.update({
+            "nombre": row.get("propietario_nombre"),
+            "telefono": row.get("propietario_telefono"),
+            "rol": row.get("propietario_rol"),
+        })
+        return propietario
+
+    @staticmethod
+    def _procesar_potrero(row: Dict[str, Any]) -> Dict[str, Any]:
+        """Procesa y retorna los datos del potrero desde el row."""
+        potrero = GanadoService._empty_potrero()
+        if row.get("id_potrero") is not None:
+            potrero.update({
+                "nombre": row.get("potrero_nombre"),
+                "tipo_pasto": row.get("potrero_tipo_pasto"),
+                "ultima_limpieza": GanadoService._to_iso_string(row.get("potrero_ultima_limpieza")),
+                "fecha_ultimo_uso": GanadoService._to_iso_string(row.get("potrero_fecha_ultimo_uso")),
+                "proxima_limpieza": GanadoService._to_iso_string(row.get("potrero_proxima_limpieza")),
+                "capacidad": GanadoService._to_nullable_int(row.get("potrero_capacidad")),
+                "estado": row.get("potrero_estado"),
+            })
+        return potrero
+
+    @staticmethod
+    def _construir_detalle_ganado(row: Dict[str, Any], animal_id: Optional[int], 
+                                   propietario: Dict[str, Any], potrero: Dict[str, Any],
+                                   vacunas: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Construye el diccionario de detalle del ganado."""
+        animal_id_value = row.get("id")
+        return {
+            "id": animal_id if animal_id is not None else animal_id_value,
+            "nombre": row.get("nombre"),
+            "raza": row.get("raza"),
+            "fecha_nacimiento": GanadoService._to_iso_string(row.get("fecha_nacimiento")),
+            "edad": GanadoService._calcular_edad(row.get("fecha_nacimiento")),
+            "sexo": row.get("sexo"),
+            "peso": GanadoService._to_nullable_float(row.get("peso")),
+            "estado": row.get("estado_principal"),
+            "estado_salud": row.get("estado_salud"),
+            "codigo_qr": row.get("codigo_qr"),
+            "propietario": propietario,
+            "propietario_nombre": propietario["nombre"],
+            "propietario_telefono": propietario["telefono"],
+            "propietario_rol": propietario["rol"],
+            "potrero": potrero,
+            "potrero_nombre": potrero["nombre"],
+            "vacunas": vacunas,
+            "historial": [],
+            "id_potrero": GanadoService._to_nullable_int(row.get("id_potrero")),
+            "id_persona": GanadoService._to_nullable_int(row.get("id_persona")),
+            "id_revision": GanadoService._to_nullable_int(row.get("id_revision")),
+        }
+
+    @staticmethod
     def obtener_ganado_detallado(identifier: int | str, tenant_id_override: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
         Obtener ganado detallado por ID o código QR.
@@ -750,7 +814,7 @@ class GanadoService:
         
         params = (identifier, identifier)
         if tenant_id is not None:
-            main_query += " AND g.tenant_id = %s"
+            main_query += SQL_AND_G_TENANT_ID
             params = (identifier, identifier, tenant_id)
         
         main_query += " LIMIT 1"
@@ -761,15 +825,10 @@ class GanadoService:
                 cursor.execute(main_query, params)
                 row = cursor.fetchone()
                 
-                # Validar que el ganado pertenece al tenant
-                if row and tenant_id is not None:
-                    if row.get('tenant_id') != tenant_id:
-                        return None
+                if not row or not GanadoService._validar_tenant_ganado(row, tenant_id):
+                    return None
             finally:
                 cursor.close()
-
-            if not row:
-                return None
 
             animal_id_value = row.get("id")
             animal_id: Optional[int] = None
@@ -779,53 +838,14 @@ class GanadoService:
                 except (TypeError, ValueError):
                     animal_id = None
 
-            propietario = GanadoService._empty_propietario()
-            propietario.update({
-                "nombre": row.get("propietario_nombre"),
-                "telefono": row.get("propietario_telefono"),
-                "rol": row.get("propietario_rol"),
-            })
-
-            potrero = GanadoService._empty_potrero()
-            if row.get("id_potrero") is not None:
-                potrero.update({
-                    "nombre": row.get("potrero_nombre"),
-                    "tipo_pasto": row.get("potrero_tipo_pasto"),
-                    "ultima_limpieza": GanadoService._to_iso_string(row.get("potrero_ultima_limpieza")),
-                    "fecha_ultimo_uso": GanadoService._to_iso_string(row.get("potrero_fecha_ultimo_uso")),
-                    "proxima_limpieza": GanadoService._to_iso_string(row.get("potrero_proxima_limpieza")),
-                    "capacidad": GanadoService._to_nullable_int(row.get("potrero_capacidad")),
-                    "estado": row.get("potrero_estado"),
-                })
+            propietario = GanadoService._procesar_propietario(row)
+            potrero = GanadoService._procesar_potrero(row)
 
             vacunas: List[Dict[str, Any]] = []
             if animal_id is not None:
                 vacunas = GanadoService._fetch_vacunas(connection, animal_id)
 
-            detalle: Dict[str, Any] = {
-                "id": animal_id if animal_id is not None else animal_id_value,
-                "nombre": row.get("nombre"),
-                "raza": row.get("raza"),
-                "fecha_nacimiento": GanadoService._to_iso_string(row.get("fecha_nacimiento")),
-                "edad": GanadoService._calcular_edad(row.get("fecha_nacimiento")),
-                "sexo": row.get("sexo"),
-                "peso": GanadoService._to_nullable_float(row.get("peso")),
-                "estado": row.get("estado_principal"),
-                "estado_salud": row.get("estado_salud"),
-                "codigo_qr": row.get("codigo_qr"),
-                "propietario": propietario,
-                "propietario_nombre": propietario["nombre"],
-                "propietario_telefono": propietario["telefono"],
-                "propietario_rol": propietario["rol"],
-                "potrero": potrero,
-                "potrero_nombre": potrero["nombre"],
-                "vacunas": vacunas,
-                "historial": [],
-                "id_potrero": GanadoService._to_nullable_int(row.get("id_potrero")),
-                "id_persona": GanadoService._to_nullable_int(row.get("id_persona")),
-                "id_revision": GanadoService._to_nullable_int(row.get("id_revision")),
-            }
-            return detalle
+            return GanadoService._construir_detalle_ganado(row, animal_id, propietario, potrero, vacunas)
         except Exception:  # pylint: disable=broad-except
             return None
         finally:

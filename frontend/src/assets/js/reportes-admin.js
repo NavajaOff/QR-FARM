@@ -209,7 +209,8 @@ export default {
               callbacks: {
                 label: (context) => {
                   const label = context.dataset.label || ''
-                  const value = context.raw ?? 0
+                  const rawValue = context.raw ?? 0
+                  const value = typeof rawValue === 'object' ? JSON.stringify(rawValue) : String(rawValue)
                   return `${label}: ${value}`
                 }
               }
