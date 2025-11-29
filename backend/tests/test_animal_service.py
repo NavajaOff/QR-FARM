@@ -222,4 +222,239 @@ class TestGanadoModel:
         """Test es_estado_activo returns False for id_estado >= 4"""
         assert Ganado.es_estado_activo(4) is False
         assert Ganado.es_estado_activo(5) is False
-        assert Ganado.es_estado_activo(None) is True  # Default to active
+    @patch('src.services.animal_service.get_connection')
+    @patch('src.services.animal_service.PotreroService.verificar_capacidad_disponible')
+    @patch('src.services.animal_service.PotreroService.sincronizar_ocupacion')
+    @patch('src.services.animal_service.GanadoService._obtener_tenant_id')
+    @patch('src.services.animal_service.GanadoService._obtener_estado_id_desde_db')
+    def test_crear_ganado_success(self, mock_obtener_estado, mock_tenant, mock_sync, mock_verify, mock_get_conn):
+        """Test crear_ganado with successful creation"""
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.lastrowid = 123
+        mock_tenant.return_value = 1
+        mock_obtener_estado.return_value = None  # Will use mapping
+        mock_verify.return_value = None
+        mock_sync.return_value = None
+
+        ganado = Ganado(
+            nombre="Test Animal",
+            raza="Holstein",
+            fecha_nacimiento="2023-01-01",
+            sexo=SexoGanado.HEMBRA,
+            peso=450.0,
+            estado="saludable",
+            id_potrero=1,
+            id_persona=1
+        )
+
+        result = GanadoService.crear_ganado(ganado)
+
+        assert result is not None
+        assert result.id == 123
+        assert result.nombre == "Test Animal"
+        mock_get_conn.assert_called_once()
+        mock_conn.cursor.assert_called_once()
+        mock_cursor.execute.assert_called_once()
+        mock_conn.commit.assert_called_once()
+        mock_verify.assert_called_once_with(1)
+        mock_sync.assert_called_once_with(1)
+        mock_conn.close.assert_called_once()
+
+    @patch('src.services.animal_service.get_connection')
+    @patch('src.services.animal_service.GanadoService._obtener_tenant_id')
+    def test_crear_ganado_tenant_none(self, mock_tenant, mock_get_conn):
+        """Test crear_ganado when tenant is None"""
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_tenant.return_value = None
+
+        ganado = Ganado(nombre="Test", estado="saludable", sexo=SexoGanado.HEMBRA)
+
+        result = GanadoService.crear_ganado(ganado)
+
+        assert result is None
+        mock_conn.close.assert_called_once()
+
+    @patch('src.services.animal_service.get_connection')
+    @patch('src.services.animal_service.GanadoService._obtener_tenant_id')
+    def test_obtener_ganado_success(self, mock_tenant, mock_get_conn):
+        """Test obtener_ganado with successful retrieval"""
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_tenant.return_value = 1
+
+        mock_cursor.fetchone.return_value = {
+            'id': 1,
+            'nombre': 'Test Animal',
+            'estado_tipo': 'saludable'
+        }
+
+        result = GanadoService.obtener_ganado(1)
+
+        assert result is not None
+        assert result.id == 1
+        assert result.nombre == 'Test Animal'
+        mock_cursor.execute.assert_called_once()
+        mock_conn.close.assert_called_once()
+
+    @patch('src.services.animal_service.get_connection')
+    def test_obtener_ganado_not_found(self, mock_get_conn):
+        """Test obtener_ganado when animal not found"""
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.fetchone.return_value = None
+
+        result = GanadoService.obtener_ganado(999)
+
+        assert result is None
+        mock_conn.close.assert_called_once()
+
+    @patch('src.services.animal_service.get_connection')
+    def test_obtener_ganado_exception(self, mock_get_conn):
+        """Test obtener_ganado with database exception"""
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.execute.side_effect = Exception("DB Error")
+
+        result = GanadoService.obtener_ganado(1)
+
+        assert result is None
+        mock_conn.close.assert_called_once()
+
+    @patch('src.services.animal_service.GanadoService.obtener_ganado')
+    @patch('src.services.animal_service.GanadoService._obtener_potrero_anterior')
+    @patch('src.services.animal_service.GanadoService._verificar_cambio_potrero')
+    @patch('src.services.animal_service.GanadoService._actualizar_ganado_en_db')
+    @patch('src.services.animal_service.GanadoService._sincronizar_potreros_despues_actualizacion')
+    def test_actualizar_ganado_success(self, mock_sync, mock_update_db, mock_verify, mock_potrero_ant, mock_obtener):
+        """Test actualizar_ganado with successful update"""
+        mock_ganado_existente = Mock()
+        mock_obtener.return_value = mock_ganado_existente
+        mock_potrero_ant.return_value = 1
+        mock_update_db.return_value = True
+        mock_verify.return_value = None
+        mock_sync.return_value = None
+
+        ganado = Ganado(id=1, nombre="Updated", estado="saludable", sexo=SexoGanado.HEMBRA)
+
+        result = GanadoService.actualizar_ganado(1, ganado)
+
+        assert result is True
+        mock_obtener.assert_called_once_with(1, None)
+        mock_potrero_ant.assert_called_once_with(1)
+        mock_verify.assert_called_once_with(None, 1)
+        mock_update_db.assert_called_once_with(1, ganado, None)
+        mock_sync.assert_called_once_with(True, None, 1)
+
+    @patch('src.services.animal_service.GanadoService.obtener_ganado')
+    def test_actualizar_ganado_not_found(self, mock_obtener):
+        """Test actualizar_ganado when animal not found"""
+        mock_obtener.return_value = None
+
+        ganado = Ganado(id=1, nombre="Test", estado="saludable", sexo=SexoGanado.HEMBRA)
+
+        result = GanadoService.actualizar_ganado(1, ganado)
+
+        assert result is False
+        mock_obtener.assert_called_once_with(1, None)
+
+    @patch('src.services.animal_service.get_connection')
+    @patch('src.services.animal_service.GanadoService._obtener_tenant_id')
+    def test_crear_ganado_exception(self, mock_tenant, mock_get_conn):
+        """Test crear_ganado with database exception"""
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.execute.side_effect = Exception("DB Error")
+        mock_tenant.return_value = 1
+
+        ganado = Ganado(nombre="Test", estado="saludable", sexo=SexoGanado.HEMBRA)
+
+        result = GanadoService.crear_ganado(ganado)
+
+        assert result is None
+        mock_conn.close.assert_called_once()
+
+    def test_ganado_es_estado_activo_none(self):
+        """Test es_estado_activo returns True for None (default to active)"""
+    def test_obtener_tenant_id(self):
+        """Test _obtener_tenant_id"""
+        with patch('src.services.animal_service.get_current_tenant_id') as mock_get_tenant:
+            mock_get_tenant.return_value = 1
+            result = GanadoService._obtener_tenant_id()
+            assert result == 1
+
+    def test_obtener_tenant_id_exception(self):
+        """Test _obtener_tenant_id with exception"""
+        with patch('src.services.animal_service.get_current_tenant_id', side_effect=Exception):
+            result = GanadoService._obtener_tenant_id()
+            assert result is None
+
+    def test_agregar_filtro_tenant_with_tenant(self):
+        """Test _agregar_filtro_tenant with tenant"""
+        sql, params = GanadoService._agregar_filtro_tenant("SELECT * FROM table", 1, True)
+        assert sql == "SELECT * FROM table WHERE g.tenant_id = %s"
+        assert params == (1,)
+
+    def test_agregar_filtro_tenant_without_tenant(self):
+        """Test _agregar_filtro_tenant without tenant"""
+        sql, params = GanadoService._agregar_filtro_tenant("SELECT * FROM table", None)
+        assert sql == "SELECT * FROM table"
+        assert params == ()
+
+    def test_to_iso_string_datetime(self):
+        """Test _to_iso_string with datetime"""
+        from datetime import datetime
+        dt = datetime(2023, 1, 1, 10, 0)
+        result = GanadoService._to_iso_string(dt)
+        assert result == '2023-01-01T10:00:00'
+
+    def test_to_iso_string_date(self):
+        """Test _to_iso_string with date"""
+        from datetime import date
+        d = date(2023, 1, 1)
+        result = GanadoService._to_iso_string(d)
+        assert result == '2023-01-01'
+
+    def test_to_iso_string_string(self):
+        """Test _to_iso_string with string"""
+        result = GanadoService._to_iso_string("2023-01-01")
+        assert result == "2023-01-01"
+
+    def test_to_iso_string_none(self):
+        """Test _to_iso_string with None"""
+        result = GanadoService._to_iso_string(None)
+        assert result is None
+
+    def test_calcular_edad_datetime(self):
+        """Test _calcular_edad with datetime"""
+        from datetime import datetime, date
+        birth = datetime(2000, 1, 1)
+        result = GanadoService._calcular_edad(birth)
+        expected = date.today().year - 2000
+        assert result == expected
+
+    def test_calcular_edad_string(self):
+        """Test _calcular_edad with string"""
+        from datetime import date
+        result = GanadoService._calcular_edad("2000-01-01")
+        expected = date.today().year - 2000
+        assert result == expected
+
+    def test_calcular_edad_invalid(self):
+        """Test _calcular_edad with invalid input"""
+        result = GanadoService._calcular_edad("invalid")
+        assert result is None
+        assert Ganado.es_estado_activo(None) is True

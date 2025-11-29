@@ -1,22 +1,49 @@
 #!/bin/bash
 
-echo "🔄 Ejecutando hook pre-push: Generando reporte de cobertura..."
+echo "🔄 Ejecutando hook pre-push: Generando reportes de cobertura..."
 
+# ==========================
+# Backend coverage
+# ==========================
 if pytest --cov=src --cov-report=xml:backend/coverage.xml --cov-report=term; then
-    echo "✅ Pruebas ejecutadas exitosamente."
+    echo "✅ Pruebas de backend ejecutadas exitosamente."
 else
-    echo "❌ Error en las pruebas. Abortando push."
+    echo "❌ Error en las pruebas de backend. Abortando push."
     exit 1
 fi
 
-# Ajustar el source en coverage.xml
+# Ajustar source en backend/coverage.xml
 if [ -f backend/coverage.xml ]; then
-    sed -i 's|<source>.*</source>|<source>src</source>|g' backend/coverage.xml
-    echo "✅ Archivo coverage.xml ajustado y guardado en backend/coverage.xml."
+    sed -i.bak 's|<source>.*</source>|<source>src</source>|g' backend/coverage.xml
+    rm backend/coverage.xml.bak
+    echo "✅ Archivo backend/coverage.xml ajustado."
 else
     echo "❌ Error: No se encontró backend/coverage.xml"
     exit 1
 fi
+
+# ==========================
+# Frontend coverage
+# ==========================
+echo "🔄 Ejecutando pruebas de frontend con Vitest..."
+cd frontend
+
+# Ejecutar pruebas con cobertura
+npx vitest run --coverage
+if [ $? -ne 0 ]; then
+    echo "❌ Error en pruebas frontend. Abortando push."
+    exit 1
+fi
+
+# Confirmar existencia de lcov.info
+if [ -f coverage/lcov.info ]; then
+    echo "✅ Archivo frontend/coverage/lcov.info generado correctamente."
+else
+    echo "❌ Archivo frontend/coverage/lcov.info no encontrado."
+    exit 1
+fi
+
+cd ..
 
 echo "🎉 Hook pre-push completado exitosamente."
 exit 0
