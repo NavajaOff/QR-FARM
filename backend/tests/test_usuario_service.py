@@ -430,7 +430,7 @@ class TestUsuarioService:
             }
         ]
 
-        with patch('src.services.usuario_service.get_current_tenant_id', return_value=1):
+        with patch('src.utils.tenant.get_current_tenant_id', return_value=1):
             result = UsuarioService.obtener_todos_usuarios()
 
             assert isinstance(result, list)
@@ -445,7 +445,7 @@ class TestUsuarioService:
 
         mock_cursor.fetchall.return_value = []
 
-        with patch('src.services.usuario_service.get_current_tenant_id', return_value=1):
+        with patch('src.utils.tenant.get_current_tenant_id', return_value=1):
             result = UsuarioService.obtener_todos_usuarios(excluir_super_admin=True)
 
             assert isinstance(result, list)
@@ -558,7 +558,7 @@ class TestUsuarioService:
         mock_cursor.lastrowid = 1
         mock_cursor.fetchone.return_value = None
 
-        with patch('src.services.usuario_service.get_current_tenant_id', return_value=1):
+        with patch('src.utils.tenant.get_current_tenant_id', return_value=1):
             persona = Persona(
                 id_rol=1,
                 primer_nombre='Juan',
@@ -646,7 +646,7 @@ class TestUsuarioService:
 
     def test_determinar_si_es_super_admin(self):
         """Test _determinar_si_es_super_admin."""
-        with patch('src.services.usuario_service.get_current_tenant_id', return_value=None):
+        with patch('src.utils.tenant.get_current_tenant_id', return_value=None):
             result = UsuarioService._determinar_si_es_super_admin()
             assert result is True
 

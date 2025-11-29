@@ -369,7 +369,7 @@ class ReporteService:
                 "tendencias": tendencias,
             }
 
-        except Exception:
+        except Exception as exc:
             print("Error generando resumen de reportes")
             return {
                 "generado_en": datetime.utcnow().isoformat(),

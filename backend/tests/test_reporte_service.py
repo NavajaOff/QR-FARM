@@ -80,7 +80,7 @@ def test_obtener_resumen_success(monkeypatch):
     ]
     
     with patch('src.services.reporte_service.get_connection', return_value=mock_conn), \
-         patch('src.services.reporte_service.get_current_tenant_id', return_value=1):
+         patch('src.utils.tenant.get_current_tenant_id', return_value=1):
         mock_conn.cursor.return_value = mock_cursor
         
         result = reporte_module.ReporteService.obtener_resumen()

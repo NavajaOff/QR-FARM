@@ -68,6 +68,8 @@ def test_obtener_rol_usuario_with_rol(app_context):
     
     mock_usuario = Mock()
     mock_rol = Mock()
+    # No tiene nombre_rol, solo tiene rol
+    del mock_rol.nombre_rol
     mock_rol.rol = 'usuario'
     mock_usuario.rol = mock_rol
 
@@ -112,10 +114,11 @@ def test_validar_permiso_unauthorized(app_context):
     """Test _validar_permiso sin permiso."""
     from src.utils.permissions import _validar_permiso
     
-    tiene_permiso, error_response = _validar_permiso('usuario', 'gestionar_tenants')
+    tiene_permiso, error_response, status_code = _validar_permiso('usuario', 'gestionar_tenants')
 
     assert tiene_permiso is False
     assert error_response is not None
+    assert status_code == 403
 
 
 def test_permission_required_success(app_context):
