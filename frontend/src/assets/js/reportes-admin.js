@@ -109,8 +109,11 @@ export default {
     }
 
     const formatPromedio = (valor) => {
-      if (typeof valor !== 'number' || Number.isNaN(valor)) return '0'
-      return Number.isInteger(valor) ? String(valor) : valor.toFixed(1)
+      if (typeof valor !== 'number' || Number.isNaN(valor) || !Number.isFinite(valor)) {
+        return '0'
+      }
+      const numValue = Number(valor)
+      return Number.isInteger(numValue) ? numValue.toString() : numValue.toFixed(1)
     }
 
     const formatVariacion = (valor) => {
@@ -168,6 +171,33 @@ export default {
       return { labels, datasets }
     }
 
+    const convertirValorAString = (rawValue) => {
+      if (rawValue == null) {
+        return '0'
+      }
+      if (typeof rawValue === 'string') {
+        return rawValue
+      }
+      if (typeof rawValue === 'number' && Number.isFinite(rawValue)) {
+        const numValue = Number(rawValue)
+        return Number.isInteger(numValue) ? numValue.toString() : numValue.toFixed(2)
+      }
+      if (typeof rawValue === 'boolean') {
+        return rawValue ? 'true' : 'false'
+      }
+      if (Array.isArray(rawValue)) {
+        return JSON.stringify(rawValue)
+      }
+      if (typeof rawValue === 'object' && rawValue !== null) {
+        try {
+          return JSON.stringify(rawValue)
+        } catch {
+          return '[objeto no serializable]'
+        }
+      }
+      return '[tipo desconocido]'
+    }
+
     const renderTrendChart = async () => {
       if (!trendCanvas.value) return
 
@@ -210,18 +240,7 @@ export default {
                 label: (context) => {
                   const label = context.dataset.label || ''
                   const rawValue = context.raw ?? 0
-                  let value
-                  if (rawValue == null) {
-                    value = '0'
-                  } else if (typeof rawValue === 'object' || Array.isArray(rawValue)) {
-                    value = JSON.stringify(rawValue)
-                  } else if (typeof rawValue === 'number') {
-                    value = Number.isInteger(rawValue) ? String(rawValue) : rawValue.toFixed(2)
-                  } else if (typeof rawValue === 'boolean') {
-                    value = String(rawValue)
-                  } else {
-                    value = String(rawValue)
-                  }
+                  const value = convertirValorAString(rawValue)
                   return `${label}: ${value}`
                 }
               }
