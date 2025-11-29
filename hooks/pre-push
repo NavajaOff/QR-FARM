@@ -25,22 +25,21 @@ cd frontend
 npx vitest --coverage --run || true
 echo "✅ Cobertura de frontend generada (o sin tests)."
 
-# Copiar cobertura-coverage.xml a coverage.xml si existe
-if [ -f coverage-frontend/cobertura-coverage.xml ]; then
-    cp coverage-frontend/cobertura-coverage.xml coverage-frontend/coverage.xml
-    echo "✅ Archivo coverage.xml copiado desde cobertura-coverage.xml."
+# Verificar si existe cobertura-frontend.xml generado por Vitest
+if [ -f coverage-frontend/cobertura-frontend.xml ]; then
+    echo "✅ Archivo cobertura-frontend.xml encontrado."
 else
-    echo "⚠️  No se encontró cobertura-coverage.xml, creando archivo vacío..."
+    echo "⚠️  No se encontró cobertura-frontend.xml, creando archivo básico..."
     mkdir -p coverage-frontend
-    echo '<?xml version="1.0" ?><!DOCTYPE coverage SYSTEM "http://cobertura.sourceforge.net/xml/coverage-04.dtd"><coverage lines-valid="0" lines-covered="0" line-rate="0" branches-valid="0" branches-covered="0" branch-rate="0"><sources><source>src</source></sources><packages></packages></coverage>' > coverage-frontend/coverage.xml
+    echo '<?xml version="1.0" ?><coverage version="7.12.0" timestamp="1764376865831" lines-valid="0" lines-covered="0" line-rate="0" branches-covered="0" branches-valid="0" branch-rate="0" complexity="0"><sources><source>src</source></sources><packages></packages></coverage>' > coverage-frontend/cobertura-frontend.xml
 fi
 
-# Ajustar el source en frontend/coverage-frontend/coverage.xml
-if [ -f coverage-frontend/coverage.xml ]; then
-    sed -i '' 's|<source>.*</source>|<source>src</source>|g' coverage-frontend/coverage.xml
-    echo "✅ Archivo frontend/coverage-frontend/coverage.xml ajustado."
+# Ajustar el source en frontend/coverage-frontend/cobertura-frontend.xml
+if [ -f coverage-frontend/cobertura-frontend.xml ]; then
+    sed -i '' 's|<source>.*</source>|<source>src</source>|g' coverage-frontend/cobertura-frontend.xml
+    echo "✅ Archivo frontend/coverage-frontend/cobertura-frontend.xml ajustado."
 else
-    echo "❌ Error: No se pudo crear frontend/coverage-frontend/coverage.xml"
+    echo "❌ Error: No se pudo crear frontend/coverage-frontend/cobertura-frontend.xml"
     cd ..
     exit 1
 fi
@@ -52,8 +51,12 @@ cd backend && python -m coverage report
 cd ..
 
 echo "📊 Reporte de cobertura - Frontend:"
-cd frontend && npx vitest --coverage
-cd ..
+echo "Archivo de cobertura: frontend/coverage-frontend/cobertura-frontend.xml"
+if [ -f frontend/coverage-frontend/cobertura-frontend.xml ]; then
+    echo "✅ Archivo de cobertura frontend existe"
+else
+    echo "❌ Archivo de cobertura frontend no encontrado"
+fi
 
 echo "🎉 Hook pre-push completado exitosamente."
 exit 0
