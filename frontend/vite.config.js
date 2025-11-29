@@ -25,8 +25,8 @@ export default defineConfig({
       all: true,
       include: ['src/**/*.{vue,js,ts}'],
       exclude: ['node_modules/', 'dist/', '.git/', 'coverage/', 'src/**/*.spec.{js,ts}', 'src/**/*.test.{js,ts}'],
-      reportsDirectory: './coverage-frontend',
-      reporter: ['text', 'cobertura']
+      reportsDirectory: './coverage',
+      reporter: ['text', 'lcov']
     }
   }
 })

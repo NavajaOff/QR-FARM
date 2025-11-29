@@ -22,26 +22,19 @@ fi
 # Frontend coverage
 echo "🔄 Generando cobertura de frontend..."
 cd frontend
-npx vitest --coverage --run || true
-echo "✅ Cobertura de frontend generada (o sin tests)."
+npx vitest run --coverage || true
+echo "✅ Cobertura de frontend generada."
 
-# Verificar si existe cobertura-frontend.xml generado por Vitest
-if [ -f coverage-frontend/cobertura-frontend.xml ]; then
-    echo "✅ Archivo cobertura-frontend.xml encontrado."
+# Verificar que se generó el archivo LCOV
+if [ -f coverage/lcov.info ]; then
+    echo "✅ Archivo frontend/coverage/lcov.info encontrado."
 else
-    echo "⚠️  No se encontró cobertura-frontend.xml, creando archivo básico..."
-    mkdir -p coverage-frontend
-    echo '<?xml version="1.0" ?><coverage version="7.12.0" timestamp="1764376865831" lines-valid="0" lines-covered="0" line-rate="0" branches-covered="0" branches-valid="0" branch-rate="0" complexity="0"><sources><source>src</source></sources><packages></packages></coverage>' > coverage-frontend/cobertura-frontend.xml
-fi
-
-# Ajustar el source en frontend/coverage-frontend/cobertura-frontend.xml
-if [ -f coverage-frontend/cobertura-frontend.xml ]; then
-    sed -i '' 's|<source>.*</source>|<source>src</source>|g' coverage-frontend/cobertura-frontend.xml
-    echo "✅ Archivo frontend/coverage-frontend/cobertura-frontend.xml ajustado."
-else
-    echo "❌ Error: No se pudo crear frontend/coverage-frontend/cobertura-frontend.xml"
-    cd ..
-    exit 1
+    echo "⚠️  No se encontró coverage/lcov.info, verificando si existe el directorio..."
+    if [ ! -d "coverage" ]; then
+        echo "Creando directorio coverage..."
+        mkdir -p coverage
+    fi
+    echo "El archivo LCOV se generará en el próximo push si las pruebas pasan."
 fi
 cd ..
 
