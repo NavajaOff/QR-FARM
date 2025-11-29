@@ -57,8 +57,6 @@ export function useFetchData(fetchFunction, options = {}) {
     error.value = null
     isCancelled.value = false
 
-    let lastError = null
-
     for (let attempt = 0; attempt <= retryAttempts; attempt++) {
       try {
         console.log(`Intentando cargar datos (intento ${attempt + 1}/${retryAttempts + 1})...`)
@@ -88,7 +86,6 @@ export function useFetchData(fetchFunction, options = {}) {
         return result
 
       } catch (err) {
-        lastError = err
 
         // Si fue cancelado por el usuario, no es un error real
         if (axios.isCancel(err) || err.name === 'AbortError' || isCancelled.value) {

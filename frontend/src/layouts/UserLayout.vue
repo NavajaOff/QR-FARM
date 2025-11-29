@@ -126,12 +126,12 @@ export default {
 
 .user-sidebar .nav-link:hover {
   color: #fff;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.25);
 }
 
 .user-sidebar .nav-link.router-link-active {
   color: #fff;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.35);
   font-weight: 600;
 }
 

@@ -69,7 +69,7 @@ export function usePotreros() {
   }
 
   const upsertPotrero = (nuevo) => {
-    if (!nuevo || !nuevo.id) return
+    if (!nuevo?.id) return
     const index = potreros.value.findIndex(item => item.id === nuevo.id)
     if (index >= 0) {
       potreros.value.splice(index, 1, { ...potreros.value[index], ...nuevo })

@@ -8,10 +8,10 @@
         </router-link>
         
         <div class="d-flex align-items-center">
-          <router-link class="btn btn-outline-light me-2" to="/contacto" role="button">
+          <router-link class="btn btn-outline-light me-2" to="/contacto" @keydown.enter.prevent="$router.push('/contacto')" @keydown.space.prevent="$router.push('/contacto')">
             <i class="fas fa-phone me-1"></i>Contacto
           </router-link>
-          <router-link class="btn btn-light" to="/login" role="button">
+          <router-link class="btn btn-light" to="/login" @keydown.enter.prevent="$router.push('/login')" @keydown.space.prevent="$router.push('/login')">
             <i class="fas fa-user me-1"></i>Iniciar Sesión
           </router-link>
         </div>

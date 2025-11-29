@@ -65,7 +65,7 @@
 
                   <div class="d-grid gap-2 mb-3">
                     <button type="submit" class="btn btn-success btn-lg fw-bold" :disabled="loading">
-                      <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                      <span v-if="loading" class="spinner-border spinner-border-sm me-2" aria-hidden="true" aria-label="Cargando"></span>
                       {{ loading ? 'Iniciando...' : 'Iniciar Sesión' }}
                     </button>
                   </div>

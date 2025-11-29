@@ -1,6 +1,6 @@
 <template>
-  <div class="modal fade show d-block" tabindex="-1" role="dialog">
-    <div class="modal-dialog modal-lg" role="document">
+  <div class="modal fade show d-block" tabindex="-1" aria-modal="true" aria-labelledby="potreroModalLabel">
+    <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">{{ isEditing ? 'Editar' : 'Crear' }} Potrero</h5>
@@ -10,12 +10,12 @@
           <form @submit.prevent="submitForm">
             <div class="row">
               <div class="col-md-6 mb-3">
-                <label class="form-label">Nombre *</label>
-                <input type="text" class="form-control" v-model="form.nombre" required>
+                <label class="form-label" for="potrero-nombre">Nombre *</label>
+                <input type="text" id="potrero-nombre" class="form-control" v-model="form.nombre" required>
               </div>
               <div v-if="isEditing" class="col-md-6 mb-3">
-                <label class="form-label">Estado</label>
-                <select class="form-select" v-model="form.estado">
+                <label class="form-label" for="potrero-estado">Estado</label>
+                <select id="potrero-estado" class="form-select" v-model="form.estado">
                   <option v-for="estado in estadosPotrero" :key="estado.id" :value="estado.estado || estado.nombre_estado || estado.nombre">
                     {{ estado.estado || estado.nombre_estado || estado.nombre }}
                   </option>
@@ -24,18 +24,18 @@
             </div>
             <div class="row">
               <div class="col-md-6 mb-3">
-                <label class="form-label">Capacidad</label>
-                <input type="number" class="form-control" v-model.number="form.capacidad" min="0">
+                <label class="form-label" for="potrero-capacidad">Capacidad</label>
+                <input type="number" id="potrero-capacidad" class="form-control" v-model.number="form.capacidad" min="0">
               </div>
               <div class="col-md-6 mb-3">
-                <label class="form-label">Hectáreas</label>
-                <input type="number" class="form-control" v-model.number="form.hectareas" step="0.01" min="0">
+                <label class="form-label" for="potrero-hectareas">Hectáreas</label>
+                <input type="number" id="potrero-hectareas" class="form-control" v-model.number="form.hectareas" step="0.01" min="0">
               </div>
             </div>
             <div class="row">
               <div class="col-md-6 mb-3">
-                <label class="form-label">Tipo de Pasto</label>
-                <select class="form-select" v-model="form.id_tipo_pasto">
+                <label class="form-label" for="potrero-tipo-pasto">Tipo de Pasto</label>
+                <select id="potrero-tipo-pasto" class="form-select" v-model="form.id_tipo_pasto">
                   <option value="">Seleccionar tipo de pasto</option>
                   <option v-for="tipo in tiposPasto" :key="tipo.id" :value="tipo.id">
                     {{ tipo.tipo_pasto || tipo.nombre }}
@@ -43,8 +43,8 @@
                 </select>
               </div>
               <div class="col-md-6 mb-3">
-                <label class="form-label">Responsable</label>
-                <select class="form-select" v-model="form.responsable_persona_id">
+                <label class="form-label" for="potrero-responsable">Responsable</label>
+                <select id="potrero-responsable" class="form-select" v-model="form.responsable_persona_id">
                   <option value="">Seleccionar responsable</option>
                   <option v-for="persona in personasUsuario" :key="persona.id" :value="persona.id">
                     {{ persona.nombre_completo }}
@@ -54,27 +54,27 @@
             </div>
             <div class="row">
               <div class="col-md-6 mb-3">
-                <label class="form-label">Fecha último uso</label>
-                <input type="date" class="form-control" v-model="form.fecha_ultimo_uso">
+                <label class="form-label" for="potrero-fecha-ultimo-uso">Fecha último uso</label>
+                <input type="date" id="potrero-fecha-ultimo-uso" class="form-control" v-model="form.fecha_ultimo_uso">
               </div>
               <div class="col-md-6 mb-3">
-                <label class="form-label">Próxima limpieza</label>
-                <input type="date" class="form-control" v-model="form.proxima_limpieza">
+                <label class="form-label" for="potrero-proxima-limpieza">Próxima limpieza</label>
+                <input type="date" id="potrero-proxima-limpieza" class="form-control" v-model="form.proxima_limpieza">
               </div>
             </div>
             <div class="row">
               <div class="col-md-6 mb-3">
-                <label class="form-label">Área (m²)</label>
-                <input type="number" class="form-control" v-model.number="form.area" step="0.01" min="0">
+                <label class="form-label" for="potrero-area">Área (m²)</label>
+                <input type="number" id="potrero-area" class="form-control" v-model.number="form.area" step="0.01" min="0">
               </div>
               <div class="col-md-6 mb-3">
-                <label class="form-label">Última limpieza</label>
-                <input type="date" class="form-control" v-model="form.ultima_limpieza">
+                <label class="form-label" for="potrero-ultima-limpieza">Última limpieza</label>
+                <input type="date" id="potrero-ultima-limpieza" class="form-control" v-model="form.ultima_limpieza">
               </div>
             </div>
             <div class="mb-3">
-              <label class="form-label">Descripción</label>
-              <textarea class="form-control" v-model="form.descripcion" rows="2"></textarea>
+              <label class="form-label" for="potrero-descripcion">Descripción</label>
+              <textarea id="potrero-descripcion" class="form-control" v-model="form.descripcion" rows="2"></textarea>
             </div>
           </form>
         </div>

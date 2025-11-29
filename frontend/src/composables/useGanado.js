@@ -66,7 +66,7 @@ export function useGanado() {
   }
 
   const upsertGanado = (nuevo) => {
-    if (!nuevo || !nuevo.id) return
+    if (!nuevo?.id) return
     const index = ganado.value.findIndex(item => item.id === nuevo.id)
     if (index >= 0) {
       ganado.value.splice(index, 1, { ...ganado.value[index], ...nuevo })

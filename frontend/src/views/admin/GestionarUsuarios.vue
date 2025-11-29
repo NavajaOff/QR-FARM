@@ -65,8 +65,8 @@
     </div>
 
     <!-- Modal de creación de usuario -->
-    <div class="modal fade" :class="{ 'show d-block': showAddUserModal }" tabindex="-1" role="dialog">
-      <div class="modal-dialog modal-lg" role="document">
+    <div class="modal fade" :class="{ 'show d-block': showAddUserModal }" tabindex="-1" aria-modal="true" aria-labelledby="addUserModalLabel">
+      <div class="modal-dialog modal-lg">
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title">Agregar Usuario</h5>
@@ -200,8 +200,8 @@
     <div v-if="showAddUserModal" class="modal-backdrop fade show" @click="closeAddModal"></div>
 
     <!-- Modal de edición de usuario -->
-    <div class="modal fade" :class="{ 'show d-block': showEditModal }" tabindex="-1" role="dialog">
-      <div class="modal-dialog modal-lg" role="document">
+    <div class="modal fade" :class="{ 'show d-block': showEditModal }" tabindex="-1" aria-modal="true" aria-labelledby="editUserModalLabel">
+      <div class="modal-dialog modal-lg">
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title">Editar Usuario</h5>

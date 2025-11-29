@@ -130,9 +130,7 @@
 </template>
 
 <script>
-import dashboardUsuario from '../../assets/js/dashboard-usuario.js';
-
-export default dashboardUsuario;
+export { default } from '../../assets/js/dashboard-usuario.js';
 </script>
 
 <style scoped>

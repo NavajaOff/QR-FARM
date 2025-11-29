@@ -111,11 +111,11 @@ const generarDatosGrafica = () => {
   const etiquetas = []
   const datos = []
 
-  categorias.forEach(cat => {
+  for (const cat of categorias) {
     const total = resumen.value[cat]?.totales?.total ?? 0
     etiquetas.push(capitalizar(cat))
     datos.push(total)
-  })
+  }
 
   return {
     labels: etiquetas,

@@ -28,7 +28,7 @@ export function useGestionarPotrerosUsuario() {
     return potreros.value.filter(p => {
       const coincideBusqueda =
         !busqueda.value ||
-        (p.nombre && p.nombre.toLowerCase().includes(busqueda.value.toLowerCase()))
+        (p.nombre?.toLowerCase().includes(busqueda.value.toLowerCase()))
       const coincideEstado = !filtroEstado.value || p.estado === filtroEstado.value
       const coincidePasto =
         !filtroPasto.value ||

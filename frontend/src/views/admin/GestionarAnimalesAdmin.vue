@@ -22,7 +22,7 @@
 
         <!-- Loader mientras carga -->
         <div v-if="isLoading" class="text-center py-5">
-          <div class="spinner-border text-primary" role="status">
+          <div class="spinner-border text-primary" aria-live="polite" aria-label="Cargando">
             <span class="visually-hidden">Cargando...</span>
           </div>
           <p class="mt-2 text-muted">Cargando ganado...</p>
@@ -125,7 +125,6 @@
 </template>
 
 <script>
-import Swal from 'sweetalert2';
 import TenantSelector from '../../components/TenantSelector.vue';
 import authService from '../../services/authService.js';
 import {
@@ -133,8 +132,6 @@ import {
   animales,
   estadosGanado,
   personasUsuario,
-  loading,
-  error,
   editarAnimal,
   agregarNuevoAnimal,
   verPerfilAnimal,

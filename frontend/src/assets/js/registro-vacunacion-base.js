@@ -60,7 +60,7 @@ export const registroVacunacionBase = {
         if (this.filtros.animal) {
           const searchTerm = this.filtros.animal.toLowerCase();
           const matchesId = v.idAnimal.toString().includes(searchTerm);
-          const matchesName = v.nombre && v.nombre.toLowerCase().includes(searchTerm);
+          const matchesName = v.nombre?.toLowerCase().includes(searchTerm);
           if (!matchesId && !matchesName) return false;
         }
 
