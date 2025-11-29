@@ -137,14 +137,14 @@ export default {
       const labelsSet = new Set()
       const tendencias = resumen.value.tendencias
 
-      metricConfig.forEach(config => {
+      for (const config of metricConfig) {
         const serie = tendencias[config.clave]?.serie || []
-        serie.forEach(punto => {
+        for (const punto of serie) {
           if (punto.fecha) {
             labelsSet.add(punto.fecha)
           }
-        })
-      })
+        }
+      }
 
       const labels = Array.from(labelsSet).sort()
 

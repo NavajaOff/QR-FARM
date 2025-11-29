@@ -275,7 +275,7 @@ export default {
       ];
       const updateData = {};
 
-      fieldsToProcess.forEach(field => {
+      for (const field of fieldsToProcess) {
         const currentField = this.editForm[field];
         let value = currentField;
         if (typeof value === 'string') {
@@ -299,7 +299,7 @@ export default {
         if (value !== comparableOriginal) {
           updateData[field] = value;
         }
-      });
+      }
 
       if (this.editForm.password.trim()) {
         updateData.password = this.editForm.password;

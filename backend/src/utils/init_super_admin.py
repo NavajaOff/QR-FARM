@@ -137,7 +137,7 @@ def crear_super_admin_desde_env() -> Tuple[bool, str]:
     if todas_vars:
         print(f"🔍 Variables ROOT_SUPER encontradas en os.environ: {list(todas_vars.keys())}")
     else:
-        print(f"🔍 No hay variables ROOT_SUPER en os.environ")
+        print("🔍 No hay variables ROOT_SUPER en os.environ")
     
     if not email or not password:
         return False, "Variables ROOT_SUPER_ADMIN_EMAIL y ROOT_SUPER_ADMIN_PASSWORD no configuradas en .env"

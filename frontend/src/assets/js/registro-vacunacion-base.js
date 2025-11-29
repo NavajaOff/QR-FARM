@@ -196,10 +196,10 @@ export const registroVacunacionBase = {
           }
 
           return {
-            id_animal: parseInt(animal, 10),
-            id_tipo_vacuna: parseInt(tipoVacuna, 10),
+            id_animal: Number.parseInt(animal, 10),
+            id_tipo_vacuna: Number.parseInt(tipoVacuna, 10),
             fecha_aplicacion: fechaAplicacion,
-            responsable: parseInt(responsable, 10),
+            responsable: Number.parseInt(responsable, 10),
             estado: estado
           };
         }

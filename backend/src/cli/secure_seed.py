@@ -120,7 +120,7 @@ def _collect_dataset() -> Dict[str, Any]:
         dataset = {
             "metadata": {
                 "version": 1,
-                "exported_at": datetime.utcnow().isoformat() + "Z",
+                "exported_at": datetime.now(timezone.utc).isoformat() + "Z",
                 "tables": [
                     "roles",
                     "tipo_pasto",

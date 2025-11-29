@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Dict, Any, List, Iterable
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from io import BytesIO
 
 from reportlab.lib.pagesizes import letter
@@ -156,7 +156,7 @@ class ReporteService:
     @staticmethod
     def _fallback_trend(total: int) -> Dict[str, Any]:
         valor = int(total or 0)
-        today = datetime.utcnow().date()
+        today = datetime.now(timezone.utc).date()
         serie = []
         for offset in range(5, 0, -1):
             fecha = today - timedelta(days=offset)
@@ -348,7 +348,7 @@ class ReporteService:
             }
 
             return {
-                "generado_en": datetime.utcnow().isoformat(),
+                "generado_en": datetime.now(timezone.utc).isoformat(),
                 "usuarios": {
                     "totales": usuarios,
                     "por_estado": usuarios_breakdown,
@@ -372,7 +372,7 @@ class ReporteService:
         except Exception as exc:
             print("Error generando resumen de reportes")
             return {
-                "generado_en": datetime.utcnow().isoformat(),
+                "generado_en": datetime.now(timezone.utc).isoformat(),
                 "usuarios": {"totales": {"total": 0, "activos": 0, "inactivos": 0}, "por_estado": []},
                 "ganado": {"totales": {"total": 0}, "por_estado": []},
                 "potreros": {"totales": {"total": 0}, "por_estado": []},
@@ -393,7 +393,7 @@ class ReporteService:
         """Genera un PDF en memoria a partir del resumen."""
         pdf_buffer = BytesIO()
         pdf = canvas.Canvas(pdf_buffer, pagesize=letter)
-        width, height = letter
+        _width, height = letter
 
         margin = 0.75 * inch
         y = height - margin

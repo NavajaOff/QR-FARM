@@ -738,7 +738,7 @@ class UsuarioService:
 
         if not es_super_admin_actual:
             excluir_super_admin = True
-            print(f"[USUARIO_SERVICE] Usuario no es super_admin, forzando excluir_super_admin=True")
+            print("[USUARIO_SERVICE] Usuario no es super_admin, forzando excluir_super_admin=True")
 
         try:
             conn = get_connection()

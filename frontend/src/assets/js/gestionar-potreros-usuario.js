@@ -9,18 +9,18 @@ export function useGestionarPotrerosUsuario() {
 
   const estadosDisponibles = computed(() => {
     const estados = new Set()
-    potreros.value.forEach(p => {
+    for (const p of potreros.value) {
       if (p.estado) estados.add(p.estado)
-    })
+    }
     return Array.from(estados)
   })
 
   const tiposPasto = computed(() => {
     const tipos = new Set()
-    potreros.value.forEach(p => {
+    for (const p of potreros.value) {
       if (p.tipo_pasto_nombre) tipos.add(p.tipo_pasto_nombre)
       else if (p.tipo_pasto) tipos.add(p.tipo_pasto)
-    })
+    }
     return Array.from(tipos)
   })
 

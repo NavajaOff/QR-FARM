@@ -176,7 +176,7 @@ class VacunacionService:
             print(f"Service: Valores: {values}")
             cursor.execute(query, values)
             conn.commit()
-            print(f"Service: Vacunación creada exitosamente")
+            print("Service: Vacunación creada exitosamente")
 
             return True
 
@@ -261,7 +261,7 @@ class VacunacionService:
             print(f"Service: Intentando eliminar vacunación con ID: {id}")
             conn = get_connection()
             cursor = conn.cursor()
-            print(f"Service: Conexión a BD obtenida")
+            print("Service: Conexión a BD obtenida")
 
             tenant_id = tenant_id_override if tenant_id_override is not None else VacunacionService._obtener_tenant_id()
             

@@ -1,5 +1,5 @@
 """Controlador Usuario."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 import re
 import jwt
@@ -10,6 +10,7 @@ from ..services.usuario_service import UsuarioService
 logger = logging.getLogger(__name__)
 
 EMAIL_REGEX = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+ERROR_PROCESAR_SOLICITUD = 'Error al procesar la solicitud'
 
 def _validar_email(email):
     return EMAIL_REGEX.match(email) is not None
@@ -94,7 +95,7 @@ def _respuesta_actualizacion_exitosa(actualizado):
 try:
     from ...app import emit_update
 except ImportError:
-    def emit_update(event, data=None):
+    def emit_update(event, _data=None):
         logger.debug("WebSocket no disponible, evento omitido: %s", event)
 
 class UsuarioController:
@@ -296,7 +297,7 @@ class UsuarioController:
             'user_id': usuario.id,
             'email': email_token,
             'role': role_token,
-            'exp': datetime.utcnow() + timedelta(hours=24)
+            'exp': datetime.now(timezone.utc) + timedelta(hours=24)
         }
         return jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
 
@@ -332,7 +333,7 @@ class UsuarioController:
             logger.error("Error en login", exc_info=True)
             return jsonify({
                 'status': 'error',
-                'message': 'Error al procesar la solicitud'
+                'message': ERROR_PROCESAR_SOLICITUD
             }), 500
 
     @staticmethod
@@ -355,7 +356,7 @@ class UsuarioController:
             logger.error("Error en login: %s", e, exc_info=True)
             return jsonify({
                 'status': 'error',
-                'message': 'Error al procesar la solicitud'
+                'message': ERROR_PROCESAR_SOLICITUD
             }), 500
 
     @staticmethod
@@ -416,7 +417,7 @@ class UsuarioController:
             logger.error("Error en obtener_todos_usuarios: %s", e, exc_info=True)
             return jsonify({
                 'status': 'error',
-                'message': 'Error al procesar la solicitud'
+                'message': ERROR_PROCESAR_SOLICITUD
             }), 500
 
     @staticmethod
@@ -457,7 +458,7 @@ class UsuarioController:
             logger.error("Error en cambiar_estado_usuario: %s", e, exc_info=True)
             return jsonify({
                 'status': 'error',
-                'message': 'Error al procesar la solicitud'
+                'message': ERROR_PROCESAR_SOLICITUD
             }), 500
 
     @staticmethod
@@ -485,7 +486,7 @@ class UsuarioController:
 
         except Exception as e:
             logger.error("Error en obtener_perfil_actual: %s", e, exc_info=True)
-            return _respuesta_error('Error al procesar la solicitud', 500)
+            return _respuesta_error(ERROR_PROCESAR_SOLICITUD, 500)
 
     @staticmethod
     def actualizar_perfil_actual():
@@ -526,7 +527,7 @@ class UsuarioController:
 
         except Exception as e:
             logger.error("Error en obtener_perfil_actual: %s", e, exc_info=True)
-            return _respuesta_error('Error al procesar la solicitud', 500)
+            return _respuesta_error(ERROR_PROCESAR_SOLICITUD, 500)
 
     @staticmethod
     def actualizar_usuario(id):
@@ -561,7 +562,7 @@ class UsuarioController:
 
         except Exception as e:
             logger.error("Error en actualizar_usuario: %s", e, exc_info=True)
-            return UsuarioController._error('Error al procesar la solicitud', 500)
+            return UsuarioController._error(ERROR_PROCESAR_SOLICITUD, 500)
 
     # --------------------------
     # Métodos auxiliares privados
@@ -690,5 +691,5 @@ class UsuarioController:
             logger.error("Error en eliminar_usuario: %s", e, exc_info=True)
             return jsonify({
                 'status': 'error',
-                'message': 'Error al procesar la solicitud'
+                'message': ERROR_PROCESAR_SOLICITUD
             }), 500
