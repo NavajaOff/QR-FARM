@@ -1,5 +1,5 @@
 # Servicio Ganado
-from typing import List, Optional, Dict, Any, Union
+from typing import List, Optional, Dict, Any
 from datetime import datetime, date
 from pathlib import Path
 from ..database.db import get_connection
@@ -9,6 +9,10 @@ from ..utils.tenant import get_current_tenant_id
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 QR_STORAGE_DIR = BASE_DIR / "qr"
+
+# SQL constants
+SQL_AND_TENANT_ID = " AND tenant_id = %s"
+SQL_WHERE_TENANT_ID = " WHERE tenant_id = %s"
 
 class GanadoService:
     @staticmethod
@@ -29,9 +33,9 @@ class GanadoService:
             return sql, ()
         
         if usar_where:
-            sql += f" WHERE g.tenant_id = %s"
+            sql += " WHERE g.tenant_id = %s"
         else:
-            sql += f" AND g.tenant_id = %s"
+            sql += " AND g.tenant_id = %s"
         
         return sql, (tenant_id,)
 
@@ -127,7 +131,7 @@ class GanadoService:
         try:
             cursor.execute(query, (animal_id,))
             rows = cursor.fetchall()
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             pass
         finally:
             cursor.close()
@@ -193,7 +197,7 @@ class GanadoService:
             if ganado.id_potrero:
                 try:
                     PotreroService.sincronizar_ocupacion(ganado.id_potrero)
-                except Exception as sync_error:
+                except Exception:
                     pass
             return ganado
 
@@ -367,7 +371,7 @@ class GanadoService:
             qr_path = QR_STORAGE_DIR / f"{codigo_qr}.png"
             if qr_path.exists():
                 qr_path.unlink()
-        except OSError as error:
+        except OSError:
             pass
 
     @staticmethod
@@ -375,7 +379,7 @@ class GanadoService:
         try:
             registro_actual = GanadoService.obtener_ganado(id)
             return registro_actual.id_potrero if registro_actual else None
-        except Exception as consulta_error:
+        except Exception:
             return None
 
     @staticmethod
@@ -390,12 +394,12 @@ class GanadoService:
         if potrero_anterior_id:
             try:
                 PotreroService.sincronizar_ocupacion(potrero_anterior_id)
-            except Exception as sync_error:
+            except Exception:
                 pass
         if nuevo_potrero_id:
             try:
                 PotreroService.sincronizar_ocupacion(nuevo_potrero_id)
-            except Exception as sync_error:
+            except Exception:
                 pass
 
     @staticmethod
@@ -429,7 +433,7 @@ class GanadoService:
             ]
             
             if tenant_id is not None:
-                sql += " AND tenant_id = %s"
+                sql += SQL_AND_TENANT_ID
                 values.append(tenant_id)
             
             cursor.execute(sql, tuple(values))
@@ -476,7 +480,7 @@ class GanadoService:
         return mapeo_causas.get(causa_baja.lower(), 8)  # Por defecto 'otra'
     
     @staticmethod
-    def dar_baja_ganado(id: int, causa_baja: str, observaciones: Optional[str] = None, tenant_id_override: Optional[int] = None) -> Union[bool, str]:
+    def dar_baja_ganado(id: int, causa_baja: str, observaciones: Optional[str] = None, tenant_id_override: Optional[int] = None) -> bool | str:
         """
         Da de baja lógica a un animal cambiando su id_estado.
         
@@ -495,7 +499,7 @@ class GanadoService:
             sql = "SELECT id_estado, id_potrero, tenant_id FROM ganado WHERE id = %s"
             params = (id,)
             if tenant_id is not None:
-                sql += " AND tenant_id = %s"
+                sql += SQL_AND_TENANT_ID
                 params = (id, tenant_id)
             
             cursor.execute(sql, params)
@@ -535,7 +539,7 @@ class GanadoService:
             """
             params = (nuevo_id_estado, id)
             if tenant_id is not None:
-                sql += " AND tenant_id = %s"
+                sql += SQL_AND_TENANT_ID
                 params = (nuevo_id_estado, id, tenant_id)
             
             cursor.execute(sql, params)
@@ -545,7 +549,7 @@ class GanadoService:
             if potrero_id:
                 try:
                     PotreroService.sincronizar_ocupacion(potrero_id)
-                except Exception as sync_error:
+                except Exception:
                     pass
 
             cursor.close()
@@ -562,7 +566,7 @@ class GanadoService:
                     pass
 
     @staticmethod
-    def reactivar_ganado(id: int, nuevo_estado: str = 'saludable', tenant_id_override: Optional[int] = None) -> Union[bool, str]:
+    def reactivar_ganado(id: int, nuevo_estado: str = 'saludable', tenant_id_override: Optional[int] = None) -> bool | str:
         """
         Reactivar un animal cambiando su id_estado a uno activo.
         
@@ -580,7 +584,7 @@ class GanadoService:
             sql = "SELECT id_estado, tenant_id FROM ganado WHERE id = %s"
             params = (id,)
             if tenant_id is not None:
-                sql += " AND tenant_id = %s"
+                sql += SQL_AND_TENANT_ID
                 params = (id, tenant_id)
             
             cursor.execute(sql, params)
@@ -621,7 +625,7 @@ class GanadoService:
             """
             params = (nuevo_id_estado, id)
             if tenant_id is not None:
-                sql += " AND tenant_id = %s"
+                sql += SQL_AND_TENANT_ID
                 params = (nuevo_id_estado, id, tenant_id)
             
             cursor.execute(sql, params)
@@ -641,7 +645,7 @@ class GanadoService:
                     pass
 
     @staticmethod
-    def eliminar_ganado(id: int) -> Union[bool, str]:
+    def eliminar_ganado(id: int) -> bool | str:
         """Elimina un ganado dando de baja con causa 'otra'."""
         result = GanadoService.dar_baja_ganado(id, 'otra', 'Eliminación automática')
         
@@ -691,7 +695,7 @@ class GanadoService:
                 conn.close()
 
     @staticmethod
-    def obtener_ganado_detallado(identifier: Union[int, str], tenant_id_override: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    def obtener_ganado_detallado(identifier: int | str, tenant_id_override: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
         Obtener ganado detallado por ID o código QR.
         
@@ -820,7 +824,7 @@ class GanadoService:
                 "id_revision": GanadoService._to_nullable_int(row.get("id_revision")),
             }
             return detalle
-        except Exception as ex:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             return None
         finally:
             try:

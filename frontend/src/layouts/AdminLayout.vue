@@ -208,7 +208,7 @@ export default {
         }).catch(err => {
           console.warn('[AdminLayout] Error en router.push, usando window.location:', err);
           // Forzar recarga si el router falla
-          window.location.href = '/login';
+          globalThis.location.href = '/login';
         });
       } catch (error) {
         console.error('[AdminLayout] Error crítico en logout:', error);
@@ -218,11 +218,11 @@ export default {
         try {
           localStorage.clear();
           sessionStorage.clear();
-          window.location.href = '/login';
+          globalThis.location.href = '/login';
         } catch (cleanupError) {
           console.error('[AdminLayout] Error en limpieza de emergencia:', cleanupError);
           // Último recurso: recargar la página
-          window.location.reload();
+          globalThis.location.reload();
         }
       }
     }

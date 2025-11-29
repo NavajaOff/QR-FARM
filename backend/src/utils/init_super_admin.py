@@ -7,46 +7,56 @@ from ..database.db import get_connection
 from passlib.hash import bcrypt
 
 
-def _cargar_env():
-    """Carga el archivo .env desde la raíz del proyecto."""
-    # Intentar múltiples rutas posibles
-    posibles_rutas = [
-        Path(__file__).parent.parent.parent.parent / '.env',  # Desde backend/src/utils/ a raíz
-        Path(__file__).parent.parent.parent / '.env',  # Desde backend/src/ a raíz (si .env está en backend/)
+def _obtener_posibles_rutas_env():
+    """Obtiene las rutas posibles donde puede estar el archivo .env."""
+    return [
+        Path(__file__).parent.parent.parent.parent / '.env',
+        Path(__file__).parent.parent.parent / '.env',
     ]
-    
+
+def _verificar_variables_env(contenido):
+    """Verifica si las variables requeridas están en el contenido."""
+    tiene_email = 'ROOT_SUPER_ADMIN_EMAIL' in contenido
+    tiene_password = 'ROOT_SUPER_ADMIN_PASSWORD' in contenido
+    return tiene_email, tiene_password
+
+def _mostrar_info_env(env_path, tiene_email, tiene_password, lineas_root):
+    """Muestra información sobre el archivo .env encontrado."""
+    print(f"📁 Archivo .env encontrado: {env_path}")
+    print(f"   - ROOT_SUPER_ADMIN_EMAIL presente: {'✅' if tiene_email else '❌'}")
+    print(f"   - ROOT_SUPER_ADMIN_PASSWORD presente: {'✅' if tiene_password else '❌'}")
+    if lineas_root:
+        print(f"   - Líneas encontradas con ROOT_SUPER: {len(lineas_root)}")
+        for linea in lineas_root[:3]:
+            if '=' in linea:
+                var_name = linea.split('=')[0].strip()
+                print(f"     → {var_name}=[VALOR_OCULTO]")
+
+def _procesar_archivo_env(env_path):
+    """Procesa y muestra información del archivo .env."""
+    try:
+        with open(env_path, 'r', encoding='utf-8') as f:
+            contenido = f.read()
+        tiene_email, tiene_password = _verificar_variables_env(contenido)
+        lineas_root = [line.strip() for line in contenido.split('\n') 
+                      if 'ROOT_SUPER' in line and not line.strip().startswith('#')]
+        _mostrar_info_env(env_path, tiene_email, tiene_password, lineas_root)
+    except Exception as e:
+        print(f"   ⚠️  Error al leer .env: {e}")
+
+def _cargar_desde_rutas_posibles():
+    """Intenta cargar .env desde rutas predefinidas."""
+    posibles_rutas = _obtener_posibles_rutas_env()
     for env_path in posibles_rutas:
         if env_path.exists():
-            # Leer el archivo para debug
-            try:
-                with open(env_path, 'r', encoding='utf-8') as f:
-                    contenido = f.read()
-                    # Buscar las variables en el contenido
-                    tiene_email = 'ROOT_SUPER_ADMIN_EMAIL' in contenido
-                    tiene_password = 'ROOT_SUPER_ADMIN_PASSWORD' in contenido
-                    print(f"📁 Archivo .env encontrado: {env_path}")
-                    print(f"   - ROOT_SUPER_ADMIN_EMAIL presente: {'✅' if tiene_email else '❌'}")
-                    print(f"   - ROOT_SUPER_ADMIN_PASSWORD presente: {'✅' if tiene_password else '❌'}")
-                    
-                    # Mostrar líneas que contienen ROOT_SUPER (sin mostrar valores completos)
-                    lineas_root = [line.strip() for line in contenido.split('\n') 
-                                  if 'ROOT_SUPER' in line and not line.strip().startswith('#')]
-                    if lineas_root:
-                        print(f"   - Líneas encontradas con ROOT_SUPER: {len(lineas_root)}")
-                        for linea in lineas_root[:3]:  # Mostrar máximo 3 líneas
-                            # Ocultar el valor después del =
-                            if '=' in linea:
-                                var_name = linea.split('=')[0].strip()
-                                print(f"     → {var_name}=[VALOR_OCULTO]")
-            except Exception as e:
-                print(f"   ⚠️  Error al leer .env: {e}")
-            
-            # Cargar las variables
+            _procesar_archivo_env(env_path)
             resultado = load_dotenv(dotenv_path=env_path, override=True)
             print(f"   - load_dotenv resultado: {'✅ Cargado' if resultado else '⚠️  No se cargaron variables'}")
             return True
-    
-    # Si no se encuentra, buscar desde el directorio actual hacia arriba
+    return False
+
+def _buscar_env_hacia_arriba():
+    """Busca .env desde el directorio actual hacia arriba."""
     current = Path(__file__).resolve()
     while current.parent != current:
         env_file = current.parent / '.env'
@@ -55,7 +65,14 @@ def _cargar_env():
             print(f"📁 Archivo .env cargado desde: {env_file}")
             return True
         current = current.parent
-    
+    return False
+
+def _cargar_env():
+    """Carga el archivo .env desde la raíz del proyecto."""
+    if _cargar_desde_rutas_posibles():
+        return True
+    if _buscar_env_hacia_arriba():
+        return True
     print("⚠️  No se encontró el archivo .env")
     return False
 

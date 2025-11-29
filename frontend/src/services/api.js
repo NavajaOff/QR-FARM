@@ -19,8 +19,8 @@ api.interceptors.request.use(config => {
   try {
     const selectedTenantId = localStorage.getItem('qr_farm_selected_tenant_id');
     if (selectedTenantId) {
-      const tenantId = parseInt(selectedTenantId, 10);
-      if (!isNaN(tenantId)) {
+      const tenantId = Number.parseInt(selectedTenantId, 10);
+      if (!Number.isNaN(tenantId)) {
         // Solo agregar tenant_id a rutas que no sean de tenants
         const url = config.url || '';
         if (!url.includes('/tenants') && !url.includes('/usuarios/login') && !url.includes('/usuarios/register')) {

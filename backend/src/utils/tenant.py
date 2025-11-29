@@ -4,6 +4,42 @@ from flask import g, jsonify, request
 from typing import Optional, Callable, Any
 
 
+def _obtener_rol_nombre(usuario):
+    """Obtiene el nombre del rol del usuario."""
+    if not hasattr(usuario, 'rol') or not usuario.rol:
+        return None
+    if hasattr(usuario.rol, 'nombre_rol'):
+        return usuario.rol.nombre_rol
+    if hasattr(usuario.rol, 'rol'):
+        return usuario.rol.rol
+    return None
+
+def _obtener_tenant_desde_query_param():
+    """Obtiene tenant_id desde query params si el usuario es super admin."""
+    tenant_id_param = request.args.get('tenant_id')
+    if not tenant_id_param:
+        return None
+    try:
+        tenant_id = int(tenant_id_param)
+        if hasattr(g, 'current_user') and g.current_user:
+            rol_nombre = _obtener_rol_nombre(g.current_user)
+            if rol_nombre == 'super_admin':
+                return tenant_id
+    except (ValueError, TypeError):
+        pass
+    return None
+
+def _obtener_tenant_del_usuario():
+    """Obtiene tenant_id del usuario actual."""
+    if not hasattr(g, 'current_user') or not g.current_user:
+        return None
+    rol_nombre = _obtener_rol_nombre(g.current_user)
+    if rol_nombre == 'super_admin':
+        return None
+    if hasattr(g.current_user, 'tenant_id'):
+        return g.current_user.tenant_id
+    return None
+
 def get_current_tenant_id(allow_query_param: bool = True) -> Optional[int]:
     """
     Obtiene el tenant_id del usuario actual.
@@ -15,46 +51,50 @@ def get_current_tenant_id(allow_query_param: bool = True) -> Optional[int]:
     Returns:
         Optional[int]: El tenant_id o None si no se puede determinar
     """
-    # Primero verificar si hay tenant_id en query params (para super admin)
     if allow_query_param:
-        tenant_id_param = request.args.get('tenant_id')
-        if tenant_id_param:
-            try:
-                tenant_id = int(tenant_id_param)
-                # Validar que el usuario es super admin antes de permitir query param
-                if hasattr(g, 'current_user') and g.current_user:
-                    if hasattr(g.current_user, 'rol') and g.current_user.rol:
-                        rol_nombre = None
-                        if hasattr(g.current_user.rol, 'nombre_rol'):
-                            rol_nombre = g.current_user.rol.nombre_rol
-                        elif hasattr(g.current_user.rol, 'rol'):
-                            rol_nombre = g.current_user.rol.rol
-                        
-                        if rol_nombre == 'super_admin':
-                            return tenant_id
-            except (ValueError, TypeError):
-                # Si tenant_id no es un número válido, continuar con el flujo normal
-                pass
+        tenant_id = _obtener_tenant_desde_query_param()
+        if tenant_id is not None:
+            return tenant_id
     
-    if not hasattr(g, 'current_user') or not g.current_user:
-        return None
+    tenant_id = _obtener_tenant_del_usuario()
+    if tenant_id is not None:
+        return tenant_id
     
-    # Super admin no tiene tenant_id por defecto (pero puede usar query param)
-    if hasattr(g.current_user, 'rol') and g.current_user.rol:
-        if hasattr(g.current_user.rol, 'nombre_rol'):
-            if g.current_user.rol.nombre_rol == 'super_admin':
-                return None
-    
-    # Obtener tenant_id del usuario
-    if hasattr(g.current_user, 'tenant_id'):
-        return g.current_user.tenant_id
-    
-    # Intentar obtener de g.tenant_id
     if hasattr(g, 'tenant_id'):
         return g.tenant_id
     
     return None
 
+
+def _es_super_admin_usuario():
+    """Verifica si el usuario actual es super admin."""
+    if not hasattr(g, 'current_user') or not g.current_user:
+        return False
+    rol_nombre = _obtener_rol_nombre(g.current_user)
+    return rol_nombre == 'super_admin'
+
+def _validar_tenant_super_admin():
+    """Valida tenant_id para super admin."""
+    tenant_id_param = request.args.get('tenant_id')
+    if not tenant_id_param:
+        return jsonify({
+            'status': 'error',
+            'code': 'tenant_required_for_super_admin',
+            'message': 'El super administrador debe seleccionar un tenant explícitamente para acceder a los datos. Proporcione tenant_id como query parameter.'
+        }), 403
+    return jsonify({
+        'status': 'error',
+        'code': 'invalid_tenant_id',
+        'message': 'El tenant_id proporcionado no es válido o no existe'
+    }), 400
+
+def _validar_tenant_usuario_normal():
+    """Valida tenant_id para usuario normal."""
+    return jsonify({
+        'status': 'error',
+        'code': 'tenant_required',
+        'message': 'Tenant requerido para esta operación'
+    }), 403
 
 def tenant_required(f: Callable) -> Callable:
     """
@@ -66,47 +106,13 @@ def tenant_required(f: Callable) -> Callable:
     @wraps(f)
     def decorated(*args: Any, **kwargs: Any) -> Any:
         tenant_id = get_current_tenant_id()
+        if tenant_id is not None:
+            return f(*args, **kwargs)
         
-        # Verificar si es super_admin
-        is_super_admin = False
-        if hasattr(g, 'current_user') and g.current_user:
-            if hasattr(g.current_user, 'rol') and g.current_user.rol:
-                rol_nombre = None
-                if hasattr(g.current_user.rol, 'nombre_rol'):
-                    rol_nombre = g.current_user.rol.nombre_rol
-                elif hasattr(g.current_user.rol, 'rol'):
-                    rol_nombre = g.current_user.rol.rol
-                
-                if rol_nombre == 'super_admin':
-                    is_super_admin = True
-        
-        # Si es super admin y no hay tenant_id, requiere que se pase explícitamente
-        if tenant_id is None:
-            if is_super_admin:
-                # Verificar si hay tenant_id en query params
-                tenant_id_param = request.args.get('tenant_id')
-                if not tenant_id_param:
-                    return jsonify({
-                        'status': 'error',
-                        'code': 'tenant_required_for_super_admin',
-                        'message': 'El super administrador debe seleccionar un tenant explícitamente para acceder a los datos. Proporcione tenant_id como query parameter.'
-                    }), 403
-                else:
-                    # Si hay tenant_id en query params pero no se validó antes, hay un error
-                    return jsonify({
-                        'status': 'error',
-                        'code': 'invalid_tenant_id',
-                        'message': 'El tenant_id proporcionado no es válido o no existe'
-                    }), 400
-            else:
-                # Usuario normal sin tenant_id
-                return jsonify({
-                    'status': 'error',
-                    'code': 'tenant_required',
-                    'message': 'Tenant requerido para esta operación'
-                }), 403
-        
-        return f(*args, **kwargs)
+        is_super_admin = _es_super_admin_usuario()
+        if is_super_admin:
+            return _validar_tenant_super_admin()
+        return _validar_tenant_usuario_normal()
     
     return decorated
 

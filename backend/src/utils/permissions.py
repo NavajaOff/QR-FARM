@@ -22,26 +22,49 @@ PERMISOS = {
 }
 
 
+def _validar_usuario_autenticado():
+    """Valida que haya un usuario autenticado."""
+    if not hasattr(g, 'current_user') or not g.current_user:
+        return None, jsonify({
+            'status': 'error',
+            'code': 'unauthorized',
+            'message': 'No autorizado'
+        }), 401
+    return g.current_user, None, None
+
+def _obtener_rol_usuario(usuario):
+    """Obtiene el nombre del rol del usuario."""
+    if not hasattr(usuario, 'rol') or not usuario.rol:
+        return None
+    if hasattr(usuario.rol, 'nombre_rol'):
+        return usuario.rol.nombre_rol
+    if hasattr(usuario.rol, 'rol'):
+        return usuario.rol.rol
+    return None
+
+def _validar_permiso(rol_nombre, permission):
+    """Valida si el rol tiene el permiso requerido."""
+    if rol_nombre == 'super_admin':
+        return True, None
+    roles_permitidos = PERMISOS.get(permission, [])
+    if rol_nombre not in roles_permitidos:
+        return False, jsonify({
+            'status': 'error',
+            'code': 'insufficient_permissions',
+            'message': f'No tiene permiso para: {permission}'
+        }), 403
+    return True, None
+
 def permission_required(permission: str):
     """Decorator que valida permisos."""
     def decorator(f: Callable) -> Callable:
         @wraps(f)
         def decorated(*args: Any, **kwargs: Any) -> Any:
-            if not hasattr(g, 'current_user') or not g.current_user:
-                return jsonify({
-                    'status': 'error',
-                    'code': 'unauthorized',
-                    'message': 'No autorizado'
-                }), 401
+            usuario, error_response, error_status = _validar_usuario_autenticado()
+            if error_response:
+                return error_response, error_status
             
-            # Obtener rol del usuario
-            rol_nombre = None
-            if hasattr(g.current_user, 'rol') and g.current_user.rol:
-                if hasattr(g.current_user.rol, 'nombre_rol'):
-                    rol_nombre = g.current_user.rol.nombre_rol
-                elif hasattr(g.current_user.rol, 'rol'):
-                    rol_nombre = g.current_user.rol.rol
-            
+            rol_nombre = _obtener_rol_usuario(usuario)
             if not rol_nombre:
                 return jsonify({
                     'status': 'error',
@@ -49,18 +72,9 @@ def permission_required(permission: str):
                     'message': 'Usuario sin rol asignado'
                 }), 403
             
-            # Super admin tiene todos los permisos
-            if rol_nombre == 'super_admin':
-                return f(*args, **kwargs)
-            
-            # Verificar permiso
-            roles_permitidos = PERMISOS.get(permission, [])
-            if rol_nombre not in roles_permitidos:
-                return jsonify({
-                    'status': 'error',
-                    'code': 'insufficient_permissions',
-                    'message': f'No tiene permiso para: {permission}'
-                }), 403
+            tiene_permiso, error_response = _validar_permiso(rol_nombre, permission)
+            if not tiene_permiso:
+                return error_response
             
             return f(*args, **kwargs)
         

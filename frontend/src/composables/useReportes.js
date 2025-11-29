@@ -1,6 +1,5 @@
 import { ref } from 'vue'
 import { reportAPI } from '../services/api.js'
-import authService from '../services/authService.js'
 
 export function useReportes() {
   const resumen = ref(null)
@@ -52,7 +51,7 @@ export function useReportes() {
     if (!email) {
       const errorMessage = 'No hay credenciales almacenadas para renovar el token. Redirigiendo a login.'
       console.warn('[useReportes]', errorMessage)
-      window.location.href = '/login'
+      globalThis.location.href = '/login'
       throw new Error(errorMessage)
     }
 
@@ -63,14 +62,14 @@ export function useReportes() {
     try {
       const response = await reportAPI.downloadSummaryPdf()
       const blob = new Blob([response.data], { type: 'application/pdf' })
-      const url = window.URL.createObjectURL(blob)
+      const url = globalThis.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
       link.download = 'reporte_qrfarm.pdf'
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      globalThis.URL.revokeObjectURL(url)
       return { success: true }
     } catch (err) {
       console.error('[useReportes] Error descargando PDF:', err)

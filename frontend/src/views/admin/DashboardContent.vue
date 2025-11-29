@@ -178,8 +178,8 @@ export default {
     selectedTenantName() {
       const selectedTenantId = localStorage.getItem('qr_farm_selected_tenant_id');
       if (!selectedTenantId) return '';
-      const tenantId = parseInt(selectedTenantId, 10);
-      if (isNaN(tenantId)) return '';
+      const tenantId = Number.parseInt(selectedTenantId, 10);
+      if (Number.isNaN(tenantId)) return '';
       // Obtener nombre del tenant desde la lista cargada
       const tenant = this.tenants?.find(t => t.id === tenantId);
       return tenant ? tenant.nombre : '';
