@@ -45,6 +45,12 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
+# cobertura de Vitest
+frontend/coverage/lcov-report/
+frontend/coverage/coverage-final.json
+
+
+
 # Jupyter Notebook
 .ipynb_checkpoints/
 

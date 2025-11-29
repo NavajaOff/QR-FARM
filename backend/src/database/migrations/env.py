@@ -41,14 +41,19 @@ def _build_database_url() -> str:
     """Build SQLAlchemy database URL from environment variables."""
     db_host = os.getenv('DB_HOST', 'localhost')
     db_user = os.getenv('DB_USER', 'root')
-    db_password = os.getenv('DB_PASSWORD', '')
+    db_password = os.getenv('DB_PASSWORD')
     db_name = os.getenv('DB_NAME', 'gestion_ganadera')
     db_port = os.getenv('DB_PORT', '3306')
-    
+
+    if not db_password:
+        raise ValueError("DB_PASSWORD environment variable must be set for database security")
+
+    # Log for debugging
+    logger.info(f"DB_HOST: {db_host}, DB_USER: {db_user}, DB_PASSWORD set: {bool(db_password)}, DB_NAME: {db_name}, DB_PORT: {db_port}")
+
     # Construct URL: mysql+mysqlconnector://user:password@host:port/database
-    password_part = f":{db_password}" if db_password else ""
-    url = f"mysql+mysqlconnector://{db_user}{password_part}@{db_host}:{db_port}/{db_name}"
-    
+    url = f"mysql+mysqlconnector://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+
     logger.info(f"Database URL constructed from environment variables (host: {db_host})")
     return url
 
