@@ -213,10 +213,14 @@ export default {
                   let value
                   if (rawValue == null) {
                     value = '0'
-                  } else if (typeof rawValue === 'object') {
+                  } else if (typeof rawValue === 'object' || Array.isArray(rawValue)) {
                     value = JSON.stringify(rawValue)
+                  } else if (typeof rawValue === 'number') {
+                    value = Number.isInteger(rawValue) ? String(rawValue) : rawValue.toFixed(2)
+                  } else if (typeof rawValue === 'boolean') {
+                    value = String(rawValue)
                   } else {
-                    value = rawValue.toString()
+                    value = String(rawValue)
                   }
                   return `${label}: ${value}`
                 }
