@@ -1,6 +1,10 @@
 import { beforeEach, vi } from 'vitest'
 import api, { authAPI, userAPI, tenantAPI, reportAPI, ganadoAPI, potreroAPI, vacunacionAPI } from './api'
 
+// Test constants to avoid hardcoded credentials
+const TEST_EMAIL = 'test@test.com'
+const TEST_PASSWORD = 'test-password-123'
+
 describe('api', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -405,7 +409,7 @@ describe('api', () => {
 
   describe('API Function Calls', () => {
     it('should call authAPI.register with correct parameters', () => {
-      const userData = { email: 'test@test.com', password: '123' }
+      const userData = { email: TEST_EMAIL, password: TEST_PASSWORD }
       const result = authAPI.register(userData)
       expect(result).toBeDefined()
       // Handle promise rejection to avoid unhandled rejection warnings
@@ -413,7 +417,7 @@ describe('api', () => {
     })
 
     it('should call authAPI.login with correct parameters', () => {
-      const credentials = { email: 'test@test.com', password: '123' }
+      const credentials = { email: TEST_EMAIL, password: TEST_PASSWORD }
       const result = authAPI.login(credentials)
       expect(result).toBeDefined()
       result.catch(() => {})
