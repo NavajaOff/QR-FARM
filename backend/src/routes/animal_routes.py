@@ -26,7 +26,7 @@ VALOR_TRUE = 'true'
 try:
     from ...app import emit_update
 except ImportError:
-    def emit_update(event, data=None):
+    def emit_update(event, _data=None):
         print(f"WebSocket no disponible, evento omitido: {event}")
 
 animal_bp = Blueprint('animal', __name__, url_prefix='/api/animales')

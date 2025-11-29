@@ -52,11 +52,11 @@ function collectAdminEditPayload() {
   const result = {
     valid: true,
     payload: {
-      id_animal: parseInt(animal, 10),
-      id_tipo_vacuna: tipoVacuna ? parseInt(tipoVacuna, 10) : null,
+      id_animal: Number.parseInt(animal, 10),
+      id_tipo_vacuna: tipoVacuna ? Number.parseInt(tipoVacuna, 10) : null,
       fecha_aplicacion: fechaAplicacion,
       proxima_dosis: proximaDosis || null,
-      responsable: parseInt(responsable, 10),
+      responsable: Number.parseInt(responsable, 10),
       estado
     },
     message: ''

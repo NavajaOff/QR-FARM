@@ -14,17 +14,17 @@ export function useGestionarAnimalesUsuario() {
 
   const razasDisponibles = computed(() => {
     const razas = new Set()
-    animales.value.forEach(a => {
+    for (const a of animales.value) {
       if (a.raza) razas.add(a.raza)
-    })
+    }
     return Array.from(razas)
   })
 
   const estadosDisponibles = computed(() => {
     const estados = new Set()
-    animales.value.forEach(a => {
+    for (const a of animales.value) {
       if (a.estado) estados.add(a.estado)
-    })
+    }
     return Array.from(estados)
   })
 
@@ -78,7 +78,7 @@ export function useGestionarAnimalesUsuario() {
 
   onMounted(() => {
     if (!authService.isAuthenticated() || !authService.isUser()) {
-      window.location.href = '/login'
+      globalThis.location.href = '/login'
       return
     }
     cargarGanado()

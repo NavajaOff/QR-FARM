@@ -13,6 +13,8 @@ QR_STORAGE_DIR = BASE_DIR / "qr"
 # SQL constants
 SQL_AND_TENANT_ID = " AND tenant_id = %s"
 SQL_WHERE_TENANT_ID = " WHERE tenant_id = %s"
+SQL_AND_G_TENANT_ID = " AND g.tenant_id = %s"
+SQL_WHERE_G_TENANT_ID = " WHERE g.tenant_id = %s"
 
 class GanadoService:
     @staticmethod
@@ -33,9 +35,9 @@ class GanadoService:
             return sql, ()
         
         if usar_where:
-            sql += " WHERE g.tenant_id = %s"
+            sql += SQL_WHERE_G_TENANT_ID
         else:
-            sql += " AND g.tenant_id = %s"
+            sql += SQL_AND_G_TENANT_ID
         
         return sql, (tenant_id,)
 
@@ -350,7 +352,7 @@ class GanadoService:
             cursor_temp.close()
             conn_temp.close()
             return result[0] if result else None
-        except Exception as e:
+        except Exception:
             return None
 
     @staticmethod
@@ -464,7 +466,7 @@ class GanadoService:
             actualizado = GanadoService._actualizar_ganado_en_db(id, ganado, tenant_id_override)
             GanadoService._sincronizar_potreros_despues_actualizacion(actualizado, nuevo_potrero_id, potrero_anterior_id)
             return actualizado
-        except Exception as e:
+        except Exception:
             return False
 
     @staticmethod
@@ -688,7 +690,7 @@ class GanadoService:
                 return Ganado.from_dict(result)
             return None
 
-        except Exception as e:
+        except Exception:
             return None
         finally:
             if 'conn' in locals():

@@ -230,13 +230,13 @@ export const cargarAnimales = async (incluirBajas = false) => {
       if (incluirBajas) {
         // Solo mostrar dados de baja (id_estado >= 4)
         animalesFiltrados = response.data.data.filter(animal => {
-          const idEstado = parseInt(animal.id_estado);
+          const idEstado = Number.parseInt(animal.id_estado, 10);
           return idEstado >= 4;
         });
       } else {
         // Solo mostrar activos (id_estado < 4 o null)
         animalesFiltrados = response.data.data.filter(animal => {
-          const idEstado = parseInt(animal.id_estado);
+          const idEstado = Number.parseInt(animal.id_estado, 10);
           return !idEstado || idEstado < 4;
         });
       }
@@ -353,9 +353,9 @@ export const verPerfilAnimal = async (id) => {
         didOpen: () => {
           // Detener cualquier reproducción de audio/video que pueda estar causando el error
           const mediaElements = document.querySelectorAll('audio, video');
-          mediaElements.forEach(element => {
+          for (const element of mediaElements) {
             element.pause();
-          });
+          }
         }
       });
     } else {
@@ -520,12 +520,12 @@ function construirUpdateData() {
 
   const data = {
     nombre,
-    peso: peso ? parseFloat(peso) : null,
+    peso: peso ? Number.parseFloat(peso) : null,
     raza: raza || null,
     estado: estado || null,
     sexo: sexo || null,
-    id_potrero: id_potrero ? parseInt(id_potrero) : null,
-    id_persona: id_persona ? parseInt(id_persona) : null
+    id_potrero: id_potrero ? Number.parseInt(id_potrero, 10) : null,
+    id_persona: id_persona ? Number.parseInt(id_persona, 10) : null
   };
 
   return limpiarCampos(data);
@@ -670,7 +670,7 @@ export const agregarNuevoAnimal = async () => {
 
       const data = {
         nombre,
-        peso: peso ? parseFloat(peso) : null,
+        peso: peso ? Number.parseFloat(peso) : null,
         raza,
         fecha_nacimiento,
         estado,

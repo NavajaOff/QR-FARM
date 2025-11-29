@@ -209,19 +209,19 @@ export const estadoClass = (estado) => {
 export const crearPotrero = () => {
   // Construir opciones de estado
   let estadoOptions = '';
-  estadosPotrero.value.forEach(estado => {
+  for (const estado of estadosPotrero.value) {
     estadoOptions += `<option value="${estado.estado}">${estado.estado}</option>`;
-  });
+  }
 
   // Construir opciones de tipo de pasto
   let pastoOptions = '<option value="">Seleccionar tipo de pasto</option>';
-  tiposPasto.value.forEach(tipo => {
+  for (const tipo of tiposPasto.value) {
     pastoOptions += `<option value="${tipo.id}">${tipo.tipo_pasto || 'Sin nombre'}</option>`;
-  });
+  }
 
   // Construir opciones de responsable
   let responsableOptions = '<option value="">Seleccionar responsable</option>';
-  personasUsuario.value.forEach(persona => {
+  for (const persona of personasUsuario.value) {
     const nombreCompleto = `${persona.primer_nombre} ${persona.primer_apellido}`.trim();
     responsableOptions += `<option value="${persona.id}">${nombreCompleto}</option>`;
   });
@@ -265,12 +265,12 @@ export const crearPotrero = () => {
       return {
         nombre: null, // El backend generará el nombre automáticamente
         estado: 'disponible', // Estado por defecto al crear
-        capacidad: capacidad ? parseInt(capacidad) : null,
-        hectareas: hectareas ? parseFloat(hectareas) : null,
-        id_tipo_pasto: id_tipo_pasto ? parseInt(id_tipo_pasto) : null,
-        responsable_persona_id: responsable_persona_id ? parseInt(responsable_persona_id) : null,
+        capacidad: capacidad ? Number.parseInt(capacidad, 10) : null,
+        hectareas: hectareas ? Number.parseFloat(hectareas) : null,
+        id_tipo_pasto: id_tipo_pasto ? Number.parseInt(id_tipo_pasto, 10) : null,
+        responsable_persona_id: responsable_persona_id ? Number.parseInt(responsable_persona_id, 10) : null,
         proxima_limpieza,
-        area: area ? parseFloat(area) : null,
+        area: area ? Number.parseFloat(area) : null,
         descripcion
       };
     }
@@ -321,23 +321,23 @@ export const editarPotrero = async (id) => {
 
   // Construir opciones de estado con selección
   let estadoOptions = '';
-  estadosPotrero.value.forEach(estado => {
+  for (const estado of estadosPotrero.value) {
     const estadoValue = estado.estado || estado.nombre_estado || estado.nombre || '';
     const selected = estadoValue === potrero.estado ? 'selected' : '';
     estadoOptions += `<option value="${estadoValue}" ${selected}>${estadoValue}</option>`;
-  });
+  }
 
   // Construir opciones de tipo de pasto con selección
   let pastoOptions = '<option value="">Seleccionar tipo de pasto</option>';
-  tiposPasto.value.forEach(tipo => {
+  for (const tipo of tiposPasto.value) {
     const tipoNombre = tipo.tipo_pasto || tipo.nombre || 'Sin nombre';
     const selected = tipo.id === potrero.id_tipo_pasto || tipoNombre === potrero.pasto ? 'selected' : '';
     pastoOptions += `<option value="${tipo.id}" ${selected}>${tipoNombre}</option>`;
-  });
+  }
 
   // Construir opciones de responsable con selección
   let responsableOptions = '<option value="">Seleccionar responsable</option>';
-  personasUsuario.value.forEach(persona => {
+  for (const persona of personasUsuario.value) {
     const nombreCompleto = persona.nombre_completo || `${persona.primer_nombre} ${persona.primer_apellido}`.trim();
     const selected = persona.id === potrero.responsable_persona_id || nombreCompleto === potrero.responsable ? 'selected' : '';
     responsableOptions += `<option value="${persona.id}" ${selected}>${nombreCompleto}</option>`;
@@ -391,11 +391,11 @@ export const editarPotrero = async (id) => {
 
       const data = {
         estado,
-        capacidad: capacidad ? parseInt(capacidad) : null,
-        hectareas: hectareas ? parseFloat(hectareas) : null,
-        id_tipo_pasto: id_tipo_pasto ? parseInt(id_tipo_pasto) : null,
-        responsable_persona_id: responsable_persona_id ? parseInt(responsable_persona_id) : null,
-        area: area ? parseFloat(area) : null,
+        capacidad: capacidad ? Number.parseInt(capacidad, 10) : null,
+        hectareas: hectareas ? Number.parseFloat(hectareas) : null,
+        id_tipo_pasto: id_tipo_pasto ? Number.parseInt(id_tipo_pasto, 10) : null,
+        responsable_persona_id: responsable_persona_id ? Number.parseInt(responsable_persona_id, 10) : null,
+        area: area ? Number.parseFloat(area) : null,
         descripcion
       };
 
