@@ -47,6 +47,8 @@ coverage.xml
 
 # cobertura de Vitest
 frontend/coverage/lcov-report/
+frontend/coverage/coverage-final.json
+
 
 
 # Jupyter Notebook
