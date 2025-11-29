@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createMemoryHistory } from 'vue-router'
 import { beforeEach } from 'vitest'
 import App from './App.vue'
 
@@ -7,9 +7,16 @@ describe('App', () => {
   let router
 
   beforeEach(() => {
-    // Crear router mock para los tests
+    // Mock de location para createMemoryHistory
+    globalThis.location = {
+      pathname: '/',
+      search: '',
+      hash: ''
+    }
+
+    // Crear router mock para los tests con createMemoryHistory
     router = createRouter({
-      history: createWebHistory(),
+      history: createMemoryHistory(),
       routes: [
         {
           path: '/',

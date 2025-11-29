@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createMemoryHistory } from 'vue-router'
 import { beforeEach, vi } from 'vitest'
 import AdminLayout from './AdminLayout.vue'
 import authService from '../services/authService.js'
@@ -19,7 +19,10 @@ vi.mock('../services/authService.js', () => ({
 // Mock de globalThis.location
 const mockLocation = {
   href: '',
-  reload: vi.fn()
+  reload: vi.fn(),
+  pathname: '/',
+  search: '',
+  hash: ''
 }
 globalThis.location = mockLocation
 
@@ -35,9 +38,9 @@ describe('AdminLayout', () => {
     mockLocation.href = ''
     mockLocation.reload.mockClear()
 
-    // Crear router mock
+    // Crear router mock con createMemoryHistory
     router = createRouter({
-      history: createWebHistory(),
+      history: createMemoryHistory(),
       routes: [
         {
           path: '/admin',

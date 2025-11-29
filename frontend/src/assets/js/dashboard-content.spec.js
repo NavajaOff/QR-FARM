@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createMemoryHistory } from 'vue-router'
 import { beforeEach, vi } from 'vitest'
 import dashboardContent from './dashboard-content.js'
 import authService from '../../services/authService.js'
@@ -41,6 +41,13 @@ describe('dashboard-content.js', () => {
     console.error = vi.fn()
     console.warn = vi.fn()
 
+    // Mock de location para createMemoryHistory
+    globalThis.location = {
+      pathname: '/',
+      search: '',
+      hash: ''
+    }
+
     // Mock de globalThis.window.crypto
     globalThis.window = {
       crypto: {
@@ -53,9 +60,9 @@ describe('dashboard-content.js', () => {
       removeEventListener: vi.fn()
     }
 
-    // Crear router mock
+    // Crear router mock con createMemoryHistory
     router = createRouter({
-      history: createWebHistory(),
+      history: createMemoryHistory(),
       routes: [
         { path: '/admin/dashboard', component: { template: '<div>Dashboard</div>' } }
       ]
