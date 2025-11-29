@@ -458,3 +458,338 @@ class TestGanadoModel:
         result = GanadoService._calcular_edad("invalid")
         assert result is None
         assert Ganado.es_estado_activo(None) is True
+
+    def test_calcular_edad_date(self):
+        """Test _calcular_edad with date object"""
+        from datetime import date
+        birth = date(2000, 1, 1)
+        result = GanadoService._calcular_edad(birth)
+        expected = date.today().year - 2000
+        assert result == expected
+
+    def test_calcular_edad_string_with_z(self):
+        """Test _calcular_edad with ISO string containing Z"""
+        from datetime import date
+        result = GanadoService._calcular_edad("2000-01-01T00:00:00Z")
+        expected = date.today().year - 2000
+        assert result == expected
+
+    def test_calcular_edad_negative_age(self):
+        """Test _calcular_edad returns None for future dates"""
+        from datetime import date, timedelta
+        future_date = date.today() + timedelta(days=365)
+        result = GanadoService._calcular_edad(future_date)
+        assert result is None
+
+    def test_calcular_edad_other_type(self):
+        """Test _calcular_edad with unsupported type"""
+        result = GanadoService._calcular_edad(12345)
+        assert result is None
+
+    def test_to_nullable_int_valid(self):
+        """Test _to_nullable_int with valid values"""
+        assert GanadoService._to_nullable_int(5) == 5
+        assert GanadoService._to_nullable_int("10") == 10
+        assert GanadoService._to_nullable_int(0) == 0
+
+    def test_to_nullable_int_none(self):
+        """Test _to_nullable_int with None"""
+        assert GanadoService._to_nullable_int(None) is None
+
+    def test_to_nullable_int_invalid(self):
+        """Test _to_nullable_int with invalid values"""
+        assert GanadoService._to_nullable_int("invalid") is None
+        assert GanadoService._to_nullable_int({}) is None
+
+    def test_to_nullable_float_valid(self):
+        """Test _to_nullable_float with valid values"""
+        assert GanadoService._to_nullable_float(5.5) == 5.5
+        assert GanadoService._to_nullable_float("10.5") == 10.5
+        assert GanadoService._to_nullable_float(0.0) == 0.0
+
+    def test_to_nullable_float_none(self):
+        """Test _to_nullable_float with None"""
+        assert GanadoService._to_nullable_float(None) is None
+
+    def test_to_nullable_float_invalid(self):
+        """Test _to_nullable_float with invalid values"""
+        assert GanadoService._to_nullable_float("invalid") is None
+        assert GanadoService._to_nullable_float({}) is None
+
+    def test_empty_propietario(self):
+        """Test _empty_propietario returns empty dict"""
+        result = GanadoService._empty_propietario()
+        assert result == {
+            "nombre": None,
+            "telefono": None,
+            "rol": None
+        }
+
+    def test_empty_potrero(self):
+        """Test _empty_potrero returns empty dict"""
+        result = GanadoService._empty_potrero()
+        assert result == {
+            "nombre": None,
+            "tipo_pasto": None,
+            "ultima_limpieza": None,
+            "fecha_ultimo_uso": None,
+            "proxima_limpieza": None,
+            "capacidad": None,
+            "estado": None
+        }
+
+    @patch('src.services.animal_service.get_connection')
+    def test_fetch_vacunas_success(self, mock_get_connection):
+        """Test _fetch_vacunas with successful fetch"""
+        mock_conn = Mock()
+        mock_cursor = Mock(dictionary=True)
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.fetchall.return_value = [
+            {
+                'id': 1,
+                'nombre_vacuna': 'Vacuna A',
+                'fecha_aplicacion': '2024-01-01',
+                'proxima_dosis': '2024-07-01',
+                'estado': 'aplicado',
+                'responsable_nombre': 'Juan Perez',
+                'responsable': 1
+            }
+        ]
+
+        result = GanadoService._fetch_vacunas(mock_conn, 1)
+
+        assert len(result) == 1
+        assert result[0]['id'] == 1
+        assert result[0]['nombre'] == 'Vacuna A'
+        mock_cursor.execute.assert_called_once()
+        mock_cursor.close.assert_called_once()
+
+    @patch('src.services.animal_service.get_connection')
+    def test_fetch_vacunas_exception(self, mock_get_connection):
+        """Test _fetch_vacunas with exception"""
+        mock_conn = Mock()
+        mock_cursor = Mock(dictionary=True)
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.execute.side_effect = Exception("DB Error")
+
+        result = GanadoService._fetch_vacunas(mock_conn, 1)
+
+        assert result == []
+        mock_cursor.close.assert_called_once()
+
+    @patch('src.services.animal_service.get_connection')
+    def test_fetch_vacunas_no_responsable_nombre(self, mock_get_connection):
+        """Test _fetch_vacunas when responsable_nombre is None"""
+        mock_conn = Mock()
+        mock_cursor = Mock(dictionary=True)
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.fetchall.return_value = [
+            {
+                'id': 1,
+                'nombre_vacuna': 'Vacuna A',
+                'fecha_aplicacion': None,
+                'proxima_dosis': None,
+                'estado': 'aplicado',
+                'responsable_nombre': None,
+                'responsable': 1
+            }
+        ]
+
+        result = GanadoService._fetch_vacunas(mock_conn, 1)
+
+        assert len(result) == 1
+        assert result[0]['responsable'] == 1  # Should use responsable ID
+
+    @patch('src.services.animal_service.get_connection')
+    @patch('src.services.animal_service.GanadoService._obtener_tenant_id')
+    def test_buscar_por_potrero_success(self, mock_tenant, mock_get_connection):
+        """Test buscar_por_potrero with successful search"""
+        mock_conn = Mock()
+        mock_cursor = Mock(dictionary=True)
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.fetchall.return_value = [
+            {'id': 1, 'nombre': 'Animal 1', 'id_potrero': 1}
+        ]
+
+        with patch.object(Ganado, 'from_dict') as mock_from_dict:
+            mock_ganado = Mock()
+            mock_from_dict.return_value = mock_ganado
+
+            result = GanadoService.buscar_por_potrero(1)
+
+            assert len(result) == 1
+            mock_cursor.execute.assert_called_once()
+            mock_conn.close.assert_called_once()
+
+    @patch('src.services.animal_service.get_connection')
+    def test_buscar_por_potrero_exception(self, mock_get_connection):
+        """Test buscar_por_potrero with exception"""
+        mock_conn = Mock()
+        mock_cursor = Mock(dictionary=True)
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.execute.side_effect = Exception("DB Error")
+
+        result = GanadoService.buscar_por_potrero(1)
+
+        assert result == []
+        mock_conn.close.assert_called_once()
+
+    @patch('src.services.animal_service.get_connection')
+    @patch('src.services.animal_service.PotreroService.sincronizar_ocupacion')
+    @patch('src.services.animal_service.GanadoService._obtener_tenant_id')
+    def test_dar_baja_ganado_success(self, mock_tenant, mock_sync, mock_get_connection):
+        """Test dar_baja_ganado with successful operation"""
+        mock_conn = Mock()
+        mock_cursor = Mock(dictionary=True)
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_tenant.return_value = 1
+
+        mock_cursor.fetchone.side_effect = [
+            {'id_estado': 1, 'id_potrero': 1, 'tenant_id': 1},
+            None  # Second fetchone for validation
+        ]
+
+        result = GanadoService.dar_baja_ganado(1, 'muerte', 'Test observaciones')
+
+        assert result is True
+        mock_cursor.execute.assert_called()
+        mock_conn.commit.assert_called_once()
+        mock_conn.close.assert_called_once()
+
+    @patch('src.services.animal_service.get_connection')
+    @patch('src.services.animal_service.GanadoService._obtener_tenant_id')
+    def test_dar_baja_ganado_not_found(self, mock_tenant, mock_get_connection):
+        """Test dar_baja_ganado when animal not found"""
+        mock_conn = Mock()
+        mock_cursor = Mock(dictionary=True)
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_tenant.return_value = 1
+
+        mock_cursor.fetchone.return_value = None
+
+        result = GanadoService.dar_baja_ganado(1, 'muerte')
+
+        assert result == "Animal no encontrado"
+        mock_conn.close.assert_called_once()
+
+    @patch('src.services.animal_service.get_connection')
+    @patch('src.services.animal_service.GanadoService._obtener_tenant_id')
+    def test_dar_baja_ganado_already_baja(self, mock_tenant, mock_get_connection):
+        """Test dar_baja_ganado when animal already has baja status"""
+        mock_conn = Mock()
+        mock_cursor = Mock(dictionary=True)
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_tenant.return_value = 1
+
+        mock_cursor.fetchone.return_value = {'id_estado': 5, 'id_potrero': None, 'tenant_id': 1}
+
+        result = GanadoService.dar_baja_ganado(1, 'muerte')
+
+        assert result == "El animal ya está dado de baja"
+        mock_conn.close.assert_called_once()
+
+    @patch('src.services.animal_service.GanadoService.dar_baja_ganado')
+    def test_eliminar_ganado_success(self, mock_dar_baja):
+        """Test eliminar_ganado with successful operation"""
+        mock_dar_baja.return_value = True
+
+        result = GanadoService.eliminar_ganado(1)
+
+        assert result is True
+        mock_dar_baja.assert_called_once_with(1, 'otra', 'Eliminación automática')
+
+    @patch('src.services.animal_service.GanadoService.dar_baja_ganado')
+    def test_eliminar_ganado_not_found(self, mock_dar_baja):
+        """Test eliminar_ganado when animal not found"""
+        mock_dar_baja.return_value = "Animal no encontrado"
+
+        result = GanadoService.eliminar_ganado(1)
+
+        assert result is False
+
+    def test_mapear_estado_string_a_id(self):
+        """Test _mapear_estado_string_a_id with valid states"""
+        assert GanadoService._mapear_estado_string_a_id('saludable') == 1
+        assert GanadoService._mapear_estado_string_a_id('revision') == 2
+        assert GanadoService._mapear_estado_string_a_id('enfermo') == 3
+
+    def test_mapear_estado_string_a_id_case_insensitive(self):
+        """Test _mapear_estado_string_a_id is case insensitive"""
+        assert GanadoService._mapear_estado_string_a_id('SALUDABLE') == 1
+        assert GanadoService._mapear_estado_string_a_id('Revision') == 2
+
+    def test_mapear_estado_string_a_id_default(self):
+        """Test _mapear_estado_string_a_id returns default for unknown"""
+        assert GanadoService._mapear_estado_string_a_id('unknown') == 1
+
+    @patch('src.services.animal_service.get_connection')
+    def test_obtener_estado_id_desde_db_success(self, mock_get_connection):
+        """Test _obtener_estado_id_desde_db with successful fetch"""
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.fetchone.return_value = (2,)
+
+        result = GanadoService._obtener_estado_id_desde_db('revision')
+
+        assert result == 2
+        mock_cursor.execute.assert_called_once()
+        mock_cursor.close.assert_called_once()
+        mock_conn.close.assert_called_once()
+
+    @patch('src.services.animal_service.get_connection')
+    def test_obtener_estado_id_desde_db_not_found(self, mock_get_connection):
+        """Test _obtener_estado_id_desde_db when not found"""
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.fetchone.return_value = None
+
+        result = GanadoService._obtener_estado_id_desde_db('unknown')
+
+        assert result is None
+
+    @patch('src.services.animal_service.get_connection')
+    def test_obtener_estado_id_desde_db_exception(self, mock_get_connection):
+        """Test _obtener_estado_id_desde_db with exception"""
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.execute.side_effect = Exception("DB Error")
+
+        result = GanadoService._obtener_estado_id_desde_db('test')
+
+        assert result is None
+
+    def test_obtener_id_estado_por_causa(self):
+        """Test _obtener_id_estado_por_causa with valid causes"""
+        assert GanadoService._obtener_id_estado_por_causa('muerte') == 5
+        assert GanadoService._obtener_id_estado_por_causa('venta') == 6
+        assert GanadoService._obtener_id_estado_por_causa('robo') == 7
+        assert GanadoService._obtener_id_estado_por_causa('otra') == 8
+        assert GanadoService._obtener_id_estado_por_causa('dado_de_baja') == 4
+
+    def test_obtener_id_estado_por_causa_default(self):
+        """Test _obtener_id_estado_por_causa returns default for unknown"""
+        assert GanadoService._obtener_id_estado_por_causa('unknown') == 8
+
+    def test_obtener_id_estado_por_causa_case_insensitive(self):
+        """Test _obtener_id_estado_por_causa is case insensitive"""
+        assert GanadoService._obtener_id_estado_por_causa('MUERTE') == 5
+        assert GanadoService._obtener_id_estado_por_causa('Venta') == 6
