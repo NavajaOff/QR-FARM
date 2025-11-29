@@ -344,6 +344,8 @@ describe('api', () => {
         expect.stringContaining('convertido a'),
         'true'
       )
+      // Handle promise rejection to avoid unhandled rejection warnings
+      result.catch(() => {})
     })
 
     it('should convert false to "false" string', () => {
@@ -356,6 +358,8 @@ describe('api', () => {
         expect.stringContaining('convertido a'),
         'false'
       )
+      // Handle promise rejection to avoid unhandled rejection warnings
+      result.catch(() => {})
     })
 
     it('should convert string "true" to "true" string', () => {
@@ -368,6 +372,8 @@ describe('api', () => {
         expect.stringContaining('convertido a'),
         'true'
       )
+      // Handle promise rejection to avoid unhandled rejection warnings
+      result.catch(() => {})
     })
 
     it('should convert string "false" to "false" string', () => {
@@ -380,6 +386,8 @@ describe('api', () => {
         expect.stringContaining('convertido a'),
         'false'
       )
+      // Handle promise rejection to avoid unhandled rejection warnings
+      result.catch(() => {})
     })
 
     it('should use default value true', () => {
@@ -392,6 +400,8 @@ describe('api', () => {
         expect.stringContaining('convertido a'),
         'true'
       )
+      // Handle promise rejection to avoid unhandled rejection warnings
+      result.catch(() => {})
     })
 
     it('should convert other values to "false" string', () => {
@@ -404,6 +414,8 @@ describe('api', () => {
         expect.stringContaining('convertido a'),
         'false'
       )
+      // Handle promise rejection to avoid unhandled rejection warnings
+      result.catch(() => {})
     })
   })
 
