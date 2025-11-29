@@ -210,7 +210,14 @@ export default {
                 label: (context) => {
                   const label = context.dataset.label || ''
                   const rawValue = context.raw ?? 0
-                  const value = rawValue == null ? '0' : typeof rawValue === 'object' ? JSON.stringify(rawValue) : rawValue.toString()
+                  let value
+                  if (rawValue == null) {
+                    value = '0'
+                  } else if (typeof rawValue === 'object') {
+                    value = JSON.stringify(rawValue)
+                  } else {
+                    value = String(rawValue)
+                  }
                   return `${label}: ${value}`
                 }
               }
