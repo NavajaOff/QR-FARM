@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage --run"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.1.0",
@@ -21,7 +23,10 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
+    "@vitest/coverage-v8": "^4.0.14",
+    "jsdom": "^27.2.0",
     "typescript": "^5.9.3",
-    "vite": "^7.1.2"
+    "vite": "^7.1.2",
+    "vitest": "^4.0.14"
   }
 }

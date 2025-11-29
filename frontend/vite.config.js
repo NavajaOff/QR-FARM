@@ -8,5 +8,14 @@ export default defineConfig({
     port: process.env.PORT ? parseInt(process.env.PORT) : 5173,
     host: true,
     strictPort: false
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov', 'cobertura'],
+      reportsDirectory: 'coverage-frontend'
+    }
   }
 })
