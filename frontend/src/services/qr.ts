@@ -77,7 +77,7 @@ const buildUrl = (endpoint: string, resourceId: string): string => {
   }
 
   const normalizedEndpoint = sanitizedEndpoint.endsWith('/')
-    ? sanitizedEndpoint.slice(0, sanitizedEndpoint.length - 1)
+    ? sanitizedEndpoint.slice(0, -1)
     : sanitizedEndpoint;
 
   return `${normalizedEndpoint}/${encodeURIComponent(resourceId)}`;
@@ -121,6 +121,12 @@ const toNullableString = (value: unknown): string | null => {
   if (typeof value === 'string') {
     const trimmed = value.trim();
     return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
   }
   return String(value);
 };

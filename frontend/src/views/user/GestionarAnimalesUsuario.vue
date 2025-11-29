@@ -16,19 +16,19 @@
           <div class="card-body">
             <div class="row g-3">
               <div class="col-md-4">
-                <label class="form-label">Buscar por nombre</label>
-                <input v-model="busqueda" type="text" class="form-control" placeholder="Ej. Rosita" />
+                <label class="form-label" for="usuario-buscar-animal">Buscar por nombre</label>
+                <input id="usuario-buscar-animal" v-model="busqueda" type="text" class="form-control" placeholder="Ej. Rosita" />
               </div>
               <div class="col-md-4">
-                <label class="form-label">Raza</label>
-                <select v-model="filtroRaza" class="form-select">
+                <label class="form-label" for="usuario-filtro-raza">Raza</label>
+                <select id="usuario-filtro-raza" v-model="filtroRaza" class="form-select">
                   <option value="">Todas</option>
                   <option v-for="raza in razasDisponibles" :key="raza" :value="raza">{{ raza }}</option>
                 </select>
               </div>
               <div class="col-md-4">
-                <label class="form-label">Estado</label>
-                <select v-model="filtroEstado" class="form-select">
+                <label class="form-label" for="usuario-filtro-estado">Estado</label>
+                <select id="usuario-filtro-estado" v-model="filtroEstado" class="form-select">
                   <option value="">Todos</option>
                   <option v-for="estado in estadosDisponibles" :key="estado" :value="estado">{{ capitalizar(estado) }}</option>
                 </select>
@@ -38,7 +38,7 @@
         </div>
 
         <div v-if="loading" class="text-center py-5">
-          <div class="spinner-border text-success" role="status">
+          <div class="spinner-border text-success" aria-live="polite" aria-label="Cargando">
             <span class="visually-hidden">Cargando...</span>
           </div>
           <p class="mt-2 text-muted">Cargando animales...</p>

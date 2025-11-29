@@ -15,7 +15,7 @@
 
     <div class="qr-layout">
       <section class="qr-panel qr-panel--scanner">
-        <div class="qr-video" role="region" aria-live="polite" aria-label="Vista previa de la cámara">
+        <section class="qr-video" aria-live="polite" aria-label="Vista previa de la cámara">
           <div :id="videoElementId" class="qr-video__viewport"></div>
           <p class="qr-status" :data-status="scannerStatus">{{ scannerStatusLabel }}</p>
         </div>
@@ -43,7 +43,7 @@
           </p>
         </div>
 
-        <div class="qr-actions" role="group" aria-label="Controles de escaneo">
+        <div class="qr-actions" aria-label="Controles de escaneo">
           <button
             type="button"
             class="qr-btn qr-btn--primary"
@@ -143,7 +143,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import type { CameraDevice, Html5QrcodeResult } from 'html5-qrcode';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { fetchQrResource, transformEmbeddedPayload } from '../services/qr';
@@ -304,7 +304,7 @@ const clearError = (): void => {
 
 const ensureHtml5QrCodeInstance = async (): Promise<void> => {
   if (html5QrCodeInstance.value) return;
-  if (typeof window === 'undefined') {
+  if (typeof globalThis.window === 'undefined') {
     appendError('La ventana del navegador no está disponible.');
     return;
   }
@@ -878,13 +878,13 @@ onBeforeUnmount(async () => {
 }
 
 .qr-alert--error {
-  background: rgba(220, 53, 69, 0.12);
-  color: #b91c1c;
+  background: rgba(220, 53, 69, 0.25);
+  color: #721c24;
 }
 
 .qr-alert--warning {
-  background: rgba(255, 193, 7, 0.15);
-  color: #b7791f;
+  background: rgba(255, 193, 7, 0.25);
+  color: #664d03;
 }
 
 .qr-telemetry {

@@ -6,14 +6,14 @@
         <p class="text-muted mb-0">Resumen consolidado del sistema QR-FARM</p>
       </div>
       <button class="btn btn-danger" @click="descargarReporte" :disabled="descargando">
-        <span v-if="descargando" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+        <span v-if="descargando" class="spinner-border spinner-border-sm me-2" aria-hidden="true" aria-label="Descargando"></span>
         <i v-else class="fas fa-file-download me-2"></i>
         Descargar PDF
       </button>
     </div>
 
     <div v-if="loading" class="text-center py-5">
-      <div class="spinner-border text-primary" role="status"></div>
+      <div class="spinner-border text-primary" aria-live="polite" aria-label="Cargando"></div>
       <p class="mt-3 mb-0">Cargando información...</p>
     </div>
 
@@ -74,7 +74,7 @@
               </div>
             </div>
             <div class="chart-wrapper">
-              <canvas ref="trendCanvas" aria-label="Gráfico de evolución diaria" role="img"></canvas>
+              <canvas ref="trendCanvas" aria-label="Gráfico de evolución diaria"></canvas>
             </div>
           </div>
         </div>
@@ -125,9 +125,7 @@
 </template>
 
 <script>
-import reportesAdmin from '../../assets/js/reportes-admin.js';
-
-export default reportesAdmin;
+export { default } from '../../assets/js/reportes-admin.js';
 </script>
 
 <style scoped>

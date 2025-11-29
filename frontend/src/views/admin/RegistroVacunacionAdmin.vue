@@ -24,23 +24,23 @@
           <div class="card-body p-3 p-sm-4">
             <div class="row g-3">
               <div class="col-md-3">
-                <label class="form-label">Buscar animal:</label>
-                <input type="text" class="form-control" v-model="filtros.animal" placeholder="ID o Nombre">
+                <label class="form-label" for="vacuna-buscar-animal">Buscar animal:</label>
+                <input type="text" id="vacuna-buscar-animal" class="form-control" v-model="filtros.animal" placeholder="ID o Nombre">
               </div>
               <div class="col-md-3">
-                <label class="form-label">Tipo de vacuna:</label>
-                <select class="form-select" v-model="filtros.vacuna">
+                <label class="form-label" for="vacuna-tipo">Tipo de vacuna:</label>
+                <select id="vacuna-tipo" class="form-select" v-model="filtros.vacuna">
                   <option value="">Todas</option>
                   <option v-for="tipo in tiposVacuna" :key="tipo.id" :value="tipo.nombre">{{ tipo.nombre }}</option>
                 </select>
               </div>
               <div class="col-md-3">
-                <label class="form-label">Fecha desde:</label>
-                <input type="date" class="form-control" v-model="filtros.fechaDesde">
+                <label class="form-label" for="vacuna-fecha-desde">Fecha desde:</label>
+                <input type="date" id="vacuna-fecha-desde" class="form-control" v-model="filtros.fechaDesde">
               </div>
               <div class="col-md-3">
-                <label class="form-label">Fecha hasta:</label>
-                <input type="date" class="form-control" v-model="filtros.fechaHasta">
+                <label class="form-label" for="vacuna-fecha-hasta">Fecha hasta:</label>
+                <input type="date" id="vacuna-fecha-hasta" class="form-control" v-model="filtros.fechaHasta">
               </div>
             </div>
           </div>
@@ -81,7 +81,7 @@
                   </tr>
                   <tr v-if="loading">
                     <td colspan="9" class="text-center">
-                      <div class="spinner-border spinner-border-sm" role="status">
+                      <div class="spinner-border spinner-border-sm" aria-live="polite" aria-label="Cargando">
                         <span class="visually-hidden">Cargando...</span>
                       </div>
                       Cargando vacunaciones...

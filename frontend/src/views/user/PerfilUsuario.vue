@@ -96,9 +96,7 @@
  </template>
 
 <script>
-import perfilUsuario from '../../assets/js/perfil-usuario.js';
-
-export default perfilUsuario;
+export { default } from '../../assets/js/perfil-usuario.js';
 </script>
 
 <style scoped>
