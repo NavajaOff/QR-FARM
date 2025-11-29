@@ -249,17 +249,17 @@ class UsuarioController:
                 return UsuarioController._error(error_msg, error_status)
             
             current_user = UsuarioController._obtener_usuario_desde_token()
-            es_super_admin = UsuarioController._es_super_admin(current_user)
+            es_super_admin_flag = UsuarioController._es_super_admin(current_user)
             
-            tenant_id_override, tenant_error = UsuarioController._obtener_tenant_id_override(es_super_admin, data)
+            tenant_id_override, tenant_error = UsuarioController._obtener_tenant_id_override(es_super_admin_flag, data)
             if tenant_error:
                 return UsuarioController._error(tenant_error, 400)
             
             persona, usuario = Usuario.from_registration_data(data)
-            UsuarioController._asignar_rol_si_es_super_admin(es_super_admin, data, persona, usuario)
+            UsuarioController._asignar_rol_si_es_super_admin(es_super_admin_flag, data, persona, usuario)
             
             nuevo_usuario, mensaje = UsuarioController._crear_usuario_en_bd(
-                es_super_admin, tenant_id_override, persona, usuario
+                es_super_admin_flag, tenant_id_override, persona, usuario
             )
             
             if nuevo_usuario:
@@ -276,43 +276,60 @@ class UsuarioController:
             return UsuarioController._error('Error interno del servidor', 500)
 
     @staticmethod
+    def _validar_credenciales_login(data):
+        """Valida que email y password estén presentes."""
+        email = data.get('email')
+        password = data.get('password')
+        if not email or not password:
+            return None, jsonify({
+                'status': 'error',
+                'message': 'Email y contraseña son requeridos'
+            }), 400
+        return email, password, None
+
+    @staticmethod
+    def _generar_token_jwt(usuario, email):
+        """Genera token JWT para el usuario autenticado."""
+        email_token = usuario.persona.email if usuario.persona else email
+        role_token = usuario.rol.nombre_rol if usuario.rol else 'usuario'
+        payload = {
+            'user_id': usuario.id,
+            'email': email_token,
+            'role': role_token,
+            'exp': datetime.utcnow() + timedelta(hours=24)
+        }
+        return jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
+
+    @staticmethod
+    def _respuesta_login_exitoso(usuario, token):
+        """Retorna respuesta exitosa de login."""
+        return jsonify({
+            'status': 'success',
+            'message': 'Login exitoso',
+            'token': token,
+            'user': usuario.to_dict()
+        }), 200
+
+    @staticmethod
     def login():
         try:
             data = request.get_json()
-            email = data.get('email')
-            password = data.get('password')
-
-            if not email or not password:
-                return jsonify({
-                    'status': 'error',
-                    'message': 'Email y contraseña son requeridos'
-                }), 400
+            email, password, error_response = UsuarioController._validar_credenciales_login(data)
+            if error_response:
+                return error_response
 
             usuario = UsuarioService.autenticar_usuario(email, password)
-
-            if usuario:
-                # Generar token JWT con información del rol
-                token = jwt.encode({
-                    'user_id': usuario.id,
-                    'email': usuario.persona.email if usuario.persona else email,
-                    'role': usuario.rol.nombre_rol if usuario.rol else 'usuario',
-                    'exp': datetime.utcnow() + timedelta(hours=24)
-                }, current_app.config['SECRET_KEY'], algorithm='HS256')
-
-                return jsonify({
-                    'status': 'success',
-                    'message': 'Login exitoso',
-                    'token': token,
-                    'user': usuario.to_dict()
-                }), 200
-            else:
+            if not usuario:
                 return jsonify({
                     'status': 'error',
                     'message': 'Credenciales inválidas'
                 }), 401
 
-        except Exception as e:
-            logger.error("Error en login: %s", e, exc_info=True)
+            token = UsuarioController._generar_token_jwt(usuario, email)
+            return UsuarioController._respuesta_login_exitoso(usuario, token)
+
+        except Exception:
+            logger.error("Error en login", exc_info=True)
             return jsonify({
                 'status': 'error',
                 'message': 'Error al procesar la solicitud'
@@ -555,32 +572,66 @@ class UsuarioController:
         return jsonify({'status': 'error', 'message': message}), status
 
     @staticmethod
-    def _validar_campos(data, usuario):
+    def _validar_campos_requeridos(data):
+        """Valida que los campos requeridos no estén vacíos."""
         required_fields = ['primer_nombre', 'primer_apellido', 'email']
-
         for field in required_fields:
             if field in data and not data[field]:
                 return UsuarioController._error(UsuarioController.MSG_FIELD_REQUIRED.format(field=field), 400)
+        return None
 
-        if 'email' in data:
-            email = data['email'].strip()
-            if not _validar_email(email):
-                return UsuarioController._error(UsuarioController.MSG_INVALID_EMAIL_FORMAT, 400)
-            if email != usuario.persona.email and UsuarioService.buscar_por_email(email):
-                return UsuarioController._error(UsuarioController.MSG_EMAIL_ALREADY_REGISTERED, 400)
+    @staticmethod
+    def _validar_email_en_actualizacion(data, usuario):
+        """Valida el email en actualización de usuario."""
+        if 'email' not in data:
+            return None
+        email = data['email'].strip()
+        if not _validar_email(email):
+            return UsuarioController._error(UsuarioController.MSG_INVALID_EMAIL_FORMAT, 400)
+        if email != usuario.persona.email and UsuarioService.buscar_por_email(email):
+            return UsuarioController._error(UsuarioController.MSG_EMAIL_ALREADY_REGISTERED, 400)
+        return None
 
+    @staticmethod
+    def _validar_password_en_actualizacion(data):
+        """Valida la contraseña en actualización."""
         if 'password' in data and len(data['password']) < 6:
             return UsuarioController._error(UsuarioController.MSG_CLAVE_CORTA, 400)
+        return None
 
-        if 'id_rol' in data:
-            try:
-                rol_id = int(data['id_rol'])
-                rol_nombre = UsuarioController._obtener_nombre_rol_por_id(rol_id)
-                if rol_nombre == 'super_admin':
-                    return UsuarioController._error('No se puede asignar el rol super_admin. Este rol solo se crea desde variables de entorno.', 403)
-            except (TypeError, ValueError):
-                return UsuarioController._error('El id_rol debe ser numérico', 400)
+    @staticmethod
+    def _validar_rol_en_actualizacion(data):
+        """Valida el rol en actualización."""
+        if 'id_rol' not in data:
+            return None
+        try:
+            rol_id = int(data['id_rol'])
+            rol_nombre = UsuarioController._obtener_nombre_rol_por_id(rol_id)
+            if rol_nombre == 'super_admin':
+                return UsuarioController._error('No se puede asignar el rol super_admin. Este rol solo se crea desde variables de entorno.', 403)
+        except (TypeError, ValueError):
+            return UsuarioController._error('El id_rol debe ser numérico', 400)
+        return None
 
+    @staticmethod
+    def _validar_campos(data, usuario):
+        """Valida todos los campos en actualización de usuario."""
+        error = UsuarioController._validar_campos_requeridos(data)
+        if error:
+            return error
+        
+        error = UsuarioController._validar_email_en_actualizacion(data, usuario)
+        if error:
+            return error
+        
+        error = UsuarioController._validar_password_en_actualizacion(data)
+        if error:
+            return error
+        
+        error = UsuarioController._validar_rol_en_actualizacion(data)
+        if error:
+            return error
+        
         return None
 
     @staticmethod

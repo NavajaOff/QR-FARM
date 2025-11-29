@@ -54,10 +54,10 @@ export default {
     }
     
     // Escuchar cambios de tenant
-    window.addEventListener('tenant-selected', this.onTenantChanged);
+    globalThis.addEventListener('tenant-selected', this.onTenantChanged);
   },
   beforeUnmount() {
-    window.removeEventListener('tenant-selected', this.onTenantChanged);
+    globalThis.removeEventListener('tenant-selected', this.onTenantChanged);
   },
   methods: {
     checkUserRole() {

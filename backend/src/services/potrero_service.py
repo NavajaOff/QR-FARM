@@ -8,6 +8,7 @@ from src.utils.tenant import get_current_tenant_id
 class PotreroService:
     """Service class for handling Potrero business logic."""
     NO_DEFINIDO = 'NO_DEFINIDO'
+    SQL_AND_TENANT_ID = " AND p.tenant_id = %s"
 
     @staticmethod
     def _obtener_tenant_id() -> Optional[int]:
@@ -109,7 +110,7 @@ class PotreroService:
             params = (potrero_id,)
             
             if tenant_id is not None:
-                sql += " AND p.tenant_id = %s"
+                sql += PotreroService.SQL_AND_TENANT_ID
                 params = (potrero_id, tenant_id)
             
             cursor.execute(sql, params)
@@ -246,7 +247,7 @@ class PotreroService:
             sql = "SELECT p.* FROM potrero p WHERE p.id = %s"
             params = (potrero_id,)
             if tenant_id is not None:
-                sql += " AND p.tenant_id = %s"
+                sql += PotreroService.SQL_AND_TENANT_ID
                 params = (potrero_id, tenant_id)
             
             select_cursor.execute(sql, params)
@@ -391,7 +392,7 @@ class PotreroService:
             """
             params = (potrero_id,)
             if tenant_id is not None:
-                sql += " AND p.tenant_id = %s"
+                sql += PotreroService.SQL_AND_TENANT_ID
                 params = (potrero_id, tenant_id)
             
             cursor.execute(sql, params)

@@ -121,6 +121,62 @@ class QRService:
         return codigo_qr
 
     @staticmethod
+    def _obtener_datos_ganado(cursor, id_ganado, tenant_id):
+        """Obtiene los datos del ganado desde la BD."""
+        cursor.execute("""
+            SELECT g.nombre, g.tenant_id, p.primer_nombre, p.segundo_nombre, p.primer_apellido, p.segundo_apellido, p.telefono
+            FROM ganado g
+            LEFT JOIN personas p ON g.id_persona = p.id
+            WHERE g.id = %s AND g.tenant_id = %s
+        """, (id_ganado, tenant_id))
+        return cursor.fetchone()
+
+    @staticmethod
+    def _construir_nombre_propietario(ganado_data):
+        """Construye el nombre completo del propietario."""
+        if not (ganado_data['primer_nombre'] or ganado_data['primer_apellido']):
+            return ""
+        partes = [
+            ganado_data['primer_nombre'] or '',
+            ganado_data['segundo_nombre'] or '',
+            ganado_data['primer_apellido'] or '',
+            ganado_data['segundo_apellido'] or ''
+        ]
+        return ' '.join(partes).strip()
+
+    @staticmethod
+    def _serializar_potrero(potrero_detalle):
+        """Serializa los datos del potrero."""
+        if not isinstance(potrero_detalle, dict):
+            return None
+        return {
+            'nombre': potrero_detalle.get('nombre'),
+            'tipo_pasto': potrero_detalle.get('tipo_pasto'),
+            'ultima_limpieza': potrero_detalle.get('ultima_limpieza'),
+            'fecha_ultimo_uso': potrero_detalle.get('fecha_ultimo_uso'),
+            'proxima_limpieza': potrero_detalle.get('proxima_limpieza'),
+            'capacidad': potrero_detalle.get('capacidad'),
+            'estado': potrero_detalle.get('estado')
+        }
+
+    @staticmethod
+    def _obtener_datos_extra(id_ganado):
+        """Obtiene los datos extra del ganado."""
+        detalles_ganado = GanadoService.obtener_ganado_detallado(id_ganado)
+        if not detalles_ganado:
+            return {}
+        potrero_detalle = detalles_ganado.get('potrero') or {}
+        potrero_serializado = QRService._serializar_potrero(potrero_detalle)
+        return {
+            'estado': detalles_ganado.get('estado'),
+            'estado_salud': detalles_ganado.get('estado_salud'),
+            'potrero': potrero_serializado,
+            'peso': detalles_ganado.get('peso'),
+            'sexo': detalles_ganado.get('sexo'),
+            'fecha_nacimiento': detalles_ganado.get('fecha_nacimiento'),
+        }
+
+    @staticmethod
     def crear_qr_ganado(id_ganado: int, id_persona_encargado: Optional[int] = None, id_persona_dueno: Optional[int] = None) -> bool:
         """Crear registro QR para un ganado."""
         try:
@@ -131,49 +187,13 @@ class QRService:
             if tenant_id is None:
                 raise ValueError("Tenant requerido para crear QR")
 
-            # Obtener datos del ganado
-            cursor.execute("""
-                SELECT g.nombre, g.tenant_id, p.primer_nombre, p.segundo_nombre, p.primer_apellido, p.segundo_apellido, p.telefono
-                FROM ganado g
-                LEFT JOIN personas p ON g.id_persona = p.id
-                WHERE g.id = %s AND g.tenant_id = %s
-            """, (id_ganado, tenant_id))
-
-            ganado_data = cursor.fetchone()
+            ganado_data = QRService._obtener_datos_ganado(cursor, id_ganado, tenant_id)
             if not ganado_data:
                 return False
 
-            # Construir nombre completo del propietario
-            nombre_propietario = ""
-            if ganado_data['primer_nombre'] or ganado_data['primer_apellido']:
-                nombre_propietario = f"{ganado_data['primer_nombre'] or ''} {ganado_data['segundo_nombre'] or ''} {ganado_data['primer_apellido'] or ''} {ganado_data['segundo_apellido'] or ''}".strip()
+            nombre_propietario = QRService._construir_nombre_propietario(ganado_data)
+            datos_extra = QRService._obtener_datos_extra(id_ganado)
 
-            detalles_ganado = GanadoService.obtener_ganado_detallado(id_ganado)
-            datos_extra: Dict[str, Any] = {}
-            if detalles_ganado:
-                potrero_detalle = detalles_ganado.get('potrero') or {}
-                if isinstance(potrero_detalle, dict):
-                    potrero_serializado = {
-                        'nombre': potrero_detalle.get('nombre'),
-                        'tipo_pasto': potrero_detalle.get('tipo_pasto'),
-                        'ultima_limpieza': potrero_detalle.get('ultima_limpieza'),
-                        'fecha_ultimo_uso': potrero_detalle.get('fecha_ultimo_uso'),
-                        'proxima_limpieza': potrero_detalle.get('proxima_limpieza'),
-                        'capacidad': potrero_detalle.get('capacidad'),
-                        'estado': potrero_detalle.get('estado')
-                    }
-                else:
-                    potrero_serializado = None
-                datos_extra = {
-                    'estado': detalles_ganado.get('estado'),
-                    'estado_salud': detalles_ganado.get('estado_salud'),
-                    'potrero': potrero_serializado,
-                    'peso': detalles_ganado.get('peso'),
-                    'sexo': detalles_ganado.get('sexo'),
-                    'fecha_nacimiento': detalles_ganado.get('fecha_nacimiento'),
-                }
-
-            # Generar código QR
             codigo_qr = QRService.generar_codigo_qr(
                 id_ganado=id_ganado,
                 nombre_ganado=ganado_data['nombre'],
@@ -183,7 +203,6 @@ class QRService:
                 tenant_id=tenant_id
             )
 
-            # Insertar en tabla QR
             cursor.execute("""
                 INSERT INTO qr (id_ganado, id_persona_encargado, id_persona_dueno, codigo_qr, tenant_id)
                 VALUES (%s, %s, %s, %s, %s)
@@ -192,8 +211,8 @@ class QRService:
             conn.commit()
             return True
 
-        except Exception as e:
-            print(f"Error creando QR para ganado {id_ganado}: {e}")
+        except Exception:
+            print(f"Error creando QR para ganado {id_ganado}")
             return False
         finally:
             if 'conn' in locals():

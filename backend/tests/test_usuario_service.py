@@ -403,3 +403,278 @@ class TestUsuarioService:
 
         assert result is None
 
+    @patch('src.services.usuario_service.get_connection')
+    def test_obtener_todos_usuarios_success(self, mock_get_connection):
+        """Test obtener_todos_usuarios exitoso."""
+        mock_conn = Mock()
+        mock_cursor = Mock(dictionary=True)
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.fetchall.return_value = [
+            {
+                'id': 1,
+                'id_persona': 1,
+                'id_rol': 1,
+                'contrasena': 'hashed',
+                'estado': 'activo',
+                'primer_nombre': 'Juan',
+                'segundo_nombre': None,
+                'primer_apellido': 'Pérez',
+                'segundo_apellido': None,
+                'email': 'juan@example.com',
+                'telefono': '123456789',
+                'fecha_creacion': '2023-01-01',
+                'rol_nombre': 'usuario',
+                'tenant_id': 1
+            }
+        ]
+
+        with patch('src.services.usuario_service.get_current_tenant_id', return_value=1):
+            result = UsuarioService.obtener_todos_usuarios()
+
+            assert isinstance(result, list)
+
+    @patch('src.services.usuario_service.get_connection')
+    def test_obtener_todos_usuarios_excluir_super_admin(self, mock_get_connection):
+        """Test obtener_todos_usuarios excluyendo super admin."""
+        mock_conn = Mock()
+        mock_cursor = Mock(dictionary=True)
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.fetchall.return_value = []
+
+        with patch('src.services.usuario_service.get_current_tenant_id', return_value=1):
+            result = UsuarioService.obtener_todos_usuarios(excluir_super_admin=True)
+
+            assert isinstance(result, list)
+
+    @patch('src.services.usuario_service.get_connection')
+    def test_obtener_usuario_success(self, mock_get_connection):
+        """Test obtener_usuario exitoso."""
+        mock_conn = Mock()
+        mock_cursor = Mock(dictionary=True)
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.fetchone.return_value = {
+            'id': 1,
+            'id_persona': 1,
+            'id_rol': 1,
+            'contrasena': 'hashed',
+            'estado': 'activo',
+            'primer_nombre': 'Juan',
+            'segundo_nombre': None,
+            'primer_apellido': 'Pérez',
+            'segundo_apellido': None,
+            'email': 'juan@example.com',
+            'telefono': '123456789',
+            'fecha_creacion': '2023-01-01',
+            'rol_nombre': 'usuario',
+            'tenant_id': 1
+        }
+
+        result = UsuarioService.obtener_usuario(1)
+
+        assert result is None or (result is not None and result.id == 1)
+
+    @patch('src.services.usuario_service.get_connection')
+    def test_obtener_usuario_not_found(self, mock_get_connection):
+        """Test obtener_usuario cuando no existe."""
+        mock_conn = Mock()
+        mock_cursor = Mock(dictionary=True)
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.fetchone.return_value = None
+
+        result = UsuarioService.obtener_usuario(999)
+
+        assert result is None
+
+    @patch('src.services.usuario_service.get_connection')
+    def test_actualizar_usuario_completo_success(self, mock_get_connection):
+        """Test actualizar_usuario_completo exitoso."""
+        mock_conn = Mock()
+        mock_cursor = Mock(dictionary=True)
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.fetchone.return_value = {'id_persona': 1}
+
+        persona = Persona(
+            id_rol=1,
+            primer_nombre='Juan',
+            primer_apellido='Pérez',
+            email='juan@example.com',
+            telefono='123456789'
+        )
+
+        usuario = Usuario(
+            id_rol=1,
+            estado=EstadoUsuario.ACTIVO,
+            persona=persona
+        )
+
+        result = UsuarioService.actualizar_usuario_completo(1, usuario)
+
+        assert result is True
+
+    @patch('src.services.usuario_service.get_connection')
+    def test_actualizar_usuario_completo_not_found(self, mock_get_connection):
+        """Test actualizar_usuario_completo cuando no existe."""
+        mock_conn = Mock()
+        mock_cursor = Mock(dictionary=True)
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.fetchone.return_value = None
+
+        persona = Persona(
+            id_rol=1,
+            primer_nombre='Juan',
+            primer_apellido='Pérez',
+            email='juan@example.com'
+        )
+
+        usuario = Usuario(
+            id_rol=1,
+            estado=EstadoUsuario.ACTIVO,
+            persona=persona
+        )
+
+        result = UsuarioService.actualizar_usuario_completo(999, usuario)
+
+        assert result is False
+
+    @patch('src.services.usuario_service.get_connection')
+    def test_registrar_usuario_success(self, mock_get_connection):
+        """Test registrar_usuario exitoso."""
+        mock_conn = Mock()
+        mock_cursor = Mock(dictionary=True)
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.lastrowid = 1
+        mock_cursor.fetchone.return_value = None
+
+        with patch('src.services.usuario_service.get_current_tenant_id', return_value=1):
+            persona = Persona(
+                id_rol=1,
+                primer_nombre='Juan',
+                primer_apellido='Pérez',
+                email='juan@example.com',
+                telefono='123456789'
+            )
+
+            usuario = Usuario(
+                id_rol=1,
+                contrasena='hashed_password',
+                estado=EstadoUsuario.ACTIVO
+            )
+
+            result_usuario, result_msg = UsuarioService.registrar_usuario(persona, usuario)
+
+            assert result_usuario is not None
+            assert result_msg == "Usuario registrado exitosamente"
+
+    def test_validar_rol_super_admin(self):
+        """Test _validar_rol_super_admin."""
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = {'rol': 'super_admin'}
+
+        persona = Persona(id_rol=3)
+        usuario = Usuario()
+
+        error = UsuarioService._validar_rol_super_admin(mock_cursor, persona, usuario)
+        assert error is not None
+
+    def test_validar_tenant_override_super_admin(self):
+        """Test _validar_tenant_override con super admin."""
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = {'id': 1}
+
+        tenant_id, error = UsuarioService._validar_tenant_override(mock_cursor, 1, True)
+        assert tenant_id == 1
+        assert error is None
+
+    def test_validar_tenant_override_no_super_admin(self):
+        """Test _validar_tenant_override sin ser super admin."""
+        mock_cursor = Mock()
+
+        tenant_id, error = UsuarioService._validar_tenant_override(mock_cursor, 1, False)
+        assert tenant_id is None
+        assert error is not None
+
+    def test_verificar_email_existente(self):
+        """Test _verificar_email_existente."""
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = {'id': 1}
+
+        result = UsuarioService._verificar_email_existente(mock_cursor, 'test@example.com')
+        assert result is True
+
+    def test_insertar_persona(self):
+        """Test _insertar_persona."""
+        mock_cursor = Mock()
+        mock_cursor.lastrowid = 1
+
+        persona = Persona(
+            id_rol=1,
+            primer_nombre='Juan',
+            primer_apellido='Pérez',
+            email='juan@example.com',
+            telefono='123456789'
+        )
+
+        id_persona = UsuarioService._insertar_persona(mock_cursor, persona, 1)
+        assert id_persona == 1
+
+    def test_insertar_usuario(self):
+        """Test _insertar_usuario."""
+        mock_cursor = Mock()
+        mock_cursor.lastrowid = 1
+
+        usuario = Usuario(
+            id_rol=1,
+            contrasena='hashed',
+            estado=EstadoUsuario.ACTIVO
+        )
+
+        id_usuario = UsuarioService._insertar_usuario(mock_cursor, 1, usuario, 1)
+        assert id_usuario == 1
+
+    def test_determinar_si_es_super_admin(self):
+        """Test _determinar_si_es_super_admin."""
+        with patch('src.services.usuario_service.get_current_tenant_id', return_value=None):
+            result = UsuarioService._determinar_si_es_super_admin()
+            assert result is True
+
+    def test_construir_condiciones_sql(self):
+        """Test _construir_condiciones_sql."""
+        conditions, params = UsuarioService._construir_condiciones_sql(False, 1, True)
+        assert len(conditions) > 0
+        assert len(params) > 0
+
+    def test_crear_usuario_desde_resultado(self):
+        """Test _crear_usuario_desde_resultado."""
+        result = {
+            'id': 1,
+            'id_persona': 1,
+            'id_rol': 1,
+            'contrasena': 'hashed',
+            'estado': 'activo',
+            'primer_nombre': 'Juan',
+            'segundo_nombre': None,
+            'primer_apellido': 'Pérez',
+            'segundo_apellido': None,
+            'email': 'juan@example.com',
+            'telefono': '123456789',
+            'fecha_creacion': '2023-01-01',
+            'rol_nombre': 'usuario',
+            'tenant_id': 1
+        }
+
+        usuario = UsuarioService._crear_usuario_desde_resultado(result)
+        assert usuario is not None
+

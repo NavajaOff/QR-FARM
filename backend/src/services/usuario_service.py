@@ -9,6 +9,67 @@ class UsuarioService:
     EMAIL_DUPLICADO_MSG = "El email ya está registrado"
     QUERY_PERSONA_ID = "SELECT id_persona FROM usuarios WHERE id = %s"
     @staticmethod
+    def _determinar_si_es_super_admin():
+        """Determina si el usuario actual es super admin."""
+        from ..utils.tenant import get_current_tenant_id
+        try:
+            current_tenant_id = get_current_tenant_id()
+            return current_tenant_id is None
+        except Exception:
+            return False
+
+    @staticmethod
+    def _construir_condiciones_sql(incluir_inactivos, tenant_id, excluir_super_admin):
+        """Construye las condiciones SQL para la consulta."""
+        conditions = []
+        params = []
+        if not incluir_inactivos:
+            conditions.append("u.estado = 'activo'")
+        if tenant_id is not None:
+            conditions.append("u.tenant_id = %s")
+            params.append(tenant_id)
+        if excluir_super_admin:
+            conditions.append("(r.rol IS NULL OR LOWER(TRIM(r.rol)) != 'super_admin')")
+        return conditions, params
+
+    @staticmethod
+    def _crear_usuario_desde_resultado(result):
+        """Crea un objeto Usuario desde un resultado de BD."""
+        rol_nombre = result.get('rol_nombre')
+        if rol_nombre and rol_nombre.lower() == 'super_admin':
+            return None
+        
+        rol = None
+        if rol_nombre:
+            rol = Rol(
+                id=result['id_rol'],
+                nombre_rol=rol_nombre
+            )
+        
+        persona = Persona(
+            id=result['id_persona'],
+            id_rol=result['id_rol'],
+            primer_nombre=result['primer_nombre'],
+            segundo_nombre=result['segundo_nombre'],
+            primer_apellido=result['primer_apellido'],
+            segundo_apellido=result['segundo_apellido'],
+            email=result['email'],
+            telefono=result['telefono'],
+            fecha_creacion=result['fecha_creacion']
+        )
+        
+        return Usuario(
+            id=result['id'],
+            id_persona=result['id_persona'],
+            id_rol=result['id_rol'],
+            contrasena=result.get('contrasena'),
+            estado=EstadoUsuario(result['estado']),
+            persona=persona,
+            rol=rol,
+            tenant_id=result.get('tenant_id')
+        )
+
+    @staticmethod
     def obtener_rol(id: int) -> Optional[Rol]:
         try:
             conn = get_connection()
@@ -30,6 +91,77 @@ class UsuarioService:
                 conn.close()
 
     @staticmethod
+    def _validar_rol_super_admin(cursor, persona, usuario):
+        """Valida que no se intente crear un super_admin desde la API."""
+        if not (persona.id_rol or usuario.id_rol):
+            return None
+        rol_id = persona.id_rol or usuario.id_rol
+        cursor.execute("SELECT rol FROM roles WHERE id = %s", (rol_id,))
+        rol = cursor.fetchone()
+        if rol and rol.get('rol') == 'super_admin':
+            return "No se puede crear usuarios super_admin desde la API. Use el script de inicialización."
+        return None
+
+    @staticmethod
+    def _validar_tenant_override(cursor, tenant_id_override, es_super_admin):
+        """Valida y obtiene el tenant_id final."""
+        if tenant_id_override is None:
+            from ..utils.tenant import get_current_tenant_id
+            return get_current_tenant_id(), None
+        
+        if not es_super_admin:
+            return None, "Solo el super administrador puede asignar tenant_id al crear usuarios"
+        
+        cursor.execute("SELECT id FROM tenants WHERE id = %s AND estado = 'activo'", (tenant_id_override,))
+        tenant = cursor.fetchone()
+        if not tenant:
+            return None, f"El tenant con ID {tenant_id_override} no existe o está inactivo"
+        
+        return tenant_id_override, None
+
+    @staticmethod
+    def _verificar_email_existente(cursor, email):
+        """Verifica si el email ya está registrado."""
+        cursor.execute("SELECT id FROM personas WHERE email = %s", (email,))
+        return cursor.fetchone() is not None
+
+    @staticmethod
+    def _insertar_persona(cursor, persona, tenant_id):
+        """Inserta la persona en la base de datos."""
+        sql_persona = """
+            INSERT INTO personas (
+                id_rol, primer_nombre, segundo_nombre, primer_apellido,
+                segundo_apellido, email, telefono, fecha_creacion, tenant_id
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, NOW(), %s
+            )
+        """
+        values_persona = (
+            persona.id_rol, persona.primer_nombre, persona.segundo_nombre,
+            persona.primer_apellido, persona.segundo_apellido,
+            persona.email, persona.telefono, tenant_id
+        )
+        cursor.execute(sql_persona, values_persona)
+        return cursor.lastrowid
+
+    @staticmethod
+    def _insertar_usuario(cursor, id_persona, usuario, tenant_id):
+        """Inserta el usuario en la base de datos."""
+        sql_usuario = """
+            INSERT INTO usuarios (
+                id_persona, id_rol, contrasena, estado, tenant_id
+            ) VALUES (
+                %s, %s, %s, %s, %s
+            )
+        """
+        values_usuario = (
+            id_persona, usuario.id_rol or 1, usuario.contrasena,
+            usuario.estado.value, tenant_id
+        )
+        cursor.execute(sql_usuario, values_usuario)
+        return cursor.lastrowid
+
+    @staticmethod
     def crear_usuario(persona: Persona, usuario: Usuario, tenant_id_override: Optional[int] = None, es_super_admin: bool = False) -> Tuple[Optional[Usuario], str]:
         """
         Crear un nuevo usuario.
@@ -47,83 +179,28 @@ class UsuarioService:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
-            # BLOQUEO: No permitir crear super_admin desde la API
-            if persona.id_rol or usuario.id_rol:
-                # Verificar si el rol es super_admin
-                rol_id = persona.id_rol or usuario.id_rol
-                cursor.execute("SELECT rol FROM roles WHERE id = %s", (rol_id,))
-                rol = cursor.fetchone()
-                if rol and rol.get('rol') == 'super_admin':
-                    return None, "No se puede crear usuarios super_admin desde la API. Use el script de inicialización."
+            error = UsuarioService._validar_rol_super_admin(cursor, persona, usuario)
+            if error:
+                return None, error
 
-            # Validar tenant_id si se proporciona
-            tenant_id_final = None
-            if tenant_id_override is not None:
-                if not es_super_admin:
-                    return None, "Solo el super administrador puede asignar tenant_id al crear usuarios"
-                
-                # Verificar que el tenant existe
-                cursor.execute("SELECT id FROM tenants WHERE id = %s AND estado = 'activo'", (tenant_id_override,))
-                tenant = cursor.fetchone()
-                if not tenant:
-                    return None, f"El tenant con ID {tenant_id_override} no existe o está inactivo"
-                
-                tenant_id_final = tenant_id_override
-            else:
-                # Si no es super admin, obtener tenant_id del contexto
-                from ..utils.tenant import get_current_tenant_id
-                tenant_id_final = get_current_tenant_id()
+            tenant_id_final, error = UsuarioService._validar_tenant_override(cursor, tenant_id_override, es_super_admin)
+            if error:
+                return None, error
 
-            # Verificar si el email ya existe
-            cursor.execute("SELECT id FROM personas WHERE email = %s", (persona.email,))
-            if cursor.fetchone():
+            if UsuarioService._verificar_email_existente(cursor, persona.email):
                 return None, "El email ya está registrado"
 
             try:
                 if hasattr(conn, 'in_transaction') and conn.in_transaction:
                     conn.rollback()
-                # Iniciar transacción
                 conn.start_transaction()
 
-                # Insertar persona con tenant_id
-                sql_persona = """
-                    INSERT INTO personas (
-                        id_rol, primer_nombre, segundo_nombre, primer_apellido,
-                        segundo_apellido, email, telefono, fecha_creacion, tenant_id
-                    ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, NOW(), %s
-                    )
-                """
+                id_persona = UsuarioService._insertar_persona(cursor, persona, tenant_id_final)
+                usuario_id = UsuarioService._insertar_usuario(cursor, id_persona, usuario, tenant_id_final)
 
-                values_persona = (
-                    persona.id_rol, persona.primer_nombre, persona.segundo_nombre,
-                    persona.primer_apellido, persona.segundo_apellido,
-                    persona.email, persona.telefono, tenant_id_final
-                )
-
-                cursor.execute(sql_persona, values_persona)
-                id_persona = cursor.lastrowid
-
-                # Luego crear el usuario con tenant_id
-                sql_usuario = """
-                    INSERT INTO usuarios (
-                        id_persona, id_rol, contrasena, estado, tenant_id
-                    ) VALUES (
-                        %s, %s, %s, %s, %s
-                    )
-                """
-
-                values_usuario = (
-                    id_persona, usuario.id_rol or 1, usuario.contrasena,
-                    usuario.estado.value, tenant_id_final
-                )
-
-                cursor.execute(sql_usuario, values_usuario)
-
-                # Commit de la transacción
                 conn.commit()
 
-                usuario.id = cursor.lastrowid
+                usuario.id = usuario_id
                 usuario.id_persona = id_persona
                 usuario.tenant_id = tenant_id_final
                 persona.id = id_persona
@@ -132,7 +209,6 @@ class UsuarioService:
                 return usuario, "Usuario creado exitosamente"
 
             except Exception as e:
-                # Rollback en caso de error
                 conn.rollback()
                 raise e
 
@@ -657,18 +733,9 @@ class UsuarioService:
         """
         print(f"[USUARIO_SERVICE] obtener_todos_usuarios called with incluir_inactivos={incluir_inactivos}, tenant_id={tenant_id}, excluir_super_admin={excluir_super_admin}")
 
-        # DETERMINAR SI EL USUARIO ACTUAL ES SUPER ADMIN
-        from ..utils.tenant import get_current_tenant_id
-        try:
-            current_tenant_id = get_current_tenant_id()
-            # Si get_current_tenant_id() retorna None, el usuario actual es super_admin
-            es_super_admin_actual = (current_tenant_id is None)
-        except Exception:
-            es_super_admin_actual = False
-
+        es_super_admin_actual = UsuarioService._determinar_si_es_super_admin()
         print(f"[USUARIO_SERVICE] Usuario actual es super_admin: {es_super_admin_actual}")
 
-        # SI NO ES SUPER ADMIN, SIEMPRE EXCLUIR SUPER ADMINS
         if not es_super_admin_actual:
             excluir_super_admin = True
             print(f"[USUARIO_SERVICE] Usuario no es super_admin, forzando excluir_super_admin=True")
@@ -684,24 +751,7 @@ class UsuarioService:
                 LEFT JOIN roles r ON u.id_rol = r.id
             """
 
-            conditions = []
-            params = []
-
-            if not incluir_inactivos:
-                conditions.append("u.estado = 'activo'")
-
-            if tenant_id is not None:
-                # Filtrar SOLO usuarios con ese tenant_id específico (excluir NULL y otros tenants)
-                # Esto asegura que usuarios con tenant_id NULL (como super_admin) NO se incluyan
-                conditions.append("u.tenant_id = %s")
-                params.append(tenant_id)
-
-            if excluir_super_admin:
-                # Excluir super_admin de forma explícita y robusta
-                # Verificar tanto el rol como el nombre del rol en la tabla roles
-                # Usar LOWER para comparación case-insensitive
-                conditions.append("(r.rol IS NULL OR LOWER(TRIM(r.rol)) != 'super_admin')")
-
+            conditions, params = UsuarioService._construir_condiciones_sql(incluir_inactivos, tenant_id, excluir_super_admin)
             if conditions:
                 sql += " WHERE " + " AND ".join(conditions)
 
@@ -713,49 +763,10 @@ class UsuarioService:
 
             usuarios = []
             for result in results:
-                # Obtener rol del resultado
-                rol_nombre = result.get('rol_nombre')
-
-                # VALIDACIÓN ADICIONAL: Si excluir_super_admin está activo, filtrar super_admins aquí también
-                if excluir_super_admin and rol_nombre and rol_nombre.lower() == 'super_admin':
-                    print(f"[USUARIO_SERVICE] FILTRANDO super_admin con id={result.get('id')}, email={result.get('email')}")
-                    continue
-
-                # Crear rol
-                rol = None
-                if rol_nombre:
-                    rol = Rol(
-                        id=result['id_rol'],
-                        nombre_rol=rol_nombre
-                    )
-
-                # Crear persona
-                persona = Persona(
-                    id=result['id_persona'],
-                    id_rol=result['id_rol'],
-                    primer_nombre=result['primer_nombre'],
-                    segundo_nombre=result['segundo_nombre'],
-                    primer_apellido=result['primer_apellido'],
-                    segundo_apellido=result['segundo_apellido'],
-                    email=result['email'],
-                    telefono=result['telefono'],
-                    fecha_creacion=result['fecha_creacion']
-                )
-
-                # Crear usuario
-                usuario = Usuario(
-                    id=result['id'],
-                    id_persona=result['id_persona'],
-                    id_rol=result['id_rol'],
-                    contrasena=result.get('contrasena'),
-                    estado=EstadoUsuario(result['estado']),
-                    persona=persona,
-                    rol=rol,
-                    tenant_id=result.get('tenant_id')
-                )
-
-                usuarios.append(usuario)
-                print(f"[USUARIO_SERVICE] Usuario agregado: id={usuario.id}, email={persona.email}, rol={rol_nombre}, tenant_id={usuario.tenant_id}")
+                usuario = UsuarioService._crear_usuario_desde_resultado(result)
+                if usuario:
+                    usuarios.append(usuario)
+                    print(f"[USUARIO_SERVICE] Usuario agregado: id={usuario.id}, email={usuario.persona.email}, rol={result.get('rol_nombre')}, tenant_id={usuario.tenant_id}")
 
             return usuarios
 

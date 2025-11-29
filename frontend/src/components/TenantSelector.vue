@@ -32,7 +32,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useTenants } from '../composables/useTenants.js'
 import { useTenantSelection } from '../composables/useTenantSelection.js'
 import authService from '../services/authService.js'
@@ -53,7 +53,7 @@ const selectedTenantName = computed(() => {
 const onTenantChange = () => {
   setSelectedTenantId(selectedTenantId.value)
   // Emitir evento para que otros componentes se actualicen
-  window.dispatchEvent(new CustomEvent('tenant-selected', { 
+  globalThis.dispatchEvent(new CustomEvent('tenant-selected', { 
     detail: { tenantId: selectedTenantId.value } 
   }))
 }

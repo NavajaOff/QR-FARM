@@ -1,5 +1,5 @@
 // useTenantSelection.js - Composable para gestionar el tenant seleccionado por super admin
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 
 const STORAGE_KEY = 'qr_farm_selected_tenant_id'
 
@@ -11,8 +11,8 @@ const loadFromStorage = () => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
-      const tenantId = parseInt(stored, 10)
-      if (!isNaN(tenantId)) {
+      const tenantId = Number.parseInt(stored, 10)
+      if (!Number.isNaN(tenantId)) {
         selectedTenantId.value = tenantId
       }
     }
