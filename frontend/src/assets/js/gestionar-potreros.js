@@ -304,11 +304,74 @@ export const crearPotrero = () => {
   });
 };
 
-export const editarPotrero = async (id) => {
-  const potrero = potreros.value.find(p => p.id === id);
-  if (!potrero) return;
+// Funciones auxiliares para construir opciones
+const construirOpcionesEstado = (potrero) => {
+  let estadoOptions = '';
+  for (const estado of estadosPotrero.value) {
+    const estadoValue = estado.estado || estado.nombre_estado || estado.nombre || '';
+    const selected = estadoValue === potrero.estado ? 'selected' : '';
+    estadoOptions += `<option value="${estadoValue}" ${selected}>${estadoValue}</option>`;
+  }
+  return estadoOptions;
+};
 
-  // Asegurar que los datos estén cargados
+const construirOpcionesTipoPasto = (potrero) => {
+  let pastoOptions = '<option value="">Seleccionar tipo de pasto</option>';
+  for (const tipo of tiposPasto.value) {
+    const tipoNombre = tipo.tipo_pasto || tipo.nombre || 'Sin nombre';
+    const selected = tipo.id === potrero.id_tipo_pasto || tipoNombre === potrero.pasto ? 'selected' : '';
+    pastoOptions += `<option value="${tipo.id}" ${selected}>${tipoNombre}</option>`;
+  }
+  return pastoOptions;
+};
+
+const construirOpcionesResponsable = (potrero) => {
+  let responsableOptions = '<option value="">Seleccionar responsable</option>';
+  for (const persona of personasUsuario.value) {
+    const nombreCompleto = persona.nombre_completo || `${persona.primer_nombre} ${persona.primer_apellido}`.trim();
+    const selected = persona.id === potrero.responsable_persona_id || nombreCompleto === potrero.responsable ? 'selected' : '';
+    responsableOptions += `<option value="${persona.id}" ${selected}>${nombreCompleto}</option>`;
+  }
+  return responsableOptions;
+};
+
+const obtenerDatosFormularioEdicion = () => {
+  const estado = document.getElementById('edit_estado').value;
+  const capacidad = document.getElementById('edit_capacidad').value;
+  const hectareas = document.getElementById('edit_hectareas').value;
+  const id_tipo_pasto = document.getElementById('edit_id_tipo_pasto').value;
+  const responsable_persona_id = document.getElementById('edit_responsable_persona_id').value;
+  const proxima_limpieza = document.getElementById('edit_proxima_limpieza').value;
+  const ultima_limpieza = document.getElementById('edit_ultima_limpieza').value;
+  const area = document.getElementById('edit_area').value;
+  const descripcion = document.getElementById('edit_descripcion').value;
+
+  const data = {
+    estado,
+    capacidad: capacidad ? Number.parseInt(capacidad, 10) : null,
+    hectareas: hectareas ? Number.parseFloat(hectareas) : null,
+    id_tipo_pasto: id_tipo_pasto ? Number.parseInt(id_tipo_pasto, 10) : null,
+    responsable_persona_id: responsable_persona_id ? Number.parseInt(responsable_persona_id, 10) : null,
+    area: area ? Number.parseFloat(area) : null,
+    descripcion
+  };
+
+  // Solo incluir campos opcionales si tienen valor
+  if (proxima_limpieza) {
+    data.proxima_limpieza = proxima_limpieza;
+  }
+  if (ultima_limpieza) {
+    data.ultima_limpieza = ultima_limpieza;
+  }
+  const fecha_ultimo_uso = document.getElementById('edit_fecha_ultimo_uso').value;
+  if (fecha_ultimo_uso) {
+    data.fecha_ultimo_uso = fecha_ultimo_uso;
+  }
+
+  return data;
+};
+
+const asegurarDatosCargados = async () => {
   if (estadosPotrero.value.length === 0) {
     await cargarEstadosPotrero();
   }
@@ -318,30 +381,17 @@ export const editarPotrero = async (id) => {
   if (personasUsuario.value.length === 0) {
     await cargarPersonasUsuario();
   }
+};
 
-  // Construir opciones de estado con selección
-  let estadoOptions = '';
-  for (const estado of estadosPotrero.value) {
-    const estadoValue = estado.estado || estado.nombre_estado || estado.nombre || '';
-    const selected = estadoValue === potrero.estado ? 'selected' : '';
-    estadoOptions += `<option value="${estadoValue}" ${selected}>${estadoValue}</option>`;
-  }
+export const editarPotrero = async (id) => {
+  const potrero = potreros.value.find(p => p.id === id);
+  if (!potrero) return;
 
-  // Construir opciones de tipo de pasto con selección
-  let pastoOptions = '<option value="">Seleccionar tipo de pasto</option>';
-  for (const tipo of tiposPasto.value) {
-    const tipoNombre = tipo.tipo_pasto || tipo.nombre || 'Sin nombre';
-    const selected = tipo.id === potrero.id_tipo_pasto || tipoNombre === potrero.pasto ? 'selected' : '';
-    pastoOptions += `<option value="${tipo.id}" ${selected}>${tipoNombre}</option>`;
-  }
+  await asegurarDatosCargados();
 
-  // Construir opciones de responsable con selección
-  let responsableOptions = '<option value="">Seleccionar responsable</option>';
-  for (const persona of personasUsuario.value) {
-    const nombreCompleto = persona.nombre_completo || `${persona.primer_nombre} ${persona.primer_apellido}`.trim();
-    const selected = persona.id === potrero.responsable_persona_id || nombreCompleto === potrero.responsable ? 'selected' : '';
-    responsableOptions += `<option value="${persona.id}" ${selected}>${nombreCompleto}</option>`;
-  }
+  const estadoOptions = construirOpcionesEstado(potrero);
+  const pastoOptions = construirOpcionesTipoPasto(potrero);
+  const responsableOptions = construirOpcionesResponsable(potrero);
 
   Swal.fire({
     title: `<i class="fas fa-edit"></i> Editar Potrero: ${potrero.nombre}`,
@@ -379,43 +429,7 @@ export const editarPotrero = async (id) => {
     confirmButtonText: 'Actualizar',
     confirmButtonColor: '#00d563',
     preConfirm: () => {
-      const estado = document.getElementById('edit_estado').value;
-      const capacidad = document.getElementById('edit_capacidad').value;
-      const hectareas = document.getElementById('edit_hectareas').value;
-      const id_tipo_pasto = document.getElementById('edit_id_tipo_pasto').value;
-      const responsable_persona_id = document.getElementById('edit_responsable_persona_id').value;
-      const proxima_limpieza = document.getElementById('edit_proxima_limpieza').value;
-      const ultima_limpieza = document.getElementById('edit_ultima_limpieza').value;
-      const area = document.getElementById('edit_area').value;
-      const descripcion = document.getElementById('edit_descripcion').value;
-
-      const data = {
-        estado,
-        capacidad: capacidad ? Number.parseInt(capacidad, 10) : null,
-        hectareas: hectareas ? Number.parseFloat(hectareas) : null,
-        id_tipo_pasto: id_tipo_pasto ? Number.parseInt(id_tipo_pasto, 10) : null,
-        responsable_persona_id: responsable_persona_id ? Number.parseInt(responsable_persona_id, 10) : null,
-        area: area ? Number.parseFloat(area) : null,
-        descripcion
-      };
-
-      // Solo incluir proxima_limpieza si tiene valor
-      if (proxima_limpieza) {
-        data.proxima_limpieza = proxima_limpieza;
-      }
-
-      // Solo incluir ultima_limpieza si tiene valor
-      if (ultima_limpieza) {
-        data.ultima_limpieza = ultima_limpieza;
-      }
-
-      // Solo incluir fecha_ultimo_uso si tiene valor
-      const fecha_ultimo_uso = document.getElementById('edit_fecha_ultimo_uso').value;
-      if (fecha_ultimo_uso) {
-        data.fecha_ultimo_uso = fecha_ultimo_uso;
-      }
-
-      return data;
+      return obtenerDatosFormularioEdicion();
     }
   }).then(async (result) => {
     if (result.isConfirmed) {

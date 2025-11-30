@@ -888,3 +888,384 @@ class TestUsuarioController:
             
             error = UsuarioController._validar_email_en_actualizacion({'email': 'new@example.com'}, mock_usuario)
             assert error is not None
+
+    def test_validar_datos_perfil_success(self, app_context, mock_jsonify, mock_current_app):
+        """Test _validar_datos_perfil with valid data."""
+        from src.controllers.usuario_controller import _validar_datos_perfil
+        with patch('src.controllers.usuario_controller._validar_email') as mock_validar:
+            mock_validar.return_value = True
+            data = {
+                'nombre_completo': 'Juan Pérez',
+                'email': 'juan@example.com',
+                'telefono': '123456789'
+            }
+            datos_validos, error_response, status = _validar_datos_perfil(data)
+            assert datos_validos is not None
+            assert error_response is None
+            assert status is None
+
+    def test_validar_datos_perfil_missing_fields(self, app_context, mock_jsonify, mock_current_app):
+        """Test _validar_datos_perfil with missing fields."""
+        from src.controllers.usuario_controller import _validar_datos_perfil
+        data = {'nombre_completo': 'Juan Pérez'}
+        datos_validos, error_response, status = _validar_datos_perfil(data)
+        assert datos_validos is None
+        assert error_response is not None
+        assert status == 400
+
+    def test_validar_datos_perfil_invalid_email(self, app_context, mock_jsonify, mock_current_app):
+        """Test _validar_datos_perfil with invalid email."""
+        from src.controllers.usuario_controller import _validar_datos_perfil
+        with patch('src.controllers.usuario_controller._validar_email') as mock_validar:
+            mock_validar.return_value = False
+            data = {
+                'nombre_completo': 'Juan Pérez',
+                'email': 'invalid-email',
+                'telefono': '123456789'
+            }
+            datos_validos, error_response, status = _validar_datos_perfil(data)
+            assert datos_validos is None
+            assert error_response is not None
+            assert status == 400
+
+    def test_respuesta_error(self, app_context, mock_jsonify, mock_current_app):
+        """Test _respuesta_error function."""
+        from src.controllers.usuario_controller import _respuesta_error
+        result = _respuesta_error('Test error', 400)
+        assert result[1] == 400
+        response_data = result[0].get_json()
+        assert response_data['status'] == 'error'
+        assert response_data['message'] == 'Test error'
+
+    def test_respuesta_actualizacion_exitosa(self, app_context, mock_jsonify, mock_current_app):
+        """Test _respuesta_actualizacion_exitosa function."""
+        from src.controllers.usuario_controller import _respuesta_actualizacion_exitosa
+        mock_usuario = Mock()
+        mock_persona = Mock()
+        mock_persona.to_dict.return_value = {
+            'nombre_completo': 'Juan Pérez',
+            'email': 'juan@example.com',
+            'telefono': '123456789',
+            'fecha_creacion': '2023-01-01'
+        }
+        mock_usuario.persona = mock_persona
+        
+        result = _respuesta_actualizacion_exitosa(mock_usuario)
+        assert result[1] == 200
+        response_data = result[0].get_json()
+        assert response_data['status'] == 'success'
+
+    def test_respuesta_actualizacion_exitosa_no_persona(self, app_context, mock_jsonify, mock_current_app):
+        """Test _respuesta_actualizacion_exitosa with no persona."""
+        from src.controllers.usuario_controller import _respuesta_actualizacion_exitosa
+        mock_usuario = Mock()
+        mock_usuario.persona = None
+        
+        result = _respuesta_actualizacion_exitosa(mock_usuario)
+        assert result[1] == 200
+        response_data = result[0].get_json()
+        assert response_data['status'] == 'success'
+
+    def test_obtener_perfil_actual_no_persona(self, app_context, mock_jsonify, mock_current_app, mock_g):
+        """Test obtener_perfil_actual when usuario has no persona."""
+        with patch('src.controllers.usuario_controller._obtener_usuario_actual') as mock_get_user:
+            mock_user = Mock()
+            mock_user.persona = None
+            mock_get_user.return_value = mock_user
+
+            result = UsuarioController.obtener_perfil_actual()
+
+            assert result[1] == 200
+            response_data = result[0].get_json()
+            assert response_data['status'] == 'success'
+
+    def test_obtener_perfil_actual_exception(self, app_context, mock_jsonify, mock_current_app, mock_g):
+        """Test obtener_perfil_actual with exception."""
+        with patch('src.controllers.usuario_controller._obtener_usuario_actual') as mock_get_user:
+            mock_get_user.side_effect = Exception("Error")
+            
+            result = UsuarioController.obtener_perfil_actual()
+            assert result[1] == 500
+
+    def test_actualizar_perfil_actual_no_persona(self, app_context, mock_jsonify, mock_current_app, mock_g, mock_request):
+        """Test actualizar_perfil_actual when usuario has no persona."""
+        mock_request.get_json.return_value = {
+            'nombre_completo': 'Juan Pérez',
+            'email': 'juan@example.com',
+            'telefono': '123456789'
+        }
+
+        with patch('src.controllers.usuario_controller._obtener_usuario_actual') as mock_get_user, \
+             patch('src.controllers.usuario_controller._validar_datos_perfil') as mock_validar:
+            
+            mock_user = Mock()
+            mock_user.id = 1
+            mock_user.persona = None
+            mock_get_user.return_value = mock_user
+            mock_validar.return_value = ({
+                'nombre_completo': 'Juan Pérez',
+                'email': 'juan@example.com',
+                'telefono': '123456789'
+            }, None, None)
+
+            result = UsuarioController.actualizar_perfil_actual()
+            assert result[1] == 404
+
+    def test_actualizar_perfil_actual_update_fails(self, app_context, mock_jsonify, mock_current_app, mock_g, mock_request):
+        """Test actualizar_perfil_actual when update fails."""
+        mock_request.get_json.return_value = {
+            'nombre_completo': 'Juan Pérez',
+            'email': 'juan@example.com',
+            'telefono': '123456789'
+        }
+
+        with patch('src.controllers.usuario_controller._obtener_usuario_actual') as mock_get_user, \
+             patch('src.controllers.usuario_controller.UsuarioService') as mock_service, \
+             patch('src.controllers.usuario_controller._validar_datos_perfil') as mock_validar, \
+             patch('src.controllers.usuario_controller._parsear_nombre_completo') as mock_parsear, \
+             patch('src.controllers.usuario_controller._actualizar_persona_perfil') as mock_actualizar:
+            
+            mock_user = Mock()
+            mock_user.id = 1
+            mock_persona = Mock()
+            mock_user.persona = mock_persona
+            mock_get_user.return_value = mock_user
+            mock_validar.return_value = ({
+                'nombre_completo': 'Juan Pérez',
+                'email': 'juan@example.com',
+                'telefono': '123456789'
+            }, None, None)
+            mock_parsear.return_value = ('Juan', None, 'Pérez', None)
+            mock_actualizar.return_value = True
+            mock_service.actualizar_usuario_completo.return_value = False
+
+            result = UsuarioController.actualizar_perfil_actual()
+            assert result[1] == 400
+
+    def test_cambiar_estado_usuario_not_found(self, app_context, mock_jsonify, mock_current_app, mock_request):
+        """Test cambiar_estado_usuario when usuario not found."""
+        mock_request.get_json.return_value = {'estado': 'activo'}
+
+        with patch('src.controllers.usuario_controller.UsuarioService') as mock_service:
+            mock_service.obtener_usuario.return_value = None
+
+            result = UsuarioController.cambiar_estado_usuario(999)
+            assert result[1] == 404
+
+    def test_cambiar_estado_usuario_update_fails(self, app_context, mock_jsonify, mock_current_app, mock_request):
+        """Test cambiar_estado_usuario when update fails."""
+        mock_request.get_json.return_value = {'estado': 'activo'}
+
+        with patch('src.controllers.usuario_controller.UsuarioService') as mock_service:
+            mock_usuario = Mock()
+            mock_usuario.estado = Mock()
+            mock_service.obtener_usuario.return_value = mock_usuario
+            mock_service.actualizar_usuario.return_value = False
+
+            result = UsuarioController.cambiar_estado_usuario(1)
+            assert result[1] == 400
+
+    def test_cambiar_estado_usuario_inactivo(self, app_context, mock_jsonify, mock_current_app, mock_request):
+        """Test cambiar_estado_usuario to inactivo."""
+        mock_request.get_json.return_value = {'estado': 'inactivo'}
+
+        with patch('src.controllers.usuario_controller.UsuarioService') as mock_service:
+            mock_usuario = Mock()
+            mock_usuario.estado = Mock()
+            mock_service.obtener_usuario.return_value = mock_usuario
+            mock_service.actualizar_usuario.return_value = True
+
+            result = UsuarioController.cambiar_estado_usuario(1)
+            assert result[1] == 200
+            response_data = result[0].get_json()
+            assert 'desactivado' in response_data['message']
+
+    def test_obtener_usuario_exception(self, app_context, mock_jsonify, mock_current_app):
+        """Test obtener_usuario with exception."""
+        with patch('src.controllers.usuario_controller.UsuarioService') as mock_service:
+            mock_service.obtener_usuario.side_effect = Exception("Error")
+
+            result = UsuarioController.obtener_usuario(1)
+            assert result[1] == 500
+
+    def test_login_exception(self, app_context, mock_jsonify, mock_current_app, mock_request):
+        """Test login with exception."""
+        mock_request.get_json.side_effect = Exception("Error")
+
+        result = UsuarioController.login()
+        assert result[1] == 500
+
+    def test_obtener_todos_usuarios_exception(self, app_context, mock_jsonify, mock_current_app, mock_g):
+        """Test obtener_todos_usuarios with exception."""
+        with patch('src.controllers.usuario_controller._obtener_usuario_actual') as mock_get_user, \
+             patch('src.controllers.usuario_controller.UsuarioService') as mock_service:
+            
+            mock_user = Mock()
+            mock_user.tenant_id = 1
+            mock_get_user.return_value = mock_user
+            mock_service.obtener_todos_usuarios.side_effect = Exception("Error")
+
+            result = UsuarioController.obtener_todos_usuarios()
+            assert result[1] == 500
+
+    def test_obtener_todos_usuarios_tenant_error(self, app_context, mock_jsonify, mock_current_app, mock_g):
+        """Test obtener_todos_usuarios with tenant error."""
+        with patch('src.controllers.usuario_controller._obtener_usuario_actual') as mock_get_user, \
+             patch('src.controllers.usuario_controller.UsuarioController._obtener_tenant_id_filtrado') as mock_get_tenant:
+            
+            mock_user = Mock()
+            mock_get_user.return_value = mock_user
+            mock_get_tenant.return_value = (None, 'No se puede determinar el tenant')
+
+            result = UsuarioController.obtener_todos_usuarios()
+            assert result[1] == 403
+
+    def test_actualizar_usuario_no_data(self, app_context, mock_jsonify, mock_current_app, mock_request):
+        """Test actualizar_usuario with no data."""
+        mock_request.get_json.return_value = None
+
+        result = UsuarioController.actualizar_usuario(1)
+        assert result[1] == 400
+
+    def test_actualizar_usuario_not_found(self, app_context, mock_jsonify, mock_current_app, mock_request):
+        """Test actualizar_usuario when usuario not found."""
+        mock_request.get_json.return_value = {'primer_nombre': 'Juan'}
+
+        with patch('src.controllers.usuario_controller.UsuarioService') as mock_service:
+            mock_service.obtener_usuario.return_value = None
+
+            result = UsuarioController.actualizar_usuario(999)
+            assert result[1] == 404
+
+    def test_actualizar_usuario_validation_error(self, app_context, mock_jsonify, mock_current_app, mock_request):
+        """Test actualizar_usuario with validation error."""
+        mock_request.get_json.return_value = {'email': 'invalid-email'}
+
+        with patch('src.controllers.usuario_controller.UsuarioService') as mock_service, \
+             patch('src.controllers.usuario_controller.UsuarioController._validar_campos') as mock_validar:
+            
+            mock_usuario = Mock()
+            mock_service.obtener_usuario.return_value = mock_usuario
+            mock_validar.return_value = (Mock(), 400)  # Error response
+
+            result = UsuarioController.actualizar_usuario(1)
+            assert result[1] == 400
+
+    def test_actualizar_usuario_update_fails(self, app_context, mock_jsonify, mock_current_app, mock_request):
+        """Test actualizar_usuario when update fails."""
+        mock_request.get_json.return_value = {
+            'primer_nombre': 'Juan',
+            'primer_apellido': 'Pérez',
+            'email': 'juan@example.com'
+        }
+
+        with patch('src.controllers.usuario_controller.UsuarioService') as mock_service, \
+             patch('src.controllers.usuario_controller.UsuarioController._validar_campos') as mock_validar:
+            
+            mock_usuario = Mock()
+            mock_service.obtener_usuario.return_value = mock_usuario
+            mock_validar.return_value = None
+            mock_service.actualizar_usuario_completo.return_value = False
+
+            result = UsuarioController.actualizar_usuario(1)
+            assert result[1] == 400
+
+    def test_actualizar_usuario_exception(self, app_context, mock_jsonify, mock_current_app, mock_request):
+        """Test actualizar_usuario with exception."""
+        mock_request.get_json.side_effect = Exception("Error")
+
+        result = UsuarioController.actualizar_usuario(1)
+        assert result[1] == 500
+
+    def test_eliminar_usuario_exception(self, app_context, mock_jsonify, mock_current_app):
+        """Test eliminar_usuario with exception."""
+        with patch('src.controllers.usuario_controller.UsuarioService') as mock_service:
+            mock_service.eliminar_usuario.side_effect = Exception("Error")
+
+            result = UsuarioController.eliminar_usuario(1)
+            assert result[1] == 500
+
+    def test_validar_datos_registro_invalid_email(self, app_context, mock_jsonify, mock_current_app):
+        """Test _validar_datos_registro with invalid email."""
+        with patch('src.controllers.usuario_controller._validar_email') as mock_validar, \
+             patch('src.controllers.usuario_controller.UsuarioService') as mock_service:
+            mock_validar.return_value = False
+            mock_service.buscar_por_email.return_value = None
+            data = {
+                'primer_nombre': 'Juan',
+                'primer_apellido': 'Pérez',
+                'email': 'invalid-email',
+                'password': 'password123'
+            }
+            result = UsuarioController._validar_datos_registro(data)
+            assert result[0] is None
+            assert result[2] == 400
+
+    def test_validar_datos_registro_short_password(self, app_context, mock_jsonify, mock_current_app):
+        """Test _validar_datos_registro with short password."""
+        with patch('src.controllers.usuario_controller._validar_email') as mock_validar, \
+             patch('src.controllers.usuario_controller.UsuarioService') as mock_service:
+            mock_validar.return_value = True
+            mock_service.buscar_por_email.return_value = None
+            data = {
+                'primer_nombre': 'Juan',
+                'primer_apellido': 'Pérez',
+                'email': 'juan@example.com',
+                'password': '12345'  # Less than 6 characters
+            }
+            result = UsuarioController._validar_datos_registro(data)
+            assert result[0] is None
+            assert result[2] == 400
+
+    def test_generar_token_jwt_no_persona(self, app_context, mock_jsonify, mock_current_app):
+        """Test _generar_token_jwt when usuario has no persona."""
+        with patch('src.controllers.usuario_controller.jwt') as mock_jwt, \
+             patch('src.controllers.usuario_controller.current_app') as mock_app:
+            mock_app.config = {'SECRET_KEY': 'test-key'}
+            mock_jwt.encode.return_value = 'fake_token'
+            
+            mock_usuario = Mock()
+            mock_usuario.id = 1
+            mock_usuario.persona = None
+            mock_usuario.rol = None
+
+            token = UsuarioController._generar_token_jwt(mock_usuario, 'test@example.com')
+            assert token == 'fake_token'
+
+    def test_generar_token_jwt_no_rol(self, app_context, mock_jsonify, mock_current_app):
+        """Test _generar_token_jwt when usuario has no rol."""
+        with patch('src.controllers.usuario_controller.jwt') as mock_jwt, \
+             patch('src.controllers.usuario_controller.current_app') as mock_app:
+            mock_app.config = {'SECRET_KEY': 'test-key'}
+            mock_jwt.encode.return_value = 'fake_token'
+            
+            mock_usuario = Mock()
+            mock_usuario.id = 1
+            mock_persona = Mock()
+            mock_persona.email = 'test@example.com'
+            mock_usuario.persona = mock_persona
+            mock_usuario.rol = None
+
+            token = UsuarioController._generar_token_jwt(mock_usuario, 'test@example.com')
+            assert token == 'fake_token'
+
+    def test_validar_autenticacion_para_listado_success(self, app_context, mock_jsonify, mock_current_app, mock_g):
+        """Test _validar_autenticacion_para_listado with authenticated user."""
+        with patch('src.controllers.usuario_controller._obtener_usuario_actual') as mock_get_user:
+            mock_user = Mock()
+            mock_get_user.return_value = mock_user
+            
+            current_user, error_response, error_status = UsuarioController._validar_autenticacion_para_listado()
+            assert current_user == mock_user
+            assert error_response is None
+            assert error_status is None
+
+    def test_validar_autenticacion_para_listado_not_authenticated(self, app_context, mock_jsonify, mock_current_app, mock_g):
+        """Test _validar_autenticacion_para_listado without authentication."""
+        with patch('src.controllers.usuario_controller._obtener_usuario_actual') as mock_get_user:
+            mock_get_user.return_value = None
+            
+            current_user, error_response, error_status = UsuarioController._validar_autenticacion_para_listado()
+            assert current_user is None
+            assert error_response is not None
+            assert error_status == 401

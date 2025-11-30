@@ -62,7 +62,7 @@ export default {
   methods: {
     checkUserRole() {
       const role = authService.getRole();
-      this.isSuperAdmin = role === 'super_admin';
+      this.isSuperAdmin = role == 'super_admin';
       console.log('[DashboardContent] Rol verificado:', role, 'isSuperAdmin:', this.isSuperAdmin);
     },
     async cargarTenants() {

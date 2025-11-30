@@ -72,7 +72,7 @@ export default {
       return authService.isAdmin();
     },
     isSuperAdmin() {
-      return authService.getRole() === 'super_admin';
+      return authService.getRole() == 'super_admin';
     }
   },
   mounted() {

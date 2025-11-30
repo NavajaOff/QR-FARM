@@ -63,7 +63,7 @@ class AuthService {
   // Verificar si es administrador
   isAdmin() {
     const role = this.getRole();
-    const isAdminResult = role === 'admin' || role === 'administrador' || role === 'super_admin';
+    const isAdminResult = role == 'admin' || role == 'administrador' || role == 'super_admin';
     console.log('[AuthService] isAdmin() - Rol:', role, 'Resultado:', isAdminResult);
     return isAdminResult;
   }
@@ -71,14 +71,14 @@ class AuthService {
   // Verificar si es super admin
   isSuperAdmin() {
     const role = this.getRole();
-    return role === 'super_admin';
+    return role == 'super_admin';
   }
 
   // Verificar si es usuario normal
   isUser() {
     const role = this.getRole();
     console.log("Verificando si es user - Rol actual:", role);
-    return role === 'user' || role === 'usuario';
+    return role == 'user' || role == 'usuario';
   }
 
   // Guardar email para renovación de token
@@ -155,14 +155,14 @@ class AuthService {
     const userRole = this.getRole();
 
     // Super admin tiene todos los permisos
-    if (userRole === 'super_admin') {
+    if (userRole == 'super_admin') {
       return true;
     }
 
-    if (requiredRole === 'admin') {
-      return userRole === 'admin' || userRole === 'administrador';
-    } else if (requiredRole === 'user') {
-      return userRole === 'user' || userRole === 'usuario' || userRole === 'admin' || userRole === 'administrador';
+    if (requiredRole == 'admin') {
+      return userRole == 'admin' || userRole == 'administrador';
+    } else if (requiredRole == 'user') {
+      return userRole == 'user' || userRole == 'usuario' || userRole == 'admin' || userRole == 'administrador';
     }
 
     return false;
@@ -173,7 +173,7 @@ class AuthService {
     const role = this.getRole();
     
     // Super admin puede acceder a admin dashboard
-    if (role === 'super_admin' || this.isAdmin()) {
+    if (role == 'super_admin' || this.isAdmin()) {
       return '/admin/dashboard';
     } else if (this.isUser()) {
       return '/user/inicio';
