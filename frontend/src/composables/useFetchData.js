@@ -35,81 +35,66 @@ export function useFetchData(fetchFunction, options = {}) {
     isCancelled.value = true
   }
 
-  // Función para resetear estados
-  const resetState = () => {
-    if (!keepDataOnUnmount) {
-      data.value = null
+  const handleCancel = (err) => {
+    if (axios.isCancel(err) || err.name === "AbortError" || isCancelled.value) {
+      console.log("Petición cancelada por navegación del usuario");
+      loading.value = false;
+      return true;
     }
-    error.value = null
-    isCancelled.value = false
-  }
+    return false;
+  };
+
+  const handleFinalError = (err) => {
+    console.error("Error cargando datos después de todos los reintentos:", err);
+    error.value = err.message || "Error desconocido";
+    loading.value = false;
+    onError && onError(err);
+  };
+
+  const waitRetry = () =>
+    new Promise((resolve) => setTimeout(resolve, retryDelay));
 
   // Función principal de carga con reintentos
   const loadData = async (params = {}) => {
-    // Cancelar petición anterior si existe
-    cancelRequest()
+    cancelRequest();
 
-    // Crear nuevos controladores de cancelación
-    abortController = new AbortController()
-    cancelTokenSource = axios.CancelToken.source()
-
-    loading.value = true
-    error.value = null
-    isCancelled.value = false
-
-    let lastError = null
+    abortController = new AbortController();
+    cancelTokenSource = axios.CancelToken.source();
+    loading.value = true;
+    error.value = null;
+    isCancelled.value = false;
 
     for (let attempt = 0; attempt <= retryAttempts; attempt++) {
       try {
-        console.log(`Intentando cargar datos (intento ${attempt + 1}/${retryAttempts + 1})...`)
+        console.log(
+          `Intentando cargar datos (intento ${attempt + 1}/${retryAttempts + 1})...`
+        );
 
-        // Ejecutar la función de fetch con ambos métodos de cancelación
         const result = await fetchFunction({
           ...params,
           signal: abortController.signal,
-          cancelToken: cancelTokenSource.token
-        })
+          cancelToken: cancelTokenSource.token,
+        });
 
-        // Verificar si fue cancelado después de la respuesta
         if (isCancelled.value) {
-          console.log('Petición cancelada, ignorando respuesta')
-          return
+          console.log("Petición cancelada, ignorando respuesta");
+          return;
         }
 
-        // Procesar respuesta exitosa
-        data.value = result
-        loading.value = false
+        data.value = result;
+        loading.value = false;
+        onSuccess && onSuccess(result);
 
-        if (onSuccess) {
-          onSuccess(result)
-        }
-
-        console.log('Datos cargados exitosamente')
-        return result
-
+        console.log("Datos cargados exitosamente");
+        return result;
       } catch (err) {
-        lastError = err
+        if (handleCancel(err)) return;
 
-        // Si fue cancelado por el usuario, no es un error real
-        if (axios.isCancel(err) || err.name === 'AbortError' || isCancelled.value) {
-          console.log('Petición cancelada por navegación del usuario')
-          loading.value = false
-          return
-        }
-
-        // Si es el último intento, manejar el error
         if (attempt === retryAttempts) {
-          console.error('Error cargando datos después de todos los reintentos:', err)
-          error.value = err.message || 'Error desconocido'
-          loading.value = false
-
-          if (onError) {
-            onError(err)
-          }
+          handleFinalError(err);
         } else {
-          // Esperar antes del siguiente intento
-          console.log(`Reintentando en ${retryDelay}ms...`)
-          await new Promise(resolve => setTimeout(resolve, retryDelay))
+          console.log(`Reintentando en ${retryDelay}ms...`);
+          await waitRetry();
         }
       }
     }
