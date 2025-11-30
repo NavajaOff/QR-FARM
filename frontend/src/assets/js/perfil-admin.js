@@ -64,6 +64,7 @@ export default {
         this.message = 'Perfil actualizado exitosamente';
         this.messageType = 'success';
       } catch (error) {
+        console.error('Error updating profile:', error);
         this.message = 'Error al actualizar el perfil';
         this.messageType = 'error';
       } finally {
@@ -89,6 +90,7 @@ export default {
         this.messageType = 'success';
         this.passwordData = { current: '', new: '', confirm: '' };
       } catch (error) {
+        console.error('Error changing password:', error);
         this.message = 'Error al cambiar la contraseña';
         this.messageType = 'error';
       } finally {

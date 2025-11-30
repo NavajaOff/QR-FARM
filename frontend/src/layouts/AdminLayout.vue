@@ -317,7 +317,7 @@ export default {
 
 .admin-sidebar .nav-link:hover {
   color: #fff;
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.25);
   transform: translateX(5px);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }

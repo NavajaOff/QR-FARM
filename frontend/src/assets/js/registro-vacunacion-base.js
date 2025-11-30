@@ -139,7 +139,7 @@ export const registroVacunacionBase = {
     },
 
     async registrarVacunacion() {
-      const config = { ...defaultConfig, ...(this.$options.registroVacunacionConfig || {}) };
+      const config = { ...defaultConfig, ...this.$options.registroVacunacionConfig };
 
       const { value: formValues } = await Swal.fire({
         title: 'Nueva Vacunación',
@@ -284,7 +284,7 @@ export const registroVacunacionBase = {
     },
 
     async eliminarVacunacion(id) {
-      const config = { ...defaultConfig, ...(this.$options.registroVacunacionConfig || {}) };
+      const config = { ...defaultConfig, ...this.$options.registroVacunacionConfig };
       console.log(`${config.eliminarLogPrefix}: Intentando eliminar vacunación con ID:`, id);
       const result = await Swal.fire({
         title: '¿Estás seguro?',

@@ -41,7 +41,7 @@
       </button>
     </div>
 
-    <nav class="ganado-tabs" role="tablist">
+    <nav class="ganado-tabs">
       <button
         v-for="tab in tabs"
         :key="tab.id"
@@ -158,7 +158,7 @@
       role="tabpanel"
     >
       <div v-if="ganado.vacunas.length > 0" class="ganado-list">
-        <div v-for="vacuna in ganado.vacunas" :key="vacuna.id ?? vacuna.nombre" class="ganado-list__item">
+        <div v-for="vacuna in ganado.vacunas" :key="vacuna.id ?? vacuna.nombre ?? Math.random()" class="ganado-list__item">
           <div class="ganado-list__header">
             <h4 class="ganado-list__title">
               <i class="fas fa-syringe"></i>
@@ -429,8 +429,8 @@ const isDoseOverdue = (value: string | null): boolean => {
 }
 
 .ganado-banner--success {
-  background: rgba(25, 135, 84, 0.25);
-  color: #0a3622;
+  background: rgba(25, 135, 84, 0.35);
+  color: #0f5132;
 }
 
 .ganado-banner__info {

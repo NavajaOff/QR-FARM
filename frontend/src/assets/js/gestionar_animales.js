@@ -492,7 +492,7 @@ function validarYConstruirUpdate(animal) {
 
 function validarCapacidadPotrero(id_potrero, animal = null) {
   const potrero = potreros.value.find(p => p.id === Number(id_potrero));
-  if (!potrero || potrero.capacidad == null) return true;
+  if (potrero?.capacidad == null) return true;
 
   const capacidad = Number(potrero.capacidad);
   const ocup = Number(potrero.ocupacion || 0);
@@ -750,22 +750,22 @@ export const darBajaAnimal = async (id, incluirBajas = false) => {
     preConfirm: () => {
       const causa = document.getElementById('causa_baja').value;
       const observaciones = document.getElementById('observaciones_baja').value;
-      
+
       if (!causa) {
         Swal.showValidationMessage('Debe seleccionar una causa de baja');
-        return false;
+        return { valid: false };
       }
-      
-      return { causa_baja: causa, observaciones: observaciones || null };
+
+      return { valid: true, data: { causa_baja: causa, observaciones: observaciones || null } };
     }
   });
   
-  if (result.isConfirmed) {
+  if (result.isConfirmed && result.value.valid) {
     try {
       const response = await fetch(`${API_BASE}/animales/${id}/baja`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(result.value)
+        body: JSON.stringify(result.value.data)
       });
       
       const data = await response.json();
@@ -825,18 +825,18 @@ export const reactivarAnimal = async (id, incluirBajas = false) => {
         const nuevoEstado = document.getElementById('nuevo_estado').value;
         if (!nuevoEstado) {
           Swal.showValidationMessage('Debe seleccionar un estado');
-          return false;
+          return { valid: false };
         }
-        return { nuevo_estado: nuevoEstado };
+        return { valid: true, data: { nuevo_estado: nuevoEstado } };
       }
     });
     
-    if (result.isConfirmed) {
+    if (result.isConfirmed && result.value.valid) {
       try {
         const response = await fetch(`${API_BASE}/animales/${id}/reactivar`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(result.value)
+          body: JSON.stringify(result.value.data)
         });
         
         const data = await response.json();

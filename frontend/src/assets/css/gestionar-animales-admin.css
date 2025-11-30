@@ -42,7 +42,7 @@ h2 {
 }
 
 .table thead th {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  background: linear-gradient(135deg, #005bb0 0%, #004a99 100%);
   color: white;
   font-weight: 600;
   border: none;
@@ -72,14 +72,14 @@ h2 {
 }
 
 .btn-outline-primary {
-  border-color: #007bff;
-  color: #007bff;
+  border-color: #005bb0;
+  color: #005bb0;
   transition: var(--transition);
 }
 
 .btn-outline-primary:hover {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-  border-color: #007bff;
+  background: linear-gradient(135deg, #005bb0 0%, #004a99 100%);
+  border-color: #005bb0;
   color: white;
 }
 
