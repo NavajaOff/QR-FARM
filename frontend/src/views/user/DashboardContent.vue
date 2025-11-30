@@ -90,9 +90,7 @@
 </template>
 
 <script>
-import dashboardContentUsuario from '../../assets/js/dashboard-content-usuario.js';
-
-export default dashboardContentUsuario;
+export { default } from '../../assets/js/dashboard-content-usuario.js';
 </script>
 
 <style scoped>

@@ -149,7 +149,12 @@ export default {
         }
       }
 
-      const labels = Array.from(labelsSet).sort()
+      const labels = Array.from(labelsSet).sort((a, b) => {
+        // Sort dates as strings (ISO format)
+        if (a < b) return -1;
+        if (a > b) return 1;
+        return 0;
+      })
 
       const datasets = metricConfig.map((config) => {
         const serie = tendencias[config.clave]?.serie || []

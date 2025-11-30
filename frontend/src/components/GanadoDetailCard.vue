@@ -424,8 +424,8 @@ const isDoseOverdue = (value: string | null): boolean => {
 }
 
 .ganado-banner--warning {
-  background: rgba(255, 193, 7, 0.15);
-  color: #8a6d1a;
+  background: rgba(255, 193, 7, 0.25);
+  color: #664d03;
 }
 
 .ganado-banner--success {
@@ -451,28 +451,28 @@ const isDoseOverdue = (value: string | null): boolean => {
 }
 
 .ganado-chip--primary {
-  background: rgba(13, 110, 253, 0.15);
-  color: #0b5ed7;
+  background: rgba(13, 110, 253, 0.25);
+  color: #0a58ca;
 }
 
 .ganado-chip--accent {
-  background: rgba(25, 135, 84, 0.15);
-  color: #198754;
+  background: rgba(25, 135, 84, 0.25);
+  color: #155724;
 }
 
 .ganado-chip--muted {
-  background: rgba(107, 114, 128, 0.15);
-  color: #4b5563;
+  background: rgba(107, 114, 128, 0.25);
+  color: #374151;
 }
 
 .ganado-chip--warning {
-  background: rgba(255, 193, 7, 0.2);
-  color: #b58104;
+  background: rgba(255, 193, 7, 0.3);
+  color: #664d03;
 }
 
 .ganado-chip--danger {
-  background: rgba(220, 53, 69, 0.2);
-  color: #b02a37;
+  background: rgba(220, 53, 69, 0.3);
+  color: #721c24;
 }
 
 .ganado-tabs {

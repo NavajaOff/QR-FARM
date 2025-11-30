@@ -18,28 +18,28 @@
                 <form @submit.prevent="updateProfile">
                   <div class="row g-3">
                     <div class="col-md-6">
-                      <label class="form-label">Primer Nombre</label>
-                      <input type="text" class="form-control" v-model="profile.primerNombre" required>
+                      <label class="form-label" for="admin-primer-nombre">Primer Nombre</label>
+                      <input type="text" id="admin-primer-nombre" class="form-control" v-model="profile.primerNombre" required>
                     </div>
                     <div class="col-md-6">
-                      <label class="form-label">Segundo Nombre</label>
-                      <input type="text" class="form-control" v-model="profile.segundoNombre">
+                      <label class="form-label" for="admin-segundo-nombre">Segundo Nombre</label>
+                      <input type="text" id="admin-segundo-nombre" class="form-control" v-model="profile.segundoNombre">
                     </div>
                     <div class="col-md-6">
-                      <label class="form-label">Primer Apellido</label>
-                      <input type="text" class="form-control" v-model="profile.primerApellido" required>
+                      <label class="form-label" for="admin-primer-apellido">Primer Apellido</label>
+                      <input type="text" id="admin-primer-apellido" class="form-control" v-model="profile.primerApellido" required>
                     </div>
                     <div class="col-md-6">
-                      <label class="form-label">Segundo Apellido</label>
-                      <input type="text" class="form-control" v-model="profile.segundoApellido">
+                      <label class="form-label" for="admin-segundo-apellido">Segundo Apellido</label>
+                      <input type="text" id="admin-segundo-apellido" class="form-control" v-model="profile.segundoApellido">
                     </div>
                     <div class="col-md-6">
-                      <label class="form-label">Email</label>
-                      <input type="email" class="form-control" v-model="profile.email" required readonly>
+                      <label class="form-label" for="admin-email">Email</label>
+                      <input type="email" id="admin-email" class="form-control" v-model="profile.email" required readonly>
                     </div>
                     <div class="col-md-6">
-                      <label class="form-label">Teléfono</label>
-                      <input type="tel" class="form-control" v-model="profile.telefono">
+                      <label class="form-label" for="admin-telefono">Teléfono</label>
+                      <input type="tel" id="admin-telefono" class="form-control" v-model="profile.telefono">
                     </div>
                   </div>
 
@@ -90,16 +90,16 @@
               <div class="card-body">
                 <form @submit.prevent="changePassword">
                   <div class="mb-3">
-                    <label class="form-label">Contraseña Actual</label>
-                    <input type="password" class="form-control" v-model="passwordData.current" required>
+                    <label class="form-label" for="admin-password-current">Contraseña Actual</label>
+                    <input type="password" id="admin-password-current" class="form-control" v-model="passwordData.current" required>
                   </div>
                   <div class="mb-3">
-                    <label class="form-label">Nueva Contraseña</label>
-                    <input type="password" class="form-control" v-model="passwordData.new" required>
+                    <label class="form-label" for="admin-password-new">Nueva Contraseña</label>
+                    <input type="password" id="admin-password-new" class="form-control" v-model="passwordData.new" required>
                   </div>
                   <div class="mb-3">
-                    <label class="form-label">Confirmar Nueva Contraseña</label>
-                    <input type="password" class="form-control" v-model="passwordData.confirm" required>
+                    <label class="form-label" for="admin-password-confirm">Confirmar Nueva Contraseña</label>
+                    <input type="password" id="admin-password-confirm" class="form-control" v-model="passwordData.confirm" required>
                   </div>
                   <button type="submit" class="btn btn-warning w-100" :disabled="passwordLoading">
                     <span v-if="passwordLoading" class="spinner-border spinner-border-sm me-2"></span>
@@ -116,9 +116,7 @@
 </template>
 
 <script>
-import perfilAdmin from '../../assets/js/perfil-admin.js';
-
-export default perfilAdmin;
+export { default } from '../../assets/js/perfil-admin.js';
 </script>
 
 <style scoped>

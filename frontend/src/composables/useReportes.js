@@ -68,7 +68,7 @@ export function useReportes() {
       link.download = 'reporte_qrfarm.pdf'
       document.body.appendChild(link)
       link.click()
-      document.body.removeChild(link)
+      link.remove()
       globalThis.URL.revokeObjectURL(url)
       return { success: true }
     } catch (err) {

@@ -59,10 +59,10 @@
 
         <!-- Gestión (Collapsible) -->
         <div class="nav-item">
-          <a class="nav-link mb-2 d-flex align-items-center justify-content-between"
+          <button class="nav-link mb-2 d-flex align-items-center justify-content-between w-100 text-start"
              data-bs-toggle="collapse"
-             href="#gestionMenu"
-             role="button"
+             data-bs-target="#gestionMenu"
+             type="button"
              aria-expanded="false"
              aria-controls="gestionMenu">
             <div class="d-flex align-items-center">
@@ -70,7 +70,7 @@
               <span class="fw-medium">Gestión</span>
             </div>
             <i class="fas fa-chevron-down transition-all"></i>
-          </a>
+          </button>
           <div class="collapse ps-4" id="gestionMenu">
             <router-link v-if="isSuperAdmin" class="nav-link mb-1 small" to="/admin/gestionar-tenants">
               <i class="fas fa-building me-2"></i>Tenants
@@ -379,8 +379,8 @@ export default {
 }
 
 .admin-sidebar .text-danger:hover {
-  background: rgba(231, 76, 60, 0.1) !important;
-  color: #ff6b6b !important;
+  background: rgba(231, 76, 60, 0.2) !important;
+  color: #c0392b !important;
 }
 
 /* Contenido principal */

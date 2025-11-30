@@ -72,7 +72,7 @@
 
                                     <div class="d-grid">
                                         <button type="submit" class="btn btn-success btn-lg fw-bold" :disabled="loading">
-                                            <span v-if="loading" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                            <span v-if="loading" class="spinner-border spinner-border-sm me-2" aria-hidden="true" aria-label="Cargando"></span>
                                             {{ loading ? 'Creando cuenta...' : 'Crear Cuenta' }}
                                         </button>
                                     </div>

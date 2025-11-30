@@ -149,7 +149,7 @@ export const cargarDatosIniciales = async () => {
     await cargarDatosInicialesPotreros();
 
     // Verificar si fue cancelado
-    if (cancelTokenSource && cancelTokenSource.token.reason) {
+    if (cancelTokenSource?.token?.reason) {
       return;
     }
 
@@ -159,7 +159,7 @@ export const cargarDatosIniciales = async () => {
     ]);
 
     // Verificar si fue cancelado
-    if (cancelTokenSource && cancelTokenSource.token.reason) {
+    if (cancelTokenSource?.token?.reason) {
       return;
     }
 
@@ -675,8 +675,8 @@ export const agregarNuevoAnimal = async () => {
         fecha_nacimiento,
         estado,
         sexo,
-        id_potrero: id_potrero ? parseInt(id_potrero) : null,
-        id_persona: id_persona ? parseInt(id_persona) : null
+        id_potrero: id_potrero ? Number.parseInt(id_potrero, 10) : null,
+        id_persona: id_persona ? Number.parseInt(id_persona, 10) : null
       };
 
       return limpiarCampos(data);

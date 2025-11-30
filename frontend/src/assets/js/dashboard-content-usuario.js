@@ -30,7 +30,7 @@ export default {
      */
     cargarDatosUsuario() {
       const user = authService.getUser();
-      if (user && user.persona) {
+      if (user?.persona) {
         this.userInfo.nombre = user.persona.nombre_completo || 'Usuario';
         this.userInfo.email = user.persona.email || '';
       }

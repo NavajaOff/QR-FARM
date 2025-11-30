@@ -134,9 +134,7 @@
 </template>
 
 <script>
-import dashboardAdmin from '../../assets/js/dashboard-admin.js';
-
-export default dashboardAdmin;
+export { default } from '../../assets/js/dashboard-admin.js';
 </script>
 
 <style scoped>
