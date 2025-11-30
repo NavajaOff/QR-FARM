@@ -41,20 +41,22 @@ export const auth = {
 
 // Guard de navegación para rutas protegidas
 export const requireAuth = (to, from, next) => {
-  if (!auth.isAuthenticated()) {
-    next('/login');
-  } else {
+  if (auth.isAuthenticated()) {
     next();
+  } else {
+    next('/login');
   }
 };
 
 // Guard para rutas de administrador
 export const requireAdmin = (to, from, next) => {
-  if (!auth.isAuthenticated()) {
-    next('/login');
-  } else if (!auth.isAdmin()) {
-    next('/menu'); // Redirigir al menú si no es admin
+  if (auth.isAuthenticated()) {
+    if (auth.isAdmin()) {
+      next();
+    } else {
+      next('/menu'); // Redirigir al menú si no es admin
+    }
   } else {
-    next();
+    next('/login');
   }
 };

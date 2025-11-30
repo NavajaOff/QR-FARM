@@ -261,7 +261,7 @@ describe('reportes-admin.js', () => {
       wrapper = createWrapper()
       await nextTick()
 
-      expect(wrapper.vm.formatPromedio(NaN)).toBe('0')
+      expect(wrapper.vm.formatPromedio(Number.NaN)).toBe('0')
       expect(wrapper.vm.formatPromedio(Infinity)).toBe('0')
       expect(wrapper.vm.formatPromedio(-Infinity)).toBe('0')
       expect(wrapper.vm.formatPromedio('not a number')).toBe('0')
@@ -289,7 +289,7 @@ describe('reportes-admin.js', () => {
       wrapper = createWrapper()
       await nextTick()
 
-      expect(wrapper.vm.formatVariacion(NaN)).toBe('0.0')
+      expect(wrapper.vm.formatVariacion(Number.NaN)).toBe('0.0')
       expect(wrapper.vm.formatVariacion('not a number')).toBe('0.0')
     })
 
@@ -335,7 +335,7 @@ describe('reportes-admin.js', () => {
       // formatFecha tries toLocaleString() which returns 'Invalid Date' for invalid dates
       // When catch block executes, it returns the original value
       const invalidDate = new Date('invalid-date')
-      if (isNaN(invalidDate.getTime())) {
+      if (Number.isNaN(invalidDate.getTime())) {
         expect(result).toBe('Invalid Date')
       } else {
         expect(['invalid-date', 'Invalid Date']).toContain(result)
@@ -391,7 +391,7 @@ describe('reportes-admin.js', () => {
       wrapper = createWrapper()
       await nextTick()
 
-      const convertir = wrapper.vm.convertirValorAString || ((v) => String(v))
+      const convertir = wrapper.vm.convertirValorAString || String
       expect(convertir('test')).toBe('test')
     })
 
@@ -448,7 +448,7 @@ describe('reportes-admin.js', () => {
     })
 
     it('should show alert on error', async () => {
-      global.alert = vi.fn()
+      globalThis.alert = vi.fn()
       mockDescargarPdf.mockResolvedValueOnce({ success: false, message: 'Error message' })
 
       wrapper = createWrapper()
@@ -456,7 +456,7 @@ describe('reportes-admin.js', () => {
 
       await wrapper.vm.descargarReporte()
 
-      expect(global.alert).toHaveBeenCalled()
+      expect(globalThis.alert).toHaveBeenCalled()
     })
   })
 

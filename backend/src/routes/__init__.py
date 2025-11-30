@@ -8,7 +8,7 @@ from flask_cors import CORS
 
 def create_app(config_class=None):
     """Create Flask application."""
-    app = Flask(__name__)
+    app = Flask(__name__)  # NOSONAR - CSRF not applicable for JWT-protected API
 
     # Load config
     if config_class is None:

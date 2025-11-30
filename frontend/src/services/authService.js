@@ -1,11 +1,9 @@
 import api from './api.js';
 
 class AuthService {
-  constructor() {
-    this.user = null;
-    this.token = null;
-    this.role = null;
-  }
+  user = null;
+  token = null;
+  role = null;
 
   // Verificar si el usuario está autenticado
   isAuthenticated() {
@@ -17,6 +15,7 @@ class AuthService {
       const currentTime = Math.floor(Date.now() / 1000);
       return payload.exp > currentTime;
     } catch (error) {
+      console.error('Error validating token:', error);
       return false;
     }
   }

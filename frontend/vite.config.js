@@ -1,6 +1,6 @@
 import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
-import { resolve } from 'path'
+import { resolve } from 'node:path'
 
 export default defineConfig({
   plugins: [vue()],
@@ -10,7 +10,7 @@ export default defineConfig({
     }
   },
   server: {
-    port: process.env.PORT ? parseInt(process.env.PORT) : 5173,
+    port: process.env.PORT ? Number.parseInt(process.env.PORT) : 5173,
     host: true,
     strictPort: false
   },

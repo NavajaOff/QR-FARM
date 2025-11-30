@@ -9,7 +9,7 @@ from ..services.usuario_service import UsuarioService
 
 logger = logging.getLogger(__name__)
 
-EMAIL_REGEX = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
 ERROR_PROCESAR_SOLICITUD = 'Error al procesar la solicitud'
 
 def _validar_email(email):
