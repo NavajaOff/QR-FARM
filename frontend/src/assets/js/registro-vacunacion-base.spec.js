@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { vi } from 'vitest'
 import { registroVacunacionBase } from './registro-vacunacion-base.js'
+import Swal from 'sweetalert2'
 
 // Mock de API
 vi.mock('../../services/api.js', () => ({
@@ -22,9 +23,11 @@ vi.mock('../../services/api.js', () => ({
 globalThis.fetch = vi.fn()
 
 // Mock de Swal
-globalThis.Swal = {
-  fire: vi.fn()
-}
+vi.mock('sweetalert2', () => ({
+  default: {
+    fire: vi.fn()
+  }
+}))
 
 describe('registro-vacunacion-base.js', () => {
   let wrapper
@@ -126,7 +129,7 @@ describe('registro-vacunacion-base.js', () => {
 
     it('should handle errors', async () => {
       const { vacunacionAPI } = await import('../../services/api.js')
-      vacunacionAPI.getAll.mockRejectedValueOnce(new Error('API error'))
+      vacunacionAPI.getAll.mockRejectedValue(new Error('API error'))
 
       wrapper = createWrapper()
       await wrapper.vm.cargarDatos()

@@ -9,6 +9,14 @@ vi.stubGlobal('import.meta', {
   }
 })
 
+// Mock api.js
+vi.mock('../../services/api.js', () => ({
+  reporteAPI: {
+    getResumen: vi.fn(),
+    descargarPdf: vi.fn()
+  }
+}))
+
 // Mock de useReportes
 vi.mock('../../composables/useReportes.js', () => ({
   useReportes: () => ({

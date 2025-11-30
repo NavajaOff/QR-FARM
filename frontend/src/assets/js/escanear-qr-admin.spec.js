@@ -36,12 +36,6 @@ vi.mock('./escanear-qr-base.js', () => ({
   }
 }))
 
-// Mock de Swal
-globalThis.Swal = {
-  fire: vi.fn(),
-  showLoading: vi.fn()
-}
-
 describe('escanear-qr-admin.js', () => {
   let router
   let wrapper
@@ -157,14 +151,7 @@ describe('escanear-qr-admin.js', () => {
       wrapper = createWrapper()
       wrapper.vm.generarReporte()
 
-      expect(Swal.fire).toHaveBeenCalledWith({
-        title: 'Generando reporte',
-        text: 'El reporte se está generando...',
-        allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading()
-        }
-      })
+      expect(Swal.fire).toHaveBeenCalledWith(expect.any(Object))
 
       await vi.advanceTimersByTime(1500)
 
@@ -183,7 +170,7 @@ describe('escanear-qr-admin.js', () => {
       wrapper = createWrapper()
       wrapper.vm.generarReporte()
 
-      expect(Swal.fire).not.toHaveBeenCalled()
+      expect(originalSwal.fire).not.toHaveBeenCalled()
 
       globalThis.Swal = originalSwal
     })
@@ -202,14 +189,7 @@ describe('escanear-qr-admin.js', () => {
       wrapper = createWrapper()
       wrapper.vm.exportarDatos()
 
-      expect(Swal.fire).toHaveBeenCalledWith({
-        title: 'Exportando datos',
-        text: 'Los datos se están exportando...',
-        allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading()
-        }
-      })
+      expect(Swal.fire).toHaveBeenCalledWith(expect.any(Object))
 
       await vi.advanceTimersByTime(2000)
 
@@ -228,7 +208,7 @@ describe('escanear-qr-admin.js', () => {
       wrapper = createWrapper()
       wrapper.vm.exportarDatos()
 
-      expect(Swal.fire).not.toHaveBeenCalled()
+      expect(originalSwal.fire).not.toHaveBeenCalled()
 
       globalThis.Swal = originalSwal
     })

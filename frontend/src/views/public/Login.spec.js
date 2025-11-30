@@ -3,6 +3,7 @@ import { createRouter, createMemoryHistory } from 'vue-router'
 import { vi } from 'vitest'
 import Login from './Login.vue'
 import authService from '../../services/authService.js'
+import Swal from 'sweetalert2'
 
 // Mock de authService
 vi.mock('../../services/authService.js', () => ({
@@ -15,9 +16,11 @@ vi.mock('../../services/authService.js', () => ({
 }))
 
 // Mock de Swal
-globalThis.Swal = {
-  fire: vi.fn()
-}
+vi.mock('sweetalert2', () => ({
+  default: {
+    fire: vi.fn().mockResolvedValue()
+  }
+}))
 
 describe('Login.vue', () => {
   let router
@@ -53,15 +56,16 @@ describe('Login.vue', () => {
   })
 
   const createWrapper = (options = {}) => {
-    // Mock router.push to return a resolved promise
-    router.push = vi.fn().mockResolvedValue()
-
     return mount(Login, {
       global: {
-        plugins: [router],
         stubs: {
           'router-link': {
             template: '<a><slot /></a>'
+          }
+        },
+        mocks: {
+          $router: {
+            push: vi.fn().mockResolvedValue()
           }
         }
       },
@@ -138,13 +142,6 @@ describe('Login.vue', () => {
   })
 
   describe('Login Functionality', () => {
-    beforeEach(() => {
-      vi.useFakeTimers()
-    })
-
-    afterEach(() => {
-      vi.useRealTimers()
-    })
 
     it('should handle successful login', async () => {
       authService.login.mockResolvedValue({ success: true })

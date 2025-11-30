@@ -250,9 +250,9 @@ describe('gestionar_animales.js', () => {
     })
 
     it('should handle API errors', async () => {
-      // Mock axios directly since it's already mocked at the top
+      // Mock axios to reject
       const axios = (await import('axios')).default
-      axios.get.mockRejectedValueOnce(new Error('Network error'))
+      axios.get.mockRejectedValue(new Error('Network error'))
 
       await cargarAnimales()
 
