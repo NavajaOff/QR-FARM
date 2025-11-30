@@ -1,5 +1,4 @@
 import { mount } from '@vue/test-utils'
-import { createRouter, createMemoryHistory } from 'vue-router'
 import { vi } from 'vitest'
 import Login from './Login.vue'
 import authService from '../../services/authService.js'
@@ -23,8 +22,6 @@ vi.mock('sweetalert2', () => ({
 }))
 
 describe('Login.vue', () => {
-  let router
-
   // Test constants for credentials to avoid hardcoded values
   const TEST_VALID_CRED = 'test123'
   const VALID_CRED = 'valid123'
@@ -42,18 +39,8 @@ describe('Login.vue', () => {
       search: '',
       hash: ''
     }
-
-    // Crear router mock con createMemoryHistory
-    router = createRouter({
-      history: createMemoryHistory(),
-      routes: [
-        { path: '/login', component: Login },
-        { path: '/admin/dashboard', component: { template: '<div>Admin Dashboard</div>' } },
-        { path: '/user/inicio', component: { template: '<div>User Dashboard</div>' } },
-        { path: '/crear_cuenta', component: { template: '<div>Crear Cuenta</div>' } }
-      ]
-    })
   })
+
 
   const createWrapper = (options = {}) => {
     return mount(Login, {

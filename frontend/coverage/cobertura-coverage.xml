@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <!DOCTYPE coverage SYSTEM "http://cobertura.sourceforge.net/xml/coverage-04.dtd">
-<coverage lines-valid="3185" lines-covered="2109" line-rate="0.6620999999999999" branches-valid="2516" branches-covered="1266" branch-rate="0.5031" timestamp="1764518907517" complexity="0" version="0.1">
+<coverage lines-valid="3185" lines-covered="2109" line-rate="0.6620999999999999" branches-valid="2516" branches-covered="1266" branch-rate="0.5031" timestamp="1764519694114" complexity="0" version="0.1">
   <sources>
     <source>C:/Users/juan david/Documents/Trabajos ADSO/Programación/QR-FARM/frontend</source>
   </sources>

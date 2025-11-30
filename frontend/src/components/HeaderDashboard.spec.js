@@ -2,7 +2,6 @@ import { mount } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 import { vi } from 'vitest'
 import HeaderDashboard from './HeaderDashboard.vue'
-import authService from '../services/authService.js'
 
 // Mock de authService
 vi.mock('../services/authService.js', () => ({

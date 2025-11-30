@@ -12,7 +12,7 @@ vi.stubGlobal('import.meta', {
 })
 
 // Mock de window.matchMedia para evitar errores de Swal
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(globalThis.window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation(query => ({
     matches: false,

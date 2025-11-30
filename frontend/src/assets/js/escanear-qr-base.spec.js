@@ -200,8 +200,8 @@ describe('escanear-qr-base.js', () => {
 
     it('should handle errors gracefully', async () => {
       // Mock setTimeout to throw an error
-      const originalSetTimeout = global.setTimeout
-      global.setTimeout = vi.fn(() => {
+      const originalSetTimeout = globalThis.setTimeout
+      globalThis.setTimeout = vi.fn(() => {
         throw new Error('Test error')
       })
 
@@ -210,7 +210,7 @@ describe('escanear-qr-base.js', () => {
 
       expect(console.error).toHaveBeenCalledWith('Error en escaneo:', expect.any(Error))
 
-      global.setTimeout = originalSetTimeout
+      globalThis.setTimeout = originalSetTimeout
     })
   })
 

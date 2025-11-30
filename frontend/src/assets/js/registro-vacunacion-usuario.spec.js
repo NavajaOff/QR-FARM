@@ -1,4 +1,3 @@
-import { mount } from '@vue/test-utils'
 import { vi } from 'vitest'
 import registroVacunacionUsuario from './registro-vacunacion-usuario.js'
 
