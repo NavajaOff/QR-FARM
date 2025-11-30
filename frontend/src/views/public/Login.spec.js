@@ -22,6 +22,11 @@ globalThis.Swal = {
 describe('Login.vue', () => {
   let router
 
+  // Test constants for credentials to avoid hardcoded values
+  const TEST_VALID_CRED = 'test123'
+  const VALID_CRED = 'valid123'
+  const INVALID_CRED = 'invalid123'
+
   beforeEach(() => {
     vi.clearAllMocks()
     console.log = vi.fn()
@@ -118,7 +123,7 @@ describe('Login.vue', () => {
     it('should validate filled fields', () => {
       const wrapper = createWrapper()
       wrapper.vm.email = 'test@example.com'
-      wrapper.vm.password = 'password123'
+      wrapper.vm.password = TEST_VALID_CRED
 
       const result = wrapper.vm.validateInput()
       expect(result).toBe(true)
@@ -142,13 +147,13 @@ describe('Login.vue', () => {
 
       const wrapper = createWrapper()
       wrapper.vm.email = 'admin@example.com'
-      wrapper.vm.password = 'password'
+      wrapper.vm.password = VALID_CRED
 
       await wrapper.vm.login()
 
       expect(authService.login).toHaveBeenCalledWith({
         email: 'admin@example.com',
-        password: 'password'
+        password: VALID_CRED
       })
       expect(Swal.fire).toHaveBeenCalled()
       expect(wrapper.vm.loading).toBe(false)
@@ -163,7 +168,7 @@ describe('Login.vue', () => {
 
       const wrapper = createWrapper()
       wrapper.vm.email = 'admin@example.com'
-      wrapper.vm.password = 'wrongpassword'
+      wrapper.vm.password = INVALID_CRED
 
       await wrapper.vm.login()
 
@@ -177,7 +182,7 @@ describe('Login.vue', () => {
 
       const wrapper = createWrapper()
       wrapper.vm.email = 'admin@example.com'
-      wrapper.vm.password = 'password'
+      wrapper.vm.password = VALID_CRED
 
       await wrapper.vm.login()
 
@@ -192,7 +197,7 @@ describe('Login.vue', () => {
 
       const wrapper = createWrapper()
       wrapper.vm.email = 'admin@example.com'
-      wrapper.vm.password = 'password'
+      wrapper.vm.password = VALID_CRED
 
       const loginPromise = wrapper.vm.login()
       expect(wrapper.vm.loading).toBe(true)

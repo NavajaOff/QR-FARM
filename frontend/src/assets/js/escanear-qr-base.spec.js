@@ -189,11 +189,10 @@ describe('escanear-qr-base.js', () => {
 
     it('should handle errors gracefully', async () => {
       // Mock a rejection in the promise
+      const rejectingExecutor = (resolve, reject) => reject(new Error('Test error'))
       const mockPromise = class extends Promise {
         constructor(executor) {
-          super((resolve, reject) => {
-            executor(() => reject(new Error('Test error')), reject)
-          })
+          super(rejectingExecutor)
         }
       }
       const stub = vi.stubGlobal('Promise', mockPromise)

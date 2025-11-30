@@ -391,7 +391,7 @@ describe('reportes-admin.js', () => {
       wrapper = createWrapper()
       await nextTick()
 
-      const convertir = wrapper.vm.convertirValorAString || ((v) => String(v))
+      const convertir = wrapper.vm.convertirValorAString || String
       expect(convertir('test')).toBe('test')
     })
 
