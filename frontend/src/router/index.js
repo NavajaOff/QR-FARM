@@ -161,6 +161,10 @@ const router = createRouter({
   routes,
 });
 
+function isRootOrLogin(path) {
+  return path === '/' || path === '/login';
+}
+
 // Guard de navegación
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token');
@@ -184,30 +188,26 @@ router.beforeEach((to, from, next) => {
   function invalidRole() {
     // Si no hay rol requerido, permitir
     if (!to.meta.role) return false;
-    
+
     // Super admin puede acceder a todas las rutas protegidas (excepto usuario si no es usuario)
     if (isSuperAdmin) {
       // Super admin puede acceder a cualquier ruta excepto las específicas de usuario
       return to.meta.role === 'usuario' && !isUser;
     }
-    
+
     // Si la ruta requiere super_admin y el usuario NO es super_admin, bloquear
     if (to.meta.role === 'super_admin' && !isSuperAdmin) return true;
-    
+
     // Si la ruta requiere admin y el usuario es admin o super_admin, permitir
     if (to.meta.role === 'admin' && isAdmin) return false;
-    
+
     // Si la ruta requiere usuario y el usuario es usuario, permitir
     if (to.meta.role === 'usuario' && isUser) return false;
-    
+
     // Si el rol requerido no coincide con el rol del usuario, bloquear
     if (to.meta.role !== userRole) return true;
-    
-    return false;
-  }
 
-  function isRootOrLogin(path) {
-    return path === '/' || path === '/login';
+    return false;
   }
 
   console.log(`[ROUTER GUARD] Navegando de ${from.path} a ${to.path}`);

@@ -119,7 +119,7 @@ h2 {
 .btn-outline-info:hover {
   background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
   border-color: #17a2b8;
-  color: white;
+  color: #000;
 }
 
 .btn-sm {

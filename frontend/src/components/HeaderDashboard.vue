@@ -85,6 +85,6 @@ export default {
 
 .text-danger:hover {
   background: rgba(220, 53, 69, 0.2) !important;
-  color: #721c24 !important;
+  color: #000 !important;
 }
 </style>
