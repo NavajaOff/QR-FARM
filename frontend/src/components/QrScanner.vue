@@ -229,7 +229,13 @@ const state = reactive<ScannerState>({
 });
 
 const html5QrCodeInstance = ref<Html5Qrcode | null>(null);
-const videoElementId = `qr-video-${Math.random().toString(36).slice(2)}`;
+// Generar ID único para el elemento de video usando CSPRNG
+const generateSecureId = (): string => {
+  const array = new Uint8Array(8);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(36)).join('').slice(0, 8);
+};
+const videoElementId = `qr-video-${generateSecureId()}`;
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const abortControllerRef = ref<AbortController | null>(null);
 
