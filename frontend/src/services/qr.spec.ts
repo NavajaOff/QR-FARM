@@ -749,7 +749,7 @@ describe('qr service', () => {
     it('should handle invalid fecha_nacimiento number', () => {
       const payload = {
         id: '1',
-        fecha_nacimiento: NaN
+        fecha_nacimiento: Number.NaN
       }
 
       const result = transformEmbeddedPayload(payload)
@@ -904,7 +904,7 @@ describe('qr service', () => {
       const payload = {
         id: '1',
         potrero: {
-          capacidad: NaN
+          capacidad: Number.NaN
         }
       }
 
