@@ -290,11 +290,7 @@ export default {
 
     const formatFecha = (fechaISO) => {
       if (!fechaISO) return 'No disponible'
-      try {
-        return new Date(fechaISO).toLocaleString()
-      } catch (err) {
-        return fechaISO
-      }
+      return new Date(fechaISO).toLocaleString()
     }
 
     const descargarReporte = async () => {

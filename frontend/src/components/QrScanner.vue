@@ -444,76 +444,108 @@ const collectAlternativeIdentifiers = (payload: NormalizedResourcePayload): stri
 
 const normalizePayload = (raw: string): NormalizedPayload => {
   const sanitized = raw.trim();
-  if (sanitized.length === 0) {
-    return { kind: 'unknown', raw: sanitized };
-  }
+  if (!sanitized) return unknownPayload(sanitized);
 
+  const jsonResult = parseJsonPayload(sanitized);
+  if (jsonResult) return jsonResult;
+
+  const idResult = parseIdPatterns(sanitized);
+  if (idResult) return idResult;
+
+  const urlResult = parseUrlPayload(sanitized);
+  if (urlResult) return urlResult;
+
+  return unknownPayload(sanitized);
+};
+
+// --- Helpers ----
+
+const unknownPayload = (raw: string): NormalizedPayload => ({
+  kind: "unknown",
+  raw
+});
+
+const parseJsonPayload = (sanitized: string): NormalizedPayload | null => {
   try {
     const parsed = JSON.parse(sanitized);
-    if (parsed && typeof parsed === 'object') {
-      const candidateId = extractCandidateIdFromObject(parsed);
-      if (candidateId) {
-        const embeddedResource = isEmbeddedGanadoPayload(parsed) ? parsed : undefined;
-        const metadata: Record<string, unknown> = { ...parsed };
-        delete metadata.id;
-        delete metadata.resourceId;
-        return {
-          kind: 'resource',
-          resourceId: candidateId,
-          resourceType: typeof parsed.tipo === 'string' ? parsed.tipo : typeof parsed.type === 'string' ? parsed.type : null,
-          raw: sanitized,
-          metadata,
-          embeddedResource
-        };
-      }
-    }
-  } catch {
-    // Ignorar parseo fallido
-  }
+    if (!parsed || typeof parsed !== "object") return null;
 
+    const candidateId = extractCandidateIdFromObject(parsed);
+    if (!candidateId) return null;
+
+    const embeddedResource = isEmbeddedGanadoPayload(parsed)
+      ? parsed
+      : undefined;
+
+    const metadata: Record<string, unknown> = { ...parsed };
+    delete metadata.id;
+    delete metadata.resourceId;
+
+    return {
+      kind: "resource",
+      resourceId: candidateId,
+      resourceType: getResourceType(parsed),
+      raw: sanitized,
+      metadata,
+      embeddedResource
+    };
+  } catch {
+    return null;
+  }
+};
+
+const parseIdPatterns = (sanitized: string): NormalizedPayload | null => {
   const numericMatch = sanitized.match(/(?:id|ID|Id)[:=]\s*(\d+)/);
   if (numericMatch) {
-    return {
-      kind: 'resource',
-      resourceId: numericMatch[1],
-      resourceType: null,
-      raw: sanitized,
-      metadata: {}
-    };
+    return basicResourcePayload(numericMatch[1], sanitized);
   }
 
   if (/^\d+$/.test(sanitized)) {
-    return {
-      kind: 'resource',
-      resourceId: sanitized,
-      resourceType: null,
-      raw: sanitized,
-      metadata: {}
-    };
+    return basicResourcePayload(sanitized, sanitized);
   }
 
+  return null;
+};
+
+const parseUrlPayload = (sanitized: string): NormalizedPayload | null => {
   try {
     const url = new URL(sanitized);
-    const segments = url.pathname.split('/').filter(Boolean);
-    const lastSegment = segments[segments.length - 1];
-    if (lastSegment && /^\d+$/.test(lastSegment)) {
+    const segments = url.pathname.split("/").filter(Boolean);
+    const last = segments[segments.length - 1];
+
+    if (last && /^\d+$/.test(last)) {
       return {
-        kind: 'resource',
-        resourceId: lastSegment,
+        kind: "resource",
+        resourceId: last,
         resourceType: null,
         raw: sanitized,
         metadata: { url: url.toString() }
       };
     }
-    return {
-      kind: 'url',
-      url: url.toString(),
-      raw: sanitized
-    };
+
+    return { kind: "url", url: url.toString(), raw: sanitized };
   } catch {
-    return { kind: 'unknown', raw: sanitized };
+    return null;
   }
 };
+
+const basicResourcePayload = (
+  id: string,
+  raw: string
+): NormalizedPayload => ({
+  kind: "resource",
+  resourceId: id,
+  resourceType: null,
+  raw,
+  metadata: {}
+});
+
+const getResourceType = (obj: any): string | null =>
+  typeof obj.tipo === "string"
+    ? obj.tipo
+    : typeof obj.type === "string"
+    ? obj.type
+    : null;
 
 const extractCandidateIdFromObject = (value: Record<string, unknown>): string | null => {
   const candidates = ['id', 'resourceId', 'codigo', 'code'];
