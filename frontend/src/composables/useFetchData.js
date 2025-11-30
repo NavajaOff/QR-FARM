@@ -105,6 +105,14 @@ export function useFetchData(fetchFunction, options = {}) {
     return loadData(params)
   }
 
+  // Función para resetear estado
+  const resetState = () => {
+    data.value = null
+    loading.value = false
+    error.value = null
+    isCancelled.value = false
+  }
+
   // Función para forzar recarga
   const forceReload = (params = {}) => {
     resetState()

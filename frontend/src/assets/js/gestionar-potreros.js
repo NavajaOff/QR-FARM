@@ -224,7 +224,7 @@ export const crearPotrero = () => {
   for (const persona of personasUsuario.value) {
     const nombreCompleto = `${persona.primer_nombre} ${persona.primer_apellido}`.trim();
     responsableOptions += `<option value="${persona.id}">${nombreCompleto}</option>`;
-  });
+  }
 
   Swal.fire({
     title: '<i class="fas fa-plus"></i> Crear Nuevo Potrero',
@@ -341,7 +341,7 @@ export const editarPotrero = async (id) => {
     const nombreCompleto = persona.nombre_completo || `${persona.primer_nombre} ${persona.primer_apellido}`.trim();
     const selected = persona.id === potrero.responsable_persona_id || nombreCompleto === potrero.responsable ? 'selected' : '';
     responsableOptions += `<option value="${persona.id}" ${selected}>${nombreCompleto}</option>`;
-  });
+  }
 
   Swal.fire({
     title: `<i class="fas fa-edit"></i> Editar Potrero: ${potrero.nombre}`,

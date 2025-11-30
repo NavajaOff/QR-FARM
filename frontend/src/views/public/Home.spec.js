@@ -28,7 +28,11 @@ describe('Home.vue', () => {
     return mount(Home, {
       global: {
         plugins: [router],
-        stubs: ['router-link']
+        stubs: {
+          'router-link': {
+            template: '<a><slot /></a>'
+          }
+        }
       },
       ...options
     })

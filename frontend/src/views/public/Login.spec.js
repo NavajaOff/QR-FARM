@@ -56,7 +56,11 @@ describe('Login.vue', () => {
     return mount(Login, {
       global: {
         plugins: [router],
-        stubs: ['router-link']
+        stubs: {
+          'router-link': {
+            template: '<a><slot /></a>'
+          }
+        }
       },
       ...options
     })

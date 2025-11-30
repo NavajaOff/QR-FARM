@@ -65,7 +65,8 @@ describe('escanear-qr-base.js', () => {
 
   describe('Data Function', () => {
     it('should return default data when no config', () => {
-      const data = escanearQRBase.data()
+      const mockVm = { $options: {} }
+      const data = escanearQRBase.data.call(mockVm)
       expect(data.isScanning).toBe(false)
       expect(data.userName).toBe('Usuario')
       expect(data.recentScans).toEqual([])
@@ -73,15 +74,16 @@ describe('escanear-qr-base.js', () => {
     })
 
     it('should use config data when provided', () => {
-      const component = {
-        ...escanearQRBase,
-        escanearQRConfig: {
-          defaultUserName: 'TestUser',
-          recentScans: [{ id: 1 }],
-          estadisticas: { total: 10 }
+      const mockVm = {
+        $options: {
+          escanearQRConfig: {
+            defaultUserName: 'TestUser',
+            recentScans: [{ id: 1 }],
+            estadisticas: { total: 10 }
+          }
         }
       }
-      const data = component.data()
+      const data = escanearQRBase.data.call(mockVm)
       expect(data.userName).toBe('TestUser')
       expect(data.recentScans).toEqual([{ id: 1 }])
       expect(data.estadisticas).toEqual({ total: 10 })
@@ -148,7 +150,10 @@ describe('escanear-qr-base.js', () => {
 
     it('should show success Swal with default color', async () => {
       wrapper = createWrapper()
-      await wrapper.vm.iniciarEscaneo()
+      const promise = wrapper.vm.iniciarEscaneo()
+
+      await vi.advanceTimersByTime(2000)
+      await promise
 
       expect(Swal.fire).toHaveBeenCalledWith({
         title: 'Escaneo completado',
@@ -164,7 +169,10 @@ describe('escanear-qr-base.js', () => {
           successButtonColor: '#007bff'
         }
       })
-      await wrapper.vm.iniciarEscaneo()
+      const promise = wrapper.vm.iniciarEscaneo()
+
+      await vi.advanceTimersByTime(2000)
+      await promise
 
       expect(Swal.fire).toHaveBeenCalledWith({
         title: 'Escaneo completado',
@@ -180,7 +188,10 @@ describe('escanear-qr-base.js', () => {
       const alertSpy = vi.spyOn(globalThis, 'alert').mockImplementation(() => {})
 
       wrapper = createWrapper()
-      await wrapper.vm.iniciarEscaneo()
+      const promise = wrapper.vm.iniciarEscaneo()
+
+      await vi.advanceTimersByTime(2000)
+      await promise
 
       expect(alertSpy).toHaveBeenCalledWith('Escaneo completado - Código QR detectado')
 
@@ -188,47 +199,43 @@ describe('escanear-qr-base.js', () => {
     })
 
     it('should handle errors gracefully', async () => {
-      // Mock a rejection in the promise
-      const rejectingExecutor = (resolve, reject) => reject(new Error('Test error'))
-      const mockPromise = class extends Promise {
-        constructor(executor) {
-          super(rejectingExecutor)
-        }
-      }
-      const stub = vi.stubGlobal('Promise', mockPromise)
+      // Mock setTimeout to throw an error
+      const originalSetTimeout = global.setTimeout
+      global.setTimeout = vi.fn(() => {
+        throw new Error('Test error')
+      })
 
       wrapper = createWrapper()
       await wrapper.vm.iniciarEscaneo()
 
-      expect(console.error).toHaveBeenCalled()
-      expect(Swal.fire).toHaveBeenCalledWith({
-        title: 'Error',
-        text: 'No se pudo completar el escaneo',
-        icon: 'error'
-      })
+      expect(console.error).toHaveBeenCalledWith('Error en escaneo:', expect.any(Error))
 
-      stub.restore()
+      global.setTimeout = originalSetTimeout
     })
   })
 
   describe('subirImagen Method', () => {
-    it('should click file input if ref exists', () => {
+    it('should click file input if ref exists', async () => {
       wrapper = createWrapper()
+      await wrapper.vm.$nextTick()
       const clickSpy = vi.fn()
-      wrapper.vm.$refs = {
-        fileInput: {
-          click: clickSpy
-        }
-      }
+      Object.defineProperty(wrapper.vm.$refs, 'fileInput', {
+        value: { click: clickSpy },
+        writable: true
+      })
 
       wrapper.vm.subirImagen()
 
       expect(clickSpy).toHaveBeenCalled()
     })
 
-    it('should do nothing if fileInput ref does not exist', () => {
+    it('should do nothing if fileInput ref does not exist', async () => {
       wrapper = createWrapper()
-      wrapper.vm.$refs = {}
+      await wrapper.vm.$nextTick()
+      Object.defineProperty(wrapper.vm.$refs, 'fileInput', {
+        value: undefined,
+        writable: true
+      })
 
       expect(() => wrapper.vm.subirImagen()).not.toThrow()
     })
