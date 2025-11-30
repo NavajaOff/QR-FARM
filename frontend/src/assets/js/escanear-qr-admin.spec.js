@@ -38,7 +38,8 @@ vi.mock('./escanear-qr-base.js', () => ({
 
 // Mock de Swal
 globalThis.Swal = {
-  fire: vi.fn()
+  fire: vi.fn(),
+  showLoading: vi.fn()
 }
 
 describe('escanear-qr-admin.js', () => {

@@ -284,10 +284,13 @@ describe('perfil-usuario.js', () => {
     })
 
     it('should not refetch profile for other routes', () => {
-      wrapper = createWrapper()
-      perfilUsuario.watch.$route.call(wrapper.vm, { name: 'OtherRoute' })
+      // Create a mock vm without mounting the component
+      const mockVm = {
+        fetchProfile: vi.fn()
+      }
+      perfilUsuario.watch.$route.call(mockVm, { name: 'OtherRoute' })
 
-      expect(authAPI.getProfile).not.toHaveBeenCalled()
+      expect(mockVm.fetchProfile).not.toHaveBeenCalled()
     })
   })
 })

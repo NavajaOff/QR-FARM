@@ -189,13 +189,13 @@ describe('useFetchData', () => {
       composable.error.value = 'test error'
       composable.isCancelled.value = true
 
-      // Call resetState (assuming it's exposed)
-      if (composable.resetState) {
-        composable.resetState()
-      }
+      // Call resetState
+      composable.resetState()
 
-      // Since resetState is not directly exposed in the return, we test the internal behavior
-      expect(composable.data.value).toBe('test data') // Should not be reset
+      expect(composable.data.value).toBeNull()
+      expect(composable.loading.value).toBe(false)
+      expect(composable.error.value).toBeNull()
+      expect(composable.isCancelled.value).toBe(false)
     })
   })
 })

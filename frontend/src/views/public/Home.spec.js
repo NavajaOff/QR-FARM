@@ -55,7 +55,7 @@ describe('Home.vue', () => {
 
     it('should render navigation links', () => {
       const wrapper = createWrapper()
-      const links = wrapper.findAll('router-link-stub')
+      const links = wrapper.findAll('a')
       expect(links).toHaveLength(3)
     })
 

@@ -318,19 +318,19 @@ describe('dashboard-usuario.js', () => {
   })
 
   describe('generarFraccionAleatoriaDemo Function', () => {
-    it('should return a fraction when crypto is available', () => {
+    it('should return a fraction when crypto is available', async () => {
       // The function is called internally in cargarEstadisticas
       ganadoAPI.getAll.mockResolvedValue({ data: { data: [] } })
       vacunacionAPI.getAll.mockResolvedValue({ data: { data: [] } })
 
       wrapper = createWrapper()
-      wrapper.vm.cargarEstadisticas()
+      await wrapper.vm.cargarEstadisticas()
 
       expect(wrapper.vm.estadisticas.salud).toBeGreaterThanOrEqual(80)
       expect(wrapper.vm.estadisticas.salud).toBeLessThanOrEqual(99)
     })
 
-    it('should handle when crypto is not available', () => {
+    it('should handle when crypto is not available', async () => {
       const originalCrypto = globalThis.window.crypto
       globalThis.window.crypto = undefined
 
@@ -338,7 +338,7 @@ describe('dashboard-usuario.js', () => {
       vacunacionAPI.getAll.mockResolvedValue({ data: { data: [] } })
 
       wrapper = createWrapper()
-      wrapper.vm.cargarEstadisticas()
+      await wrapper.vm.cargarEstadisticas()
 
       // When crypto is not available, should use timestamp fallback
       expect(wrapper.vm.estadisticas.salud).toBeGreaterThanOrEqual(80)

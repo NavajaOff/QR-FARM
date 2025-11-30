@@ -126,7 +126,7 @@ describe('registro-vacunacion-base.js', () => {
 
     it('should handle errors', async () => {
       const { vacunacionAPI } = await import('../../services/api.js')
-      vacunacionAPI.getAll.mockRejectedValue(new Error('API error'))
+      vacunacionAPI.getAll.mockRejectedValueOnce(new Error('API error'))
 
       wrapper = createWrapper()
       await wrapper.vm.cargarDatos()

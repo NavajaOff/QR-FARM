@@ -53,6 +53,9 @@ describe('Login.vue', () => {
   })
 
   const createWrapper = (options = {}) => {
+    // Mock router.push to return a resolved promise
+    router.push = vi.fn().mockResolvedValue()
+
     return mount(Login, {
       global: {
         plugins: [router],

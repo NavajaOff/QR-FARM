@@ -2,6 +2,13 @@ import { mount } from '@vue/test-utils'
 import { vi } from 'vitest'
 import reportesUsuario from './reportes-usuario.js'
 
+// Mock import.meta.env
+vi.stubGlobal('import.meta', {
+  env: {
+    VITE_BACKEND_URL: 'http://localhost:5000'
+  }
+})
+
 // Mock de useReportes
 vi.mock('../../composables/useReportes.js', () => ({
   useReportes: () => ({

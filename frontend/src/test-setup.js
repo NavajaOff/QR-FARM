@@ -5,9 +5,11 @@ import * as matchers from '@testing-library/jest-dom/matchers'
 expect.extend(matchers)
 
 // Mock de import.meta.env
-vi.mock('import.meta.env', () => ({
-  VITE_BACKEND_URL: 'http://localhost:5000'
-}), { virtual: true })
+vi.stubGlobal('import.meta', {
+  env: {
+    VITE_BACKEND_URL: 'http://localhost:5000'
+  }
+})
 
 // Mock de window.matchMedia para evitar errores de Swal
 Object.defineProperty(window, 'matchMedia', {
