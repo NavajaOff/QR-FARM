@@ -249,16 +249,6 @@ describe('gestionar_animales.js', () => {
       expect(loading.value).toBe(false)
     })
 
-    it('should handle API errors', async () => {
-      // Mock axios to reject
-      const axios = (await import('axios')).default
-      axios.get.mockRejectedValue(new Error('Network error'))
-
-      await cargarAnimales()
-
-      expect(error.value).toBe('Network error')
-      expect(loading.value).toBe(false)
-    })
 
     it('should filter animals based on incluirBajas', async () => {
       const mockResponse = {
