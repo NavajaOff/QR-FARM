@@ -46,7 +46,14 @@ describe('AdminLayout', () => {
           path: '/admin',
           component: AdminLayout,
           children: [
-            { path: 'dashboard', component: { template: '<div>Dashboard</div>' } }
+            { path: 'dashboard', component: { template: '<div>Dashboard</div>' } },
+            { path: 'gestionar-tenants', component: { template: '<div>Gestionar Tenants</div>' } },
+            { path: 'gestionar-usuarios', component: { template: '<div>Gestionar Usuarios</div>' } },
+            { path: 'gestionar-animales', component: { template: '<div>Gestionar Animales</div>' } },
+            { path: 'gestionar-potreros', component: { template: '<div>Gestionar Potreros</div>' } },
+            { path: 'vacunacion', component: { template: '<div>Vacunacion</div>' } },
+            { path: 'reportes', component: { template: '<div>Reportes</div>' } },
+            { path: 'scan-qr', component: { template: '<div>Scan QR</div>' } }
           ]
         },
         { path: '/login', component: { template: '<div>Login</div>' } }
@@ -288,115 +295,103 @@ describe('AdminLayout', () => {
     })
 
     it('should call authService.logout', async () => {
-      wrapper = createWrapper()
-      await wrapper.vm.$nextTick()
+       wrapper = createWrapper()
+       await wrapper.vm.$nextTick()
 
-      const mockEvent = { preventDefault: vi.fn(), stopPropagation: vi.fn() }
-      wrapper.vm.logout(mockEvent)
+       const mockEvent = { preventDefault: vi.fn(), stopPropagation: vi.fn() }
+       await wrapper.vm.logout(mockEvent)
 
-      expect(authService.logout).toHaveBeenCalled()
-    })
+       expect(authService.logout).toHaveBeenCalled()
+     })
 
     it('should clear localStorage and sessionStorage', async () => {
-      localStorage.setItem('test', 'value')
-      sessionStorage.setItem('test', 'value')
+       localStorage.setItem('test', 'value')
+       sessionStorage.setItem('test', 'value')
 
-      wrapper = createWrapper()
-      await wrapper.vm.$nextTick()
+       wrapper = createWrapper()
+       await wrapper.vm.$nextTick()
 
-      wrapper.vm.logout()
+       await wrapper.vm.logout()
 
-      expect(localStorage.getItem('test')).toBeNull()
-      expect(sessionStorage.getItem('test')).toBeNull()
-    })
+       expect(localStorage.getItem('test')).toBeNull()
+       expect(sessionStorage.getItem('test')).toBeNull()
+     })
 
     it('should prevent default and stop propagation if event is provided', async () => {
-      wrapper = createWrapper()
-      await wrapper.vm.$nextTick()
+       wrapper = createWrapper()
+       await wrapper.vm.$nextTick()
 
-      const mockEvent = {
-        preventDefault: vi.fn(),
-        stopPropagation: vi.fn()
-      }
-      wrapper.vm.logout(mockEvent)
+       const mockEvent = {
+         preventDefault: vi.fn(),
+         stopPropagation: vi.fn()
+       }
+       await wrapper.vm.logout(mockEvent)
 
-      expect(mockEvent.preventDefault).toHaveBeenCalled()
-      expect(mockEvent.stopPropagation).toHaveBeenCalled()
-    })
+       expect(mockEvent.preventDefault).toHaveBeenCalled()
+       expect(mockEvent.stopPropagation).toHaveBeenCalled()
+     })
 
     it('should redirect to login using router', async () => {
-      const pushSpy = vi.spyOn(router, 'push').mockResolvedValue()
+       const pushSpy = vi.spyOn(router, 'push').mockResolvedValue()
 
-      wrapper = createWrapper()
-      await wrapper.vm.$nextTick()
+       wrapper = createWrapper()
+       await wrapper.vm.$nextTick()
 
-      wrapper.vm.logout()
-      await wrapper.vm.$nextTick()
+       await wrapper.vm.logout()
 
-      expect(pushSpy).toHaveBeenCalledWith('/login')
-    })
+       expect(pushSpy).toHaveBeenCalledWith('/login')
+     })
 
     it('should use globalThis.location.href if router.push fails', async () => {
-      const pushSpy = vi.spyOn(router, 'push').mockRejectedValue(new Error('Router error'))
+       const pushSpy = vi.spyOn(router, 'push').mockRejectedValue(new Error('Router error'))
 
-      wrapper = createWrapper()
-      await wrapper.vm.$nextTick()
+       wrapper = createWrapper()
+       await wrapper.vm.$nextTick()
 
-      wrapper.vm.logout()
-      // Wait for the promise chain to complete
-      await new Promise(resolve => setTimeout(resolve, 200))
+       await wrapper.vm.logout()
 
-      // The component should attempt to use globalThis.location.href when router.push fails
-      expect(pushSpy).toHaveBeenCalledWith('/login')
-      // Note: In test environment, location.href might not be set immediately
-      // The important thing is that router.push was called and rejected
-    })
+       // The component should attempt to use globalThis.location.href when router.push fails
+       expect(pushSpy).toHaveBeenCalledWith('/login')
+       expect(mockLocation.href).toBe('/login')
+     })
 
     it('should handle errors in logout and use globalThis.location.href', async () => {
-      authService.logout.mockImplementation(() => {
-        throw new Error('Logout error')
-      })
+       authService.logout.mockImplementation(() => {
+         throw new Error('Logout error')
+       })
 
-      wrapper = createWrapper()
-      await wrapper.vm.$nextTick()
+       wrapper = createWrapper()
+       await wrapper.vm.$nextTick()
 
-      wrapper.vm.logout()
-      await new Promise(resolve => setTimeout(resolve, 100))
+       await wrapper.vm.logout()
 
-      expect(mockLocation.href).toBe('/login')
-    })
+       expect(mockLocation.href).toBe('/login')
+     })
 
     it('should reload page if cleanup also fails', async () => {
-      authService.logout.mockImplementation(() => {
-        throw new Error('Logout error')
-      })
-      const originalLocalClear = localStorage.clear
-      const originalSessionClear = sessionStorage.clear
-      localStorage.clear = vi.fn(() => {
-        throw new Error('Clear error')
-      })
-      sessionStorage.clear = vi.fn(() => {
-        throw new Error('Clear error')
-      })
-      mockLocation.href = ''
-      mockLocation.reload.mockClear()
+       authService.logout.mockImplementation(() => {
+         throw new Error('Logout error')
+       })
+       const originalLocalStorage = globalThis.localStorage
+       const originalSessionStorage = globalThis.sessionStorage
+       globalThis.localStorage = { clear: vi.fn(() => { throw new Error('Clear error') }) }
+       globalThis.sessionStorage = { clear: vi.fn(() => { throw new Error('Clear error') }) }
+       mockLocation.href = ''
+       mockLocation.reload.mockClear()
 
-      wrapper = createWrapper()
-      await wrapper.vm.$nextTick()
+       wrapper = createWrapper()
+       await wrapper.vm.$nextTick()
 
-      wrapper.vm.logout()
-      // Wait for the promise chain to complete
-      await new Promise(resolve => setTimeout(resolve, 200))
+       await wrapper.vm.logout()
 
-      // The component should attempt to reload when all cleanup fails
-      // Note: In test environment, this might not execute exactly as in production
-      // The important thing is that the error handling path is tested
-      expect(authService.logout).toHaveBeenCalled()
+       // The component should attempt to reload when all cleanup fails
+       expect(authService.logout).toHaveBeenCalled()
+       expect(mockLocation.reload).toHaveBeenCalled()
 
-      // Restore original functions
-      localStorage.clear = originalLocalClear
-      sessionStorage.clear = originalSessionClear
-    })
+       // Restore
+       globalThis.localStorage = originalLocalStorage
+       globalThis.sessionStorage = originalSessionStorage
+     })
   })
 
   describe('Template Rendering', () => {
@@ -449,15 +444,15 @@ describe('AdminLayout', () => {
     })
 
     it('should show tenants link when isSuperAdmin is true', async () => {
-      authService.getRole.mockReturnValue('super_admin')
-      authService.isAdmin.mockReturnValue(false)
+       authService.getRole.mockReturnValue('super_admin')
+       authService.isAdmin.mockReturnValue(false)
 
-      wrapper = createWrapper()
-      await wrapper.vm.$nextTick()
+       wrapper = createWrapper()
+       await wrapper.vm.$nextTick()
 
-      const tenantsLink = wrapper.find('a[href="#gestionMenu"]')
-      expect(tenantsLink.exists()).toBe(true)
-    })
+       const tenantsLink = wrapper.find('a[href="/admin/gestionar-tenants"]')
+       expect(tenantsLink.exists()).toBe(true)
+     })
 
     it('should render logout button', async () => {
       wrapper = createWrapper()
@@ -468,15 +463,17 @@ describe('AdminLayout', () => {
     })
 
     it('should call logout when logout button is clicked', async () => {
-      wrapper = createWrapper()
-      await wrapper.vm.$nextTick()
+       wrapper = createWrapper()
+       await wrapper.vm.$nextTick()
 
-      const logoutSpy = vi.spyOn(wrapper.vm, 'logout')
-      const logoutButton = wrapper.find('button[title="Cerrar sesión"]')
-      await logoutButton.trigger('click')
+       const logoutSpy = vi.spyOn(wrapper.vm, 'logout')
+       const logoutButton = wrapper.find('button[title="Cerrar sesión"]')
+       await logoutButton.trigger('click')
 
-      expect(logoutSpy).toHaveBeenCalled()
-    })
+       expect(logoutSpy).toHaveBeenCalled()
+       // Wait for the async logout to complete
+       await logoutSpy.mock.results[0].value
+     })
   })
 })
 

@@ -183,7 +183,7 @@ export default {
     }
   },
   methods: {
-    logout(event) {
+    async logout(event) {
       try {
         // Prevenir comportamiento por defecto si es un evento
         if (event) {
@@ -192,7 +192,7 @@ export default {
         }
 
         console.log('[AdminLayout] Iniciando proceso de logout...');
-        
+
         // Limpiar servicio de autenticación
         authService.logout();
         console.log('[AdminLayout] authService.logout() ejecutado');
@@ -203,17 +203,12 @@ export default {
         console.log('[AdminLayout] localStorage y sessionStorage limpiados');
 
         // Intentar redirigir con router
-        this.$router.push('/login').then(() => {
-          console.log('[AdminLayout] Redirección a login exitosa');
-        }).catch(err => {
-          console.warn('[AdminLayout] Error en router.push, usando window.location:', err);
-          // Forzar recarga si el router falla
-          globalThis.location.href = '/login';
-        });
+        await this.$router.push('/login');
+        console.log('[AdminLayout] Redirección a login exitosa');
       } catch (error) {
         console.error('[AdminLayout] Error crítico en logout:', error);
         console.error('[AdminLayout] Stack trace:', error.stack);
-        
+
         // Forzar limpieza y redirección en caso de error
         try {
           localStorage.clear();

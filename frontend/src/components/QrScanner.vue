@@ -18,7 +18,7 @@
         <section class="qr-video" aria-live="polite" aria-label="Vista previa de la cámara">
           <div :id="videoElementId" class="qr-video__viewport"></div>
           <p class="qr-status" :data-status="scannerStatus">{{ scannerStatusLabel }}</p>
-        </div>
+        </section>
 
         <div class="qr-camera-select">
           <label class="qr-camera-select__label" for="qr-camera-options">Selecciona una cámara</label>
