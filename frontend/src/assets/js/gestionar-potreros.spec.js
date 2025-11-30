@@ -696,7 +696,6 @@ describe('gestionar-potreros.js', () => {
       expect(Swal.fire).toHaveBeenCalled()
       const callArgs = Swal.fire.mock.calls[0][0]
       expect(callArgs.title).toContain('Editar Potrero')
-      // The title contains the potrero name
       expect(callArgs.title).toContain('Potrero')
     })
 
@@ -719,7 +718,6 @@ describe('gestionar-potreros.js', () => {
         json: async () => mockResponse
       })
 
-      // Mock cargarPotreros to avoid calling fetch again
       const cargarPotrerosSpy = vi.spyOn(gestionarPotreros, 'cargarPotreros').mockResolvedValue()
 
       await gestionarPotreros.editarPotrero(1)
@@ -754,6 +752,368 @@ describe('gestionar-potreros.js', () => {
       await new Promise(resolve => setTimeout(resolve, 100))
 
       expect(Swal.fire).toHaveBeenCalledTimes(2)
+    })
+
+    it('should handle editarPotrero with potrero without dates', async () => {
+      gestionarPotreros.potreros.value = [
+        {
+          id: 2,
+          nombre: 'Potrero 2',
+          estado: 'Disponible',
+          capacidad: 20,
+          hectareas: 2.0,
+          pasto: 'Raygrass',
+          responsable: 'María García',
+          area: 2000,
+          descripcion: '',
+          fechaUso: null,
+          ultimaLimpieza: null,
+          proximaLimpieza: null
+        }
+      ]
+
+      Swal.fire.mockResolvedValueOnce({ isConfirmed: false })
+
+      await gestionarPotreros.editarPotrero(2)
+
+      expect(Swal.fire).toHaveBeenCalled()
+    })
+
+    it('should handle editarPotrero with estado without estado property', async () => {
+      gestionarPotreros.estadosPotrero.value = [
+        { nombre_estado: 'Disponible' },
+        { nombre: 'En uso' }
+      ]
+
+      Swal.fire.mockResolvedValueOnce({ isConfirmed: false })
+
+      await gestionarPotreros.editarPotrero(1)
+
+      expect(Swal.fire).toHaveBeenCalled()
+    })
+
+    it('should handle editarPotrero with tipo pasto match by nombre', async () => {
+      gestionarPotreros.potreros.value[0].id_tipo_pasto = null
+      gestionarPotreros.potreros.value[0].pasto = 'Bermuda'
+
+      Swal.fire.mockResolvedValueOnce({ isConfirmed: false })
+
+      await gestionarPotreros.editarPotrero(1)
+
+      expect(Swal.fire).toHaveBeenCalled()
+    })
+
+    it('should handle editarPotrero with persona nombre_completo', async () => {
+      gestionarPotreros.personasUsuario.value = [
+        { id: 1, nombre_completo: 'Juan Carlos Pérez García' }
+      ]
+
+      Swal.fire.mockResolvedValueOnce({ isConfirmed: false })
+
+      await gestionarPotreros.editarPotrero(1)
+
+      expect(Swal.fire).toHaveBeenCalled()
+    })
+
+    it('should handle editarPotrero obtenerDatosFormularioEdicion with empty values', async () => {
+      mockGetElementById.mockImplementation((id) => {
+        const elements = {
+          'edit_estado': { value: '' },
+          'edit_capacidad': { value: '' },
+          'edit_hectareas': { value: '' },
+          'edit_id_tipo_pasto': { value: '' },
+          'edit_responsable_persona_id': { value: '' },
+          'edit_proxima_limpieza': { value: '' },
+          'edit_ultima_limpieza': { value: '' },
+          'edit_fecha_ultimo_uso': { value: '' },
+          'edit_area': { value: '' },
+          'edit_descripcion': { value: '' }
+        }
+        return elements[id] || { value: '' }
+      })
+
+      Swal.fire.mockResolvedValueOnce({
+        isConfirmed: true,
+        value: {
+          estado: '',
+          capacidad: null,
+          hectareas: null,
+          id_tipo_pasto: null,
+          responsable_persona_id: null,
+          area: null,
+          descripcion: ''
+        }
+      })
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true })
+      })
+
+      const cargarPotrerosSpy = vi.spyOn(gestionarPotreros, 'cargarPotreros').mockResolvedValue()
+
+      await gestionarPotreros.editarPotrero(1)
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      expect(global.fetch).toHaveBeenCalled()
+      cargarPotrerosSpy.mockRestore()
+    })
+
+    it('should handle editarPotrero obtenerDatosFormularioEdicion with all optional fields', async () => {
+      mockGetElementById.mockImplementation((id) => {
+        const elements = {
+          'edit_estado': { value: 'En uso' },
+          'edit_capacidad': { value: '30' },
+          'edit_hectareas': { value: '3.0' },
+          'edit_id_tipo_pasto': { value: '1' },
+          'edit_responsable_persona_id': { value: '1' },
+          'edit_proxima_limpieza': { value: '2025-01-15' },
+          'edit_ultima_limpieza': { value: '2024-12-10' },
+          'edit_fecha_ultimo_uso': { value: '2024-12-15' },
+          'edit_area': { value: '3000' },
+          'edit_descripcion': { value: 'Updated' }
+        }
+        return elements[id] || { value: '' }
+      })
+
+      Swal.fire.mockResolvedValueOnce({
+        isConfirmed: true,
+        value: {
+          estado: 'En uso',
+          capacidad: 30,
+          hectareas: 3.0,
+          id_tipo_pasto: 1,
+          responsable_persona_id: 1,
+          proxima_limpieza: '2025-01-15',
+          ultima_limpieza: '2024-12-10',
+          fecha_ultimo_uso: '2024-12-15',
+          area: 3000,
+          descripcion: 'Updated'
+        }
+      })
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true })
+      })
+
+      const cargarPotrerosSpy = vi.spyOn(gestionarPotreros, 'cargarPotreros').mockResolvedValue()
+
+      await gestionarPotreros.editarPotrero(1)
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      expect(global.fetch).toHaveBeenCalled()
+      cargarPotrerosSpy.mockRestore()
+    })
+  })
+
+  describe('mapPotreroFromApi coverage', () => {
+    it('should map potrero with all date fields', async () => {
+      gestionarPotreros.personasUsuario.value = [
+        { id: 1, primer_nombre: 'Juan', primer_apellido: 'Pérez' }
+      ]
+
+      const mockPotrero = {
+        id: 1,
+        nombre: 'Potrero 1',
+        estado: 'Disponible',
+        capacidad: 25,
+        ocupacion: 10,
+        hectareas: 2.5,
+        area: 2500,
+        responsable_persona_id: 1,
+        descripcion: 'Test',
+        fecha_ultimo_uso: '2024-01-15',
+        ultima_limpieza: '2024-01-10',
+        proxima_limpieza: '2024-12-31',
+        tipo_pasto_nombre: 'Bermuda'
+      }
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: [mockPotrero]
+        })
+      })
+
+      await gestionarPotreros.cargarPotreros()
+
+      expect(gestionarPotreros.potreros.value).toHaveLength(1)
+      expect(gestionarPotreros.potreros.value[0].fechaUso).toBeTruthy()
+      expect(gestionarPotreros.potreros.value[0].ultimaLimpieza).toBeTruthy()
+      expect(gestionarPotreros.potreros.value[0].proximaLimpieza).toBeTruthy()
+      expect(gestionarPotreros.potreros.value[0].pasto).toBe('Bermuda')
+    })
+
+    it('should map potrero without dates', async () => {
+      gestionarPotreros.personasUsuario.value = [
+        { id: 1, primer_nombre: 'Juan', primer_apellido: 'Pérez' }
+      ]
+
+      const mockPotrero = {
+        id: 2,
+        nombre: 'Potrero 2',
+        estado: 'En uso',
+        capacidad: 20,
+        ocupacion: 5,
+        hectareas: 2.0,
+        area: 2000,
+        responsable_persona_id: 1,
+        descripcion: null,
+        tipo_pasto_nombre: null
+      }
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: [mockPotrero]
+        })
+      })
+
+      await gestionarPotreros.cargarPotreros()
+
+      expect(gestionarPotreros.potreros.value).toHaveLength(1)
+      expect(gestionarPotreros.potreros.value[0].fechaUso).toBe('')
+      expect(gestionarPotreros.potreros.value[0].ultimaLimpieza).toBe('')
+      expect(gestionarPotreros.potreros.value[0].proximaLimpieza).toBeNull()
+      expect(gestionarPotreros.potreros.value[0].pasto).toBe('No definido')
+    })
+
+    it('should map potrero without responsable_persona_id', async () => {
+      const mockPotrero = {
+        id: 3,
+        nombre: 'Potrero 3',
+        estado: 'Disponible',
+        responsable_persona_id: null
+      }
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: [mockPotrero]
+        })
+      })
+
+      await gestionarPotreros.cargarPotreros()
+
+      expect(gestionarPotreros.potreros.value).toHaveLength(1)
+      expect(gestionarPotreros.potreros.value[0].responsable).toBe('No asignado')
+    })
+
+    it('should map potrero with responsable_persona_id but persona not found', async () => {
+      const mockPotrero = {
+        id: 4,
+        nombre: 'Potrero 4',
+        estado: 'Disponible',
+        responsable_persona_id: 999
+      }
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: [mockPotrero]
+        })
+      })
+
+      await gestionarPotreros.cargarPotreros()
+
+      expect(gestionarPotreros.potreros.value).toHaveLength(1)
+      expect(gestionarPotreros.potreros.value[0].responsable).toBe('Persona 999')
+    })
+
+    it('should map potrero with persona having nombre_completo', async () => {
+      gestionarPotreros.personasUsuario.value = [
+        { id: 5, nombre_completo: 'María García López' }
+      ]
+
+      const mockPotrero = {
+        id: 5,
+        nombre: 'Potrero 5',
+        estado: 'Disponible',
+        responsable_persona_id: 5
+      }
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: [mockPotrero]
+        })
+      })
+
+      await gestionarPotreros.cargarPotreros()
+
+      expect(gestionarPotreros.potreros.value).toHaveLength(1)
+      expect(gestionarPotreros.potreros.value[0].responsable).toBe('María García López')
+    })
+
+    it('should map potrero with persona having all name parts', async () => {
+      gestionarPotreros.personasUsuario.value = [
+        {
+          id: 6,
+          primer_nombre: 'Carlos',
+          segundo_nombre: 'Andrés',
+          primer_apellido: 'García',
+          segundo_apellido: 'López'
+        }
+      ]
+
+      const mockPotrero = {
+        id: 6,
+        nombre: 'Potrero 6',
+        estado: 'Disponible',
+        responsable_persona_id: 6
+      }
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: [mockPotrero]
+        })
+      })
+
+      await gestionarPotreros.cargarPotreros()
+
+      expect(gestionarPotreros.potreros.value).toHaveLength(1)
+      expect(gestionarPotreros.potreros.value[0].responsable).toContain('Carlos')
+      expect(gestionarPotreros.potreros.value[0].responsable).toContain('García')
+    })
+
+    it('should map potrero with persona having some name parts missing', async () => {
+      gestionarPotreros.personasUsuario.value = [
+        {
+          id: 7,
+          primer_nombre: 'Ana',
+          segundo_nombre: null,
+          primer_apellido: 'Martínez',
+          segundo_apellido: null
+        }
+      ]
+
+      const mockPotrero = {
+        id: 7,
+        nombre: 'Potrero 7',
+        estado: 'Disponible',
+        responsable_persona_id: 7
+      }
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: [mockPotrero]
+        })
+      })
+
+      await gestionarPotreros.cargarPotreros()
+
+      expect(gestionarPotreros.potreros.value).toHaveLength(1)
+      expect(gestionarPotreros.potreros.value[0].responsable).toContain('Ana')
     })
   })
 })
