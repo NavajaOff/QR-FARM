@@ -107,12 +107,6 @@ describe('reportes-usuario.js', () => {
 
   })
 
-  describe('descargar Function', () => {
-
-  })
-
-  describe('generarDatosGrafica Function', () => {
-  })
 
   describe('Component Integration', () => {
     it('should mount correctly', () => {
