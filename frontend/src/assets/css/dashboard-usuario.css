@@ -43,14 +43,14 @@
 
 .user-sidebar .nav-link:hover {
   color: #fff;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.15);
   transform: translateX(5px);
 }
 
 .user-sidebar .nav-link.active {
   color: #fff;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 100%);
-  box-shadow: 0 4px 8px rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, #005bb0 0%, #004a99 100%);
+  box-shadow: 0 4px 8px rgba(0, 91, 176, 0.3);
   font-weight: 600;
 }
 
