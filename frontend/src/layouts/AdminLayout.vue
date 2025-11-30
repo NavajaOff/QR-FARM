@@ -318,7 +318,7 @@ export default {
 }
 
 .admin-sidebar .nav-link.router-link-active {
-  color: #fff;
+  color: #000;
   background: linear-gradient(135deg, #3498db, #2980b9);
   box-shadow: 0 4px 20px rgba(52, 152, 219, 0.4);
   transform: translateX(8px);
@@ -375,7 +375,7 @@ export default {
 
 .admin-sidebar .text-danger:hover {
   background: rgba(231, 76, 60, 0.2) !important;
-  color: #c0392b !important;
+  color: #000 !important;
 }
 
 /* Contenido principal */

@@ -540,12 +540,11 @@ const basicResourcePayload = (
   metadata: {}
 });
 
-const getResourceType = (obj: any): string | null =>
-  typeof obj.tipo === "string"
-    ? obj.tipo
-    : typeof obj.type === "string"
-    ? obj.type
-    : null;
+const getResourceType = (obj: any): string | null => {
+  if (typeof obj.tipo === "string") return obj.tipo;
+  if (typeof obj.type === "string") return obj.type;
+  return null;
+};
 
 const extractCandidateIdFromObject = (value: Record<string, unknown>): string | null => {
   const candidates = ['id', 'resourceId', 'codigo', 'code'];
@@ -911,12 +910,12 @@ onBeforeUnmount(async () => {
 
 .qr-alert--error {
   background: rgba(220, 53, 69, 0.25);
-  color: #721c24;
+  color: #000;
 }
 
 .qr-alert--warning {
   background: rgba(255, 193, 7, 0.25);
-  color: #664d03;
+  color: #000;
 }
 
 .qr-telemetry {
