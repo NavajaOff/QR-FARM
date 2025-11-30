@@ -18,8 +18,10 @@ def _validar_email(email):
 def _obtener_usuario_actual():
     return getattr(g, 'current_user', None)
 
+
 def _respuesta_error(message, status):
     return jsonify({'status': 'error', 'message': message}), status
+
 
 def _validar_datos_perfil(data):
     nombre_completo = (data.get('nombre_completo') or '').strip()
