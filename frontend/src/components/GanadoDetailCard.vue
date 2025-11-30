@@ -462,7 +462,7 @@ const isDoseOverdue = (value: string | null): boolean => {
 
 .ganado-chip--muted {
   background: rgba(107, 114, 128, 0.25);
-  color: #000;
+  color: #fff;
 }
 
 .ganado-chip--warning {
@@ -615,7 +615,7 @@ const isDoseOverdue = (value: string | null): boolean => {
   padding: 1rem;
   border-radius: 0.85rem;
   background: rgba(15, 118, 110, 0.08);
-  color: #000;
+  color: #fff;
   font-weight: 600;
 }
 

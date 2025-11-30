@@ -311,9 +311,7 @@
 </template>
 
 <script>
-import gestionarUsuarios from '../../assets/js/gestionar-usuarios.js';
-
-export default gestionarUsuarios;
+export { default } from '../../assets/js/gestionar-usuarios.js';
 </script>
 
 <style scoped>

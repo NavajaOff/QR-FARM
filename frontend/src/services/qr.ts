@@ -128,7 +128,8 @@ const toNullableString = (value: unknown): string | null => {
   if (typeof value === 'object') {
     return JSON.stringify(value);
   }
-  return String(value);
+  // Para tipos desconocidos, retornar null en lugar de usar String() que podría dar '[object Object]'
+  return null;
 };
 
 const toIsoString = (value: unknown): string | null => {
@@ -231,7 +232,7 @@ const parseGanadoResponse = (input: unknown): GanadoResource => {
     throw createError('La respuesta del servidor no es válida.', 'QrInvalidResponseError');
   }
   const payload = input as Record<string, unknown>;
-  const raw = 'data' in payload ? (payload.data as unknown) : payload;
+  const raw = 'data' in payload ? payload.data : payload;
 
   if (!raw || typeof raw !== 'object') {
     throw createError('La respuesta del servidor no es válida.', 'QrInvalidResponseError');
