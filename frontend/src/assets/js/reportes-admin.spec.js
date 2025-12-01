@@ -18,7 +18,6 @@ vi.mock('chart.js/auto', () => ({
 
 import reportesAdmin from './reportes-admin.js'
 import { useReportes } from '../../composables/useReportes.js'
-import Chart from 'chart.js/auto'
 
 describe('reportes-admin.js', () => {
   let wrapper
