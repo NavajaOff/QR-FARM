@@ -10,6 +10,15 @@ def _require_env(nombre_variable: str) -> str:
     return valor
 
 
+def _require_int_env(nombre_variable: str) -> int:
+    """Obtiene una variable de entorno obligatoria y la convierte a entero."""
+    valor_str = _require_env(nombre_variable)
+    try:
+        return int(valor_str)
+    except ValueError:
+        raise ValueError(f"La variable de entorno {nombre_variable} debe ser un número entero, pero se obtuvo: {valor_str}")
+
+
 class Config:
     """Base configuration."""
 

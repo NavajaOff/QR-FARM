@@ -51,8 +51,6 @@ def token_required(f):
         estado_valor = None
         if estado_obj is not None:
             estado_valor = getattr(estado_obj, 'value', estado_obj)
-        elif hasattr(current_user, 'estado'):
-            estado_valor = str(current_user.estado)
 
         print(f"[AUTH] Usuario actual: id={getattr(current_user, 'id', None)}, estado={estado_valor}")
 
