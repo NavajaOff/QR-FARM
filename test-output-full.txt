@@ -1,0 +1,18 @@
+﻿node.exe : npm error Missing script: "test"
+En línea: 1 Carácter: 1
++ & "C:\Program Files\nodejs/node.exe" 
+"C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (np 
+   m error Missing script: "test":String) [],   
+  RemoteException
+    + FullyQualifiedErrorId : NativeCommandErro 
+   r
+ 
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be 
+found in: C:\Users\josed\AppData\Local\npm-cache
+\_logs\2025-12-01T11_45_30_343Z-debug-0.log

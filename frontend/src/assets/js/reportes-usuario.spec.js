@@ -492,4 +492,241 @@ describe('reportes-usuario.js', () => {
       expect(mockOnUnmounted).toHaveBeenCalled()
     })
   })
+
+  describe('generarDatosGrafica', () => {
+    it('should return empty data when resumen is null', async () => {
+      mockResumen.value = null
+      
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      // Access the internal function through module inspection
+      // Since it's not exported, we test it indirectly through renderChart
+      const component = m.default
+      const setupResult = component.setup()
+      
+      // The function is internal, so we test through cards computed
+      expect(setupResult.cards.value).toEqual([])
+    })
+
+    it('should generate chart data with all categories', async () => {
+      mockResumen.value = {
+        ganado: { totales: { total: 10 } },
+        potreros: { totales: { total: 5 } },
+        vacunaciones: { totales: { total: 20 } }
+      }
+      mockComputed.mockImplementation((fn) => ({
+        get value() { return fn() }
+      }))
+      
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      const setupResult = component.setup()
+      const cards = setupResult.cards
+      
+      // Verify cards are generated correctly
+      expect(cards.value).toHaveLength(3)
+      expect(cards.value[0].total).toBe(10)
+      expect(cards.value[1].total).toBe(5)
+      expect(cards.value[2].total).toBe(20)
+    })
+
+    it('should handle missing totales in generarDatosGrafica', async () => {
+      mockResumen.value = {
+        ganado: {},
+        potreros: {},
+        vacunaciones: {}
+      }
+      mockComputed.mockImplementation((fn) => ({
+        get value() { return fn() }
+      }))
+      
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      const setupResult = component.setup()
+      const cards = setupResult.cards
+      
+      expect(cards.value[0].total).toBe(0)
+      expect(cards.value[1].total).toBe(0)
+      expect(cards.value[2].total).toBe(0)
+    })
+  })
+
+  describe('renderChart', () => {
+    it('should not render when resumen is null', async () => {
+      mockResumen.value = null
+      const mockCanvas = { getContext: vi.fn() }
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: mockCanvas })
+      mockNextTick.mockResolvedValue()
+      
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+      
+      // Trigger watch callback
+      const watchCall = mockWatch.mock.calls[0]
+      if (watchCall && watchCall[1]) {
+        await watchCall[1]()
+      }
+      
+      // Chart should not be created when resumen is null
+      expect(mockChartInstance.update).not.toHaveBeenCalled()
+    })
+
+    it('should create new chart when chartInstance is null', async () => {
+      mockResumen.value = {
+        ganado: { totales: { total: 10 } },
+        potreros: { totales: { total: 5 } },
+        vacunaciones: { totales: { total: 20 } }
+      }
+      mockLoading.value = false
+      const mockCanvas = { getContext: vi.fn() }
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: mockCanvas })
+      mockNextTick.mockResolvedValue()
+      
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+      
+      // Trigger watch callback
+      const watchCall = mockWatch.mock.calls[0]
+      if (watchCall && watchCall[1]) {
+        await watchCall[1]()
+      }
+      
+      expect(mockNextTick).toHaveBeenCalled()
+    })
+
+    it('should update existing chart when chartInstance exists', async () => {
+      mockResumen.value = {
+        ganado: { totales: { total: 10 } },
+        potreros: { totales: { total: 5 } },
+        vacunaciones: { totales: { total: 20 } }
+      }
+      mockLoading.value = false
+      const mockCanvas = { getContext: vi.fn() }
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: mockCanvas })
+      mockNextTick.mockResolvedValue()
+      
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+      
+      // First call to create chart
+      let watchCall = mockWatch.mock.calls[0]
+      if (watchCall && watchCall[1]) {
+        await watchCall[1]()
+      }
+      
+      // Second call should update
+      mockWatch.mockClear()
+      component.setup()
+      watchCall = mockWatch.mock.calls[0]
+      if (watchCall && watchCall[1]) {
+        await watchCall[1]()
+      }
+      
+      expect(mockNextTick).toHaveBeenCalled()
+    })
+
+    it('should not render when chartCanvas is null', async () => {
+      mockResumen.value = {
+        ganado: { totales: { total: 10 } },
+        potreros: { totales: { total: 5 } },
+        vacunaciones: { totales: { total: 20 } }
+      }
+      mockLoading.value = false
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: null })
+      mockNextTick.mockResolvedValue()
+      
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+      
+      // Trigger watch callback
+      const watchCall = mockWatch.mock.calls[0]
+      if (watchCall && watchCall[1]) {
+        await watchCall[1]()
+      }
+      
+      // Chart should not be created when canvas is null
+      expect(mockNextTick).toHaveBeenCalled()
+    })
+  })
+
+  describe('edge cases', () => {
+    it('should handle empty por_estado arrays', async () => {
+      mockResumen.value = {
+        ganado: {
+          totales: { total: 10 },
+          por_estado: []
+        },
+        potreros: {
+          totales: { total: 5 },
+          por_estado: []
+        },
+        vacunaciones: {
+          totales: { total: 20 },
+          proximas: 0
+        }
+      }
+      mockComputed.mockImplementation((fn) => ({
+        get value() { return fn() }
+      }))
+      
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      const setupResult = component.setup()
+      const cards = setupResult.cards
+      
+      expect(cards.value[0].detalles).toEqual([])
+      expect(cards.value[1].detalles).toEqual([])
+      expect(cards.value[2].detalles).toContain('Próximas dosis: 0')
+    })
+
+    it('should handle null proximas in vacunaciones', async () => {
+      mockResumen.value = {
+        ganado: {
+          totales: { total: 10 },
+          por_estado: []
+        },
+        potreros: {
+          totales: { total: 5 },
+          por_estado: []
+        },
+        vacunaciones: {
+          totales: { total: 20 },
+          proximas: null
+        }
+      }
+      mockComputed.mockImplementation((fn) => ({
+        get value() { return fn() }
+      }))
+      
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      const setupResult = component.setup()
+      const cards = setupResult.cards
+      
+      expect(cards.value[2].detalles).toContain('Próximas dosis: 0')
+    })
+
+    it('should handle capitalizar with special characters', async () => {
+      const component = module.default
+      const setupResult = component.setup()
+      const capitalizar = setupResult.capitalizar
+      
+      expect(capitalizar('123abc')).toBe('123abc')
+      expect(capitalizar('ABC')).toBe('ABC')
+      // capitalizar only checks !texto, so '  ' is truthy and gets capitalized
+      expect(capitalizar('  ')).toBe('  ')
+    })
+  })
 })

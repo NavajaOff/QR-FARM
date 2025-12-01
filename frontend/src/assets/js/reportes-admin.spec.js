@@ -395,6 +395,325 @@ describe('reportes-admin.js', () => {
     })
   })
 
+  describe('construirDetalles edge cases', () => {
+    it('should handle ganado detalles', async () => {
+      const resumenWithGanado = {
+        ...mockResumen,
+        ganado: {
+          totales: { total: 50 },
+          por_estado: [
+            { estado: 'saludable', cantidad: 40 },
+            { estado: 'enfermo', cantidad: 10 },
+            { estado: 'revision', cantidad: 5 }
+          ]
+        }
+      }
 
+      useReportes.mockReturnValueOnce({
+        resumen: { value: resumenWithGanado },
+        loading: { value: false },
+        error: { value: null },
+        cargarResumen: mockCargarResumen,
+        descargarPdf: mockDescargarPdf
+      })
+
+      wrapper = createWrapper()
+      await nextTick()
+
+      const ganadoCard = wrapper.vm.summaryCards.find(c => c.clave === 'ganado')
+      expect(ganadoCard.detalles).toHaveLength(2) // Only first 2
+      expect(ganadoCard.detalles[0]).toContain('saludable')
+    })
+
+    it('should handle potreros detalles', async () => {
+      const resumenWithPotreros = {
+        ...mockResumen,
+        potreros: {
+          totales: { total: 5 },
+          por_estado: [
+            { estado: 'disponible', cantidad: 3 },
+            { estado: 'ocupado', cantidad: 2 }
+          ]
+        }
+      }
+
+      useReportes.mockReturnValueOnce({
+        resumen: { value: resumenWithPotreros },
+        loading: { value: false },
+        error: { value: null },
+        cargarResumen: mockCargarResumen,
+        descargarPdf: mockDescargarPdf
+      })
+
+      wrapper = createWrapper()
+      await nextTick()
+
+      const potrerosCard = wrapper.vm.summaryCards.find(c => c.clave === 'potreros')
+      expect(potrerosCard.detalles).toHaveLength(2)
+    })
+
+    it('should handle empty por_estado arrays', async () => {
+      const resumenEmpty = {
+        ...mockResumen,
+        ganado: {
+          totales: { total: 0 },
+          por_estado: []
+        }
+      }
+
+      useReportes.mockReturnValueOnce({
+        resumen: { value: resumenEmpty },
+        loading: { value: false },
+        error: { value: null },
+        cargarResumen: mockCargarResumen,
+        descargarPdf: mockDescargarPdf
+      })
+
+      wrapper = createWrapper()
+      await nextTick()
+
+      const ganadoCard = wrapper.vm.summaryCards.find(c => c.clave === 'ganado')
+      expect(ganadoCard.detalles).toEqual([])
+    })
+  })
+
+  describe('summaryCards edge cases', () => {
+    it('should handle missing totales', async () => {
+      const resumenMissingTotales = {
+        usuarios: {},
+        ganado: {},
+        potreros: {},
+        vacunaciones: {},
+        tendencias: {}
+      }
+
+      useReportes.mockReturnValueOnce({
+        resumen: { value: resumenMissingTotales },
+        loading: { value: false },
+        error: { value: null },
+        cargarResumen: mockCargarResumen,
+        descargarPdf: mockDescargarPdf
+      })
+
+      wrapper = createWrapper()
+      await nextTick()
+
+      const cards = wrapper.vm.summaryCards
+      expect(cards).toHaveLength(4)
+      expect(cards[0].total).toBe(0)
+    })
+
+    it('should handle missing tendencias', async () => {
+      const resumenMissingTendencias = {
+        ...mockResumen,
+        tendencias: null
+      }
+
+      useReportes.mockReturnValueOnce({
+        resumen: { value: resumenMissingTendencias },
+        loading: { value: false },
+        error: { value: null },
+        cargarResumen: mockCargarResumen,
+        descargarPdf: mockDescargarPdf
+      })
+
+      wrapper = createWrapper()
+      await nextTick()
+
+      const cards = wrapper.vm.summaryCards
+      expect(cards[0].variacion).toBe(0)
+      expect(cards[0].variacionAbsoluta).toBe(0)
+      expect(cards[0].promedio).toBe(0)
+      expect(cards[0].serie).toEqual([])
+    })
+  })
+
+  describe('secciones edge cases', () => {
+    it('should handle missing detalle arrays', async () => {
+      const resumenMissingDetalle = {
+        ...mockResumen,
+        ganado: {
+          totales: { total: 50 },
+          por_estado: null
+        }
+      }
+
+      useReportes.mockReturnValueOnce({
+        resumen: { value: resumenMissingDetalle },
+        loading: { value: false },
+        error: { value: null },
+        cargarResumen: mockCargarResumen,
+        descargarPdf: mockDescargarPdf
+      })
+
+      wrapper = createWrapper()
+      await nextTick()
+
+      const secciones = wrapper.vm.secciones
+      const ganadoSeccion = secciones.find(s => s.clave === 'ganado')
+      expect(ganadoSeccion.detalle).toEqual([])
+    })
+
+    it('should handle missing proximas in vacunaciones', async () => {
+      const resumenMissingProximas = {
+        ...mockResumen,
+        vacunaciones: {
+          totales: { total: 20 },
+          proximas: null
+        }
+      }
+
+      useReportes.mockReturnValueOnce({
+        resumen: { value: resumenMissingProximas },
+        loading: { value: false },
+        error: { value: null },
+        cargarResumen: mockCargarResumen,
+        descargarPdf: mockDescargarPdf
+      })
+
+      wrapper = createWrapper()
+      await nextTick()
+
+      const secciones = wrapper.vm.secciones
+      const vacunacionesSeccion = secciones.find(s => s.clave === 'vacunaciones')
+      expect(vacunacionesSeccion.extra).toContain('0')
+    })
+  })
+
+  describe('formatPromedio edge cases', () => {
+    it('should handle null and undefined', async () => {
+      wrapper = createWrapper()
+      await nextTick()
+
+      expect(wrapper.vm.formatPromedio(null)).toBe('0')
+      expect(wrapper.vm.formatPromedio(undefined)).toBe('0')
+    })
+
+    it('should handle very large numbers', async () => {
+      wrapper = createWrapper()
+      await nextTick()
+
+      expect(wrapper.vm.formatPromedio(Number.MAX_SAFE_INTEGER)).toBe('9007199254740991')
+    })
+
+    it('should handle negative numbers', async () => {
+      wrapper = createWrapper()
+      await nextTick()
+
+      expect(wrapper.vm.formatPromedio(-5.5)).toBe('-5.5')
+      expect(wrapper.vm.formatPromedio(-10)).toBe('-10')
+    })
+  })
+
+  describe('formatVariacion edge cases', () => {
+    it('should handle null and undefined', async () => {
+      wrapper = createWrapper()
+      await nextTick()
+
+      expect(wrapper.vm.formatVariacion(null)).toBe('0.0')
+      expect(wrapper.vm.formatVariacion(undefined)).toBe('0.0')
+    })
+
+    it('should handle Infinity', async () => {
+      wrapper = createWrapper()
+      await nextTick()
+
+      // formatVariacion doesn't check for Infinity, so it converts it to string
+      expect(wrapper.vm.formatVariacion(Infinity)).toBe('Infinity')
+      expect(wrapper.vm.formatVariacion(-Infinity)).toBe('-Infinity')
+    })
+
+    it('should handle zero', async () => {
+      wrapper = createWrapper()
+      await nextTick()
+
+      expect(wrapper.vm.formatVariacion(0)).toBe('0.0')
+    })
+  })
+
+  describe('formatearEstado edge cases', () => {
+    it('should handle multiple underscores', async () => {
+      wrapper = createWrapper()
+      await nextTick()
+
+      // formatearEstado only replaces the first underscore
+      expect(wrapper.vm.formatearEstado('en_revision_medica')).toBe('en revision_medica')
+    })
+
+    it('should handle estado with no underscores', async () => {
+      wrapper = createWrapper()
+      await nextTick()
+
+      expect(wrapper.vm.formatearEstado('saludable')).toBe('saludable')
+    })
+  })
+
+  describe('descargarReporte edge cases', () => {
+    it('should handle error without message', async () => {
+      globalThis.alert = vi.fn()
+      mockDescargarPdf.mockResolvedValueOnce({ success: false })
+
+      wrapper = createWrapper()
+      await nextTick()
+
+      await wrapper.vm.descargarReporte()
+
+      expect(globalThis.alert).toHaveBeenCalled()
+      expect(globalThis.alert).toHaveBeenCalledWith(expect.stringContaining('Error desconocido'))
+    })
+
+    it('should handle successful download', async () => {
+      globalThis.alert = vi.fn()
+      mockDescargarPdf.mockResolvedValueOnce({ success: true })
+
+      wrapper = createWrapper()
+      await nextTick()
+
+      await wrapper.vm.descargarReporte()
+
+      expect(globalThis.alert).not.toHaveBeenCalled()
+      expect(wrapper.vm.descargando).toBe(false)
+    })
+  })
+
+  describe('Component lifecycle', () => {
+    it('should call cargarResumen on mount', async () => {
+      wrapper = createWrapper()
+      await nextTick()
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      expect(mockCargarResumen).toHaveBeenCalled()
+    })
+
+    it('should handle loading state', async () => {
+      useReportes.mockReturnValueOnce({
+        resumen: { value: mockResumen },
+        loading: { value: true },
+        error: { value: null },
+        cargarResumen: mockCargarResumen,
+        descargarPdf: mockDescargarPdf
+      })
+
+      wrapper = createWrapper()
+      await nextTick()
+
+      expect(wrapper.vm.loading.value).toBe(true)
+    })
+
+    it('should handle error state', async () => {
+      useReportes.mockReturnValueOnce({
+        resumen: { value: null },
+        loading: { value: false },
+        error: { value: 'Error message' },
+        cargarResumen: mockCargarResumen,
+        descargarPdf: mockDescargarPdf
+      })
+
+      wrapper = createWrapper()
+      await nextTick()
+
+      expect(wrapper.vm.error.value).toBe('Error message')
+    })
+  })
 })
 
