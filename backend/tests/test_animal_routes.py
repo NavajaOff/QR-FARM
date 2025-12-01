@@ -6,12 +6,12 @@ from src.routes.animal_routes import animal_bp
 
 
 class TestAnimalRoutes:
-    def setup_method(self):
+    @pytest.fixture(autouse=True)
+    def setup_app(self, app):
         """Setup test client and app context"""
-        self.app = Flask(__name__)
-        self.app.register_blueprint(animal_bp)
-        self.client = self.app.test_client()
-        self.app_context = self.app.app_context()
+        app.register_blueprint(animal_bp)
+        self.client = app.test_client()
+        self.app_context = app.app_context()
         self.app_context.push()
 
     def teardown_method(self):
