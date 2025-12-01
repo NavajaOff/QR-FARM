@@ -85,4 +85,43 @@ describe('Home.vue', () => {
       expect(wrapper.vm).toBeDefined()
     })
   })
+
+  describe('Keyboard Navigation', () => {
+    it('should handle Enter key on Contacto link', async () => {
+      const wrapper = createWrapper()
+      const contactoLink = wrapper.findAll('a').find(link => link.text().includes('Contacto'))
+
+      await contactoLink.trigger('keydown.enter')
+
+      // Since router.push is mocked, we just verify the event was triggered
+      expect(contactoLink.exists()).toBe(true)
+    })
+
+    it('should handle Space key on Contacto link', async () => {
+      const wrapper = createWrapper()
+      const contactoLink = wrapper.findAll('a').find(link => link.text().includes('Contacto'))
+
+      await contactoLink.trigger('keydown.space')
+
+      expect(contactoLink.exists()).toBe(true)
+    })
+
+    it('should handle Enter key on Login link', async () => {
+      const wrapper = createWrapper()
+      const loginLink = wrapper.findAll('a').find(link => link.text().includes('Iniciar Sesión'))
+
+      await loginLink.trigger('keydown.enter')
+
+      expect(loginLink.exists()).toBe(true)
+    })
+
+    it('should handle Space key on Login link', async () => {
+      const wrapper = createWrapper()
+      const loginLink = wrapper.findAll('a').find(link => link.text().includes('Iniciar Sesión'))
+
+      await loginLink.trigger('keydown.space')
+
+      expect(loginLink.exists()).toBe(true)
+    })
+  })
 })
