@@ -219,7 +219,69 @@ describe('Login.vue', () => {
       const message = wrapper.vm.getErrorMessage(err)
       expect(message).toBe('No se pudo conectar al servidor. Verifica tu conexión a internet.')
     })
+
+    it('should get error message from response data', () => {
+      const wrapper = createWrapper()
+      const err = { response: { status: 400, data: { message: 'Custom error message' } } }
+      const message = wrapper.vm.getErrorMessage(err)
+      expect(message).toBe('Custom error message')
+    })
+
+    it('should get default error message for unknown server error', () => {
+      const wrapper = createWrapper()
+      const err = { response: { status: 400, data: {} } }
+      const message = wrapper.vm.getErrorMessage(err)
+      expect(message).toBe('Error desconocido del servidor')
+    })
   })
+
+  describe('Form Input Binding', () => {
+    it('should update email model when input changes', async () => {
+      const wrapper = createWrapper()
+      const emailInput = wrapper.find('input[type="email"]')
+
+      await emailInput.setValue('test@example.com')
+      expect(wrapper.vm.email).toBe('test@example.com')
+    })
+
+    it('should update password model when input changes', async () => {
+      const wrapper = createWrapper()
+      const passwordInput = wrapper.find('input[type="password"]')
+
+      await passwordInput.setValue('testpassword')
+      expect(wrapper.vm.password).toBe('testpassword')
+    })
+  })
+
+  describe('Session Storage Handling', () => {
+    it('should handle sessionStorage error gracefully', async () => {
+      // Mock sessionStorage to throw error
+      const originalSetItem = Storage.prototype.setItem
+      Storage.prototype.setItem = vi.fn(() => {
+        throw new Error('Storage quota exceeded')
+      })
+
+      authService.login.mockResolvedValue({ success: true })
+      authService.getRedirectPath.mockReturnValue('/admin/dashboard')
+      Swal.fire.mockResolvedValue()
+
+      const wrapper = createWrapper()
+      wrapper.vm.email = 'admin@example.com'
+      wrapper.vm.password = VALID_CRED
+      console.warn = vi.fn()
+
+      await wrapper.vm.login()
+
+      expect(console.warn).toHaveBeenCalledWith(
+        'No se pudieron guardar las credenciales en sessionStorage',
+        expect.any(Error)
+      )
+
+      // Restore original setItem
+      Storage.prototype.setItem = originalSetItem
+    })
+  })
+
 
   describe('Component Integration', () => {
     it('should mount correctly', () => {

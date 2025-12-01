@@ -14,6 +14,17 @@ vi.mock('../../services/authService.js', () => ({
   }
 }))
 
+// Mock de Swal
+globalThis.Swal = {
+  fire: vi.fn((options) => {
+    if (options && options.didOpen) {
+      options.didOpen()
+    }
+    return Promise.resolve()
+  }),
+  showLoading: vi.fn()
+}
+
 // Mock de escanear-qr-base.js
 vi.mock('./escanear-qr-base.js', () => ({
   escanearQRBase: {
@@ -42,8 +53,6 @@ describe('escanear-qr-admin.js', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    console.error = vi.fn()
-    console.log = vi.fn()
 
     // Mock de location para createMemoryHistory
     globalThis.location = {
@@ -152,6 +161,7 @@ describe('escanear-qr-admin.js', () => {
       wrapper.vm.generarReporte()
 
       expect(Swal.fire).toHaveBeenCalledWith(expect.any(Object))
+      expect(Swal.showLoading).toHaveBeenCalled()
 
       await vi.advanceTimersByTime(1500)
 
@@ -190,6 +200,7 @@ describe('escanear-qr-admin.js', () => {
       wrapper.vm.exportarDatos()
 
       expect(Swal.fire).toHaveBeenCalledWith(expect.any(Object))
+      expect(Swal.showLoading).toHaveBeenCalled()
 
       await vi.advanceTimersByTime(2000)
 

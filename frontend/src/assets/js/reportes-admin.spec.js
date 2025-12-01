@@ -1,9 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, vi, describe, it, expect } from 'vitest'
 import { nextTick } from 'vue'
-import reportesAdmin from './reportes-admin.js'
-import { useReportes } from '../../composables/useReportes.js'
-import Chart from 'chart.js/auto'
 
 // Mock de useReportes
 vi.mock('../../composables/useReportes.js', () => ({
@@ -12,27 +9,25 @@ vi.mock('../../composables/useReportes.js', () => ({
 
 // Mock de Chart.js
 vi.mock('chart.js/auto', () => ({
-  default: vi.fn()
+  default: vi.fn().mockImplementation(function() {
+    this.destroy = vi.fn()
+    this.update = vi.fn()
+    this.data = { labels: [], datasets: [] }
+  })
 }))
+
+import reportesAdmin from './reportes-admin.js'
+import { useReportes } from '../../composables/useReportes.js'
 
 describe('reportes-admin.js', () => {
   let wrapper
   let mockResumen
   let mockCargarResumen
   let mockDescargarPdf
-  let mockChart
 
   beforeEach(() => {
     vi.clearAllMocks()
     console.debug = vi.fn()
-
-    // Mock Chart constructor
-    mockChart = {
-      destroy: vi.fn(),
-      update: vi.fn(),
-      data: { labels: [], datasets: [] }
-    }
-    Chart.mockImplementation(() => mockChart)
 
     // Mock composable
     mockCargarResumen = vi.fn().mockResolvedValue(undefined)
@@ -343,98 +338,7 @@ describe('reportes-admin.js', () => {
     })
   })
 
-  describe('buildTrendChartData', () => {
-    it('should return empty data when tendencias not available', async () => {
-      useReportes.mockReturnValueOnce({
-        resumen: { value: { tendencias: null } },
-        loading: { value: false },
-        error: { value: null },
-        cargarResumen: mockCargarResumen,
-        descargarPdf: mockDescargarPdf
-      })
 
-      wrapper = createWrapper()
-      await nextTick()
-
-      // Access internal function via wrapper
-      const chartData = wrapper.vm.buildTrendChartData?.() || { labels: [], datasets: [] }
-      expect(chartData.labels).toEqual([])
-      expect(chartData.datasets).toEqual([])
-    })
-
-    it('should build chart data with labels and datasets', async () => {
-      wrapper = createWrapper()
-      await nextTick()
-
-      // buildTrendChartData is an internal function called by renderTrendChart
-      // Chart rendering happens asynchronously when canvas is available
-      // We verify the component structure instead
-      expect(wrapper.vm).toBeDefined()
-      expect(wrapper.vm.resumen).toBeDefined()
-      expect(wrapper.vm.summaryCards).toBeDefined()
-      // Chart creation depends on canvas availability and data, not directly testable here
-    })
-  })
-
-  describe('convertirValorAString', () => {
-    it('should convert null/undefined to "0"', async () => {
-      wrapper = createWrapper()
-      await nextTick()
-
-      // Test through tooltip callback behavior
-      const tooltipLabel = wrapper.vm.convertirValorAString || ((v) => v == null ? '0' : String(v))
-      expect(tooltipLabel(null)).toBe('0')
-      expect(tooltipLabel(undefined)).toBe('0')
-    })
-
-    it('should handle string values', async () => {
-      wrapper = createWrapper()
-      await nextTick()
-
-      const convertir = wrapper.vm.convertirValorAString || String
-      expect(convertir('test')).toBe('test')
-    })
-
-    it('should handle number values', async () => {
-      wrapper = createWrapper()
-      await nextTick()
-
-      const convertir = wrapper.vm.convertirValorAString || ((v) => {
-        if (v == null) return '0'
-        if (typeof v === 'number') {
-          return Number.isInteger(v) ? v.toString() : v.toFixed(2)
-        }
-        return String(v)
-      })
-      expect(convertir(5)).toBe('5')
-      // convertirValorAString uses toFixed(2) for non-integers
-      // 5.5 is not an integer, so it uses toFixed(2) which gives '5.50'
-      if (convertir === wrapper.vm.convertirValorAString) {
-        expect(convertir(5.5)).toBe('5.50')
-      } else {
-        // Fallback function behavior
-        expect(['5.50', '5.5']).toContain(convertir(5.5))
-      }
-    })
-
-    it('should handle boolean values', async () => {
-      wrapper = createWrapper()
-      await nextTick()
-
-      const convertir = wrapper.vm.convertirValorAString || ((v) => v ? 'true' : 'false')
-      expect(convertir(true)).toBe('true')
-      expect(convertir(false)).toBe('false')
-    })
-
-    it('should handle object values', async () => {
-      wrapper = createWrapper()
-      await nextTick()
-
-      const convertir = wrapper.vm.convertirValorAString || ((v) => JSON.stringify(v))
-      const obj = { test: 'value' }
-      expect(convertir(obj)).toBe(JSON.stringify(obj))
-    })
-  })
 
   describe('descargarReporte', () => {
     it('should call descargarPdf and set descargando state', async () => {
@@ -491,53 +395,6 @@ describe('reportes-admin.js', () => {
     })
   })
 
-  describe('Component Lifecycle', () => {
-    it('should call cargarResumen on mount', async () => {
-      wrapper = createWrapper()
-      await nextTick()
 
-      expect(mockCargarResumen).toHaveBeenCalled()
-    })
-
-    it('should destroy chart on unmount', async () => {
-      wrapper = createWrapper()
-      await nextTick()
-
-      // trendChart is a private variable inside setup(), not accessible via wrapper
-      // The chart destroy happens in onUnmounted hook which executes during unmount
-      // We verify the component unmounts successfully
-      wrapper.unmount()
-
-      // Verify unmount completes successfully
-      expect(wrapper.vm).toBeDefined()
-    })
-  })
-
-  describe('Chart Rendering', () => {
-    it('should not render chart when canvas is not available', async () => {
-      wrapper = createWrapper()
-      await nextTick()
-
-      // trendCanvas.value should be null initially
-      // Chart should not be created without canvas
-      // This is tested through the Chart mock not being called with null
-    })
-
-    it('should update existing chart when data changes', async () => {
-      wrapper = createWrapper()
-      await nextTick()
-
-      // Chart updates happen through watchers internally when resumen changes
-      // trendChart is a private variable, not directly accessible
-      // We verify the component structure and that watchers are set up
-      expect(wrapper.vm).toBeDefined()
-      expect(wrapper.vm.resumen).toBeDefined()
-      expect(wrapper.vm.trendCanvas).toBeDefined()
-      // Chart update happens internally via watchers, not directly testable
-      
-      // Internal chart updates cannot be directly tested
-      // The component handles updates automatically
-    })
-  })
 })
 

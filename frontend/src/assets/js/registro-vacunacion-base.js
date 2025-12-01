@@ -26,7 +26,7 @@ const buildDefaultEditForm = (vacunacion) => `
   </div>
 `;
 
-const collectDefaultEditPayload = () => {
+export const collectDefaultEditPayload = () => {
   const estado = document.getElementById('estado').value;
   const fechaAplicacion = document.getElementById('fechaAplicacion').value;
   const proximaDosis = document.getElementById('proximaDosis').value;
