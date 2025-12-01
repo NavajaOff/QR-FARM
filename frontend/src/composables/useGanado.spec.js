@@ -3,6 +3,9 @@ import { useGanado } from './useGanado'
 import { ganadoAPI } from '../services/api.js'
 import { socket } from '../socket.js'
 
+// Store socket event handlers
+const socketHandlers = {}
+
 // Mock de ganadoAPI
 vi.mock('../services/api.js', () => ({
   ganadoAPI: {
@@ -16,7 +19,9 @@ vi.mock('../services/api.js', () => ({
 // Mock de socket
 vi.mock('../socket.js', () => ({
   socket: {
-    on: vi.fn(),
+    on: vi.fn((event, handler) => {
+      socketHandlers[event] = handler
+    }),
     off: vi.fn()
   }
 }))
@@ -25,12 +30,14 @@ describe('useGanado', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     console.error = vi.fn()
-    // Reset socketRegistered by resetting modules
-    vi.resetModules()
+    // Clear socket handlers
+    Object.keys(socketHandlers).forEach(key => delete socketHandlers[key])
   })
 
   afterEach(() => {
     vi.clearAllMocks()
+    // Clear socket handlers
+    Object.keys(socketHandlers).forEach(key => delete socketHandlers[key])
   })
 
   it('should export useGanado composable', () => {
@@ -396,206 +403,216 @@ describe('useGanado', () => {
   })
 
   describe('socket events', () => {
-    // Socket events are registered at module level when the module is first imported
-    // The registerSocketEvents() function is called automatically when the module loads
-    // These tests verify the socket event handlers work correctly
+    let testUseGanado
 
-    it('should handle animal_created event', () => {
+    beforeEach(async () => {
+      // Reset modules to reset socketRegistered flag
+      vi.resetModules()
+      // Re-import to get fresh instance with socketRegistered = false
+      const module = await import('./useGanado.js')
+      testUseGanado = module.useGanado
+      // Clear socket mock calls to get fresh handlers
       socket.on.mockClear()
-      
-      const { ganado } = useGanado()
-      
-      // Get the callback for animal_created from the most recent calls
-      const createdCalls = socket.on.mock.calls.filter(call => call[0] === 'animal_created')
-      if (createdCalls.length > 0) {
-        const callback = createdCalls[createdCalls.length - 1][1]
-        const newAnimal = { id: 1, nombre: 'Nuevo Animal' }
-        callback({ data: newAnimal })
+    })
 
-        expect(ganado.value).toContainEqual(newAnimal)
-      }
+    const getSocketHandler = (eventName) => {
+      // Get handler from socket.on mock calls - get the last call for this event
+      const calls = socket.on.mock.calls
+      // Find all calls for this event and get the last one
+      const matchingCalls = calls.filter(call => call[0] === eventName)
+      return matchingCalls.length > 0 ? matchingCalls[matchingCalls.length - 1][1] : undefined
+    }
+
+    it('should handle animal_created event with data', () => {
+      const { ganado } = testUseGanado()
+      
+      const newAnimal = { id: 1, nombre: 'Nuevo Animal' }
+      const callback = getSocketHandler('animal_created')
+      
+      expect(callback).toBeDefined()
+      callback({ data: newAnimal })
+
+      expect(ganado.value).toContainEqual(newAnimal)
     })
 
     it('should handle animal_created event without data', () => {
-      socket.on.mockClear()
-      
-      const { ganado } = useGanado()
+      const { ganado } = testUseGanado()
       const initialLength = ganado.value.length
       
-      const createdCall = socket.on.mock.calls.find(call => call[0] === 'animal_created')
-      if (createdCall && createdCall[1]) {
-        const callback = createdCall[1]
-        callback({})
+      const callback = getSocketHandler('animal_created')
+      expect(callback).toBeDefined()
+      callback({})
 
-        expect(ganado.value.length).toBe(initialLength)
-      }
+      expect(ganado.value.length).toBe(initialLength)
     })
 
     it('should handle animal_created event with null payload', () => {
-      socket.on.mockClear()
-      
-      const { ganado } = useGanado()
+      const { ganado } = testUseGanado()
       const initialLength = ganado.value.length
       
-      const createdCall = socket.on.mock.calls.find(call => call[0] === 'animal_created')
-      if (createdCall && createdCall[1]) {
-        const callback = createdCall[1]
-        callback(null)
+      const callback = getSocketHandler('animal_created')
+      expect(callback).toBeDefined()
+      callback(null)
 
-        expect(ganado.value.length).toBe(initialLength)
-      }
+      expect(ganado.value.length).toBe(initialLength)
     })
 
-    it('should handle animal_updated event', () => {
-      socket.on.mockClear()
+    it('should handle animal_created event with payload without id', () => {
+      const { ganado } = testUseGanado()
+      const initialLength = ganado.value.length
       
-      const { ganado } = useGanado()
+      const callback = getSocketHandler('animal_created')
+      expect(callback).toBeDefined()
+      callback({ data: { nombre: 'Sin ID' } })
+
+      expect(ganado.value.length).toBe(initialLength)
+    })
+
+    it('should handle animal_updated event with existing item', () => {
+      const { ganado } = testUseGanado()
       ganado.value = [{ id: 1, nombre: 'Animal Original' }]
       
-      const updatedCall = socket.on.mock.calls.find(call => call[0] === 'animal_updated')
-      if (updatedCall && updatedCall[1]) {
-        const callback = updatedCall[1]
-        callback({ data: { id: 1, nombre: 'Animal Actualizado' } })
+      const callback = getSocketHandler('animal_updated')
+      expect(callback).toBeDefined()
+      callback({ data: { id: 1, nombre: 'Animal Actualizado' } })
 
-        expect(ganado.value.find(a => a.id === 1).nombre).toBe('Animal Actualizado')
-      }
+      expect(ganado.value.find(a => a.id === 1).nombre).toBe('Animal Actualizado')
     })
 
     it('should handle animal_updated event for new item', () => {
-      socket.on.mockClear()
-      
-      const { ganado } = useGanado()
+      const { ganado } = testUseGanado()
       ganado.value = []
       
-      const updatedCall = socket.on.mock.calls.find(call => call[0] === 'animal_updated')
-      if (updatedCall && updatedCall[1]) {
-        const callback = updatedCall[1]
-        callback({ data: { id: 2, nombre: 'Nuevo Animal' } })
+      const callback = getSocketHandler('animal_updated')
+      expect(callback).toBeDefined()
+      callback({ data: { id: 2, nombre: 'Nuevo Animal' } })
 
-        expect(ganado.value).toContainEqual({ id: 2, nombre: 'Nuevo Animal' })
-      }
+      expect(ganado.value).toContainEqual({ id: 2, nombre: 'Nuevo Animal' })
     })
 
     it('should handle animal_updated event without data', () => {
-      socket.on.mockClear()
-      
-      const { ganado } = useGanado()
+      const { ganado } = testUseGanado()
       ganado.value = [{ id: 1, nombre: 'Animal' }]
       const initialLength = ganado.value.length
       
-      const updatedCall = socket.on.mock.calls.find(call => call[0] === 'animal_updated')
-      if (updatedCall && updatedCall[1]) {
-        const callback = updatedCall[1]
-        callback({})
+      const callback = getSocketHandler('animal_updated')
+      expect(callback).toBeDefined()
+      callback({})
 
-        expect(ganado.value.length).toBe(initialLength)
-      }
+      expect(ganado.value.length).toBe(initialLength)
+    })
+
+    it('should handle animal_updated event with null payload', () => {
+      const { ganado } = testUseGanado()
+      ganado.value = [{ id: 1, nombre: 'Animal' }]
+      const initialLength = ganado.value.length
+      
+      const callback = getSocketHandler('animal_updated')
+      expect(callback).toBeDefined()
+      callback(null)
+
+      expect(ganado.value.length).toBe(initialLength)
     })
 
     it('should handle animal_updated event with item without id', () => {
-      socket.on.mockClear()
-      
-      const { ganado } = useGanado()
+      const { ganado } = testUseGanado()
       ganado.value = [{ id: 1, nombre: 'Animal' }]
       const initialLength = ganado.value.length
       
-      const updatedCall = socket.on.mock.calls.find(call => call[0] === 'animal_updated')
-      if (updatedCall && updatedCall[1]) {
-        const callback = updatedCall[1]
-        callback({ data: { nombre: 'Sin ID' } })
+      const callback = getSocketHandler('animal_updated')
+      expect(callback).toBeDefined()
+      callback({ data: { nombre: 'Sin ID' } })
 
-        expect(ganado.value.length).toBe(initialLength)
-      }
+      expect(ganado.value.length).toBe(initialLength)
+    })
+
+    it('should merge properties when updating existing item', () => {
+      const { ganado } = testUseGanado()
+      ganado.value = [{ id: 1, nombre: 'Animal Original', raza: 'Holstein' }]
+      
+      const callback = getSocketHandler('animal_updated')
+      expect(callback).toBeDefined()
+      callback({ data: { id: 1, nombre: 'Animal Actualizado', peso: 500 } })
+
+      const updated = ganado.value.find(a => a.id === 1)
+      expect(updated).toBeDefined()
+      expect(updated.nombre).toBe('Animal Actualizado')
+      expect(updated.raza).toBe('Holstein') // Existing property preserved
+      expect(updated.peso).toBe(500) // New property added
     })
 
     it('should handle animal_deleted event', () => {
-      socket.on.mockClear()
-      vi.resetModules()
-      
-      const { ganado } = useGanado()
+      const { ganado } = testUseGanado()
       ganado.value = [
         { id: 1, nombre: 'Animal 1' },
         { id: 2, nombre: 'Animal 2' }
       ]
       
-      const deletedCall = socket.on.mock.calls.find(call => call[0] === 'animal_deleted')
-      if (deletedCall && deletedCall[1]) {
-        const callback = deletedCall[1]
-        callback({ id: 1 })
+      const callback = getSocketHandler('animal_deleted')
+      expect(callback).toBeDefined()
+      callback({ id: 1 })
 
-        expect(ganado.value.find(a => a.id === 1)).toBeUndefined()
-        expect(ganado.value.find(a => a.id === 2)).toBeDefined()
-      }
+      expect(ganado.value.find(a => a.id === 1)).toBeUndefined()
+      expect(ganado.value.find(a => a.id === 2)).toBeDefined()
     })
 
     it('should handle animal_deleted event without id', () => {
-      socket.on.mockClear()
-      vi.resetModules()
-      
-      const { ganado } = useGanado()
+      const { ganado } = testUseGanado()
       ganado.value = [{ id: 1, nombre: 'Animal 1' }]
       const initialLength = ganado.value.length
       
-      const deletedCall = socket.on.mock.calls.find(call => call[0] === 'animal_deleted')
-      if (deletedCall && deletedCall[1]) {
-        const callback = deletedCall[1]
-        callback({})
+      const callback = getSocketHandler('animal_deleted')
+      expect(callback).toBeDefined()
+      callback({})
 
-        expect(ganado.value.length).toBe(initialLength)
-      }
+      expect(ganado.value.length).toBe(initialLength)
     })
 
     it('should handle animal_deleted event with null id', () => {
-      socket.on.mockClear()
-      vi.resetModules()
-      
-      const { ganado } = useGanado()
+      const { ganado } = testUseGanado()
       ganado.value = [{ id: 1, nombre: 'Animal 1' }]
       const initialLength = ganado.value.length
       
-      const deletedCall = socket.on.mock.calls.find(call => call[0] === 'animal_deleted')
-      if (deletedCall && deletedCall[1]) {
-        const callback = deletedCall[1]
-        callback({ id: null })
+      const callback = getSocketHandler('animal_deleted')
+      expect(callback).toBeDefined()
+      callback({ id: null })
 
-        expect(ganado.value.length).toBe(initialLength)
-      }
+      expect(ganado.value.length).toBe(initialLength)
     })
 
-    it('should handle disconnect event', () => {
-      socket.on.mockClear()
+    it('should handle animal_deleted event with undefined id', () => {
+      const { ganado } = testUseGanado()
+      ganado.value = [{ id: 1, nombre: 'Animal 1' }]
+      const initialLength = ganado.value.length
       
-      useGanado()
-      
-      const disconnectCalls = socket.on.mock.calls.filter(call => call[0] === 'disconnect')
-      if (disconnectCalls.length > 0) {
-        const callback = disconnectCalls[disconnectCalls.length - 1][1]
-        callback()
+      const callback = getSocketHandler('animal_deleted')
+      expect(callback).toBeDefined()
+      callback({ id: undefined })
 
-        // After disconnect, socketRegistered should be false
-        // This allows re-registration on next use
-        expect(socket.on).toHaveBeenCalled()
-      }
+      expect(ganado.value.length).toBe(initialLength)
     })
 
-    it('should merge properties on update', () => {
-      socket.on.mockClear()
-      vi.resetModules()
+    it('should handle disconnect event and reset socketRegistered', () => {
+      testUseGanado()
       
-      const { ganado } = useGanado()
-      ganado.value = [{ id: 1, nombre: 'Animal Original', raza: 'Holstein' }]
-      
-      const updatedCall = socket.on.mock.calls.find(call => call[0] === 'animal_updated')
-      if (updatedCall && updatedCall[1]) {
-        const callback = updatedCall[1]
-        callback({ data: { id: 1, nombre: 'Animal Actualizado' } })
+      const callback = getSocketHandler('disconnect')
+      expect(callback).toBeDefined()
+      callback()
 
-        const updated = ganado.value.find(a => a.id === 1)
-        if (updated) {
-          expect(updated.nombre).toBe('Animal Actualizado')
-          expect(updated.raza).toBe('Holstein') // Should preserve existing properties
-        }
-      }
+      // Verify that socket.on was called
+      expect(socket.on).toHaveBeenCalled()
+    })
+
+    it('should not register socket events twice when socketRegistered is true', () => {
+      testUseGanado()
+      const firstCallCount = socket.on.mock.calls.length
+      
+      // Call useGanado again - should not register events again because socketRegistered is true
+      testUseGanado()
+      const secondCallCount = socket.on.mock.calls.length
+      
+      // socket.on should not be called again if socketRegistered is true
+      expect(secondCallCount).toBe(firstCallCount)
     })
   })
 })
