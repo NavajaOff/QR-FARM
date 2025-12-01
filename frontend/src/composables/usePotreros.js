@@ -38,7 +38,7 @@ export function usePotreros() {
       }
       return { success: false, message: response.data?.message }
     } catch (err) {
-      return { success: false, message: err.message || 'Error desconocido al eliminar potrero' }
+      return { success: false, message: err.message || 'Error desconocido al crear potrero' }
     }
   }
 
@@ -64,7 +64,7 @@ export function usePotreros() {
       }
       return { success: false, message: response.data?.message }
     } catch (err) {
-      return { success: false, message: err.message || 'Error desconocido al crear potrero' }
+      return { success: false, message: err.message || 'Error desconocido al eliminar potrero' }
     }
   }
 

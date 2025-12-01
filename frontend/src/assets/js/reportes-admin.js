@@ -1,8 +1,8 @@
-import { computed, onMounted, onUnmounted, ref, watch, nextTick } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch, nextTick, defineComponent } from 'vue'
 import Chart from 'chart.js/auto'
 import { useReportes } from '../../composables/useReportes.js'
 
-export default {
+export default defineComponent({
   name: 'ReportesAdmin',
   setup() {
     const { resumen, loading, error, cargarResumen, descargarPdf } = useReportes()
@@ -325,4 +325,4 @@ export default {
       descargando
     }
   }
-}
+})
