@@ -1,5 +1,17 @@
 import { beforeEach, afterEach, vi, describe, it, expect } from 'vitest'
 import { createRouter, createMemoryHistory } from 'vue-router'
+
+// Mock createWebHistory to use createMemoryHistory for testing
+// This allows the real router to be imported and tested
+vi.mock('vue-router', async () => {
+  const actual = await vi.importActual('vue-router')
+  return {
+    ...actual,
+    createWebHistory: actual.createMemoryHistory
+  }
+})
+
+// Import router after mocking - this will use the mocked createWebHistory
 import router from './index.js'
 
 // Mock console.log to avoid noise in tests

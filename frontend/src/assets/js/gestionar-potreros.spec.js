@@ -1,16 +1,14 @@
 import { beforeEach, vi, describe, it, expect } from 'vitest'
+import { ref } from 'vue'
 
 // Mock dependencies - must be defined before imports
-vi.mock('vue', () => ({
-  ref: vi.fn((initialValue) => ({ value: initialValue }))
-}))
-
 vi.mock('sweetalert2', () => ({
   default: {
     fire: vi.fn()
   }
 }))
 
+// Mock socket.io-client - create mock directly
 vi.mock('socket.io-client', () => ({
   default: vi.fn(() => ({
     on: vi.fn()
@@ -26,6 +24,13 @@ global.document = {
   getElementById: mockGetElementById
 }
 
+// Mock console methods
+global.console = {
+  ...console,
+  log: vi.fn(),
+  error: vi.fn()
+}
+
 // Import dependencies after mocks
 import Swal from 'sweetalert2'
 import io from 'socket.io-client'
@@ -36,6 +41,8 @@ import * as gestionarPotreros from './gestionar-potreros.js'
 describe('gestionar-potreros.js', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    global.console.log = vi.fn()
+    global.console.error = vi.fn()
     
     // Reset refs
     gestionarPotreros.currentIndex.value = 0
@@ -486,6 +493,10 @@ describe('gestionar-potreros.js', () => {
   })
 
   describe('configurarWebSocketPotreros', () => {
+    beforeEach(() => {
+      global.console.log = vi.fn()
+    })
+
     it('should be a function', () => {
       expect(typeof gestionarPotreros.configurarWebSocketPotreros).toBe('function')
     })
@@ -493,7 +504,6 @@ describe('gestionar-potreros.js', () => {
     it('should configure WebSocket listeners without errors', () => {
       const mockCallback = vi.fn()
       
-      // The socket is created when module loads, so we verify the function executes
       expect(() => gestionarPotreros.configurarWebSocketPotreros(mockCallback)).not.toThrow()
     })
 
@@ -1114,6 +1124,352 @@ describe('gestionar-potreros.js', () => {
 
       expect(gestionarPotreros.potreros.value).toHaveLength(1)
       expect(gestionarPotreros.potreros.value[0].responsable).toContain('Ana')
+    })
+
+    it('should map potrero with persona having empty nombre_completo', async () => {
+      gestionarPotreros.personasUsuario.value = [
+        {
+          id: 8,
+          nombre_completo: '',
+          primer_nombre: 'Pedro',
+          primer_apellido: 'Sánchez'
+        }
+      ]
+
+      const mockPotrero = {
+        id: 8,
+        nombre: 'Potrero 8',
+        estado: 'Disponible',
+        responsable_persona_id: 8
+      }
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: [mockPotrero]
+        })
+      })
+
+      await gestionarPotreros.cargarPotreros()
+
+      expect(gestionarPotreros.potreros.value).toHaveLength(1)
+      expect(gestionarPotreros.potreros.value[0].responsable).toContain('Pedro')
+    })
+
+    it('should map potrero with persona having only primer_nombre', async () => {
+      gestionarPotreros.personasUsuario.value = [
+        {
+          id: 9,
+          primer_nombre: 'Luis'
+        }
+      ]
+
+      const mockPotrero = {
+        id: 9,
+        nombre: 'Potrero 9',
+        estado: 'Disponible',
+        responsable_persona_id: 9
+      }
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: [mockPotrero]
+        })
+      })
+
+      await gestionarPotreros.cargarPotreros()
+
+      expect(gestionarPotreros.potreros.value).toHaveLength(1)
+      expect(gestionarPotreros.potreros.value[0].responsable).toContain('Luis')
+    })
+  })
+
+  describe('crearPotrero edge cases', () => {
+    beforeEach(() => {
+      gestionarPotreros.estadosPotrero.value = [
+        { estado: 'Disponible' },
+        { estado: 'En uso' }
+      ]
+      gestionarPotreros.tiposPasto.value = [
+        { id: 1, tipo_pasto: null },
+        { id: 2 },
+        { id: 3, nombre: 'Tipo Nombre' }
+      ]
+      gestionarPotreros.personasUsuario.value = [
+        { id: 1 },
+        { id: 2, primer_nombre: 'Juan' },
+        { id: 3, primer_nombre: 'María', primer_apellido: 'García' }
+      ]
+
+      mockGetElementById.mockImplementation((id) => {
+        const elements = {
+          capacidad: { value: '' },
+          hectareas: { value: '' },
+          'id_tipo_pasto': { value: '' },
+          'responsable_persona_id': { value: '' },
+          'proxima_limpieza': { value: '' },
+          area: { value: '' },
+          descripcion: { value: '' }
+        }
+        return elements[id] || { value: '' }
+      })
+    })
+
+    it('should handle crearPotrero with empty estado options', () => {
+      gestionarPotreros.estadosPotrero.value = []
+      Swal.fire.mockResolvedValueOnce({ isConfirmed: false })
+
+      gestionarPotreros.crearPotrero()
+
+      expect(Swal.fire).toHaveBeenCalled()
+    })
+
+    it('should handle crearPotrero with tiposPasto without tipo_pasto property', () => {
+      gestionarPotreros.tiposPasto.value = [
+        { id: 1 },
+        { id: 2, nombre: 'Tipo con nombre' }
+      ]
+      Swal.fire.mockResolvedValueOnce({ isConfirmed: false })
+
+      gestionarPotreros.crearPotrero()
+
+      expect(Swal.fire).toHaveBeenCalled()
+      const callArgs = Swal.fire.mock.calls[0][0]
+      expect(callArgs.html).toContain('Sin nombre')
+    })
+
+    it('should handle crearPotrero with personas without nombres', () => {
+      gestionarPotreros.personasUsuario.value = [
+        { id: 1 },
+        { id: 2, primer_nombre: '' }
+      ]
+      Swal.fire.mockResolvedValueOnce({ isConfirmed: false })
+
+      gestionarPotreros.crearPotrero()
+
+      expect(Swal.fire).toHaveBeenCalled()
+    })
+
+    it('should handle crearPotrero with error when response not ok and no errorData', async () => {
+      Swal.fire.mockResolvedValueOnce({
+        isConfirmed: true,
+        value: { capacidad: 25 }
+      })
+
+      global.fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({})
+      })
+
+      gestionarPotreros.crearPotrero()
+
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      expect(Swal.fire).toHaveBeenCalledTimes(2)
+    })
+
+    it('should handle crearPotrero with success response but no data.success', async () => {
+      Swal.fire.mockResolvedValueOnce({
+        isConfirmed: true,
+        value: { capacidad: 25 }
+      })
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: false, message: 'Error message' })
+      })
+
+      gestionarPotreros.crearPotrero()
+
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      expect(Swal.fire).toHaveBeenCalledTimes(2)
+    })
+
+    it('should handle crearPotrero with fetch error that has no message', async () => {
+      Swal.fire.mockResolvedValueOnce({
+        isConfirmed: true,
+        value: { capacidad: 25 }
+      })
+
+      const errorWithoutMessage = new Error()
+      errorWithoutMessage.message = ''
+      global.fetch.mockRejectedValueOnce(errorWithoutMessage)
+
+      gestionarPotreros.crearPotrero()
+
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      expect(Swal.fire).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe('editarPotrero edge cases', () => {
+    beforeEach(() => {
+      gestionarPotreros.potreros.value = [
+        {
+          id: 1,
+          nombre: 'Potrero 1',
+          estado: 'Disponible',
+          capacidad: 25,
+          id_tipo_pasto: 1,
+          responsable_persona_id: 1
+        }
+      ]
+
+      gestionarPotreros.estadosPotrero.value = [
+        { nombre_estado: 'Disponible' },
+        { nombre: 'En uso' }
+      ]
+      gestionarPotreros.tiposPasto.value = [
+        { id: 1, nombre: 'Bermuda' }
+      ]
+      gestionarPotreros.personasUsuario.value = [
+        { id: 1, nombre_completo: 'Juan Pérez' }
+      ]
+
+      mockGetElementById.mockImplementation((id) => {
+        const elements = {
+          'edit_estado': { value: 'En uso' },
+          'edit_capacidad': { value: '30' },
+          'edit_hectareas': { value: '3.0' },
+          'edit_id_tipo_pasto': { value: '1' },
+          'edit_responsable_persona_id': { value: '1' },
+          'edit_proxima_limpieza': { value: '' },
+          'edit_ultima_limpieza': { value: '' },
+          'edit_fecha_ultimo_uso': { value: '' },
+          'edit_area': { value: '3000' },
+          'edit_descripcion': { value: 'Updated' }
+        }
+        return elements[id] || { value: '' }
+      })
+    })
+
+    it('should handle editarPotrero with estado matching by nombre', async () => {
+      gestionarPotreros.potreros.value[0].estado = 'En uso'
+      
+      Swal.fire.mockResolvedValueOnce({ isConfirmed: false })
+
+      await gestionarPotreros.editarPotrero(1)
+
+      expect(Swal.fire).toHaveBeenCalled()
+    })
+
+    it('should handle editarPotrero with tipo pasto matching by nombre', async () => {
+      gestionarPotreros.potreros.value[0].pasto = 'Bermuda'
+      gestionarPotreros.potreros.value[0].id_tipo_pasto = null
+
+      Swal.fire.mockResolvedValueOnce({ isConfirmed: false })
+
+      await gestionarPotreros.editarPotrero(1)
+
+      expect(Swal.fire).toHaveBeenCalled()
+    })
+
+    it('should handle editarPotrero with responsable matching by nombre_completo', async () => {
+      gestionarPotreros.potreros.value[0].responsable = 'Juan Pérez'
+      gestionarPotreros.potreros.value[0].responsable_persona_id = null
+
+      Swal.fire.mockResolvedValueOnce({ isConfirmed: false })
+
+      await gestionarPotreros.editarPotrero(1)
+
+      expect(Swal.fire).toHaveBeenCalled()
+    })
+
+    it('should handle editarPotrero error with no errorData message', async () => {
+      Swal.fire.mockResolvedValueOnce({
+        isConfirmed: true,
+        value: { estado: 'En uso' }
+      })
+
+      global.fetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({})
+      })
+
+      await gestionarPotreros.editarPotrero(1)
+
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      expect(Swal.fire).toHaveBeenCalledTimes(2)
+    })
+
+    it('should handle editarPotrero fetch error without message', async () => {
+      Swal.fire.mockResolvedValueOnce({
+        isConfirmed: true,
+        value: { estado: 'En uso' }
+      })
+
+      const errorWithoutMessage = new Error()
+      errorWithoutMessage.message = ''
+      global.fetch.mockRejectedValueOnce(errorWithoutMessage)
+
+      await gestionarPotreros.editarPotrero(1)
+
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      expect(Swal.fire).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe('cargarDatosIniciales edge cases', () => {
+    it('should handle error in cargarPersonasUsuario', async () => {
+      gestionarPotreros.error.value = null
+      gestionarPotreros.loading.value = true
+
+      global.fetch.mockRejectedValueOnce(new Error('Error loading personas'))
+
+      await gestionarPotreros.cargarDatosIniciales()
+
+      expect(gestionarPotreros.loading.value).toBe(false)
+    })
+
+    it('should handle error in cargarTiposPasto', async () => {
+      gestionarPotreros.error.value = null
+      gestionarPotreros.loading.value = true
+
+      global.fetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: [] }) })
+        .mockRejectedValueOnce(new Error('Error loading tipos'))
+
+      await gestionarPotreros.cargarDatosIniciales()
+
+      expect(gestionarPotreros.loading.value).toBe(false)
+    })
+
+    it('should handle error in cargarEstadosPotrero', async () => {
+      gestionarPotreros.error.value = null
+      gestionarPotreros.loading.value = true
+
+      global.fetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: [] }) })
+        .mockRejectedValueOnce(new Error('Error loading estados'))
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: [] }) })
+
+      await gestionarPotreros.cargarDatosIniciales()
+
+      expect(gestionarPotreros.loading.value).toBe(false)
+    })
+
+    it('should handle error in cargarPotreros', async () => {
+      gestionarPotreros.error.value = null
+      gestionarPotreros.loading.value = true
+
+      global.fetch
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: [] }) })
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: [] }) })
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: [] }) })
+        .mockRejectedValueOnce(new Error('Error loading potreros'))
+
+      await gestionarPotreros.cargarDatosIniciales()
+
+      expect(gestionarPotreros.loading.value).toBe(false)
     })
   })
 })

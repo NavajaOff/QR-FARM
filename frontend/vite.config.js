@@ -25,8 +25,7 @@ export default defineConfig({
       include: ['src/**/*.{js,ts,vue}'],
       exclude: [
         'node_modules',
-        '**/icov-report/**',
-        '**/gestionar-potreros.js' // Exclude file that causes parsing errors
+        '**/icov-report/**'
       ],
       tempDirectory: './node_modules/.vitest-coverage-temp'
     }
