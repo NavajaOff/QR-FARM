@@ -199,7 +199,8 @@ describe('usePotreros', () => {
     })
 
     it('should handle errors without message', async () => {
-      const err = new Error()
+      // eslint-disable-next-line unicorn/error-message
+      const err = new Error('')
       err.message = undefined
       potreroAPI.getAll.mockRejectedValue(err)
 
@@ -207,7 +208,7 @@ describe('usePotreros', () => {
 
       await cargarPotreros()
 
-      expect(error.value).toBeUndefined()
+      expect(error.value).toBe('Error desconocido al cargar potreros')
     })
   })
 
@@ -270,7 +271,8 @@ describe('usePotreros', () => {
     })
 
     it('should handle create exception without message', async () => {
-      const err = new Error()
+      // eslint-disable-next-line unicorn/error-message
+      const err = new Error('')
       err.message = undefined
       potreroAPI.create.mockRejectedValue(err)
 
@@ -279,7 +281,7 @@ describe('usePotreros', () => {
       const result = await crearPotrero({ nombre: 'Test' })
 
       expect(result.success).toBe(false)
-      expect(result.message).toBeUndefined()
+      expect(result.message).toBe('Error desconocido al crear potrero')
     })
   })
 
@@ -342,7 +344,8 @@ describe('usePotreros', () => {
     })
 
     it('should handle update exception without message', async () => {
-      const err = new Error()
+      // eslint-disable-next-line unicorn/error-message
+      const err = new Error('')
       err.message = undefined
       potreroAPI.update.mockRejectedValue(err)
 
@@ -351,7 +354,7 @@ describe('usePotreros', () => {
       const result = await actualizarPotrero(1, { nombre: 'Test' })
 
       expect(result.success).toBe(false)
-      expect(result.message).toBeUndefined()
+      expect(result.message).toBe('Error desconocido al actualizar potrero')
     })
   })
 
@@ -414,7 +417,8 @@ describe('usePotreros', () => {
     })
 
     it('should handle delete exception without message', async () => {
-      const err = new Error()
+      // eslint-disable-next-line unicorn/error-message
+      const err = new Error('')
       err.message = undefined
       potreroAPI.delete.mockRejectedValue(err)
 
@@ -423,7 +427,7 @@ describe('usePotreros', () => {
       const result = await eliminarPotrero(1)
 
       expect(result.success).toBe(false)
-      expect(result.message).toBeUndefined()
+      expect(result.message).toBe('Error desconocido al eliminar potrero')
     })
   })
 

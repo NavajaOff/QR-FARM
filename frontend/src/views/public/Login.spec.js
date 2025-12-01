@@ -267,7 +267,8 @@ describe('Login.vue', () => {
 
       const wrapper = createWrapper()
       wrapper.vm.email = 'admin@example.com'
-      wrapper.vm.password = 'password'
+      wrapper.vm.password = VALID_CRED
+      console.warn = vi.fn()
 
       await wrapper.vm.login()
 

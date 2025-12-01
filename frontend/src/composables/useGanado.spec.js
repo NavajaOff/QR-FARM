@@ -167,6 +167,8 @@ describe('useGanado', () => {
     })
 
     it('should handle errors without message', async () => {
+      // Intencionalmente se crea Error sin mensaje para probar manejo de errores sin message
+      // eslint-disable-next-line unicorn/error-message
       const err = new Error()
       err.message = undefined
       ganadoAPI.getAll.mockRejectedValue(err)
@@ -238,6 +240,8 @@ describe('useGanado', () => {
     })
 
     it('should handle create exception without message', async () => {
+      // Intencionalmente se crea Error sin mensaje para probar manejo de errores sin message
+      // eslint-disable-next-line unicorn/error-message
       const err = new Error()
       err.message = undefined
       ganadoAPI.create.mockRejectedValue(err)
@@ -310,6 +314,8 @@ describe('useGanado', () => {
     })
 
     it('should handle update exception without message', async () => {
+      // Intencionalmente se crea Error sin mensaje para probar manejo de errores sin message
+      // eslint-disable-next-line unicorn/error-message
       const err = new Error()
       err.message = undefined
       ganadoAPI.update.mockRejectedValue(err)
@@ -382,6 +388,8 @@ describe('useGanado', () => {
     })
 
     it('should handle delete exception without message', async () => {
+      // Intencionalmente se crea Error sin mensaje para probar manejo de errores sin message
+      // eslint-disable-next-line unicorn/error-message
       const err = new Error()
       err.message = undefined
       ganadoAPI.delete.mockRejectedValue(err)

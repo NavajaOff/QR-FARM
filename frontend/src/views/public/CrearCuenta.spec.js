@@ -9,6 +9,9 @@ vi.mock('../../services/api.js', () => ({
   }
 }))
 
+// Constant for test password, using env var for security
+const TEST_PASSWORD = process.env.TEST_PASSWORD || 'test-password-123'
+
 describe('CrearCuenta', () => {
   let wrapper
 
@@ -54,7 +57,7 @@ describe('CrearCuenta', () => {
     await wrapper.find('#primerNombre').setValue('Juan')
     await wrapper.find('#primerApellido').setValue('Perez')
     await wrapper.find('#email').setValue('juan@example.com')
-    await wrapper.find('#password').setValue('password123')
+    await wrapper.find('#password').setValue(TEST_PASSWORD)
     await wrapper.find('#telefono').setValue('123456789')
     await wrapper.find('#terminos').setChecked(true)
 
@@ -68,7 +71,7 @@ describe('CrearCuenta', () => {
       segundo_apellido: null,
       email: 'juan@example.com',
       telefono: '123456789',
-      password: 'password123'
+      password: TEST_PASSWORD
     })
 
     expect(wrapper.vm.success).toBe('Cuenta creada exitosamente. Redirigiendo al login...')
@@ -97,7 +100,7 @@ describe('CrearCuenta', () => {
     await wrapper.find('#primerNombre').setValue('Juan')
     await wrapper.find('#primerApellido').setValue('Perez')
     await wrapper.find('#email').setValue('juan@example.com')
-    await wrapper.find('#password').setValue('password123')
+    await wrapper.find('#password').setValue(TEST_PASSWORD)
     await wrapper.find('#terminos').setChecked(true)
 
     // Submit form
@@ -115,7 +118,7 @@ describe('CrearCuenta', () => {
     await wrapper.find('#primerNombre').setValue('Juan')
     await wrapper.find('#primerApellido').setValue('Perez')
     await wrapper.find('#email').setValue('juan@example.com')
-    await wrapper.find('#password').setValue('password123')
+    await wrapper.find('#password').setValue(TEST_PASSWORD)
     await wrapper.find('#terminos').setChecked(true)
 
     // Submit form
@@ -135,7 +138,7 @@ describe('CrearCuenta', () => {
     await wrapper.find('#primerNombre').setValue('Juan')
     await wrapper.find('#primerApellido').setValue('Perez')
     await wrapper.find('#email').setValue('juan@example.com')
-    await wrapper.find('#password').setValue('password123')
+    await wrapper.find('#password').setValue(TEST_PASSWORD)
     await wrapper.find('#terminos').setChecked(true)
 
     // Submit form
@@ -155,7 +158,7 @@ describe('CrearCuenta', () => {
     await wrapper.find('#primerNombre').setValue('Juan')
     await wrapper.find('#primerApellido').setValue('Perez')
     await wrapper.find('#email').setValue('juan@example.com')
-    await wrapper.find('#password').setValue('password123')
+    await wrapper.find('#password').setValue(TEST_PASSWORD)
     await wrapper.find('#terminos').setChecked(true)
 
     // Submit form

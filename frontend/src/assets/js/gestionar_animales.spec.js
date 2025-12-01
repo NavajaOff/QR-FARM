@@ -16,17 +16,7 @@ import {
   prevAnimal,
   nextAnimal,
   toggleAccordion,
-  resetEstado,
-  verPerfilAnimal,
-  agregarNuevoAnimal,
-  darBajaAnimal,
-  reactivarAnimal,
-  editarAnimal,
-  cargarEstadosGanado,
-  cargarPersonasUsuario,
-  cancelPendingRequests,
-  setUpdateCallback
-} from './gestionar_animales.js'
+  resetEstado} from './gestionar_animales.js'
 
 // Mock axios
 vi.mock('axios', () => ({

@@ -22,7 +22,7 @@ export function usePotreros() {
         error.value = payload?.message || 'No fue posible obtener los potreros'
       }
     } catch (err) {
-      error.value = err.message
+      error.value = err.message || 'Error desconocido al cargar potreros'
       console.error('Error cargando potreros:', err)
     } finally {
       loading.value = false
@@ -38,7 +38,7 @@ export function usePotreros() {
       }
       return { success: false, message: response.data?.message }
     } catch (err) {
-      return { success: false, message: err.message }
+      return { success: false, message: err.message || 'Error desconocido al eliminar potrero' }
     }
   }
 
@@ -51,7 +51,7 @@ export function usePotreros() {
       }
       return { success: false, message: response.data?.message }
     } catch (err) {
-      return { success: false, message: err.message }
+      return { success: false, message: err.message || 'Error desconocido al actualizar potrero' }
     }
   }
 
@@ -64,7 +64,7 @@ export function usePotreros() {
       }
       return { success: false, message: response.data?.message }
     } catch (err) {
-      return { success: false, message: err.message }
+      return { success: false, message: err.message || 'Error desconocido al crear potrero' }
     }
   }
 
