@@ -22,14 +22,16 @@ const mockRefs = vi.hoisted(() => {
   }
 })
 
+const mockUseReportes = vi.fn(() => ({
+  resumen: mockRefs.resumen,
+  loading: mockRefs.loading,
+  error: mockRefs.error,
+  cargarResumen: vi.fn(),
+  descargarPdf: vi.fn().mockResolvedValue({ success: true })
+}))
+
 vi.mock('../../composables/useReportes.js', () => ({
-  useReportes: () => ({
-    resumen: mockRefs.resumen,
-    loading: mockRefs.loading,
-    error: mockRefs.error,
-    cargarResumen: vi.fn(),
-    descargarPdf: vi.fn().mockResolvedValue({ success: true })
-  })
+  useReportes: () => mockUseReportes()
 }))
 
 describe('ReportesAdmin.vue', () => {
@@ -37,6 +39,13 @@ describe('ReportesAdmin.vue', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUseReportes.mockReturnValue({
+      resumen: mockRefs.resumen,
+      loading: mockRefs.loading,
+      error: mockRefs.error,
+      cargarResumen: vi.fn(),
+      descargarPdf: vi.fn().mockResolvedValue({ success: true })
+    })
     mockRefs.resumen.value = null
     mockRefs.loading.value = false
     mockRefs.error.value = null
@@ -173,8 +182,8 @@ describe('ReportesAdmin.vue', () => {
           setTimeout(() => resolve({ success: true }), 100)
         })
       })
-      const { useReportes } = await import('../../composables/useReportes.js')
-      vi.mocked(useReportes).mockReturnValueOnce({
+      
+      mockUseReportes.mockReturnValueOnce({
         resumen: mockRefs.resumen,
         loading: mockRefs.loading,
         error: mockRefs.error,
@@ -198,8 +207,8 @@ describe('ReportesAdmin.vue', () => {
 
     it('should call descargarReporte when button is clicked', async () => {
       const mockDescargarPdf = vi.fn().mockResolvedValue({ success: true })
-      const { useReportes } = await import('../../composables/useReportes.js')
-      vi.mocked(useReportes).mockReturnValueOnce({
+      
+      mockUseReportes.mockReturnValueOnce({
         resumen: mockRefs.resumen,
         loading: mockRefs.loading,
         error: mockRefs.error,
