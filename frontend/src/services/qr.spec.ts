@@ -2176,5 +2176,81 @@ describe('qr service', () => {
         })
       ).rejects.toThrow('identificador')
     })
+
+    // Note: Lines 71 and 317 appear to be defensive code that is difficult to reach:
+    // - Line 71: buildUrl throws when resourceId is empty, but the queue filter
+    //   ensures all candidates have length > 0 before buildUrl is called.
+    // - Line 317: fetchQrResource throws QrUnknownError when queue is exhausted
+    //   without 404 errors, but the code throws immediately on non-404 errors.
+    // These lines serve as safety checks but are unlikely to be reached in practice.
+  })
+
+  describe('transformEmbeddedPayload edge cases', () => {
+    it('should handle toNullableString with unknown types (line 132)', () => {
+      // This test covers line 132 in toNullableString for unknown types
+      // We can test this through transformEmbeddedPayload by passing values
+      // that are not string, number, boolean, object, null, or undefined
+      
+      // Test with Symbol
+      const payloadWithSymbol = {
+        id: '1',
+        nombre: Symbol('test')
+      }
+      const result1 = transformEmbeddedPayload(payloadWithSymbol)
+      expect(result1.nombre).toBeNull()
+      
+      // Test with BigInt
+      const payloadWithBigInt = {
+        id: '1',
+        nombre: BigInt(123)
+      }
+      const result2 = transformEmbeddedPayload(payloadWithBigInt)
+      expect(result2.nombre).toBeNull()
+      
+      // Test with function
+      const payloadWithFunction = {
+        id: '1',
+        nombre: () => 'test'
+      }
+      const result3 = transformEmbeddedPayload(payloadWithFunction)
+      expect(result3.nombre).toBeNull()
+    })
+
+    it('should handle toIsoString with non-string/number/Date types (line 148)', () => {
+      // This test covers line 148 in toIsoString for types that are not
+      // string, number, Date, null, or undefined
+      
+      // Test with boolean
+      const payloadWithBoolean = {
+        id: '1',
+        fecha_nacimiento: true
+      }
+      const result1 = transformEmbeddedPayload(payloadWithBoolean)
+      expect(result1.fecha_nacimiento).toBeNull()
+      
+      // Test with object
+      const payloadWithObject = {
+        id: '1',
+        fecha_nacimiento: { year: 2020, month: 1, day: 15 }
+      }
+      const result2 = transformEmbeddedPayload(payloadWithObject)
+      expect(result2.fecha_nacimiento).toBeNull()
+      
+      // Test with array
+      const payloadWithArray = {
+        id: '1',
+        fecha_nacimiento: [2020, 1, 15]
+      }
+      const result3 = transformEmbeddedPayload(payloadWithArray)
+      expect(result3.fecha_nacimiento).toBeNull()
+      
+      // Test with Symbol
+      const payloadWithSymbol = {
+        id: '1',
+        fecha_nacimiento: Symbol('test')
+      }
+      const result4 = transformEmbeddedPayload(payloadWithSymbol)
+      expect(result4.fecha_nacimiento).toBeNull()
+    })
   })
 })
