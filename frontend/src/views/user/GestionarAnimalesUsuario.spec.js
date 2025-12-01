@@ -565,17 +565,19 @@ describe('GestionarAnimalesUsuario.vue', () => {
 
     it('should show sync icon when not loading', async () => {
       mockLoading.value = false
+      mockError.value = null
+      mockAnimales.value = []
+      mockAnimalesFiltrados.value = []
       
-      vi.resetModules()
-      const GestionarAnimalesUsuarioComponent = await import('./GestionarAnimalesUsuario.vue')
-      wrapper = mount(GestionarAnimalesUsuarioComponent.default)
+      wrapper = mount(GestionarAnimalesUsuario)
       await nextTick()
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await wrapper.vm.$nextTick()
+      await nextTick()
       
       const updateButton = wrapper.find('button.btn-outline-success')
-      if (updateButton.exists()) {
-        expect(updateButton.html()).toContain('fa-sync-alt')
-      }
+      expect(updateButton.exists()).toBe(true)
+      expect(updateButton.attributes('disabled')).toBeUndefined()
+      expect(updateButton.html()).toContain('fa-sync-alt')
     })
   })
 })

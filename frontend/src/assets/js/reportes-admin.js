@@ -300,11 +300,16 @@ export default defineComponent({
 
     const descargarReporte = async () => {
       descargando.value = true
-      const resultado = await descargarPdf()
-      descargando.value = false
+      try {
+        const resultado = await descargarPdf()
+        descargando.value = false
 
-      if (!resultado.success) {
-        alert('No fue posible descargar el PDF: ' + (resultado.message || 'Error desconocido'))
+        if (resultado && !resultado.success) {
+          alert('No fue posible descargar el PDF: ' + (resultado.message || 'Error desconocido'))
+        }
+      } catch (error) {
+        descargando.value = false
+        alert('No fue posible descargar el PDF: ' + (error.message || 'Error desconocido'))
       }
     }
 

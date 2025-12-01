@@ -3,73 +3,33 @@ import { beforeEach, vi, describe, it, expect } from 'vitest'
 import { nextTick } from 'vue'
 import ReportesAdmin from './ReportesAdmin.vue'
 
-const {
-  mockResumen,
-  mockLoading,
-  mockError,
-  mockDescargando,
-  mockSummaryCards,
-  mockSecciones,
-  mockTrendInsights,
-  mockDescargarReporte,
-  mockFormatBadgeClass,
-  mockFormatVariacion,
-  mockFormatPromedio,
-  mockFormatearEstado,
-  mockFormatFecha
-} = vi.hoisted(() => {
-  const mockResumen = { value: null }
-  const mockLoading = { value: false }
-  const mockError = { value: null }
-  const mockDescargando = { value: false }
-  const mockSummaryCards = { value: [] }
-  const mockSecciones = { value: [] }
-  const mockTrendInsights = { value: [] }
-  const mockDescargarReporte = vi.fn()
-  const mockFormatBadgeClass = vi.fn((v) => v > 0 ? 'badge-soft-success' : v < 0 ? 'badge-soft-danger' : 'badge-soft-muted')
-  const mockFormatVariacion = vi.fn((v) => typeof v === 'number' && !isNaN(v) ? v.toFixed(1) : '0.0')
-  const mockFormatPromedio = vi.fn((v) => typeof v === 'number' && !isNaN(v) && isFinite(v) ? (Number.isInteger(v) ? v.toString() : v.toFixed(1)) : '0')
-  const mockFormatearEstado = vi.fn((e) => e ? e.replace('_', ' ') : 'sin estado')
-  const mockFormatFecha = vi.fn((f) => f ? new Date(f).toLocaleDateString() : 'No disponible')
-  
+const mockRefs = vi.hoisted(() => {
+  const { ref } = require('vue')
   return {
-    mockResumen,
-    mockLoading,
-    mockError,
-    mockDescargando,
-    mockSummaryCards,
-    mockSecciones,
-    mockTrendInsights,
-    mockDescargarReporte,
-    mockFormatBadgeClass,
-    mockFormatVariacion,
-    mockFormatPromedio,
-    mockFormatearEstado,
-    mockFormatFecha
+    resumen: ref(null),
+    loading: ref(false),
+    error: ref(null),
+    descargando: ref(false),
+    summaryCards: ref([]),
+    secciones: ref([]),
+    trendInsights: ref([]),
+    descargarReporte: vi.fn(),
+    formatBadgeClass: vi.fn((v) => v > 0 ? 'badge-soft-success' : v < 0 ? 'badge-soft-danger' : 'badge-soft-muted'),
+    formatVariacion: vi.fn((v) => typeof v === 'number' && !isNaN(v) ? v.toFixed(1) : '0.0'),
+    formatPromedio: vi.fn((v) => typeof v === 'number' && !isNaN(v) && isFinite(v) ? (Number.isInteger(v) ? v.toString() : v.toFixed(1)) : '0'),
+    formatearEstado: vi.fn((e) => e ? e.replace('_', ' ') : 'sin estado'),
+    formatFecha: vi.fn((f) => f ? new Date(f).toLocaleDateString() : 'No disponible')
   }
 })
 
-vi.mock('../../assets/js/reportes-admin.js', () => ({
-  default: {
-    name: 'ReportesAdmin',
-    setup() {
-      return {
-        resumen: mockResumen,
-        loading: mockLoading,
-        error: mockError,
-        descargando: mockDescargando,
-        summaryCards: mockSummaryCards,
-        secciones: mockSecciones,
-        trendInsights: mockTrendInsights,
-        descargarReporte: mockDescargarReporte,
-        formatBadgeClass: mockFormatBadgeClass,
-        formatVariacion: mockFormatVariacion,
-        formatPromedio: mockFormatPromedio,
-        formatearEstado: mockFormatearEstado,
-        formatFecha: mockFormatFecha
-      }
-    }
-  }
+vi.mock('../../composables/useReportes.js', () => ({
+  useReportes: () => ({
+    resumen: mockRefs.resumen,
+    loading: mockRefs.loading,
+    error: mockRefs.error,
+    cargarResumen: vi.fn(),
+    descargarPdf: vi.fn().mockResolvedValue({ success: true })
+  })
 }))
 
 describe('ReportesAdmin.vue', () => {
@@ -77,13 +37,13 @@ describe('ReportesAdmin.vue', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    mockResumen.value = null
-    mockLoading.value = false
-    mockError.value = null
-    mockDescargando.value = false
-    mockSummaryCards.value = []
-    mockSecciones.value = []
-    mockTrendInsights.value = []
+    mockRefs.resumen.value = null
+    mockRefs.loading.value = false
+    mockRefs.error.value = null
+    mockRefs.descargando.value = false
+    mockRefs.summaryCards.value = []
+    mockRefs.secciones.value = []
+    mockRefs.trendInsights.value = []
   })
 
   describe('Component mounting', () => {
@@ -105,10 +65,10 @@ describe('ReportesAdmin.vue', () => {
 
   describe('Loading state', () => {
     it('should show loading spinner when loading is true', async () => {
-      mockLoading.value = true
+      mockRefs.loading.value = true
       wrapper = mount(ReportesAdmin)
       await nextTick()
-      
+
       expect(wrapper.text()).toContain('Cargando información...')
       expect(wrapper.find('.spinner-border').exists()).toBe(true)
     })
@@ -116,11 +76,13 @@ describe('ReportesAdmin.vue', () => {
 
   describe('Error state', () => {
     it('should show error message when error exists', async () => {
-      mockError.value = 'Error al cargar reportes'
-      mockLoading.value = false
+      mockRefs.loading.value = false
+      mockRefs.error.value = 'Error al cargar reportes'
+      mockRefs.resumen.value = null
       wrapper = mount(ReportesAdmin)
       await nextTick()
-      
+      await wrapper.vm.$nextTick()
+
       expect(wrapper.text()).toContain('Error al cargar reportes')
       expect(wrapper.find('.alert-danger').exists()).toBe(true)
     })
@@ -149,68 +111,114 @@ describe('ReportesAdmin.vue', () => {
     ]
 
     it('should display summary cards when resumen exists', async () => {
-      mockResumen.value = { usuarios: { totales: { total: 50 } } }
-      mockSummaryCards.value = mockSummaryCardsData
-      mockLoading.value = false
-      mockError.value = null
+      mockRefs.loading.value = false
+      mockRefs.error.value = null
+      mockRefs.resumen.value = { usuarios: { totales: { total: 50 } } }
+      mockRefs.summaryCards.value = mockSummaryCardsData
       wrapper = mount(ReportesAdmin)
       await nextTick()
-      
+      await wrapper.vm.$nextTick()
+
       expect(wrapper.text()).toContain('Usuarios')
       expect(wrapper.text()).toContain('Ganado')
     })
 
     it('should display card totals', async () => {
-      mockResumen.value = { usuarios: { totales: { total: 50 } } }
-      mockSummaryCards.value = mockSummaryCardsData
-      mockLoading.value = false
-      mockError.value = null
+      mockRefs.loading.value = false
+      mockRefs.error.value = null
+      mockRefs.resumen.value = {
+        usuarios: {
+          totales: { total: 50, activos: 45, inactivos: 5 },
+          por_estado: []
+        },
+        ganado: {
+          totales: { total: 100 },
+          por_estado: [{ estado: 'saludable', cantidad: 80 }, { estado: 'enfermo', cantidad: 20 }]
+        },
+        potreros: {
+          totales: { total: 0 },
+          por_estado: []
+        },
+        vacunaciones: {
+          totales: { total: 0 },
+          proximas: 0,
+          por_estado: []
+        },
+        tendencias: {}
+      }
       wrapper = mount(ReportesAdmin)
       await nextTick()
-      
+      await wrapper.vm.$nextTick()
+
       expect(wrapper.text()).toContain('50')
       expect(wrapper.text()).toContain('100')
     })
 
     it('should display download button', async () => {
-      mockResumen.value = { usuarios: { totales: { total: 50 } } }
-      mockSummaryCards.value = mockSummaryCardsData
-      mockLoading.value = false
-      mockError.value = null
+      mockRefs.resumen.value = { usuarios: { totales: { total: 50 } } }
+      mockRefs.summaryCards.value = mockSummaryCardsData
+      mockRefs.loading.value = false
+      mockRefs.error.value = null
       wrapper = mount(ReportesAdmin)
       await nextTick()
-      
+
       const downloadButton = wrapper.find('button.btn-danger')
       expect(downloadButton.exists()).toBe(true)
       expect(downloadButton.text()).toContain('Descargar PDF')
     })
 
     it('should disable download button when descargando', async () => {
-      mockResumen.value = { usuarios: { totales: { total: 50 } } }
-      mockSummaryCards.value = mockSummaryCardsData
-      mockDescargando.value = true
-      mockLoading.value = false
-      mockError.value = null
+      const mockDescargarPdf = vi.fn().mockImplementation(() => {
+        return new Promise((resolve) => {
+          setTimeout(() => resolve({ success: true }), 100)
+        })
+      })
+      const { useReportes } = await import('../../composables/useReportes.js')
+      vi.mocked(useReportes).mockReturnValueOnce({
+        resumen: mockRefs.resumen,
+        loading: mockRefs.loading,
+        error: mockRefs.error,
+        cargarResumen: vi.fn(),
+        descargarPdf: mockDescargarPdf
+      })
+
+      mockRefs.loading.value = false
+      mockRefs.error.value = null
+      mockRefs.resumen.value = { usuarios: { totales: { total: 50 } } }
       wrapper = mount(ReportesAdmin)
       await nextTick()
-      
+      await wrapper.vm.$nextTick()
+
       const downloadButton = wrapper.find('button.btn-danger')
+      await downloadButton.trigger('click')
+      await nextTick()
+
       expect(downloadButton.attributes('disabled')).toBeDefined()
     })
 
     it('should call descargarReporte when button is clicked', async () => {
-      mockResumen.value = { usuarios: { totales: { total: 50 } } }
-      mockSummaryCards.value = mockSummaryCardsData
-      mockDescargando.value = false
-      mockLoading.value = false
-      mockError.value = null
+      const mockDescargarPdf = vi.fn().mockResolvedValue({ success: true })
+      const { useReportes } = await import('../../composables/useReportes.js')
+      vi.mocked(useReportes).mockReturnValueOnce({
+        resumen: mockRefs.resumen,
+        loading: mockRefs.loading,
+        error: mockRefs.error,
+        cargarResumen: vi.fn(),
+        descargarPdf: mockDescargarPdf
+      })
+
+      mockRefs.loading.value = false
+      mockRefs.error.value = null
+      mockRefs.resumen.value = { usuarios: { totales: { total: 50 } } }
       wrapper = mount(ReportesAdmin)
       await nextTick()
-      
+      await wrapper.vm.$nextTick()
+
       const downloadButton = wrapper.find('button.btn-danger')
       await downloadButton.trigger('click')
-      
-      expect(mockDescargarReporte).toHaveBeenCalled()
+      await nextTick()
+
+      expect(mockDescargarPdf).toHaveBeenCalled()
     })
   })
 })
