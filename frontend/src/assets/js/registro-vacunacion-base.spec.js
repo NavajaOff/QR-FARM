@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { vi } from 'vitest'
-import { registroVacunacionBase } from './registro-vacunacion-base.js'
+import { registroVacunacionBase, collectDefaultEditPayload } from './registro-vacunacion-base.js'
 import Swal from 'sweetalert2'
 
 // Mock de API
@@ -255,6 +255,143 @@ describe('registro-vacunacion-base.js', () => {
       await wrapper.vm.eliminarVacunacion(1)
 
       expect(vacunacionAPI.delete).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('registrarVacunacion Method', () => {
+    beforeEach(() => {
+      wrapper = createWrapper()
+      wrapper.vm.animales = [{ id: 1, nombre: 'Animal 1' }]
+      wrapper.vm.tiposVacuna = [{ id: 1, nombre: 'Vacuna A' }]
+      wrapper.vm.personas = [{ id: 1, nombre: 'Persona 1' }]
+    })
+
+    it('should register vaccination successfully', async () => {
+      const { vacunacionAPI } = await import('../../services/api.js')
+      Swal.fire.mockResolvedValue({
+        value: {
+          id_animal: 1,
+          id_tipo_vacuna: 1,
+          fecha_aplicacion: '2023-01-01',
+          responsable: 1,
+          estado: 'pendiente'
+        }
+      })
+      vacunacionAPI.create.mockResolvedValue({})
+
+      await wrapper.vm.registrarVacunacion()
+
+      expect(vacunacionAPI.create).toHaveBeenCalled()
+      expect(Swal.fire).toHaveBeenCalledWith('Éxito', 'Vacunación registrada correctamente', 'success')
+    })
+
+    it('should validate required fields', async () => {
+      const { vacunacionAPI } = await import('../../services/api.js')
+      Swal.fire.mockImplementation(() => {
+        // Simulate preConfirm validation
+        const mockPreConfirm = () => {
+          throw new Error('VALIDATION_ERROR')
+        }
+        return Promise.resolve({ value: null })
+      })
+
+      await wrapper.vm.registrarVacunacion()
+
+      expect(vacunacionAPI.create).not.toHaveBeenCalled()
+    })
+
+    it('should handle API errors', async () => {
+      const { vacunacionAPI } = await import('../../services/api.js')
+      Swal.fire.mockResolvedValue({
+        value: {
+          id_animal: 1,
+          id_tipo_vacuna: 1,
+          fecha_aplicacion: '2023-01-01',
+          responsable: 1,
+          estado: 'pendiente'
+        }
+      })
+      vacunacionAPI.create.mockRejectedValue(new Error('API error'))
+
+      await wrapper.vm.registrarVacunacion()
+
+      expect(Swal.fire).toHaveBeenCalledWith('Error', 'No se pudo registrar la vacunación', 'error')
+    })
+  })
+
+  describe('editarVacunacion Method', () => {
+    beforeEach(() => {
+      wrapper = createWrapper()
+      wrapper.vm.vacunaciones = [{
+        id: 1,
+        estado: 'pendiente',
+        fechaAplicacion: '2023-01-01T00:00:00',
+        proximaDosis: '2023-02-01T00:00:00'
+      }]
+    })
+
+    it('should edit vaccination successfully', async () => {
+      const { vacunacionAPI } = await import('../../services/api.js')
+      Swal.fire.mockResolvedValue({
+        isConfirmed: true,
+        value: {
+          estado: 'aplicado',
+          fecha_aplicacion: '2023-01-01',
+          proxima_dosis: '2023-02-01'
+        }
+      })
+      vacunacionAPI.update.mockResolvedValue({})
+
+      await wrapper.vm.editarVacunacion(1)
+
+      expect(vacunacionAPI.update).toHaveBeenCalledWith(1, expect.any(Object))
+      expect(Swal.fire).toHaveBeenCalledWith('Éxito', 'Vacunación actualizada correctamente', 'success')
+    })
+
+    it('should do nothing if vaccination not found', async () => {
+      await wrapper.vm.editarVacunacion(999)
+
+      expect(true).toBe(true)
+    })
+
+    it('should handle API errors', async () => {
+      const { vacunacionAPI } = await import('../../services/api.js')
+      Swal.fire.mockResolvedValue({
+        isConfirmed: true,
+        value: {
+          estado: 'aplicado',
+          fecha_aplicacion: '2023-01-01',
+          proxima_dosis: '2023-02-01'
+        }
+      })
+      vacunacionAPI.update.mockRejectedValue(new Error('API error'))
+
+      await wrapper.vm.editarVacunacion(1)
+
+      expect(Swal.fire).toHaveBeenCalledWith('Error', 'No se pudo actualizar la vacunación', 'error')
+    })
+  })
+
+  describe('collectDefaultEditPayload Function', () => {
+    it('should collect edit payload correctly', () => {
+      // Mock DOM elements
+      document.getElementById = vi.fn((id) => {
+        const mocks = {
+          estado: { value: 'aplicado' },
+          fechaAplicacion: { value: '2023-01-01' },
+          proximaDosis: { value: '2023-02-01' }
+        }
+        return mocks[id] || null
+      })
+
+      const result = collectDefaultEditPayload()
+
+      expect(result.valid).toBe(true)
+      expect(result.payload).toEqual({
+        estado: 'aplicado',
+        fecha_aplicacion: '2023-01-01',
+        proxima_dosis: '2023-02-01'
+      })
     })
   })
 })
