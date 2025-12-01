@@ -20,12 +20,16 @@ export default defineConfig({
     setupFiles: ['./src/test-setup.js'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'lcov', 'json', 'cobertura'],
+      reporter: ['text', 'lcov', 'json', 'cobertura', 'html'],
       reportsDirectory: './coverage',
       include: ['src/**/*.{js,ts,vue}'],
       exclude: [
         'node_modules',
-        '**/icov-report/**'
+        '**/icov-report/**',
+        '**/*.spec.{js,ts}',
+        '**/*.test.{js,ts}',
+        '**/test-setup.js',
+        '**/test-helpers.*'
       ],
       tempDirectory: './node_modules/.vitest-coverage-temp'
     }
