@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, vi, describe, it, expect } from 'vitest'
-import { nextTick } from 'vue'
+import { nextTick, ref } from 'vue'
 
 // Mock authService before importing component
 vi.mock('../../services/authService.js', () => ({
@@ -19,9 +19,12 @@ vi.mock('sweetalert2', () => ({
   }
 }))
 
+// Import component AFTER mocks are set up
 import GestionarAnimalesUsuario from './GestionarAnimalesUsuario.vue'
 
+// Create shared refs and mocks in a single hoisted block
 const {
+  sharedRefs,
   mockBusqueda,
   mockFiltroRaza,
   mockFiltroEstado,
@@ -35,21 +38,41 @@ const {
   mockCapitalizar,
   mockEstadoClass,
   mockVerPerfilAnimal,
-  mockEditarAnimal
+  mockEditarAnimal,
+  createMockUseGestionarAnimalesUsuario
 } = vi.hoisted(() => {
-  const mockBusqueda = { value: '' }
-  const mockFiltroRaza = { value: '' }
-  const mockFiltroEstado = { value: '' }
-  const mockAnimales = { value: [] }
-  const mockLoading = { value: false }
-  const mockError = { value: null }
+  // Import Vue ref to create real reactive refs
+  const { ref } = require('vue')
+  
+  // Create shared refs that both mocks and tests will use
+  // Use Vue ref() to make them truly reactive
+  const loading = ref(false)
+  const error = ref(null)
+  const animales = ref([])
+  const busqueda = ref('')
+  const filtroRaza = ref('')
+  const filtroEstado = ref('')
+  const animalesFiltrados = ref([])
+  const razasDisponibles = ref([])
+  const estadosDisponibles = ref([])
+  
+  const sharedRefs = {
+    loading,
+    error,
+    animales,
+    busqueda,
+    filtroRaza,
+    filtroEstado,
+    animalesFiltrados,
+    razasDisponibles,
+    estadosDisponibles
+  }
+  
+  // Create function mocks
   const mockCargarAnimales = vi.fn().mockImplementation(() => {
     // Explicitly don't change loading state
     return Promise.resolve()
   })
-  const mockRazasDisponibles = { value: [] }
-  const mockEstadosDisponibles = { value: [] }
-  const mockAnimalesFiltrados = { value: [] }
   const mockCapitalizar = vi.fn((s) => {
     if (!s) return ''
     const str = String(s)
@@ -59,64 +82,76 @@ const {
   const mockVerPerfilAnimal = vi.fn()
   const mockEditarAnimal = vi.fn()
   
-  return {
-    mockBusqueda,
-    mockFiltroRaza,
-    mockFiltroEstado,
-    mockAnimales,
-    mockLoading,
-    mockError,
-    mockCargarAnimales,
-    mockRazasDisponibles,
-    mockEstadosDisponibles,
-    mockAnimalesFiltrados,
-    mockCapitalizar,
-    mockEstadoClass,
-    mockVerPerfilAnimal,
-    mockEditarAnimal
-  }
-})
-
-// Mock useGanado first
-vi.mock('../../composables/useGanado.js', () => ({
-  useGanado: vi.fn(() => {
-    const mockCargarGanadoSafe = vi.fn().mockImplementation(() => {
-      // Don't change loading state in mock
+  // Create mock factory for useGestionarAnimalesUsuario
+  const createMockUseGestionarAnimalesUsuario = () => {
+    // Don't modify loading here - let tests control it
+    // The loading ref is shared, so tests can set it before mounting
+    
+    const safeCargarAnimales = vi.fn().mockImplementation(async () => {
+      // Don't change loading state - let tests control it
       return Promise.resolve()
     })
+    
     return {
-      ganado: mockAnimales,
-      loading: mockLoading,
-      error: mockError,
-      cargarGanado: mockCargarGanadoSafe
-    }
-  })
-}))
-
-vi.mock('../../assets/js/gestionar-animales-usuario.js', () => ({
-  useGestionarAnimalesUsuario: vi.fn(() => {
-    // Create a safe cargarAnimales that doesn't change loading state
-    const safeCargarAnimales = vi.fn().mockImplementation(() => {
-      // Don't change loading state in mock
-      return Promise.resolve()
-    })
-    return {
-      busqueda: mockBusqueda,
-      filtroRaza: mockFiltroRaza,
-      filtroEstado: mockFiltroEstado,
-      animales: mockAnimales,
-      loading: mockLoading,
-      error: mockError,
+      busqueda,
+      filtroRaza,
+      filtroEstado,
+      animales,
+      loading,
+      error,
       cargarAnimales: safeCargarAnimales,
-      razasDisponibles: mockRazasDisponibles,
-      estadosDisponibles: mockEstadosDisponibles,
-      animalesFiltrados: mockAnimalesFiltrados,
+      razasDisponibles,
+      estadosDisponibles,
+      animalesFiltrados,
       capitalizar: mockCapitalizar,
       estadoClass: mockEstadoClass,
       verPerfilAnimal: mockVerPerfilAnimal,
       editarAnimal: mockEditarAnimal
     }
-  })
+  }
+  
+  return {
+    sharedRefs,
+    // Expose refs as mock* for backward compatibility with tests
+    mockBusqueda: busqueda,
+    mockFiltroRaza: filtroRaza,
+    mockFiltroEstado: filtroEstado,
+    mockAnimales: animales,
+    mockLoading: loading,
+    mockError: error,
+    mockCargarAnimales,
+    mockRazasDisponibles: razasDisponibles,
+    mockEstadosDisponibles: estadosDisponibles,
+    mockAnimalesFiltrados: animalesFiltrados,
+    mockCapitalizar,
+    mockEstadoClass,
+    mockVerPerfilAnimal,
+    mockEditarAnimal,
+    createMockUseGestionarAnimalesUsuario
+  }
+})
+
+// Mock useGanado first - uses shared refs
+vi.mock('../../composables/useGanado.js', () => {
+  const { ref } = require('vue')
+  return {
+    useGanado: vi.fn(() => {
+      const mockCargarGanadoSafe = vi.fn().mockImplementation(() => {
+        // Don't change loading state in mock
+        return Promise.resolve()
+      })
+      return {
+        ganado: sharedRefs.animales,
+        loading: sharedRefs.loading,
+        error: sharedRefs.error,
+        cargarGanado: mockCargarGanadoSafe
+      }
+    })
+  }
+})
+
+vi.mock('../../assets/js/gestionar-animales-usuario.js', () => ({
+  useGestionarAnimalesUsuario: vi.fn(() => createMockUseGestionarAnimalesUsuario())
 }))
 
 describe('GestionarAnimalesUsuario.vue', () => {
@@ -580,37 +615,63 @@ describe('GestionarAnimalesUsuario.vue', () => {
     })
 
     it('should show sync icon when not loading', async () => {
-      // Ensure loading is false before mounting
+      // CRITICAL: Set loading to false BEFORE mounting
+      // The mock factory will also set it to false when called, but
+      // we want to ensure it starts false
       mockLoading.value = false
       mockError.value = null
       mockAnimales.value = []
       mockAnimalesFiltrados.value = []
       
+      // Mount the component - the mock factory will be called and set loading to false
       wrapper = mount(GestionarAnimalesUsuario)
       
-      // Wait for all async operations to complete
+      // Wait for initial render
       await nextTick()
+      
+      // The mock factory already set loading to false when called
+      // But ensure it stays false
+      mockLoading.value = false
+      
+      // Wait for Vue reactivity to update
       await wrapper.vm.$nextTick()
       await nextTick()
       
-      // Ensure loading stays false (mock should not change it)
-      mockLoading.value = false
-      await nextTick()
-      
+      // Get the button - it should reflect loading = false
       const updateButton = wrapper.find('button.btn-outline-success')
       expect(updateButton.exists()).toBe(true)
       
-      // Verify loading is actually false
+      // Verify our shared ref is false
       expect(mockLoading.value).toBe(false)
       
-      // Check that button is not disabled
-      const disabledAttr = updateButton.attributes('disabled')
-      expect(disabledAttr === undefined || disabledAttr === '' || disabledAttr === false).toBe(true)
+      // The component uses the same ref (loading), so it should also be false
+      // Wait one more tick for Vue to update the template
+      await nextTick()
       
-      // Check for sync icon (not spinner)
+      // Now check the button HTML
       const buttonHtml = updateButton.html()
-      expect(buttonHtml).toContain('fa-sync-alt')
-      expect(buttonHtml).not.toContain('spinner-border')
+      
+      // The button should show fa-sync-alt when loading is false
+      // If it shows spinner-border, loading must be true in the component
+      // which means the component is not using our shared ref
+      
+      // Let's be more aggressive - force the value and wait for render
+      mockLoading.value = false
+      await wrapper.vm.$forceUpdate()
+      await nextTick()
+      await wrapper.vm.$nextTick()
+      
+      // Get fresh button reference
+      const freshButton = wrapper.find('button.btn-outline-success')
+      const freshHtml = freshButton.html()
+      
+      // Now assert - the button MUST show sync icon when loading is false
+      expect(freshHtml).toContain('fa-sync-alt')
+      expect(freshHtml).not.toContain('spinner-border')
+      
+      // Verify button is not disabled
+      const disabledAttr = freshButton.attributes('disabled')
+      expect(disabledAttr === undefined || disabledAttr === '' || disabledAttr === false).toBe(true)
     })
   })
 })
