@@ -12,11 +12,11 @@ vi.mock('../../composables/useReportes.js', () => ({
 
 // Mock de Chart.js
 vi.mock('chart.js/auto', () => ({
-  default: vi.fn().mockImplementation(() => ({
-    destroy: vi.fn(),
-    update: vi.fn(),
-    data: { labels: [], datasets: [] }
-  }))
+  default: vi.fn().mockImplementation(function() {
+    this.destroy = vi.fn()
+    this.update = vi.fn()
+    this.data = { labels: [], datasets: [] }
+  })
 }))
 
 describe('reportes-admin.js', () => {

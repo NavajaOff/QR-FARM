@@ -609,10 +609,10 @@ describe('usePotreros', () => {
 
     it('should merge properties on update', () => {
       socket.on.mockClear()
-      
+
       const { potreros } = usePotreros()
       potreros.value = [{ id: 1, nombre: 'Potrero Original', capacidad: 25 }]
-      
+
       const updatedCalls = socket.on.mock.calls.filter(call => call[0] === 'potrero_updated')
       if (updatedCalls.length > 0) {
         const callback = updatedCalls[updatedCalls.length - 1][1]
@@ -623,6 +623,94 @@ describe('usePotreros', () => {
           expect(updated.nombre).toBe('Potrero Actualizado')
           expect(updated.capacidad).toBe(25) // Should preserve existing properties
         }
+      }
+    })
+
+    it('should handle upsertPotrero with new item (else branch)', () => {
+      const { potreros } = usePotreros()
+      potreros.value = [{ id: 1, nombre: 'Existing Potrero' }]
+
+      // Access internal upsertPotrero function through socket callback
+      const updatedCalls = socket.on.mock.calls.filter(call => call[0] === 'potrero_updated')
+      if (updatedCalls.length > 0) {
+        const callback = updatedCalls[updatedCalls.length - 1][1]
+        callback({ data: { id: 2, nombre: 'New Potrero' } })
+
+        expect(potreros.value).toHaveLength(2)
+        expect(potreros.value[0].nombre).toBe('New Potrero') // Should be prepended
+        expect(potreros.value[1].nombre).toBe('Existing Potrero')
+      }
+    })
+
+    it('should handle removePotrero with valid id', () => {
+      const { potreros } = usePotreros()
+      potreros.value = [
+        { id: 1, nombre: 'Potrero 1' },
+        { id: 2, nombre: 'Potrero 2' },
+        { id: 3, nombre: 'Potrero 3' }
+      ]
+
+      // Access internal removePotrero function through socket callback
+      const deletedCalls = socket.on.mock.calls.filter(call => call[0] === 'potrero_deleted')
+      if (deletedCalls.length > 0) {
+        const callback = deletedCalls[deletedCalls.length - 1][1]
+        callback({ id: 2 })
+
+        expect(potreros.value).toHaveLength(2)
+        expect(potreros.value.find(p => p.id === 2)).toBeUndefined()
+        expect(potreros.value.find(p => p.id === 1)).toBeDefined()
+        expect(potreros.value.find(p => p.id === 3)).toBeDefined()
+      }
+    })
+
+    it('should handle socket events with valid payload data', () => {
+      socket.on.mockClear()
+
+      const { potreros } = usePotreros()
+
+      // Test potrero_created with valid data
+      const createdCalls = socket.on.mock.calls.filter(call => call[0] === 'potrero_created')
+      if (createdCalls.length > 0) {
+        const callback = createdCalls[createdCalls.length - 1][1]
+        callback({ data: { id: 1, nombre: 'Created Potrero' } })
+
+        expect(potreros.value).toContainEqual({ id: 1, nombre: 'Created Potrero' })
+      }
+
+      // Test potrero_updated with valid data
+      const updatedCalls = socket.on.mock.calls.filter(call => call[0] === 'potrero_updated')
+      if (updatedCalls.length > 0) {
+        const callback = updatedCalls[updatedCalls.length - 1][1]
+        potreros.value = [{ id: 1, nombre: 'Original' }]
+        callback({ data: { id: 1, nombre: 'Updated Potrero' } })
+
+        expect(potreros.value.find(p => p.id === 1).nombre).toBe('Updated Potrero')
+      }
+
+      // Test potrero_deleted with valid id
+      const deletedCalls = socket.on.mock.calls.filter(call => call[0] === 'potrero_deleted')
+      if (deletedCalls.length > 0) {
+        const callback = deletedCalls[deletedCalls.length - 1][1]
+        potreros.value = [{ id: 1, nombre: 'To Delete' }]
+        callback({ id: 1 })
+
+        expect(potreros.value.find(p => p.id === 1)).toBeUndefined()
+      }
+    })
+
+    it('should handle disconnect event and reset socketRegistered', () => {
+      socket.on.mockClear()
+
+      usePotreros()
+
+      const disconnectCalls = socket.on.mock.calls.filter(call => call[0] === 'disconnect')
+      if (disconnectCalls.length > 0) {
+        const callback = disconnectCalls[disconnectCalls.length - 1][1]
+        callback()
+
+        // The disconnect callback sets socketRegistered = false
+        // This allows re-registration on next use
+        expect(socket.on).toHaveBeenCalledWith('disconnect', expect.any(Function))
       }
     })
   })

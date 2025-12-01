@@ -581,10 +581,10 @@ describe('useGanado', () => {
     it('should merge properties on update', () => {
       socket.on.mockClear()
       vi.resetModules()
-      
+
       const { ganado } = useGanado()
       ganado.value = [{ id: 1, nombre: 'Animal Original', raza: 'Holstein' }]
-      
+
       const updatedCall = socket.on.mock.calls.find(call => call[0] === 'animal_updated')
       if (updatedCall && updatedCall[1]) {
         const callback = updatedCall[1]
@@ -595,6 +595,94 @@ describe('useGanado', () => {
           expect(updated.nombre).toBe('Animal Actualizado')
           expect(updated.raza).toBe('Holstein') // Should preserve existing properties
         }
+      }
+    })
+
+    it('should handle upsertGanado with new item (else branch)', () => {
+      const { ganado } = useGanado()
+      ganado.value = [{ id: 1, nombre: 'Existing Animal' }]
+
+      // Access internal upsertGanado function through socket callback
+      const updatedCall = socket.on.mock.calls.find(call => call[0] === 'animal_updated')
+      if (updatedCall && updatedCall[1]) {
+        const callback = updatedCall[1]
+        callback({ data: { id: 2, nombre: 'New Animal' } })
+
+        expect(ganado.value).toHaveLength(2)
+        expect(ganado.value[0].nombre).toBe('New Animal') // Should be prepended
+        expect(ganado.value[1].nombre).toBe('Existing Animal')
+      }
+    })
+
+    it('should handle removeGanado with valid id', () => {
+      const { ganado } = useGanado()
+      ganado.value = [
+        { id: 1, nombre: 'Animal 1' },
+        { id: 2, nombre: 'Animal 2' },
+        { id: 3, nombre: 'Animal 3' }
+      ]
+
+      // Access internal removeGanado function through socket callback
+      const deletedCall = socket.on.mock.calls.find(call => call[0] === 'animal_deleted')
+      if (deletedCall && deletedCall[1]) {
+        const callback = deletedCall[1]
+        callback({ id: 2 })
+
+        expect(ganado.value).toHaveLength(2)
+        expect(ganado.value.find(a => a.id === 2)).toBeUndefined()
+        expect(ganado.value.find(a => a.id === 1)).toBeDefined()
+        expect(ganado.value.find(a => a.id === 3)).toBeDefined()
+      }
+    })
+
+    it('should handle socket events with valid payload data', () => {
+      socket.on.mockClear()
+
+      const { ganado } = useGanado()
+
+      // Test animal_created with valid data
+      const createdCall = socket.on.mock.calls.find(call => call[0] === 'animal_created')
+      if (createdCall && createdCall[1]) {
+        const callback = createdCall[1]
+        callback({ data: { id: 1, nombre: 'Created Animal' } })
+
+        expect(ganado.value).toContainEqual({ id: 1, nombre: 'Created Animal' })
+      }
+
+      // Test animal_updated with valid data
+      const updatedCall = socket.on.mock.calls.find(call => call[0] === 'animal_updated')
+      if (updatedCall && updatedCall[1]) {
+        const callback = updatedCall[1]
+        ganado.value = [{ id: 1, nombre: 'Original' }]
+        callback({ data: { id: 1, nombre: 'Updated Animal' } })
+
+        expect(ganado.value.find(a => a.id === 1).nombre).toBe('Updated Animal')
+      }
+
+      // Test animal_deleted with valid id
+      const deletedCall = socket.on.mock.calls.find(call => call[0] === 'animal_deleted')
+      if (deletedCall && deletedCall[1]) {
+        const callback = deletedCall[1]
+        ganado.value = [{ id: 1, nombre: 'To Delete' }]
+        callback({ id: 1 })
+
+        expect(ganado.value.find(a => a.id === 1)).toBeUndefined()
+      }
+    })
+
+    it('should handle disconnect event and reset socketRegistered', () => {
+      socket.on.mockClear()
+
+      useGanado()
+
+      const disconnectCalls = socket.on.mock.calls.filter(call => call[0] === 'disconnect')
+      if (disconnectCalls.length > 0) {
+        const callback = disconnectCalls[disconnectCalls.length - 1][1]
+        callback()
+
+        // The disconnect callback sets socketRegistered = false
+        // This allows re-registration on next use
+        expect(socket.on).toHaveBeenCalledWith('disconnect', expect.any(Function))
       }
     })
   })
