@@ -12,7 +12,7 @@ vi.mock('../../composables/useReportes.js', () => ({
 
 // Mock de Chart.js
 vi.mock('chart.js/auto', () => ({
-  default: vi.fn(() => ({
+  default: vi.fn().mockImplementation(() => ({
     destroy: vi.fn(),
     update: vi.fn(),
     data: { labels: [], datasets: [] }

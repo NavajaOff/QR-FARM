@@ -490,6 +490,18 @@ describe('gestionar-potreros.js', () => {
       // Should not throw, just log error
       expect(global.fetch).toHaveBeenCalled()
     })
+
+    it('should handle success response but no data.success', async () => {
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: false, message: 'Error' })
+      })
+
+      await gestionarPotreros.actualizarProximaLimpieza(1, '2024-12-31')
+
+      // Should not throw, just log error
+      expect(global.fetch).toHaveBeenCalled()
+    })
   })
 
   describe('configurarWebSocketPotreros', () => {
@@ -621,10 +633,45 @@ describe('gestionar-potreros.js', () => {
       await new Promise(resolve => setTimeout(resolve, 100))
 
       expect(Swal.fire).toHaveBeenCalledTimes(2)
-      const errorCall = Swal.fire.mock.calls.find(call => 
+      const errorCall = Swal.fire.mock.calls.find(call =>
         call[0] === 'Error' || (call[0] && call[0].title === 'Error')
       )
       expect(errorCall).toBeTruthy()
+    })
+
+    it('should handle success response but no data.success', async () => {
+      Swal.fire.mockResolvedValueOnce({
+        isConfirmed: true,
+        value: { capacidad: 25 }
+      })
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: false, message: 'Error message' })
+      })
+
+      gestionarPotreros.crearPotrero()
+
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      expect(Swal.fire).toHaveBeenCalledTimes(2)
+    })
+
+    it('should handle fetch error that has no message', async () => {
+      Swal.fire.mockResolvedValueOnce({
+        isConfirmed: true,
+        value: { capacidad: 25 }
+      })
+
+      const errorWithoutMessage = new Error()
+      errorWithoutMessage.message = ''
+      global.fetch.mockRejectedValueOnce(errorWithoutMessage)
+
+      gestionarPotreros.crearPotrero()
+
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      expect(Swal.fire).toHaveBeenCalledTimes(2)
     })
   })
 
@@ -756,6 +803,41 @@ describe('gestionar-potreros.js', () => {
         status: 500,
         json: async () => ({ message: 'Server error' })
       })
+
+      await gestionarPotreros.editarPotrero(1)
+
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      expect(Swal.fire).toHaveBeenCalledTimes(2)
+    })
+
+    it('should handle success response but no data.success in editarPotrero', async () => {
+      Swal.fire.mockResolvedValueOnce({
+        isConfirmed: true,
+        value: { estado: 'En uso' }
+      })
+
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: false, message: 'Error message' })
+      })
+
+      await gestionarPotreros.editarPotrero(1)
+
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      expect(Swal.fire).toHaveBeenCalledTimes(2)
+    })
+
+    it('should handle fetch error without message in editarPotrero', async () => {
+      Swal.fire.mockResolvedValueOnce({
+        isConfirmed: true,
+        value: { estado: 'En uso' }
+      })
+
+      const errorWithoutMessage = new Error()
+      errorWithoutMessage.message = ''
+      global.fetch.mockRejectedValueOnce(errorWithoutMessage)
 
       await gestionarPotreros.editarPotrero(1)
 
