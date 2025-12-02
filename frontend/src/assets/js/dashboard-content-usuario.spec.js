@@ -146,4 +146,37 @@ describe('dashboard-content-usuario.js', () => {
     expect(component.estadisticas.potreros).toBe(0)
     expect(component.estadisticas.vacunaciones).toBe(0)
   })
+
+  describe('mounted hook', () => {
+    it('should call cargarDatosUsuario and cargarEstadisticas on mount', async () => {
+      const mountedComponent = { ...dashboardContentUsuario }
+      mountedComponent.data = mountedComponent.data.bind(mountedComponent)
+      mountedComponent.methods = { ...mountedComponent.methods }
+      
+      // Bind methods to component context
+      Object.keys(mountedComponent.methods).forEach(key => {
+        mountedComponent.methods[key] = mountedComponent.methods[key].bind(mountedComponent)
+      })
+      
+      // Set up component state
+      mountedComponent.estadisticas = mountedComponent.data().estadisticas
+      mountedComponent.userInfo = mountedComponent.data().userInfo
+      
+      // Spy on methods
+      const cargarDatosUsuarioSpy = vi.spyOn(mountedComponent.methods, 'cargarDatosUsuario')
+      const cargarEstadisticasSpy = vi.spyOn(mountedComponent.methods, 'cargarEstadisticas').mockResolvedValue()
+
+      // Bind mounted to component and add methods to 'this'
+      mountedComponent.cargarDatosUsuario = mountedComponent.methods.cargarDatosUsuario
+      mountedComponent.cargarEstadisticas = mountedComponent.methods.cargarEstadisticas
+
+      // Simulate mounted hook
+      if (mountedComponent.mounted) {
+        await mountedComponent.mounted.call(mountedComponent)
+      }
+
+      expect(cargarDatosUsuarioSpy).toHaveBeenCalled()
+      expect(cargarEstadisticasSpy).toHaveBeenCalled()
+    })
+  })
 })
