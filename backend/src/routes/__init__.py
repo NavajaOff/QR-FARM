@@ -21,11 +21,21 @@ def create_app(config_class=None):
     # Initialize database
     init_db()
 
-    # Enable CORS con configuración específica para desarrollo
+    # Enable CORS con configuración desde variables de entorno
     from flask_cors import CORS
+    import os
+
+    # CORS origins desde variables de entorno o valores por defecto para desarrollo
+    _cors_origins_env = os.getenv('CORS_ORIGINS', '')
+    if _cors_origins_env:
+        # Si hay variable de entorno, usar esos valores (separados por coma)
+        _cors_origins = [origin.strip() for origin in _cors_origins_env.split(',')]
+    else:
+        # Valores por defecto para desarrollo local
+        _cors_origins = ["http://localhost:5173", "http://localhost:5174"]
 
     CORS(app, resources={r"/api/*": {
-        "origins": ["http://localhost:5173", "http://localhost:5174"],
+        "origins": _cors_origins,
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
         "supports_credentials": True
@@ -33,8 +43,9 @@ def create_app(config_class=None):
 
     @app.after_request
     def after_request(response):
-        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5173')
-        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:5174')
+        # Agregar headers CORS dinámicamente desde la configuración
+        for origin in _cors_origins:
+            response.headers.add('Access-Control-Allow-Origin', origin)
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
         response.headers.add('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
         return response

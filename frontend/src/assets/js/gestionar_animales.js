@@ -61,12 +61,13 @@ let cancelTokenSource = null;
 
 // Importar potreros para el select
 import { potreros, cargarDatosIniciales as cargarDatosInicialesPotreros, cargarPotreros } from './gestionar-potreros.js';
+import { getApiBaseUrl, getBackendUrl } from '../../utils/config.js';
 
 // API configuration
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = getApiBaseUrl();
 
 // WebSocket configuration
-const socket = io('http://localhost:5000');
+const socket = io(getBackendUrl());
 
 // Función para actualizar la lista en el componente Vue
 let updateCallback = null;
@@ -345,7 +346,7 @@ export const verPerfilAnimal = async (id) => {
             <p><strong>Estado:</strong> ${animalActualizado.estado_tipo || animalActualizado.estado || 'Sin dato'}</p>
             <p><strong>Potrero actual:</strong> ${potreroNombre}</p>
             <p><strong>Historial médico:</strong> Sin incidencias</p>
-            ${animalActualizado.codigo_qr ? `<div class="mt-3"><img src="http://localhost:5000/api/animales/qr/${animalActualizado.codigo_qr}.png" alt="Código QR" class="img-fluid" style="max-width: 300px;"></div>` : ''}
+            ${animalActualizado.codigo_qr ? `<div class="mt-3"><img src="${API_BASE}/animales/qr/${animalActualizado.codigo_qr}.png" alt="Código QR" class="img-fluid" style="max-width: 300px;"></div>` : ''}
           </div>
         `,
         confirmButtonColor: '#00d563',
@@ -380,7 +381,7 @@ export const verPerfilAnimal = async (id) => {
           <p><strong>Estado:</strong> ${animal.estado || 'Sin dato'}</p>
           <p><strong>Potrero actual:</strong> ${potreroLocal}</p>
           <p><strong>Historial médico:</strong> Sin incidencias</p>
-          ${animal.codigo_qr ? `<div class="mt-3"><img src="http://localhost:5000/api/animales/qr/${animal.codigo_qr}.png" alt="Código QR" class="img-fluid" style="max-width: 300px;"></div>` : ''}
+          ${animal.codigo_qr ? `<div class="mt-3"><img src="${API_BASE}/animales/qr/${animal.codigo_qr}.png" alt="Código QR" class="img-fluid" style="max-width: 300px;"></div>` : ''}
         </div>
       `,
       confirmButtonColor: '#00d563',

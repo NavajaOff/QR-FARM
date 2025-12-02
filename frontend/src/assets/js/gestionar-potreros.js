@@ -68,11 +68,13 @@ const mapPotreroFromApi = (potrero) => {
   return mapped;
 };
 
+import { getApiBaseUrl, getBackendUrl } from '../../utils/config.js';
+
 // API configuration
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = getApiBaseUrl();
 
 // WebSocket configuration
-const socket = io('http://localhost:5000');
+const socket = io(getBackendUrl());
 
 // API calls
 export const cargarDatosIniciales = async () => {

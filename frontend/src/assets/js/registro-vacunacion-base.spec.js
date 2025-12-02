@@ -1,5 +1,13 @@
 import { mount } from '@vue/test-utils'
 import { vi } from 'vitest'
+
+// Mock config.js before importing registro-vacunacion-base.js
+vi.mock('../../utils/config.js', () => ({
+  getBackendUrl: () => 'http://localhost:5000',
+  getApiBaseUrl: () => 'http://localhost:5000/api',
+  getApiUrl: (endpoint) => `http://localhost:5000/api${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`
+}))
+
 import { registroVacunacionBase, collectDefaultEditPayload } from './registro-vacunacion-base.js'
 import Swal from 'sweetalert2'
 

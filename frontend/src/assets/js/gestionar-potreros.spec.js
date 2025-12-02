@@ -1,5 +1,12 @@
 import { beforeEach, vi, describe, it, expect } from 'vitest'
 
+// Mock config.js before importing gestionar-potreros.js
+vi.mock('../../utils/config.js', () => ({
+  getBackendUrl: () => 'http://localhost:5000',
+  getApiBaseUrl: () => 'http://localhost:5000/api',
+  getApiUrl: (endpoint) => `http://localhost:5000/api${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`
+}))
+
 // Mock dependencies - must be defined before imports
 vi.mock('sweetalert2', () => ({
   default: {

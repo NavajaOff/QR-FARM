@@ -70,7 +70,7 @@
                 </ul>
                 <div v-if="animal.codigo_qr" class="text-center">
                   <img
-                    :src="`http://localhost:5000/api/animales/qr/${animal.codigo_qr}.png`"
+                    :src="`${apiBaseUrl}/animales/qr/${animal.codigo_qr}.png`"
                     alt="Código QR"
                     class="img-fluid rounded"
                     style="max-width: 160px;"
@@ -100,7 +100,9 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useGestionarAnimalesUsuario } from '../../assets/js/gestionar-animales-usuario.js'
+import { getApiBaseUrl } from '../../utils/config.js'
 
 const {
   busqueda,
@@ -118,6 +120,8 @@ const {
   verPerfilAnimal,
   editarAnimal
 } = useGestionarAnimalesUsuario()
+
+const apiBaseUrl = computed(() => getApiBaseUrl())
 </script>
 
 <style scoped>

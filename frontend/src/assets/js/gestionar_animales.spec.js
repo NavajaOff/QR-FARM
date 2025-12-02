@@ -1,4 +1,12 @@
 import { vi } from 'vitest'
+
+// Mock config.js before importing gestionar_animales.js
+vi.mock('../../utils/config.js', () => ({
+  getBackendUrl: () => 'http://localhost:5000',
+  getApiBaseUrl: () => 'http://localhost:5000/api',
+  getApiUrl: (endpoint) => `http://localhost:5000/api${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`
+}))
+
 import {
   currentIndex,
   accordionOpen,
@@ -86,6 +94,28 @@ vi.mock('./gestionar-potreros.js', () => ({
   cargarDatosIniciales: vi.fn().mockResolvedValue(),
   cargarPotreros: vi.fn().mockResolvedValue()
 }))
+
+// Import after mocks
+import {
+  currentIndex,
+  accordionOpen,
+  animales,
+  estadosGanado,
+  personasUsuario,
+  loading,
+  error,
+  cargarDatosIniciales,
+  cargarAnimales,
+  cargarEstadosGanado,
+  cargarPersonasUsuario,
+  calcularEdad,
+  formatDate,
+  estadoClass,
+  iconClass,
+  prevAnimal,
+  nextAnimal,
+  toggleAccordion,
+  resetEstado} from './gestionar_animales.js'
 
 describe('gestionar_animales.js', () => {
   beforeEach(() => {

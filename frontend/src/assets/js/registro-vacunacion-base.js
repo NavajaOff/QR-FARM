@@ -113,7 +113,8 @@ export const registroVacunacionBase = {
 
     async obtenerTiposVacuna() {
       try {
-        const response = await fetch('http://localhost:5000/api/vacunaciones/tipos-vacuna');
+        const { getApiUrl } = await import('../../utils/config.js');
+        const response = await fetch(getApiUrl('/vacunaciones/tipos-vacuna'));
         const data = await response.json();
         this.tiposVacuna = data.data || [];
       } catch (error) {

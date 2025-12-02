@@ -79,16 +79,23 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 migrate = Migrate(app, directory='src/database/migrations')
 
 # Inicializar SocketIO para actualizaciones en tiempo real
-ALLOWED_CORS_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:5174",
-    "http://localhost:80",
-    "http://127.0.0.1:80",
-    "http://localhost",
-    "http://127.0.0.1"
-]
+# CORS origins desde variables de entorno o valores por defecto para desarrollo
+_cors_origins_env = os.getenv('CORS_ORIGINS', '')
+if _cors_origins_env:
+    # Si hay variable de entorno, usar esos valores (separados por coma)
+    ALLOWED_CORS_ORIGINS = [origin.strip() for origin in _cors_origins_env.split(',')]
+else:
+    # Valores por defecto para desarrollo local
+    ALLOWED_CORS_ORIGINS = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "http://localhost:80",
+        "http://127.0.0.1:80",
+        "http://localhost",
+        "http://127.0.0.1"
+    ]
 
 socketio = SocketIO(app, cors_allowed_origins=ALLOWED_CORS_ORIGINS)
 
