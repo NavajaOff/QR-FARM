@@ -25,13 +25,22 @@ export default defineConfig({
       include: ['src/**/*.{js,ts,vue}'],
       exclude: [
         'node_modules',
-        '**/icov-report/**',
+        '**/coverage/**',
+        '**/lcov-report/**',
         '**/*.spec.{js,ts}',
         '**/*.test.{js,ts}',
         '**/test-setup.js',
-        '**/test-helpers.*'
+        '**/test-helpers.*',
+        '**/__tests__/**',
+        '**/__mocks__/**',
+        '**/dist/**',
+        '**/build/**'
       ],
-      tempDirectory: './node_modules/.vitest-coverage-temp'
+      tempDirectory: './node_modules/.vitest-coverage-temp',
+      // Ensure test files are not included in coverage report
+      all: false,
+      // Only include source files, not test files
+      clean: true
     }
   }
 })
