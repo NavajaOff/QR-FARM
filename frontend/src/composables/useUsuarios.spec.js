@@ -259,4 +259,149 @@ describe('useUsuarios', () => {
       expect(console.error).toHaveBeenCalled()
     })
   })
+
+  describe('Edge Cases', () => {
+    it('should handle cargarUsuarios with response without status', async () => {
+      userAPI.getAll.mockResolvedValue({
+        data: { data: [] } // Missing status
+      })
+
+      const { cargarUsuarios, usuarios } = useUsuarios()
+      await cargarUsuarios()
+
+      expect(usuarios.value).toEqual([])
+    })
+
+    it('should handle cargarUsuarios with null data', async () => {
+      userAPI.getAll.mockResolvedValue({
+        data: { status: 'success', data: null }
+      })
+
+      const { cargarUsuarios, usuarios } = useUsuarios()
+      await cargarUsuarios()
+
+      expect(usuarios.value).toEqual([])
+    })
+
+    it('should filter usuarios with rol.nombre_rol', async () => {
+      userAPI.getAll.mockResolvedValue({
+        data: {
+          status: 'success',
+          data: [
+            { id: 1, rol: { nombre_rol: 'admin' } },
+            { id: 2, rol: { nombre_rol: 'super_admin' } },
+            { id: 3, rol: { nombre_rol: 'user' } }
+          ]
+        }
+      })
+
+      const { cargarUsuarios, usuarios } = useUsuarios()
+      await cargarUsuarios()
+
+      expect(usuarios.value).toHaveLength(2)
+      expect(usuarios.value.find(u => u.id === 2)).toBeUndefined()
+    })
+
+    it('should filter usuarios with rol.rol', async () => {
+      userAPI.getAll.mockResolvedValue({
+        data: {
+          status: 'success',
+          data: [
+            { id: 1, rol: { rol: 'admin' } },
+            { id: 2, rol: { rol: 'super_admin' } }
+          ]
+        }
+      })
+
+      const { cargarUsuarios, usuarios } = useUsuarios()
+      await cargarUsuarios()
+
+      expect(usuarios.value).toHaveLength(1)
+      expect(usuarios.value[0].id).toBe(1)
+    })
+
+    it('should filter usuarios with rol as string', async () => {
+      userAPI.getAll.mockResolvedValue({
+        data: {
+          status: 'success',
+          data: [
+            { id: 1, rol: 'admin' },
+            { id: 2, rol: 'super_admin' }
+          ]
+        }
+      })
+
+      const { cargarUsuarios, usuarios } = useUsuarios()
+      await cargarUsuarios()
+
+      expect(usuarios.value).toHaveLength(1)
+      expect(usuarios.value[0].id).toBe(1)
+    })
+
+    it('should handle usuarios with null rol', async () => {
+      userAPI.getAll.mockResolvedValue({
+        data: {
+          status: 'success',
+          data: [
+            { id: 1, rol: null },
+            { id: 2, rol: { nombre_rol: 'admin' } }
+          ]
+        }
+      })
+
+      const { cargarUsuarios, usuarios } = useUsuarios()
+      await cargarUsuarios()
+
+      // null rol !== 'super_admin', so both should be included
+      expect(usuarios.value.length).toBeGreaterThanOrEqual(1)
+    })
+
+    it('should handle cambiarEstadoUsuario with error.response.data.message', async () => {
+      userAPI.changeStatus.mockRejectedValue({
+        response: {
+          data: { message: 'Custom error message' }
+        }
+      })
+
+      const { cambiarEstadoUsuario } = useUsuarios()
+      const result = await cambiarEstadoUsuario(1, 'activo')
+
+      expect(result.success).toBe(false)
+      expect(result.message).toBe('Custom error message')
+    })
+
+    it('should handle cambiarEstadoUsuario with error.message', async () => {
+      userAPI.changeStatus.mockRejectedValue({
+        message: 'Network error'
+      })
+
+      const { cambiarEstadoUsuario } = useUsuarios()
+      const result = await cambiarEstadoUsuario(1, 'activo')
+
+      expect(result.success).toBe(false)
+      expect(result.message).toBe('Network error')
+    })
+
+    it('should handle cambiarEstadoUsuario with error without message', async () => {
+      userAPI.changeStatus.mockRejectedValue({})
+
+      const { cambiarEstadoUsuario } = useUsuarios()
+      const result = await cambiarEstadoUsuario(1, 'activo')
+
+      expect(result.success).toBe(false)
+      expect(result.message).toBe('Error al cambiar el estado del usuario')
+    })
+
+    it('should handle cambiarEstadoUsuario with response without status', async () => {
+      userAPI.changeStatus.mockResolvedValue({
+        data: {} // No status, no message
+      })
+
+      const { cambiarEstadoUsuario } = useUsuarios()
+      const result = await cambiarEstadoUsuario(1, 'activo')
+
+      expect(result.success).toBe(false)
+      expect(result.message).toBe('Error desconocido')
+    })
+  })
 })

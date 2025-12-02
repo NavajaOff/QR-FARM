@@ -3,6 +3,9 @@ import { vi } from 'vitest'
 import { registroVacunacionBase, collectDefaultEditPayload } from './registro-vacunacion-base.js'
 import Swal from 'sweetalert2'
 
+// Import buildDefaultEditForm from the module
+let buildDefaultEditForm
+
 // Mock de API
 vi.mock('../../services/api.js', () => ({
   vacunacionAPI: {
@@ -442,6 +445,170 @@ describe('registro-vacunacion-base.js', function() {
         fecha_aplicacion: '2023-01-01',
         proxima_dosis: '2023-02-01'
       })
+    })
+
+    it('should handle empty fechaAplicacion', () => {
+      document.getElementById = vi.fn((id) => {
+        const mocks = {
+          estado: { value: 'aplicado' },
+          fechaAplicacion: { value: '' },
+          proximaDosis: { value: '2023-02-01' }
+        }
+        return mocks[id] || null
+      })
+
+      const result = collectDefaultEditPayload()
+
+      expect(result.payload.fecha_aplicacion).toBeNull()
+    })
+
+    it('should handle empty proximaDosis', () => {
+      document.getElementById = vi.fn((id) => {
+        const mocks = {
+          estado: { value: 'aplicado' },
+          fechaAplicacion: { value: '2023-01-01' },
+          proximaDosis: { value: '' }
+        }
+        return mocks[id] || null
+      })
+
+      const result = collectDefaultEditPayload()
+
+      expect(result.payload.proxima_dosis).toBeNull()
+    })
+  })
+
+  describe('Edge Cases', () => {
+    it('should handle filteredVacunaciones with null nombre', () => {
+      wrapper = createWrapper()
+      wrapper.vm.vacunaciones = [
+        { id: 1, idAnimal: 1, nombre: null, tipoVacuna: 'Vacuna A' },
+        { id: 2, idAnimal: 2, nombre: 'Animal 2', tipoVacuna: 'Vacuna B' }
+      ]
+      wrapper.vm.filtros.animal = 'Animal 2'
+
+      expect(wrapper.vm.filteredVacunaciones).toHaveLength(1)
+      expect(wrapper.vm.filteredVacunaciones[0].id).toBe(2)
+    })
+
+    it('should handle filteredVacunaciones with idAnimal match', () => {
+      wrapper = createWrapper()
+      wrapper.vm.vacunaciones = [
+        { id: 1, idAnimal: 1, nombre: 'Animal 1', tipoVacuna: 'Vacuna A' },
+        { id: 2, idAnimal: 2, nombre: 'Animal 2', tipoVacuna: 'Vacuna B' }
+      ]
+      wrapper.vm.filtros.animal = '1'
+
+      expect(wrapper.vm.filteredVacunaciones).toHaveLength(1)
+      expect(wrapper.vm.filteredVacunaciones[0].id).toBe(1)
+    })
+
+    it('should handle filteredVacunaciones with fechaAplicacion null', () => {
+      wrapper = createWrapper()
+      wrapper.vm.vacunaciones = [
+        { id: 1, idAnimal: 1, fechaAplicacion: null },
+        { id: 2, idAnimal: 2, fechaAplicacion: '2023-01-15T00:00:00' }
+      ]
+      wrapper.vm.filtros.fechaDesde = '2023-01-10'
+      wrapper.vm.filtros.fechaHasta = '2023-01-20'
+
+      // When fechaAplicacion is null, the date filter is not applied (line 71: if (this.filtros.fechaDesde && v.fechaAplicacion))
+      // So both vacunaciones should be included
+      expect(wrapper.vm.filteredVacunaciones).toHaveLength(2)
+      expect(wrapper.vm.filteredVacunaciones.map(v => v.id)).toEqual([1, 2])
+    })
+
+    it('should handle obtenerTiposVacuna with null data', async () => {
+      globalThis.fetch.mockResolvedValue({
+        json: () => Promise.resolve({ data: null })
+      })
+
+      wrapper = createWrapper()
+      await wrapper.vm.obtenerTiposVacuna()
+
+      expect(wrapper.vm.tiposVacuna).toEqual([])
+    })
+
+    it('should handle obtenerTiposVacuna with response without data', async () => {
+      globalThis.fetch.mockResolvedValue({
+        json: () => Promise.resolve({})
+      })
+
+      wrapper = createWrapper()
+      await wrapper.vm.obtenerTiposVacuna()
+
+      expect(wrapper.vm.tiposVacuna).toEqual([])
+    })
+
+    it('should handle cargarDatos with null responses', async () => {
+      const { vacunacionAPI, ganadoAPI, userAPI } = await import('../../services/api.js')
+      vacunacionAPI.getAll.mockResolvedValue({ data: null })
+      ganadoAPI.getAll.mockResolvedValue({ data: null })
+      userAPI.getAll.mockResolvedValue({ data: null })
+
+      wrapper = createWrapper()
+      await wrapper.vm.cargarDatos()
+
+      expect(wrapper.vm.vacunaciones).toEqual([])
+      expect(wrapper.vm.animales).toEqual([])
+      expect(wrapper.vm.personas).toEqual([])
+    })
+
+    it('should handle cargarDatos with partial errors', async () => {
+      const { vacunacionAPI, ganadoAPI, userAPI } = await import('../../services/api.js')
+      vacunacionAPI.getAll.mockRejectedValue(new Error('Error 1'))
+      ganadoAPI.getAll.mockResolvedValue({ data: { data: [{ id: 1 }] } })
+      userAPI.getAll.mockResolvedValue({ data: { data: [{ id: 1 }] } })
+
+      wrapper = createWrapper()
+      await wrapper.vm.cargarDatos()
+
+      expect(Swal.fire).toHaveBeenCalledWith('Error', 'No se pudieron cargar los datos', 'error')
+    })
+
+    it('should handle formatDate with empty string', () => {
+      wrapper = createWrapper()
+      expect(wrapper.vm.formatDate('')).toBe('No definida')
+    })
+
+    it('should handle estadoLabel with empty string', () => {
+      wrapper = createWrapper()
+      expect(wrapper.vm.estadoLabel('')).toBe('Sin estado')
+    })
+
+    it('should handle buildDefaultEditForm with null fechaAplicacion', async () => {
+      // buildDefaultEditForm is not exported, test through editarVacunacion
+      const { vacunacionAPI } = await import('../../services/api.js')
+      document.getElementById = vi.fn((id) => {
+        const mocks = {
+          estado: { value: 'aplicado' },
+          fechaAplicacion: { value: '' },
+          proximaDosis: { value: '' }
+        }
+        return mocks[id] || null
+      })
+
+      wrapper = createWrapper()
+      wrapper.vm.vacunaciones = [{
+        id: 1,
+        estado: 'pendiente',
+        fechaAplicacion: null,
+        proximaDosis: null
+      }]
+
+      Swal.fire.mockResolvedValue({
+        isConfirmed: true,
+        value: {
+          estado: 'aplicado',
+          fecha_aplicacion: null,
+          proxima_dosis: null
+        }
+      })
+      vacunacionAPI.update.mockResolvedValue({})
+
+      await wrapper.vm.editarVacunacion(1)
+
+      expect(vacunacionAPI.update).toHaveBeenCalled()
     })
   })
 })

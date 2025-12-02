@@ -202,3 +202,146 @@ class TestSecureSeed:
 
         # Check that file was written
         mock_file().writelines.assert_called()
+
+    def test_parse_datetime_with_timezone(self):
+        """Test _parse_datetime with ISO string with timezone"""
+        from datetime import datetime
+        result = _parse_datetime('2023-01-01T10:00:00Z')
+        assert isinstance(result, datetime)
+        assert result.year == 2023
+
+    def test_parse_datetime_with_other_type(self):
+        """Test _parse_datetime with other types"""
+        result = _parse_datetime(123)
+        assert result == 123
+
+    @patch('src.cli.secure_seed.get_connection')
+    def test_get_connection_checked_success(self, mock_get_conn):
+        """Test _get_connection_checked with successful connection"""
+        from src.cli.secure_seed import _get_connection_checked
+        mock_conn = Mock()
+        mock_get_conn.return_value = mock_conn
+        result = _get_connection_checked()
+        assert result == mock_conn
+
+    @patch('src.cli.secure_seed.get_connection')
+    def test_get_connection_checked_database_error(self, mock_get_conn):
+        """Test _get_connection_checked with DatabaseError"""
+        from src.cli.secure_seed import _get_connection_checked
+        from src.database.db import DatabaseError
+        mock_get_conn.side_effect = DatabaseError('DB error')
+        with pytest.raises(Exception) as exc_info:
+            _get_connection_checked()
+        assert 'Error al obtener conexión' in str(exc_info.value)
+
+    @patch('src.cli.secure_seed.get_connection')
+    def test_get_connection_checked_none(self, mock_get_conn):
+        """Test _get_connection_checked when connection is None"""
+        from src.cli.secure_seed import _get_connection_checked
+        mock_get_conn.return_value = None
+        with pytest.raises(Exception) as exc_info:
+            _get_connection_checked()
+        assert 'No se pudo obtener una conexión' in str(exc_info.value)
+
+    def test_fetch_table(self):
+        """Test _fetch_table"""
+        from src.cli.secure_seed import _fetch_table
+        mock_cursor = Mock()
+        mock_cursor.fetchall.return_value = [
+            {'id': 1, 'name': 'Test1'},
+            {'id': 2, 'name': 'Test2'}
+        ]
+        result = _fetch_table(mock_cursor, 'SELECT * FROM test')
+        assert len(result) == 2
+        assert result[0]['id'] == 1
+        mock_cursor.execute.assert_called_once_with('SELECT * FROM test')
+
+    @patch('src.cli.secure_seed._get_connection_checked')
+    def test_collect_dataset_success(self, mock_get_conn):
+        """Test _collect_dataset with successful collection"""
+        from src.cli.secure_seed import _collect_dataset
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_cursor.fetchall.return_value = []
+        mock_get_conn.return_value = mock_conn
+        result = _collect_dataset()
+        assert 'metadata' in result
+        assert 'roles' in result
+        assert 'tipo_pasto' in result
+
+    @patch('src.cli.secure_seed._get_connection_checked')
+    def test_collect_dataset_with_unhashed_password(self, mock_get_conn):
+        """Test _collect_dataset detects unhashed password"""
+        from src.cli.secure_seed import _collect_dataset
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_conn.cursor.return_value = mock_cursor
+        
+        # Mock fetchall to return empty for most queries, but usuarios with unhashed password
+        call_count = [0]
+        def fetchall_side_effect():
+            call_count[0] += 1
+            # The usuarios query is called last (after all other tables)
+            # We need to track which query is being executed
+            if call_count[0] >= 9:  # usuarios is the 9th query
+                return [{'id': 1, 'id_persona': 1, 'id_rol': 1, 'contrasena': 'plaintext', 'estado': 'activo'}]
+            return []
+        
+        mock_cursor.fetchall = fetchall_side_effect
+        mock_get_conn.return_value = mock_conn
+        
+        with pytest.raises(Exception) as exc_info:
+            _collect_dataset()
+        assert 'contraseña de usuario sin hash' in str(exc_info.value)
+
+    def test_execute_many(self):
+        """Test _execute_many"""
+        from src.cli.secure_seed import _execute_many
+        mock_cursor = Mock()
+        _execute_many(mock_cursor, 'INSERT INTO test VALUES (%s)', (1,))
+        mock_cursor.execute.assert_called_once_with('INSERT INTO test VALUES (%s)', (1,))
+
+    @patch('src.cli.secure_seed._execute_many')
+    def test_import_roles(self, mock_execute):
+        """Test _import_roles"""
+        from src.cli.secure_seed import _import_roles
+        rows = [
+            {'id': 1, 'rol': 'admin', 'descripcion': 'Administrator'}
+        ]
+        mock_cursor = Mock()
+        _import_roles(mock_cursor, rows)
+        assert mock_execute.called
+
+    @patch('src.cli.secure_seed._execute_many')
+    def test_import_tipo_pasto(self, mock_execute):
+        """Test _import_tipo_pasto"""
+        from src.cli.secure_seed import _import_tipo_pasto
+        rows = [
+            {'id': 1, 'tipo_pasto': 'Bermuda'}
+        ]
+        mock_cursor = Mock()
+        _import_tipo_pasto(mock_cursor, rows)
+        assert mock_execute.called
+
+    @patch('src.cli.secure_seed._execute_many')
+    def test_import_tipo_vacuna(self, mock_execute):
+        """Test _import_tipo_vacuna"""
+        from src.cli.secure_seed import _import_tipo_vacuna
+        rows = [
+            {'id': 1, 'nombre_vacuna': 'Vacuna A'}
+        ]
+        mock_cursor = Mock()
+        _import_tipo_vacuna(mock_cursor, rows)
+        assert mock_execute.called
+
+    @patch('src.cli.secure_seed._execute_many')
+    def test_import_estado_ganado(self, mock_execute):
+        """Test _import_estado_ganado"""
+        from src.cli.secure_seed import _import_estado_ganado
+        rows = [
+            {'id': 1, 'tipo_estado': 'saludable'}
+        ]
+        mock_cursor = Mock()
+        _import_estado_ganado(mock_cursor, rows)
+        assert mock_execute.called

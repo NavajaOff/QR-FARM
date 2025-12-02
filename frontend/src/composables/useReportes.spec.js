@@ -114,4 +114,116 @@ describe('useReportes', () => {
 
     expect(resumen.value).toBeDefined()
   })
+
+  describe('Edge Cases', () => {
+    it('should handle obtenerResumenConRenovacion with response without status', async () => {
+      reportAPI.getSummary.mockResolvedValue({
+        data: { data: {} } // Missing status
+      })
+
+      const { cargarResumen, error } = useReportes()
+      await cargarResumen()
+
+      expect(error.value).toBeDefined()
+    })
+
+    it('should handle obtenerResumenConRenovacion with 401 and no email in sessionStorage', async () => {
+      reportAPI.getSummary.mockRejectedValue({
+        response: { status: 401 }
+      })
+      sessionStorage.clear()
+
+      const { cargarResumen, error } = useReportes()
+      await cargarResumen()
+
+      expect(error.value).toContain('No hay credenciales almacenadas')
+      expect(globalThis.location.href).toBe('/login')
+    })
+
+    it('should handle obtenerResumenConRenovacion with 401 and email in sessionStorage', async () => {
+      sessionStorage.setItem('lastLoginEmail', 'test@example.com')
+      reportAPI.getSummary
+        .mockRejectedValueOnce({
+          response: { status: 401 }
+        })
+        .mockResolvedValueOnce({
+          data: { status: 'success', data: { usuarios: { total: 5 } } }
+        })
+
+      const { cargarResumen, resumen } = useReportes()
+      await cargarResumen()
+
+      // Should retry after token renewal attempt
+      expect(resumen.value).toBeDefined()
+    })
+
+
+    it('should handle obtenerResumenConRenovacion with non-401 error', async () => {
+      reportAPI.getSummary.mockRejectedValue({
+        response: { status: 500 },
+        message: 'Server error'
+      })
+
+      const { cargarResumen, error } = useReportes()
+      await cargarResumen()
+
+      expect(error.value).toBeDefined()
+    })
+
+    it('should handle obtenerResumenConRenovacion with error without response', async () => {
+      const errorObj = new Error('Network error')
+      // Remove response property to test err.status path
+      delete errorObj.response
+      reportAPI.getSummary.mockRejectedValue(errorObj)
+
+      const { cargarResumen, error } = useReportes()
+      await cargarResumen()
+
+      expect(error.value).toBe('Network error')
+    })
+
+    it('should handle obtenerResumenConRenovacion with error using err.status', async () => {
+      reportAPI.getSummary.mockRejectedValue({
+        status: 500,
+        message: 'Server error'
+      })
+
+      const { cargarResumen, error } = useReportes()
+      await cargarResumen()
+
+      expect(error.value).toBeDefined()
+    })
+
+    it('should handle descargarPdf with error without message', async () => {
+      reportAPI.downloadSummaryPdf.mockRejectedValue({})
+
+      const { descargarPdf } = useReportes()
+      const result = await descargarPdf()
+
+      expect(result.success).toBe(false)
+      expect(result.message).toBe('No fue posible descargar el PDF')
+    })
+
+    it('should handle cargarResumen with error without message', async () => {
+      reportAPI.getSummary.mockRejectedValue({})
+
+      const { cargarResumen, error } = useReportes()
+      await cargarResumen()
+
+      expect(error.value).toBe('Error al consultar reportes')
+    })
+
+    it('should handle renovarToken with email in sessionStorage', async () => {
+      sessionStorage.setItem('lastLoginEmail', 'test@example.com')
+      reportAPI.getSummary.mockRejectedValue({
+        response: { status: 401 }
+      })
+
+      const { cargarResumen, error } = useReportes()
+      await cargarResumen()
+
+      // renovarToken throws error when email exists
+      expect(error.value).toContain('Token expirado')
+    })
+  })
 })

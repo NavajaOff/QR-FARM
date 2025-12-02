@@ -1,5 +1,5 @@
 import { vi } from 'vitest'
-import api from './api.js'
+import apiInternal from './api.js'
 import type { GanadoResource, EmbeddedQrPayload } from './qr'
 
 // Setup mocks
@@ -142,8 +142,8 @@ export const setupAxiosMocks = async () => {
  */
 export const resetMocks = () => {
   vi.clearAllMocks()
-  api.get.mockReset()
+  apiInternal.get.mockReset()
 }
 
-export { api }
+export { default as api } from './api.js'
 

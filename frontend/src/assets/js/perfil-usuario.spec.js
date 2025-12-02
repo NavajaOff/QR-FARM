@@ -293,4 +293,110 @@ describe('perfil-usuario.js', () => {
       expect(mockVm.fetchProfile).not.toHaveBeenCalled()
     })
   })
+
+  describe('Edge Cases', () => {
+    it('should handle fetchProfile with missing data fields', async () => {
+      authAPI.getProfile.mockResolvedValue({
+        data: {
+          status: 'success',
+          data: {
+            nombre_completo: null,
+            email: null,
+            telefono: null,
+            fecha_creacion: null
+          }
+        }
+      })
+
+      wrapper = createWrapper()
+      await wrapper.vm.fetchProfile()
+
+      expect(wrapper.vm.profile.nombreCompleto).toBe('')
+      expect(wrapper.vm.profile.email).toBe('')
+      expect(wrapper.vm.profile.telefono).toBe('')
+      expect(wrapper.vm.profile.fechaCreacion).toBe('')
+    })
+
+    it('should handle fetchProfile with response without status', async () => {
+      authAPI.getProfile.mockResolvedValue({
+        data: { data: {} }
+      })
+
+      wrapper = createWrapper()
+      await wrapper.vm.fetchProfile()
+
+      expect(wrapper.vm.message).toBe('No se pudo cargar el perfil')
+      expect(wrapper.vm.messageType).toBe('error')
+    })
+
+    it('should handle updateProfile with response without status', async () => {
+      authAPI.updateProfile.mockResolvedValue({
+        data: {} // No status and no message
+      })
+
+      wrapper = createWrapper()
+      await wrapper.vm.updateProfile()
+
+      // When status is not 'success', it throws with message || default
+      expect(wrapper.vm.message).toBe('No se pudo actualizar el perfil')
+      expect(wrapper.vm.messageType).toBe('error')
+    })
+
+    it('should handle updateProfile with success but no message', async () => {
+      authAPI.updateProfile.mockResolvedValue({
+        data: { status: 'success' }
+      })
+      authAPI.getProfile.mockResolvedValue({
+        data: { status: 'success', data: {} }
+      })
+
+      wrapper = createWrapper()
+      await wrapper.vm.updateProfile()
+
+      expect(wrapper.vm.message).toBe('Perfil actualizado exitosamente')
+      expect(wrapper.vm.messageType).toBe('success')
+    })
+
+    it('should handle formatDate with empty string', () => {
+      wrapper = createWrapper()
+      const result = wrapper.vm.formatDate('')
+      expect(result).toBe('N/A')
+    })
+
+    it('should handle formatDate with undefined', () => {
+      wrapper = createWrapper()
+      const result = wrapper.vm.formatDate(undefined)
+      expect(result).toBe('N/A')
+    })
+
+    it('should handle userName with null persona', async () => {
+      authService.isAuthenticated.mockReturnValue(true)
+      authService.isUser.mockReturnValue(true)
+      authService.getUser.mockReturnValue({ persona: null })
+      authService.getRole.mockReturnValue('user')
+      authAPI.getProfile.mockResolvedValue({
+        data: { status: 'success', data: {} }
+      })
+
+      wrapper = createWrapper()
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.vm.userName).toBe('Usuario')
+    })
+
+    it('should handle userName with missing primer_nombre', async () => {
+      authService.isAuthenticated.mockReturnValue(true)
+      authService.isUser.mockReturnValue(true)
+      authService.getUser.mockReturnValue({ persona: {} })
+      authService.getRole.mockReturnValue('user')
+      authAPI.getProfile.mockResolvedValue({
+        data: { status: 'success', data: {} }
+      })
+
+      wrapper = createWrapper()
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.vm.userName).toBe('Usuario')
+    })
+  })
 })

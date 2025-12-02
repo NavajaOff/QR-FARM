@@ -127,4 +127,179 @@ describe('useTenants', () => {
     expect(result.success).toBe(false)
     expect(error.value).toBe(errorMessage)
   })
+
+  describe('Edge Cases', () => {
+    it('should handle cargarTenants with activosOnly false', async () => {
+      const mockTenants = [{ id: 1, nombre: 'Tenant 1' }]
+      tenantAPI.getAll.mockResolvedValue({
+        data: { status: 'success', data: mockTenants }
+      })
+
+      const { cargarTenants } = useTenants()
+      await cargarTenants(false)
+
+      expect(tenantAPI.getAll).toHaveBeenCalledWith(false)
+    })
+
+    it('should handle cargarTenants with response without status', async () => {
+      tenantAPI.getAll.mockResolvedValue({
+        data: { data: [] } // Missing status
+      })
+
+      const { cargarTenants, error } = useTenants()
+      await cargarTenants()
+
+      expect(error.value).toBe('Error al cargar tenants')
+    })
+
+    it('should handle cargarTenants with null data', async () => {
+      tenantAPI.getAll.mockResolvedValue({
+        data: { status: 'success', data: null }
+      })
+
+      const { cargarTenants, tenants } = useTenants()
+      await cargarTenants()
+
+      expect(tenants.value).toEqual([])
+    })
+
+    it('should handle cargarTenants with error.response.data.message', async () => {
+      tenantAPI.getAll.mockRejectedValue({
+        response: { data: { message: 'Custom error' } }
+      })
+
+      const { cargarTenants, error } = useTenants()
+      await cargarTenants()
+
+      expect(error.value).toBe('Custom error')
+    })
+
+    it('should handle cargarTenants with error without response', async () => {
+      tenantAPI.getAll.mockRejectedValue({
+        message: 'Network error'
+      })
+
+      const { cargarTenants, error } = useTenants()
+      await cargarTenants()
+
+      expect(error.value).toBe('Network error')
+    })
+
+    it('should handle cargarTenants with error without message', async () => {
+      tenantAPI.getAll.mockRejectedValue({})
+
+      const { cargarTenants, error } = useTenants()
+      await cargarTenants()
+
+      expect(error.value).toBe('Error al cargar tenants')
+    })
+
+    it('should handle crearTenant with response without status', async () => {
+      tenantAPI.create.mockResolvedValue({
+        data: { message: 'Error message' }
+      })
+
+      const { crearTenant } = useTenants()
+      const result = await crearTenant({ nombre: 'Test' })
+
+      expect(result.success).toBe(false)
+      expect(result.message).toBe('Error message')
+    })
+
+    it('should handle crearTenant with error.response.data.message', async () => {
+      tenantAPI.create.mockRejectedValue({
+        response: { data: { message: 'Custom error' } }
+      })
+
+      const { crearTenant, error } = useTenants()
+      const result = await crearTenant({ nombre: 'Test' })
+
+      expect(result.success).toBe(false)
+      expect(result.message).toBe('Custom error')
+      expect(error.value).toBe('Custom error')
+    })
+
+    it('should handle crearTenant with error without response', async () => {
+      tenantAPI.create.mockRejectedValue({
+        message: 'Network error'
+      })
+
+      const { crearTenant, error } = useTenants()
+      const result = await crearTenant({ nombre: 'Test' })
+
+      expect(result.success).toBe(false)
+      expect(result.message).toBe('Network error')
+      expect(error.value).toBe('Network error')
+    })
+
+    it('should handle actualizarTenant with activosOnly true', async () => {
+      tenantAPI.update.mockResolvedValue({
+        data: { status: 'success', data: { id: 1 } }
+      })
+      tenantAPI.getAll.mockResolvedValue({
+        data: { status: 'success', data: [] }
+      })
+
+      const { actualizarTenant } = useTenants()
+      const result = await actualizarTenant(1, { nombre: 'Test' }, true)
+
+      expect(result.success).toBe(true)
+      expect(tenantAPI.getAll).toHaveBeenCalledWith(true)
+    })
+
+    it('should handle actualizarTenant with response without status', async () => {
+      tenantAPI.update.mockResolvedValue({
+        data: {} // No status, no message
+      })
+
+      const { actualizarTenant, error } = useTenants()
+      const result = await actualizarTenant(1, { nombre: 'Test' })
+
+      expect(result.success).toBe(false)
+      expect(result.message).toBe('Error al actualizar tenant')
+      // error.value is set in catch block, not in the else branch
+      expect(error.value).toBeNull()
+    })
+
+    it('should handle obtenerTenant with response without status', async () => {
+      tenantAPI.getById.mockResolvedValue({
+        data: {} // No status, no message
+      })
+
+      const { obtenerTenant, error } = useTenants()
+      const result = await obtenerTenant(1)
+
+      expect(result.success).toBe(false)
+      expect(result.message).toBe('Tenant no encontrado')
+      // error.value is set in catch block, but this is not a catch, so it's null
+      // The else branch doesn't set error.value, only returns the error message
+      expect(error.value).toBeNull()
+    })
+
+    it('should handle obtenerTenant with error.response.data.message', async () => {
+      tenantAPI.getById.mockRejectedValue({
+        response: { data: { message: 'Custom error' } }
+      })
+
+      const { obtenerTenant, error } = useTenants()
+      const result = await obtenerTenant(1)
+
+      expect(result.success).toBe(false)
+      expect(result.message).toBe('Custom error')
+      expect(error.value).toBe('Custom error')
+    })
+
+    it('should handle obtenerTenant with error without response', async () => {
+      tenantAPI.getById.mockRejectedValue({
+        message: 'Network error'
+      })
+
+      const { obtenerTenant, error } = useTenants()
+      const result = await obtenerTenant(1)
+
+      expect(result.success).toBe(false)
+      expect(result.message).toBe('Network error')
+      expect(error.value).toBe('Network error')
+    })
+  })
 })

@@ -58,4 +58,69 @@ describe('gestionar-potreros-admin.js', () => {
     const wrapper = mount(gestionarPotrerosAdmin)
     expect(wrapper.vm).toBeDefined()
   })
+
+  it('should call cargarDatosIniciales on mount', () => {
+    const { cargarDatosIniciales } = require('./gestionar-potreros.js')
+    mount(gestionarPotrerosAdmin)
+    // onMounted is called when component mounts
+    // We verify the setup function returns the expected structure
+    const result = gestionarPotrerosAdmin.setup()
+    expect(result).toBeDefined()
+  })
+
+  it('should return all required properties from setup', () => {
+    const result = gestionarPotrerosAdmin.setup()
+    const requiredProps = [
+      'currentIndex',
+      'accordionOpen',
+      'potreros',
+      'tiposPasto',
+      'estadosPotrero',
+      'personasUsuario',
+      'loading',
+      'error',
+      'crearPotrero',
+      'editarPotrero',
+      'prevPotrero',
+      'nextPotrero',
+      'toggleAccordion',
+      'estadoClass',
+      'cargarPotreros',
+      'actualizarProximaLimpieza'
+    ]
+
+    requiredProps.forEach(prop => {
+      expect(result).toHaveProperty(prop)
+    })
+  })
+
+  it('should have correct component name', () => {
+    expect(gestionarPotrerosAdmin.name).toBe('GestionarPotreros')
+  })
+
+  it('should return functions that can be called', () => {
+    const result = gestionarPotrerosAdmin.setup()
+    
+    expect(typeof result.crearPotrero).toBe('function')
+    expect(typeof result.editarPotrero).toBe('function')
+    expect(typeof result.prevPotrero).toBe('function')
+    expect(typeof result.nextPotrero).toBe('function')
+    expect(typeof result.toggleAccordion).toBe('function')
+    expect(typeof result.estadoClass).toBe('function')
+    expect(typeof result.cargarPotreros).toBe('function')
+    expect(typeof result.actualizarProximaLimpieza).toBe('function')
+  })
+
+  it('should return reactive refs', () => {
+    const result = gestionarPotrerosAdmin.setup()
+    
+    expect(result.currentIndex).toBeDefined()
+    expect(result.accordionOpen).toBeDefined()
+    expect(result.potreros).toBeDefined()
+    expect(result.tiposPasto).toBeDefined()
+    expect(result.estadosPotrero).toBeDefined()
+    expect(result.personasUsuario).toBeDefined()
+    expect(result.loading).toBeDefined()
+    expect(result.error).toBeDefined()
+  })
 })

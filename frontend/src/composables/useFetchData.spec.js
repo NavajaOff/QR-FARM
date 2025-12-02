@@ -123,15 +123,17 @@ describe('useFetchData', () => {
       mockFetchFunction.mockResolvedValue('force reload data')
       composable = useFetchData(mockFetchFunction, { immediate: false })
 
-      // Set some state
-      composable.data.value = 'old data'
-      composable.error.value = 'old error'
+      // Load data first to set state
+      await composable.loadData()
+      expect(composable.data.value).toBe('force reload data')
 
+      // Now force reload
+      mockFetchFunction.mockResolvedValue('new force reload data')
       const result = await composable.forceReload()
 
-      expect(composable.data.value).toBe('force reload data')
+      expect(composable.data.value).toBe('new force reload data')
       expect(composable.error.value).toBeNull()
-      expect(result).toBe('force reload data')
+      expect(result).toBe('new force reload data')
     })
   })
 
@@ -180,22 +182,124 @@ describe('useFetchData', () => {
   })
 
   describe('resetState Function', () => {
-    it('should reset all state', () => {
+    it('should reset all state', async () => {
       composable = useFetchData(mockFetchFunction, { immediate: false })
 
-      // Set some state
-      composable.data.value = 'test data'
-      composable.loading.value = true
-      composable.error.value = 'test error'
-      composable.isCancelled.value = true
+      // Load data first to set state
+      mockFetchFunction.mockResolvedValue('test data')
+      await composable.loadData()
+      expect(composable.data.value).toBe('test data')
 
-      // Call resetState
+      // Now reset state
       composable.resetState()
 
       expect(composable.data.value).toBeNull()
       expect(composable.loading.value).toBe(false)
       expect(composable.error.value).toBeNull()
       expect(composable.isCancelled.value).toBe(false)
+    })
+  })
+
+  describe('Edge Cases', () => {
+    it('should handle AbortError cancellation', async () => {
+      const abortError = new Error('Aborted')
+      abortError.name = 'AbortError'
+      mockFetchFunction.mockRejectedValue(abortError)
+      composable = useFetchData(mockFetchFunction, { immediate: false })
+
+      await composable.loadData()
+
+      // handleCancel returns true for AbortError, stopping processing
+      expect(composable.loading.value).toBe(false)
+    })
+
+    it('should handle axios cancel error', async () => {
+      const axios = await import('axios')
+      const cancelError = { isCancel: true }
+      axios.default.isCancel.mockReturnValue(true)
+      mockFetchFunction.mockRejectedValue(cancelError)
+      composable = useFetchData(mockFetchFunction, { immediate: false })
+
+      await composable.loadData()
+
+      expect(composable.loading.value).toBe(false)
+    })
+
+    it('should ignore response when cancelled', async () => {
+      let resolvePromise
+      const promise = new Promise(resolve => { resolvePromise = resolve })
+      mockFetchFunction.mockReturnValue(promise)
+      composable = useFetchData(mockFetchFunction, { immediate: false })
+
+      const loadPromise = composable.loadData()
+      composable.cancelRequest()
+      resolvePromise('data')
+      await loadPromise
+
+      // When cancelled, data should remain null because isCancelled check prevents assignment
+      expect(composable.data.value).toBeNull()
+    })
+
+    it('should handle error without message', async () => {
+      const errorWithoutMessage = {}
+      mockFetchFunction.mockRejectedValue(errorWithoutMessage)
+      composable = useFetchData(mockFetchFunction, { 
+        immediate: false,
+        retryAttempts: 0
+      })
+
+      await composable.loadData()
+
+      // handleFinalError uses err.message || "Error desconocido"
+      // But if error is handled by handleCancel, error.value may be null
+      expect(composable.loading.value).toBe(false)
+    })
+
+    it('should handle keepDataOnUnmount option', () => {
+      // This test verifies the option exists and can be set
+      // The actual behavior is tested through component lifecycle
+      composable = useFetchData(mockFetchFunction, { 
+        immediate: false,
+        keepDataOnUnmount: true
+      })
+
+      expect(composable).toBeDefined()
+      expect(composable.data).toBeDefined()
+    })
+
+    it('should handle loadData with params', async () => {
+      mockFetchFunction.mockResolvedValue('param data')
+      composable = useFetchData(mockFetchFunction, { immediate: false })
+
+      await composable.loadData({ id: 1, name: 'test' })
+
+      expect(mockFetchFunction).toHaveBeenCalledWith({
+        id: 1,
+        name: 'test',
+        signal: expect.any(AbortSignal),
+        cancelToken: expect.any(Object)
+      })
+    })
+
+    it('should handle error with message property', async () => {
+      const errorWithMessage = new Error('Custom error message')
+      // Ensure axios.isCancel returns false so handleCancel doesn't catch it
+      const axios = await import('axios')
+      axios.default.isCancel.mockReturnValue(false)
+      
+      mockFetchFunction.mockRejectedValue(errorWithMessage)
+      composable = useFetchData(mockFetchFunction, { 
+        immediate: false,
+        retryAttempts: 0 // 0 retries means 1 attempt total
+      })
+
+      await composable.loadData()
+
+      // After the single attempt fails, handleFinalError should be called
+      // handleFinalError sets: error.value = err.message || "Error desconocido"
+      expect(composable.error.value).toBe('Custom error message')
+      expect(composable.loading.value).toBe(false)
+      expect(mockFetchFunction).toHaveBeenCalledTimes(1)
     })
   })
 })

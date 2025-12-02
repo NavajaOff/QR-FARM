@@ -368,4 +368,95 @@ describe('dashboard-usuario.js', () => {
       expect(wrapper.vm.estadisticas.vacunas).toBe(3)
     })
   })
+
+  describe('Edge Cases', () => {
+    it('should handle cargarEstadisticas with null user', async () => {
+      authService.isAuthenticated.mockReturnValue(true)
+      authService.isUser.mockReturnValue(true)
+      authService.getUser.mockReturnValue(null)
+      ganadoAPI.getAll.mockResolvedValue({ data: { data: [] } })
+      vacunacionAPI.getAll.mockResolvedValue({ data: { data: [] } })
+
+      wrapper = createWrapper()
+      await wrapper.vm.cargarEstadisticas()
+
+      expect(wrapper.vm.estadisticas.ganado).toBe(0)
+      expect(wrapper.vm.estadisticas.vacunas).toBe(0)
+    })
+
+    it('should handle cargarEstadisticas with user without id', async () => {
+      authService.isAuthenticated.mockReturnValue(true)
+      authService.isUser.mockReturnValue(true)
+      authService.getUser.mockReturnValue({})
+      ganadoAPI.getAll.mockResolvedValue({
+        data: { data: [{ id: 1, id_persona: 1 }, { id: 2, id_persona: 2 }] }
+      })
+      vacunacionAPI.getAll.mockResolvedValue({ data: { data: [] } })
+
+      wrapper = createWrapper()
+      await wrapper.vm.cargarEstadisticas()
+
+      // When userId is undefined, filter returns empty array
+      expect(wrapper.vm.estadisticas.ganado).toBe(0)
+    })
+
+    it('should handle cargarEstadisticas with null ganadoResponse.data', async () => {
+      authService.isAuthenticated.mockReturnValue(true)
+      authService.isUser.mockReturnValue(true)
+      authService.getUser.mockReturnValue({ id: 1 })
+      ganadoAPI.getAll.mockResolvedValue({ data: null })
+      vacunacionAPI.getAll.mockResolvedValue({ data: { data: [] } })
+
+      wrapper = createWrapper()
+      await wrapper.vm.cargarEstadisticas()
+
+      expect(wrapper.vm.estadisticas.ganado).toBe(0)
+    })
+
+    it('should handle cargarEstadisticas with null vacunasResponse.data', async () => {
+      authService.isAuthenticated.mockReturnValue(true)
+      authService.isUser.mockReturnValue(true)
+      authService.getUser.mockReturnValue({ id: 1 })
+      ganadoAPI.getAll.mockResolvedValue({ data: { data: [] } })
+      vacunacionAPI.getAll.mockResolvedValue({ data: null })
+
+      wrapper = createWrapper()
+      await wrapper.vm.cargarEstadisticas()
+
+      expect(wrapper.vm.estadisticas.vacunas).toBe(0)
+    })
+
+    it('should handle userRole from user.rol.rol', async () => {
+      authService.isAuthenticated.mockReturnValue(true)
+      authService.isUser.mockReturnValue(true)
+      authService.getUser.mockReturnValue({
+        persona: { primer_nombre: 'Test' },
+        rol: { rol: 'admin' }
+      })
+      ganadoAPI.getAll.mockResolvedValue({ data: { data: [] } })
+      vacunacionAPI.getAll.mockResolvedValue({ data: { data: [] } })
+
+      wrapper = createWrapper()
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      expect(wrapper.vm.userRole).toBe('admin')
+    })
+
+    it('should handle userRole default when rol is missing', async () => {
+      authService.isAuthenticated.mockReturnValue(true)
+      authService.isUser.mockReturnValue(true)
+      authService.getUser.mockReturnValue({
+        persona: { primer_nombre: 'Test' }
+      })
+      ganadoAPI.getAll.mockResolvedValue({ data: { data: [] } })
+      vacunacionAPI.getAll.mockResolvedValue({ data: { data: [] } })
+
+      wrapper = createWrapper()
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      expect(wrapper.vm.userRole).toBe('Usuario')
+    })
+  })
 })

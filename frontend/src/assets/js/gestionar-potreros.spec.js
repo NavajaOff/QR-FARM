@@ -1760,5 +1760,81 @@ describe('gestionar-potreros.js', () => {
       expect(Swal.fire).toHaveBeenCalledTimes(2)
     })
   })
+
+  describe('Navigation Edge Cases', () => {
+    it('should handle prevPotrero with empty array', () => {
+      gestionarPotreros.potreros.value = []
+      gestionarPotreros.currentIndex.value = 0
+      gestionarPotreros.prevPotrero()
+      expect(gestionarPotreros.currentIndex.value).toBe(0)
+    })
+
+    it('should handle nextPotrero with empty array', () => {
+      gestionarPotreros.potreros.value = []
+      gestionarPotreros.currentIndex.value = 0
+      gestionarPotreros.nextPotrero()
+      expect(gestionarPotreros.currentIndex.value).toBe(0)
+    })
+  })
+
+  describe('formatDate Edge Cases', () => {
+    it('should handle formatDate with invalid date string', () => {
+      const result = gestionarPotreros.formatDate('invalid-date')
+      expect(result).toBeTruthy()
+      expect(typeof result).toBe('string')
+    })
+
+    it('should handle formatDate with null', () => {
+      const result = gestionarPotreros.formatDate(null)
+      expect(result).toBe('')
+    })
+
+    it('should handle formatDate with undefined', () => {
+      const result = gestionarPotreros.formatDate(undefined)
+      expect(result).toBe('')
+    })
+  })
+
+  describe('estadoClass Edge Cases', () => {
+    it('should handle estadoClass with null', () => {
+      expect(gestionarPotreros.estadoClass(null)).toBe('bg-secondary')
+    })
+
+    it('should handle estadoClass with undefined', () => {
+      expect(gestionarPotreros.estadoClass(undefined)).toBe('bg-secondary')
+    })
+  })
+
+  describe('cargarPotreros Edge Cases', () => {
+    it('should handle response with data.success false', async () => {
+      globalThis.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: false,
+          data: []
+        })
+      })
+
+      await gestionarPotreros.cargarPotreros()
+
+      expect(gestionarPotreros.potreros.value).toEqual([])
+      expect(gestionarPotreros.loading.value).toBe(false)
+    })
+
+    it('should handle response with data but not array', async () => {
+      globalThis.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: { id: 1, nombre: 'Potrero 1' } // Not an array
+        })
+      })
+
+      await gestionarPotreros.cargarPotreros()
+
+      expect(gestionarPotreros.potreros.value).toEqual([])
+      expect(gestionarPotreros.loading.value).toBe(false)
+    })
+  })
 })
 

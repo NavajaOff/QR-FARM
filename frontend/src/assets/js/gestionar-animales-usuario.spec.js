@@ -315,5 +315,138 @@ describe('useGestionarAnimalesUsuario', () => {
       expect(mockCargarGanado).toHaveBeenCalled()
     })
   })
+
+  describe('Edge Cases', () => {
+    it('should handle animalesFiltrados with null nombre', () => {
+      mockAnimales.value = [
+        { nombre: null, raza: 'Holstein', estado: 'saludable' },
+        { nombre: 'Animal 2', raza: 'Angus', estado: 'enfermo' }
+      ]
+      const result = useGestionarAnimalesUsuario()
+      result.busqueda.value = 'test'
+
+      // null nombre becomes empty string, so it won't match 'test'
+      expect(result.animalesFiltrados.value).toHaveLength(0)
+    })
+
+    it('should handle animalesFiltrados with empty nombre', () => {
+      mockAnimales.value = [
+        { nombre: '', raza: 'Holstein', estado: 'saludable' },
+        { nombre: 'Animal 2', raza: 'Angus', estado: 'enfermo' }
+      ]
+      const result = useGestionarAnimalesUsuario()
+      result.busqueda.value = 'animal'
+
+      expect(result.animalesFiltrados.value).toHaveLength(1)
+      expect(result.animalesFiltrados.value[0].nombre).toBe('Animal 2')
+    })
+
+    it('should handle animalesFiltrados with case-insensitive search', () => {
+      mockAnimales.value = [
+        { nombre: 'VACA TEST', raza: 'Holstein', estado: 'saludable' },
+        { nombre: 'toro test', raza: 'Angus', estado: 'enfermo' }
+      ]
+      const result = useGestionarAnimalesUsuario()
+      result.busqueda.value = 'VACA'
+
+      expect(result.animalesFiltrados.value).toHaveLength(1)
+      expect(result.animalesFiltrados.value[0].nombre).toBe('VACA TEST')
+    })
+
+    it('should handle animalesFiltrados with empty raza filter', () => {
+      mockAnimales.value = [
+        { nombre: 'Animal 1', raza: '', estado: 'saludable' },
+        { nombre: 'Animal 2', raza: 'Angus', estado: 'enfermo' }
+      ]
+      const result = useGestionarAnimalesUsuario()
+      result.filtroRaza.value = ''
+
+      expect(result.animalesFiltrados.value).toHaveLength(2)
+    })
+
+    it('should handle animalesFiltrados with empty estado filter', () => {
+      mockAnimales.value = [
+        { nombre: 'Animal 1', raza: 'Holstein', estado: '' },
+        { nombre: 'Animal 2', raza: 'Angus', estado: 'enfermo' }
+      ]
+      const result = useGestionarAnimalesUsuario()
+      result.filtroEstado.value = ''
+
+      expect(result.animalesFiltrados.value).toHaveLength(2)
+    })
+
+    it('should handle verPerfilAnimal with undefined values', () => {
+      const result = useGestionarAnimalesUsuario()
+      const animal = {
+        id: 1,
+        nombre: undefined,
+        raza: undefined,
+        edad: undefined,
+        peso: undefined,
+        estado: undefined
+      }
+
+      result.verPerfilAnimal(animal)
+
+      expect(Swal.fire).toHaveBeenCalled()
+      const callArgs = Swal.fire.mock.calls[0][0]
+      expect(callArgs.html).toContain('Sin información')
+    })
+
+    it('should handle verPerfilAnimal with edad 0', () => {
+      const result = useGestionarAnimalesUsuario()
+      const animal = {
+        id: 1,
+        nombre: 'Test',
+        edad: 0,
+        peso: 0
+      }
+
+      result.verPerfilAnimal(animal)
+
+      expect(Swal.fire).toHaveBeenCalled()
+      const callArgs = Swal.fire.mock.calls[0][0]
+      expect(callArgs.html).toContain('0')
+    })
+
+    it('should handle razasDisponibles with null raza', () => {
+      mockAnimales.value = [
+        { raza: 'Holstein' },
+        { raza: null },
+        { raza: 'Angus' }
+      ]
+      const result = useGestionarAnimalesUsuario()
+
+      expect(result.razasDisponibles.value).toHaveLength(2)
+      expect(result.razasDisponibles.value).not.toContain(null)
+    })
+
+    it('should handle estadosDisponibles with null estado', () => {
+      mockAnimales.value = [
+        { estado: 'saludable' },
+        { estado: null },
+        { estado: 'enfermo' }
+      ]
+      const result = useGestionarAnimalesUsuario()
+
+      expect(result.estadosDisponibles.value).toHaveLength(2)
+      expect(result.estadosDisponibles.value).not.toContain(null)
+    })
+
+    it('should handle capitalizar with empty string', () => {
+      const result = useGestionarAnimalesUsuario()
+      expect(result.capitalizar('')).toBe('')
+    })
+
+    it('should handle capitalizar with single character', () => {
+      const result = useGestionarAnimalesUsuario()
+      expect(result.capitalizar('a')).toBe('A')
+    })
+
+    it('should handle estadoClass with empty string', () => {
+      const result = useGestionarAnimalesUsuario()
+      expect(result.estadoClass('')).toBe('bg-secondary')
+    })
+  })
 })
 

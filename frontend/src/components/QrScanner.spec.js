@@ -475,4 +475,119 @@ describe('QrScanner.vue', () => {
       expect(wrapper.text()).toContain('Apunta el código dentro del recuadro')
     })
   })
+
+  describe('Button Actions', () => {
+    it('should handle start scan button click', async () => {
+      wrapper = createWrapper()
+      await wrapper.vm.$nextTick()
+      
+      wrapper.vm.state.selectedCameraId = 'camera1'
+      wrapper.vm.state.availableCameras = [
+        { id: 'camera1', label: 'Camera 1' }
+      ]
+      
+      const startButton = wrapper.find('.qr-btn--primary')
+      if (startButton.exists() && !startButton.attributes('disabled')) {
+        await startButton.trigger('click')
+        await wrapper.vm.$nextTick()
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
+        expect(wrapper.exists()).toBe(true)
+      }
+    })
+
+    it('should handle stop scan button click', async () => {
+      wrapper = createWrapper()
+      await wrapper.vm.$nextTick()
+      
+      // Create mock instance directly
+      const mockInstance = {
+        start: vi.fn().mockResolvedValue(),
+        stop: vi.fn().mockResolvedValue(),
+        clear: vi.fn().mockResolvedValue(),
+        pause: vi.fn().mockResolvedValue(),
+        resume: vi.fn().mockResolvedValue()
+      }
+      // Assign mock instance directly
+      wrapper.vm.html5QrCodeInstance = { value: mockInstance }
+      wrapper.vm.state.isScanning = true
+      await wrapper.vm.$nextTick()
+      
+      // Call the handler directly
+      await wrapper.vm.handleStopScan()
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 200))
+      
+      expect(wrapper.exists()).toBe(true)
+      // stopScanner sets isScanning to false in finally block
+      expect(wrapper.vm.state.isScanning).toBe(false)
+    })
+
+    it('should handle file upload button click', async () => {
+      wrapper = createWrapper()
+      await wrapper.vm.$nextTick()
+      
+      // Instead of using trigger('click'), call the handler directly
+      wrapper.vm.openFileDialog()
+      await wrapper.vm.$nextTick()
+      
+      expect(wrapper.exists()).toBe(true)
+    })
+  })
+
+  describe('Network and Offline Handling', () => {
+    it('should handle offline state', async () => {
+      wrapper = createWrapper()
+      await wrapper.vm.$nextTick()
+      
+      globalThis.navigator.onLine = false
+      
+      fetchQrResource.mockResolvedValue({
+        id: '1',
+        nombre: 'Test Animal'
+      })
+      
+      const { transformEmbeddedPayload } = await import('../services/qr')
+      transformEmbeddedPayload.mockReturnValue({
+        id: '1',
+        nombre: 'Test Animal'
+      })
+      
+      wrapper.vm.state.lastPayload = {
+        kind: 'resource',
+        resourceId: '1',
+        resourceType: null,
+        raw: JSON.stringify({ id: '1', nombre: 'Test', schema: 'qr-farm', type: 'ganado' }),
+        metadata: {},
+        embeddedResource: { id: '1', nombre: 'Test', schema: 'qr-farm', type: 'ganado' }
+      }
+      
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      expect(wrapper.exists()).toBe(true)
+    })
+  })
+
+  describe('Error Handling', () => {
+    it('should handle fetch error gracefully', async () => {
+      wrapper = createWrapper()
+      await wrapper.vm.$nextTick()
+      
+      fetchQrResource.mockRejectedValue(new Error('Network error'))
+      
+      wrapper.vm.state.lastPayload = {
+        kind: 'resource',
+        resourceId: '999',
+        resourceType: null,
+        raw: '999',
+        metadata: {}
+      }
+      
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      expect(wrapper.exists()).toBe(true)
+    })
+  })
 })

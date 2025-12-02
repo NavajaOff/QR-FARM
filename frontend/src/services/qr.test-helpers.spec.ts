@@ -363,7 +363,7 @@ describe('qr.test-helpers', () => {
   describe('resetMocks', () => {
     it('should reset all mocks', () => {
       // Set up some mock calls
-      if (api && api.get) {
+      if (api?.get) {
         api.get.mockResolvedValueOnce({ data: { data: { id: '1' } } })
 
         // Call resetMocks
@@ -378,7 +378,7 @@ describe('qr.test-helpers', () => {
     })
 
     it('should clear all mocks and reset api.get', () => {
-      if (api && api.get) {
+      if (api?.get) {
         // Make some calls
         api.get.mockResolvedValue({ data: { data: { id: '1' } } })
         api.get('/test')
