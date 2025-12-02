@@ -7,27 +7,19 @@
  */
 export const getBackendUrl = () => {
   // Priority 1: Vite environment variable
-  try {
-    // Try direct access to import.meta (works in Vite/ESM environments)
+  // Use optional chaining to safely access import.meta (works in Vite/ESM environments)
+  // eslint-disable-next-line no-undef
+  if (import.meta?.env?.VITE_BACKEND_URL) {
     // eslint-disable-next-line no-undef
-    if (import.meta && import.meta.env && import.meta.env.VITE_BACKEND_URL) {
-      // eslint-disable-next-line no-undef
-      return import.meta.env.VITE_BACKEND_URL;
-    }
-  } catch (e) {
-    // import.meta not available (e.g., in tests or non-ESM environments)
+    return import.meta.env.VITE_BACKEND_URL;
   }
   
   // Priority 2: Vue environment variable (for compatibility)
-  try {
+  // eslint-disable-next-line no-undef
+  if (import.meta?.env?.VUE_APP_API_BASE_URL) {
     // eslint-disable-next-line no-undef
-    if (import.meta && import.meta.env && import.meta.env.VUE_APP_API_BASE_URL) {
-      // eslint-disable-next-line no-undef
-      const url = import.meta.env.VUE_APP_API_BASE_URL;
-      return url.replace(/\/api\/?$/, '');
-    }
-  } catch (e) {
-    // import.meta not available (e.g., in tests or non-ESM environments)
+    const url = import.meta.env.VUE_APP_API_BASE_URL;
+    return url.replace(/\/api\/?$/, '');
   }
   
   // Priority 3: Window config (from config.js)
