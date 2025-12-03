@@ -1,7 +1,10 @@
 # Servicio Usuario
 from typing import List, Optional, Tuple
 from datetime import datetime
+import logging
 from ..database.db import get_connection
+
+logger = logging.getLogger(__name__)
 from ..models.usuario import Usuario, Persona, Rol, EstadoUsuario
 
 class UsuarioService:
@@ -19,20 +22,48 @@ class UsuarioService:
 
     @staticmethod
     def _determinar_si_es_super_admin():
-        """Determina si el usuario actual es super admin."""
-        tenant_id = UsuarioService._obtener_tenant_id()
-        return tenant_id is None
+        """
+        Determina si el usuario actual es super admin.
+        
+        IMPORTANTE: Verifica el ROL real del usuario, no solo el tenant_id.
+        Un usuario puede tener tenant_id=None temporalmente pero no ser super_admin.
+        """
+        try:
+            from flask import g
+            if not hasattr(g, 'current_user') or not g.current_user:
+                return False
+            
+            # Verificar el rol real del usuario
+            rol_nombre = None
+            if hasattr(g.current_user, 'rol') and g.current_user.rol:
+                if hasattr(g.current_user.rol, 'nombre_rol'):
+                    rol_nombre = g.current_user.rol.nombre_rol
+                elif hasattr(g.current_user.rol, 'rol'):
+                    rol_nombre = g.current_user.rol.rol
+            
+            # Solo es super_admin si el rol es explícitamente 'super_admin'
+            is_super = rol_nombre and rol_nombre.lower() == 'super_admin'
+            print(f"[USUARIO_SERVICE] _determinar_si_es_super_admin: rol={rol_nombre}, is_super={is_super}")
+            return is_super
+        except Exception as e:
+            print(f"[USUARIO_SERVICE] Error en _determinar_si_es_super_admin: {e}")
+            return False
 
     @staticmethod
     def _construir_condiciones_sql(incluir_inactivos, tenant_id, excluir_super_admin):
-        """Construye las condiciones SQL para la consulta."""
+        """Construye las condiciones SQL para la consulta.
+        
+        IMPORTANTE: tenant_id está en la tabla personas (p.tenant_id), NO en usuarios (u.tenant_id).
+        """
         conditions = []
         params = []
         if not incluir_inactivos:
             conditions.append("u.estado = 'activo'")
         if tenant_id is not None:
-            conditions.append("u.tenant_id = %s")
+            # Filtrar estrictamente por tenant_id desde personas - esto es crítico para el aislamiento
+            conditions.append("p.tenant_id = %s")
             params.append(tenant_id)
+            print(f"[USUARIO_SERVICE] Filtro de tenant_id aplicado desde personas: {tenant_id}")
         if excluir_super_admin:
             conditions.append("(r.rol IS NULL OR LOWER(TRIM(r.rol)) != 'super_admin')")
         return conditions, params
@@ -51,6 +82,10 @@ class UsuarioService:
                 nombre_rol=rol_nombre
             )
         
+        # Obtener tenant_id desde personas (p.tenant_id)
+        # Cuando se hace SELECT u.*, p.*, el tenant_id viene de personas
+        tenant_id_persona = result.get('tenant_id')
+        
         persona = Persona(
             id=result['id_persona'],
             id_rol=result['id_rol'],
@@ -60,7 +95,8 @@ class UsuarioService:
             segundo_apellido=result['segundo_apellido'],
             email=result['email'],
             telefono=result['telefono'],
-            fecha_creacion=result['fecha_creacion']
+            fecha_creacion=result['fecha_creacion'],
+            tenant_id=tenant_id_persona
         )
         
         return Usuario(
@@ -71,7 +107,7 @@ class UsuarioService:
             estado=EstadoUsuario(result['estado']),
             persona=persona,
             rol=rol,
-            tenant_id=result.get('tenant_id')
+            tenant_id=tenant_id_persona
         )
 
     @staticmethod
@@ -151,18 +187,39 @@ class UsuarioService:
 
     @staticmethod
     def _insertar_usuario(cursor, id_persona, usuario, tenant_id):
-        """Inserta el usuario en la base de datos."""
-        sql_usuario = """
-            INSERT INTO usuarios (
-                id_persona, id_rol, contrasena, estado, tenant_id
-            ) VALUES (
-                %s, %s, %s, %s, %s
-            )
+        """Inserta el usuario en la base de datos.
+        
+        IMPORTANTE: tenant_id está en personas, NO en usuarios.
+        Si la tabla usuarios tiene columna tenant_id, se puede insertar para compatibilidad,
+        pero el valor real y único está en personas.
         """
-        values_usuario = (
-            id_persona, usuario.id_rol or 1, usuario.contrasena,
-            usuario.estado.value, tenant_id
-        )
+        # Intentar insertar tenant_id en usuarios si la columna existe (para compatibilidad)
+        # Pero el valor real está en personas
+        try:
+            sql_usuario = """
+                INSERT INTO usuarios (
+                    id_persona, id_rol, contrasena, estado, tenant_id
+                ) VALUES (
+                    %s, %s, %s, %s, %s
+                )
+            """
+            values_usuario = (
+                id_persona, usuario.id_rol or 1, usuario.contrasena,
+                usuario.estado.value, tenant_id
+            )
+        except Exception:
+            # Si la columna tenant_id no existe en usuarios, insertar sin ella
+            sql_usuario = """
+                INSERT INTO usuarios (
+                    id_persona, id_rol, contrasena, estado
+                ) VALUES (
+                    %s, %s, %s, %s
+                )
+            """
+            values_usuario = (
+                id_persona, usuario.id_rol or 1, usuario.contrasena,
+                usuario.estado.value
+            )
         cursor.execute(sql_usuario, values_usuario)
         return cursor.lastrowid
 
@@ -546,14 +603,16 @@ class UsuarioService:
             
             tenant_id = tenant_id_override if tenant_id_override is not None else UsuarioService._obtener_tenant_id()
             
-            # Verificar que el usuario existe y obtener id_persona y tenant_id
-            sql_check = "SELECT id_persona, tenant_id FROM usuarios WHERE id = %s"
+            # Verificar que el usuario existe y obtener id_persona
+            # IMPORTANTE: tenant_id está en personas, no en usuarios
+            sql_check = "SELECT u.id_persona, p.tenant_id FROM usuarios u INNER JOIN personas p ON u.id_persona = p.id WHERE u.id = %s"
             cursor.execute(sql_check, (id,))
             result = cursor.fetchone()
             if not result:
                 return False, "Usuario no encontrado"
             
             # Validar tenant_id si no es super_admin
+            # IMPORTANTE: tenant_id viene de personas (p.tenant_id)
             if tenant_id is not None and result.get('tenant_id') != tenant_id:
                 return False, "No tiene permisos para eliminar este usuario"
                 
@@ -648,10 +707,16 @@ class UsuarioService:
                                         payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
                                         user_id = payload.get('user_id')
                                         if user_id:
-                                            cursor.execute("SELECT tenant_id FROM usuarios WHERE id = %s", (user_id,))
-                                            result = cursor.fetchone()
-                                            if result and result.get('tenant_id'):
-                                                tenant_id_contexto = result['tenant_id']
+                                            # IMPORTANTE: tenant_id está en personas, no en usuarios
+                                            # Necesitamos obtener id_persona primero, luego tenant_id desde personas
+                                            cursor.execute("SELECT u.id_persona FROM usuarios u WHERE u.id = %s", (user_id,))
+                                            usuario_result = cursor.fetchone()
+                                            if usuario_result and usuario_result.get('id_persona'):
+                                                id_persona = usuario_result['id_persona']
+                                                cursor.execute("SELECT tenant_id FROM personas WHERE id = %s", (id_persona,))
+                                                result = cursor.fetchone()
+                                                if result and result.get('tenant_id'):
+                                                    tenant_id_contexto = result['tenant_id']
                         except Exception:
                             pass  # Si falla, continuar con None
 
@@ -727,7 +792,9 @@ class UsuarioService:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
-            tenant_id = tenant_id_override if tenant_id_override is not None else UsuarioService._obtener_tenant_id()
+            # Si tenant_id_override es None, NO filtrar por tenant (útil para autenticación)
+            # Solo filtrar si se proporciona explícitamente
+            tenant_id = tenant_id_override
 
             sql = """
                 SELECT u.*, p.*, r.rol as rol_nombre FROM usuarios u
@@ -740,10 +807,15 @@ class UsuarioService:
             if not incluir_inactivos:
                 sql += " AND u.estado = 'activo'"
             
-            # Validar tenant_id para usuarios no super_admin
+            # Validar tenant_id SOLO si se proporciona explícitamente (tenant_id_override)
+            # IMPORTANTE: tenant_id está en personas (p.tenant_id), NO en usuarios (u.tenant_id)
+            # Esto permite obtener el usuario sin filtrar por tenant para autenticación
             if tenant_id is not None:
-                sql += " AND u.tenant_id = %s"
+                sql += " AND p.tenant_id = %s"
                 params = params + (tenant_id,)
+                print(f"[USUARIO_SERVICE] obtener_usuario: Filtrando por p.tenant_id={tenant_id}")
+            else:
+                print(f"[USUARIO_SERVICE] obtener_usuario: NO filtrando por tenant_id (obteniendo usuario completo)")
 
             cursor.execute(sql, params)
 
@@ -771,6 +843,8 @@ class UsuarioService:
                 )
 
                 # Crear usuario
+                # IMPORTANTE: tenant_id viene de personas (p.tenant_id), no de usuarios (u.tenant_id)
+                tenant_id_persona = result.get('tenant_id')  # Este viene de p.* (personas)
                 usuario = Usuario(
                     id=result['id'],
                     id_persona=result['id_persona'],
@@ -779,8 +853,9 @@ class UsuarioService:
                     estado=EstadoUsuario(result['estado']),
                     persona=persona,
                     rol=rol,
-                    tenant_id=result.get('tenant_id')
+                    tenant_id=tenant_id_persona  # tenant_id desde personas
                 )
+                print(f"[USUARIO_SERVICE] obtener_usuario: Usuario {usuario.id} con tenant_id={tenant_id_persona} desde personas")
 
                 return usuario
             return None
@@ -797,26 +872,71 @@ class UsuarioService:
         """
         Obtener todos los usuarios con filtrado automático de super admin para usuarios no privilegiados.
 
+        IMPORTANTE: 
+        - Si tenant_id es None, NO filtrar (solo para super_admin)
+        - Si tenant_id está definido, filtrar estrictamente por p.tenant_id
+        
         Args:
             incluir_inactivos: Incluir usuarios inactivos
-            tenant_id: Filtrar por tenant específico (None para super admin)
+            tenant_id: Filtrar por tenant específico (None para super admin, OBLIGATORIO para usuarios normales)
             excluir_super_admin: Forzar exclusión de super admin (siempre True para no super admin)
         """
         print(f"[USUARIO_SERVICE] obtener_todos_usuarios called with incluir_inactivos={incluir_inactivos}, tenant_id={tenant_id}, excluir_super_admin={excluir_super_admin}")
 
+        # Verificar si es super_admin basándose en el ROL, no en tenant_id
         es_super_admin_actual = UsuarioService._determinar_si_es_super_admin()
-        print(f"[USUARIO_SERVICE] Usuario actual es super_admin: {es_super_admin_actual}")
+        print(f"[USUARIO_SERVICE] Usuario actual es super_admin (por rol): {es_super_admin_actual}")
+
+        # Si NO es super_admin y tenant_id es None, intentar obtenerlo desde g
+        if not es_super_admin_actual and tenant_id is None:
+            print(f"[USUARIO_SERVICE] ADVERTENCIA: Usuario no es super_admin pero tenant_id es None. Intentando obtener desde g...")
+            # Intentar obtener tenant_id desde múltiples fuentes en g
+            try:
+                from flask import g
+                # Prioridad 1: g.tenant_id
+                if hasattr(g, 'tenant_id') and g.tenant_id is not None:
+                    tenant_id = g.tenant_id
+                    print(f"[USUARIO_SERVICE] tenant_id obtenido desde g.tenant_id: {tenant_id}")
+                # Prioridad 2: g.jwt_payload['tenant_id']
+                elif hasattr(g, 'jwt_payload') and g.jwt_payload.get('tenant_id'):
+                    tenant_id = g.jwt_payload.get('tenant_id')
+                    print(f"[USUARIO_SERVICE] tenant_id obtenido desde g.jwt_payload: {tenant_id}")
+                # Prioridad 3: g.current_user.tenant_id
+                elif hasattr(g, 'current_user') and g.current_user:
+                    tenant_id = getattr(g.current_user, 'tenant_id', None)
+                    if tenant_id:
+                        print(f"[USUARIO_SERVICE] tenant_id obtenido desde g.current_user.tenant_id: {tenant_id}")
+            except Exception as e:
+                print(f"[USUARIO_SERVICE] Error obteniendo tenant_id desde g: {e}")
 
         if not es_super_admin_actual:
             excluir_super_admin = True
             print("[USUARIO_SERVICE] Usuario no es super_admin, forzando excluir_super_admin=True")
+            
+            # Usuarios normales DEBEN tener tenant_id
+            # Si después de todos los intentos sigue siendo None, retornar lista vacía por seguridad
+            if tenant_id is None:
+                print(f"[USUARIO_SERVICE] ERROR CRÍTICO: Usuario normal sin tenant_id después de todos los intentos. Retornando lista vacía por seguridad.")
+                print(f"[USUARIO_SERVICE] DEBUG: es_super_admin_actual={es_super_admin_actual}, tenant_id={tenant_id}")
+                return []
 
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
             sql = """
-                SELECT u.*, p.*, r.rol as rol_nombre
+                SELECT u.*, 
+                       p.id as id_persona,
+                       p.id_rol as persona_id_rol,
+                       p.primer_nombre,
+                       p.segundo_nombre,
+                       p.primer_apellido,
+                       p.segundo_apellido,
+                       p.email,
+                       p.telefono,
+                       p.fecha_creacion,
+                       p.tenant_id,
+                       r.rol as rol_nombre
                 FROM usuarios u
                 INNER JOIN personas p ON u.id_persona = p.id
                 LEFT JOIN roles r ON u.id_rol = r.id
@@ -825,17 +945,44 @@ class UsuarioService:
             conditions, params = UsuarioService._construir_condiciones_sql(incluir_inactivos, tenant_id, excluir_super_admin)
             if conditions:
                 sql += " WHERE " + " AND ".join(conditions)
+            
+            # VALIDACIÓN CRÍTICA: Si tenant_id está definido, DEBE estar en las condiciones
+            if tenant_id is not None:
+                # Verificar que p.tenant_id esté en las condiciones
+                if "p.tenant_id = %s" not in sql:
+                    print(f"[USUARIO_SERVICE] ERROR CRÍTICO: tenant_id={tenant_id} pero no está en el SQL. Agregando filtro manualmente.")
+                    if "WHERE" in sql:
+                        sql += " AND p.tenant_id = %s"
+                    else:
+                        sql += " WHERE p.tenant_id = %s"
+                    # Agregar tenant_id a params si no está ya incluido
+                    if tenant_id not in params:
+                        params = params + (tenant_id,)
+                    print(f"[USUARIO_SERVICE] Filtro p.tenant_id agregado manualmente. SQL final: {sql}, params: {params}")
 
             print(f"[USUARIO_SERVICE] SQL: {sql}, params: {params}")
             print(f"[USUARIO_SERVICE] Condiciones aplicadas: tenant_id={tenant_id}, excluir_super_admin={excluir_super_admin}")
+            if tenant_id is not None:
+                print(f"[TENANT] Filtrando usuarios con p.tenant_id: {tenant_id}")
             cursor.execute(sql, params)
             results = cursor.fetchall()
             print(f"[USUARIO_SERVICE] Resultados obtenidos: {len(results)} usuarios")
+            # Log de tenant_id de cada usuario para depuración
+            for result in results:
+                print(f"[TENANT] Usuario {result.get('id')} tiene p.tenant_id: {result.get('tenant_id')}")
 
             usuarios = []
             for result in results:
                 usuario = UsuarioService._crear_usuario_desde_resultado(result)
                 if usuario:
+                    # VALIDACIÓN CRÍTICA: Verificar que el tenant_id coincida si se está filtrando
+                    # Esto es una doble validación para asegurar el aislamiento
+                    if tenant_id is not None:
+                        if usuario.tenant_id != tenant_id:
+                            print(f"[USUARIO_SERVICE] BLOQUEADO: Usuario {usuario.id} tiene p.tenant_id={usuario.tenant_id} pero se esperaba {tenant_id}, OMITIENDO por seguridad")
+                            continue
+                        else:
+                            print(f"[USUARIO_SERVICE] Usuario {usuario.id} validado - p.tenant_id={usuario.tenant_id} coincide con filtro")
                     usuarios.append(usuario)
                     print(f"[USUARIO_SERVICE] Usuario agregado: id={usuario.id}, email={usuario.persona.email}, rol={result.get('rol_nombre')}, tenant_id={usuario.tenant_id}")
 
@@ -894,14 +1041,16 @@ class UsuarioService:
 
             tenant_id = tenant_id_override if tenant_id_override is not None else UsuarioService._obtener_tenant_id()
 
-            # Verificar que el usuario existe y obtener id_persona y tenant_id
-            sql_check = "SELECT id_persona, tenant_id FROM usuarios WHERE id = %s"
+            # Verificar que el usuario existe y obtener id_persona
+            # IMPORTANTE: tenant_id está en personas, no en usuarios
+            sql_check = "SELECT u.id_persona, p.tenant_id FROM usuarios u INNER JOIN personas p ON u.id_persona = p.id WHERE u.id = %s"
             cursor.execute(sql_check, (id,))
             result = cursor.fetchone()
             if not result:
                 return False
 
             # Validar tenant_id si no es super_admin
+            # IMPORTANTE: tenant_id viene de personas (p.tenant_id)
             if tenant_id is not None and result.get('tenant_id') != tenant_id:
                 return False
 
@@ -1022,7 +1171,7 @@ class UsuarioService:
                         nombre_rol=result['rol_nombre']
                     )
 
-                # Crear persona
+                # Crear persona - IMPORTANTE: tenant_id está en personas, no en usuarios
                 persona = Persona(
                     id=result['id_persona'],
                     id_rol=result['id_rol'],
@@ -1035,6 +1184,9 @@ class UsuarioService:
                     fecha_creacion=result['fecha_creacion']
                 )
 
+                # Obtener tenant_id desde personas (campo p.tenant_id)
+                tenant_id_persona = result.get('tenant_id')  # Este viene de personas p.*
+                
                 # Crear usuario
                 usuario = Usuario(
                     id=result['id'],
@@ -1043,8 +1195,11 @@ class UsuarioService:
                     contrasena=result.get('contrasena'),
                     estado=EstadoUsuario(result['estado']),
                     persona=persona,
-                    rol=rol
+                    rol=rol,
+                    tenant_id=tenant_id_persona  # tenant_id viene de personas, no de usuarios
                 )
+                
+                print(f"[BUSCAR_POR_EMAIL] Usuario encontrado: id={usuario.id}, persona_id={usuario.id_persona}, tenant_id={tenant_id_persona}")
 
                 return usuario
             return None
@@ -1068,6 +1223,25 @@ class UsuarioService:
                 if usuario.id_rol:
                     rol = UsuarioService.obtener_rol(usuario.id_rol)
                     usuario.rol = rol
+                
+                # Asegurar que tenant_id está cargado
+                # IMPORTANTE: tenant_id está en personas, no en usuarios
+                if not hasattr(usuario, 'tenant_id') or usuario.tenant_id is None:
+                    try:
+                        conn = get_connection()
+                        if conn:
+                            cursor = conn.cursor(dictionary=True)
+                            # IMPORTANTE: tenant_id está en personas, no en usuarios
+                            cursor.execute("SELECT tenant_id FROM personas WHERE id = %s", (usuario.id_persona,))
+                            result = cursor.fetchone()
+                            if result and result.get('tenant_id') is not None:
+                                usuario.tenant_id = result['tenant_id']
+                                print(f"[AUTENTICACION] tenant_id cargado desde personas para usuario {usuario.id} (persona_id={usuario.id_persona}): {usuario.tenant_id}")
+                            cursor.close()
+                            conn.close()
+                    except Exception as e:
+                        print(f"[AUTENTICACION] Error obteniendo tenant_id desde personas: {e}")
+                
                 return usuario
             return None
 

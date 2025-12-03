@@ -53,7 +53,8 @@ class Persona:
                  email: str = "",
                  telefono: Optional[str] = None,
                  fecha_creacion: Optional[datetime] = None,
-                 rol: Optional[Rol] = None):
+                 rol: Optional[Rol] = None,
+                 tenant_id: Optional[int] = None):
 
         self.id = id
         self.id_rol = id_rol
@@ -65,6 +66,7 @@ class Persona:
         self.telefono = telefono
         self.fecha_creacion = fecha_creacion
         self.rol = rol
+        self.tenant_id = tenant_id
 
     @property
     def nombre_completo(self) -> str:
@@ -90,7 +92,8 @@ class Persona:
             segundo_apellido=data.get('segundo_apellido'),
             email=data.get('email', ''),
             telefono=data.get('telefono'),
-            fecha_creacion=data.get('fecha_creacion')
+            fecha_creacion=data.get('fecha_creacion'),
+            tenant_id=data.get('tenant_id')
         )
         if 'rol' in data and data['rol']:
             persona.rol = Rol.from_dict(data['rol'])
@@ -107,7 +110,8 @@ class Persona:
             'email': self.email,
             'telefono': self.telefono,
             'nombre_completo': self.nombre_completo,
-            'fecha_creacion': self.fecha_creacion.isoformat() if self.fecha_creacion else None
+            'fecha_creacion': self.fecha_creacion.isoformat() if self.fecha_creacion else None,
+            'tenant_id': self.tenant_id
         }
         if self.rol:
             data['rol'] = self.rol.to_dict()

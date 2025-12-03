@@ -282,39 +282,8 @@ def health_check():
         "message": "Servidor activo"
     }), 200
 
-@app.route('/api/usuarios/', methods=['GET'])
-def obtener_usuarios():
-    """Endpoint para obtener lista de usuarios desde la base de datos"""
-    try:
-        print("Obteniendo lista de usuarios desde la base de datos...")
-
-        usuarios = UsuarioService.obtener_todos_usuarios(incluir_inactivos=True)
-
-        # Convertir a formato compatible con el frontend
-        usuarios_data = []
-        for usuario in usuarios:
-            usuarios_data.append({
-                "id": usuario.id,
-                "nombre": f"{usuario.persona.primer_nombre} {usuario.persona.primer_apellido}",
-                "email": usuario.persona.email,
-                "rol": usuario.rol.nombre_rol if usuario.rol else "user",
-                "estado": usuario.estado.value if hasattr(usuario.estado, 'value') else str(usuario.estado)
-            })
-
-        print(f"Enviando {len(usuarios_data)} usuarios desde la base de datos")
-
-        return jsonify({
-            "status": "success",
-            "message": "Usuarios obtenidos exitosamente",
-            "data": usuarios_data
-        }), 200
-
-    except Exception as e:
-        print(f"Error al obtener usuarios: {str(e)}")
-        return jsonify({
-            "status": "error",
-            "message": INTERNAL_SERVER_ERROR_MSG
-        }), 500
+# Endpoint eliminado: usar el blueprint usuario_routes.py que tiene la lógica completa de tenant
+# El endpoint correcto está en: usuario_bp.route('/', methods=['GET'])(token_required(UsuarioController.obtener_todos_usuarios))
 
 
 

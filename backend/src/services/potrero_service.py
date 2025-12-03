@@ -621,6 +621,8 @@ class PotreroService:
         """
         Get all personas with rol usuario, filtrado por tenant.
         
+        IMPORTANTE: tenant_id está en personas (p.tenant_id), NO en usuarios (u.tenant_id).
+        
         Args:
             tenant_id_override: Si se proporciona, filtra por este tenant
         """
@@ -637,8 +639,10 @@ class PotreroService:
                 """
                 params = ()
                 if tenant_id is not None:
-                    sql += " AND u.tenant_id = %s"
+                    # IMPORTANTE: tenant_id está en personas (p.tenant_id), NO en usuarios (u.tenant_id)
+                    sql += " AND p.tenant_id = %s"
                     params = (tenant_id,)
+                    print(f"[POTRERO_SERVICE] Filtrando personas con p.tenant_id: {tenant_id}")
                 
                 sql += " ORDER BY p.primer_apellido, p.primer_nombre"
                 
