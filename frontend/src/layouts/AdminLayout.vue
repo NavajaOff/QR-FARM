@@ -81,25 +81,25 @@
             </router-link>
             <!-- Usuarios para admin y super admin -->
             <router-link class="nav-link mb-1 small" to="/admin/gestionar-usuarios">
-              <i class="fas fa-users me-2"></i>Usuarios
+              <i class="fas fa-users me-2"></i>{{ isSuperAdmin ? 'Administradores' : 'Usuarios' }}
             </router-link>
-            <!-- Ganado para admin y super admin -->
-            <router-link class="nav-link mb-1 small" to="/admin/gestionar-animales">
+            <!-- Ganado solo para admin (NO super admin) -->
+            <router-link v-if="!isSuperAdmin" class="nav-link mb-1 small" to="/admin/gestionar-animales">
               <i class="fas fa-cow me-2"></i>Ganado
             </router-link>
-            <!-- Potreros para admin y super admin -->
-            <router-link class="nav-link mb-1 small" to="/admin/gestionar-potreros">
+            <!-- Potreros solo para admin (NO super admin) -->
+            <router-link v-if="!isSuperAdmin" class="nav-link mb-1 small" to="/admin/gestionar-potreros">
               <i class="fas fa-map-marked-alt me-2"></i>Potreros
             </router-link>
-            <!-- Vacunación para admin y super admin -->
-            <router-link class="nav-link mb-1 small" to="/admin/vacunacion">
+            <!-- Vacunación solo para admin (NO super admin) -->
+            <router-link v-if="!isSuperAdmin" class="nav-link mb-1 small" to="/admin/vacunacion">
               <i class="fas fa-syringe me-2"></i>Vacunación
             </router-link>
-            <!-- Reportes para admin y super admin -->
-            <router-link class="nav-link mb-1 small" to="/admin/reportes">
+            <!-- Reportes solo para admin (NO super admin) -->
+            <router-link v-if="!isSuperAdmin" class="nav-link mb-1 small" to="/admin/reportes">
               <i class="fas fa-chart-line me-2"></i>Reportes
             </router-link>
-            <!-- Escanear QR solo visible para usuarios con tenant (no super admin) -->
+            <!-- Escanear QR solo para admin (NO super admin) -->
             <router-link v-if="!isSuperAdmin" class="nav-link mb-1 small" to="/admin/scan-qr">
               <i class="fas fa-qrcode me-2"></i>Escanear QR
             </router-link>

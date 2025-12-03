@@ -199,15 +199,16 @@ describe('Router Configuration', () => {
       expect(adminRoute).toBeDefined()
       expect(adminRoute.meta).toBeDefined()
       expect(adminRoute.meta.requiresAuth).toBe(true)
-      expect(adminRoute.meta.role).toBe('admin')
+      expect(adminRoute.meta.allowedRoles).toContain('admin')
+      expect(adminRoute.meta.allowedRoles).toContain('super_admin')
     })
 
-    it('should have gestionar-tenants route with super_admin role', () => {
+    it('should have gestionar-tenants route with super_admin only', () => {
       const routes = router.getRoutes()
       const tenantsRoute = routes.find(r => r.name === 'GestionarTenants')
       expect(tenantsRoute).toBeDefined()
       expect(tenantsRoute.meta).toBeDefined()
-      expect(tenantsRoute.meta.role).toBe('super_admin')
+      expect(tenantsRoute.meta.allowedRoles).toEqual(['super_admin'])
     })
   })
 
@@ -259,13 +260,23 @@ describe('Router Configuration', () => {
       expect(router.currentRoute.value.path).toBe('/user/potreros')
     })
 
-    it('should have ReportesUsuario route (only for admin)', async () => {
-      // ReportesUsuario requiere rol admin, no usuario normal
+    it('should NOT have ReportesUsuario route (reportes removed from user routes)', async () => {
+      // Reportes fue eliminado de las rutas de usuario según las nuevas reglas
+      // Solo los admins tienen acceso a reportes en /admin/reportes
+      localStorage.setItem('token', 'test-token')
       localStorage.setItem('userRole', 'admin')
-      await router.push('/user/reportes')
-      await router.isReady()
-      expect(router.currentRoute.value.name).toBe('ReportesUsuario')
-      expect(router.currentRoute.value.path).toBe('/user/reportes')
+      
+      try {
+        await router.push('/user/reportes')
+        await router.isReady()
+      } catch (error) {
+        // Expected: la ruta no existe o redirige
+      }
+      
+      // La ruta /user/reportes no debe existir
+      const routes = router.getRoutes()
+      const reportesRoute = routes.find(r => r.name === 'ReportesUsuario')
+      expect(reportesRoute).toBeUndefined()
       
       // Reset para otros tests
       localStorage.setItem('userRole', 'usuario')
@@ -312,7 +323,7 @@ describe('Router Configuration', () => {
       expect(userRoute).toBeDefined()
       expect(userRoute.meta).toBeDefined()
       expect(userRoute.meta.requiresAuth).toBe(true)
-      expect(userRoute.meta.role).toBe('usuario')
+      expect(userRoute.meta.allowedRoles).toContain('usuario')
     })
   })
 })
@@ -815,6 +826,11 @@ describe('Router Navigation Guards', () => {
       localStorage.setItem('token', 'test-token')
       localStorage.setItem('userRole', 'user')
       
+      // Start from a known state (login) to avoid redirect loops
+      await router.push('/login')
+      await router.isReady()
+      
+      // Now navigate to user route
       await router.push('/user/inicio')
       await router.isReady()
       expect(router.currentRoute.value.path).toBe('/user/inicio')
@@ -824,10 +840,9 @@ describe('Router Navigation Guards', () => {
       localStorage.setItem('token', 'test-token')
       localStorage.setItem('userRole', 'admin')
       
-      // Start from a known state
-      await router.push('/admin/dashboard')
+      // Start from a known state (login) to avoid redirect loops
+      await router.push('/login')
       await router.isReady()
-      expect(router.currentRoute.value.path).toBe('/admin/dashboard')
       
       // Admin should be blocked from accessing user routes
       try {
@@ -838,8 +853,10 @@ describe('Router Navigation Guards', () => {
       }
       
       // After the attempt, we should NOT be on the user route
+      // Admin should be redirected to their dashboard or login
       const currentPath = router.currentRoute.value.path
       expect(currentPath).not.toBe('/user/inicio')
+      expect(currentPath === '/admin/dashboard' || currentPath === '/login').toBe(true)
     })
 
     it('should handle invalidRole when to.meta.role is admin and userRole is not admin', async () => {

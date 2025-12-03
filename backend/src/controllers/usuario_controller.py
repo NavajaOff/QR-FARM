@@ -366,7 +366,12 @@ class UsuarioController:
     @staticmethod
     def obtener_usuario(id):
         try:
-            usuario = UsuarioService.obtener_usuario(id)
+            current_user = _obtener_usuario_actual()
+            tenant_id = None
+            if current_user and not UsuarioController._es_super_admin(current_user):
+                tenant_id = getattr(current_user, 'tenant_id', None)
+            
+            usuario = UsuarioService.obtener_usuario(id, tenant_id_override=tenant_id)
 
             if usuario:
                 return jsonify({
@@ -380,7 +385,7 @@ class UsuarioController:
                 }), 404
 
         except Exception as e:
-            logger.error("Error en login: %s", e, exc_info=True)
+            logger.error("Error en obtener_usuario: %s", e, exc_info=True)
             return jsonify({
                 'status': 'error',
                 'message': ERROR_PROCESAR_SOLICITUD
@@ -459,7 +464,12 @@ class UsuarioController:
                     'message': 'Estado inválido. Debe ser "activo" o "inactivo"'
                 }), 400
 
-            usuario_existente = UsuarioService.obtener_usuario(id, incluir_inactivos=True)
+            current_user = _obtener_usuario_actual()
+            tenant_id = None
+            if current_user and not UsuarioController._es_super_admin(current_user):
+                tenant_id = getattr(current_user, 'tenant_id', None)
+
+            usuario_existente = UsuarioService.obtener_usuario(id, incluir_inactivos=True, tenant_id_override=tenant_id)
             if not usuario_existente:
                 return jsonify({
                     'status': 'error',
@@ -564,7 +574,12 @@ class UsuarioController:
             if not data:
                 return UsuarioController._error("No se recibieron datos para actualizar", 400)
 
-            usuario = UsuarioService.obtener_usuario(id, incluir_inactivos=True)
+            current_user = _obtener_usuario_actual()
+            tenant_id = None
+            if current_user and not UsuarioController._es_super_admin(current_user):
+                tenant_id = getattr(current_user, 'tenant_id', None)
+
+            usuario = UsuarioService.obtener_usuario(id, incluir_inactivos=True, tenant_id_override=tenant_id)
             if not usuario:
                 return UsuarioController._error(UsuarioController.MSG_USER_NOT_FOUND, 404)
 
@@ -575,7 +590,7 @@ class UsuarioController:
             UsuarioController._actualizar_datos_persona(usuario, data)
             UsuarioController._actualizar_datos_usuario(usuario, data)
 
-            if UsuarioService.actualizar_usuario_completo(id, usuario):
+            if UsuarioService.actualizar_usuario_completo(id, usuario, tenant_id_override=tenant_id):
                 UsuarioController._emitir_actualizacion(id, usuario)
                 return jsonify({
                     'status': 'success',
@@ -696,7 +711,13 @@ class UsuarioController:
     @staticmethod
     def eliminar_usuario(id):
         try:
-            if UsuarioService.eliminar_usuario(id):
+            current_user = _obtener_usuario_actual()
+            tenant_id = None
+            if current_user and not UsuarioController._es_super_admin(current_user):
+                tenant_id = getattr(current_user, 'tenant_id', None)
+
+            success, message = UsuarioService.eliminar_usuario(id, tenant_id_override=tenant_id)
+            if success:
                 # Emitir actualización en tiempo real para usuario eliminado
                 try:
                     emit_update('usuario_deleted', {
@@ -711,7 +732,7 @@ class UsuarioController:
             else:
                 return jsonify({
                     'status': 'error',
-                    'message': UsuarioController.MSG_USER_NOT_FOUND
+                    'message': message or UsuarioController.MSG_USER_NOT_FOUND
                 }), 404
                 
         except Exception as e:
