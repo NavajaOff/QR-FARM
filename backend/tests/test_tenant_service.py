@@ -6,23 +6,52 @@ from src.services.tenant_service import TenantService
 
 class TestTenantService:
     @patch('src.services.tenant_service.get_connection')
-    def test_listar_tenants_success(self, mock_get_conn):
-        """Test listar_tenants with successful database call"""
+    def test_listar_tenants_inactivos_only(self, mock_get_conn):
+        """Test listar_tenants with activos_only=False returns only inactive tenants"""
         mock_conn = Mock()
         mock_cursor = Mock()
         mock_get_conn.return_value = mock_conn
         mock_conn.cursor.return_value = mock_cursor
 
         mock_cursor.fetchall.return_value = [
-            {'id': 1, 'nombre': 'Tenant 1', 'codigo_tenant': 'code1', 'estado': 'activo'},
             {'id': 2, 'nombre': 'Tenant 2', 'codigo_tenant': 'code2', 'estado': 'inactivo'}
         ]
 
         result = TenantService.listar_tenants(activos_only=False)
 
-        assert len(result) == 2
+        assert len(result) == 1
+        assert result[0].id == 2
+        assert result[0].nombre == 'Tenant 2'
+        assert result[0].estado.value == 'inactivo'
+        mock_cursor.execute.assert_called_once()
+        # Verificar que la query incluye el filtro WHERE estado = 'inactivo'
+        call_args = mock_cursor.execute.call_args[0][0]
+        assert "WHERE estado = 'inactivo'" in call_args
+        mock_get_conn.assert_called_once()
+        mock_conn.close.assert_called_once()
+
+    @patch('src.services.tenant_service.get_connection')
+    def test_listar_tenants_activos_only(self, mock_get_conn):
+        """Test listar_tenants with activos_only=True returns only active tenants"""
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_get_conn.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        mock_cursor.fetchall.return_value = [
+            {'id': 1, 'nombre': 'Tenant 1', 'codigo_tenant': 'code1', 'estado': 'activo'}
+        ]
+
+        result = TenantService.listar_tenants(activos_only=True)
+
+        assert len(result) == 1
         assert result[0].id == 1
         assert result[0].nombre == 'Tenant 1'
+        assert result[0].estado.value == 'activo'
+        mock_cursor.execute.assert_called_once()
+        # Verificar que la query incluye el filtro WHERE estado = 'activo'
+        call_args = mock_cursor.execute.call_args[0][0]
+        assert "WHERE estado = 'activo'" in call_args
         mock_get_conn.assert_called_once()
         mock_conn.close.assert_called_once()
 

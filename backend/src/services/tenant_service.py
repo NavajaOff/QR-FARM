@@ -83,6 +83,8 @@ class TenantService:
             query = "SELECT * FROM tenants"
             if activos_only:
                 query += " WHERE estado = 'activo'"
+            else:
+                query += " WHERE estado = 'inactivo'"
             query += " ORDER BY nombre"
             
             cursor.execute(query)

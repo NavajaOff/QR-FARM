@@ -273,7 +273,7 @@ const saveTenant = async () => {
 }
 
 const handleToggleInactivos = () => {
-  // Si mostrarInactivos es true, cargar todos incluyendo inactivos (activosOnly = false)
+  // Si mostrarInactivos es true, cargar solo inactivos (activosOnly = false)
   // Si mostrarInactivos es false, cargar solo activos (activosOnly = true)
   const activosOnly = !mostrarInactivos.value
   console.log('[GestionarTenants] Cambiando filtro:')
