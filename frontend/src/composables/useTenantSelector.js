@@ -1,5 +1,5 @@
 // useTenantSelector.js - Composable para manejo de selección de tenant
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useTenants } from './useTenants.js'
 import authService from '../services/authService.js'
 
@@ -31,7 +31,8 @@ export function useTenantSelector() {
 
   // Verificar si el usuario es super admin
   const isSuperAdmin = computed(() => {
-    return authService.getRole() === 'super_admin'
+    const role = authService.getRole()
+    return String(role) === 'super_admin'
   })
 
   // Verificar si debe mostrar el selector (solo para super admin)

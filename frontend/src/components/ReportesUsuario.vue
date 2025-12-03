@@ -56,9 +56,7 @@
 </template>
 
 <script>
-import reportesUsuario from '../assets/js/reportes-usuario.js'
-
-export default reportesUsuario
+export { default } from '../assets/js/reportes-usuario.js'
 </script>
 
 <style scoped>

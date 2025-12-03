@@ -47,7 +47,7 @@
             <div class="spinner-border spinner-border-sm text-primary" role="status">
               <span class="visually-hidden">Cargando...</span>
             </div>
-            <small class="d-block mt-2 text-muted">Cargando tenants...</small>
+            <output class="d-block mt-2 text-muted">Cargando tenants...</output>
           </div>
         </li>
         <li v-else-if="error">
@@ -102,7 +102,7 @@ const handleSelectTenant = (tenantId, tenantName = null) => {
   selectTenant(tenantId, tenantName)
   
   // Emitir evento para que otros componentes se actualicen
-  window.dispatchEvent(new CustomEvent('tenant-changed', {
+  globalThis.dispatchEvent(new CustomEvent('tenant-changed', {
     detail: { tenantId, tenantName }
   }))
   

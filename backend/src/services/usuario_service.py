@@ -890,7 +890,7 @@ class UsuarioService:
                 params = params + (tenant_id,)
                 print(f"[USUARIO_SERVICE] obtener_usuario: Filtrando por p.tenant_id={tenant_id}")
             else:
-                print(f"[USUARIO_SERVICE] obtener_usuario: NO filtrando por tenant_id (obteniendo usuario completo)")
+                print("[USUARIO_SERVICE] obtener_usuario: NO filtrando por tenant_id (obteniendo usuario completo)")
 
             cursor.execute(sql, params)
 
@@ -1037,6 +1037,86 @@ class UsuarioService:
                 conn.close()
 
     @staticmethod
+    def _validar_usuario_para_actualizacion(cursor, id, tenant_id):
+        """Valida que el usuario existe y pertenece al tenant correcto."""
+        sql_check = "SELECT u.id_persona, p.tenant_id FROM usuarios u INNER JOIN personas p ON u.id_persona = p.id WHERE u.id = %s"
+        cursor.execute(sql_check, (id,))
+        result = cursor.fetchone()
+        if not result:
+            return None
+        if tenant_id is not None and result.get('tenant_id') != tenant_id:
+            return None
+        return result['id_persona']
+    
+    @staticmethod
+    def _preparar_transaccion(conn):
+        """Prepara la conexión para una transacción."""
+        original_autocommit = getattr(conn, 'autocommit', None)
+        if original_autocommit is not None and original_autocommit:
+            conn.autocommit = False
+        if hasattr(conn, 'in_transaction') and conn.in_transaction:
+            conn.rollback()
+        conn.start_transaction()
+        return original_autocommit
+    
+    @staticmethod
+    def _actualizar_persona_en_bd(cursor, usuario, id_persona):
+        """Actualiza los datos de la persona en la BD."""
+        sql_persona = """
+            UPDATE personas SET
+                id_rol = %s,
+                primer_nombre = %s,
+                segundo_nombre = %s,
+                primer_apellido = %s,
+                segundo_apellido = %s,
+                email = %s,
+                telefono = %s
+            WHERE id = %s
+        """
+        values_persona = (
+            usuario.persona.id_rol,
+            usuario.persona.primer_nombre,
+            usuario.persona.segundo_nombre,
+            usuario.persona.primer_apellido,
+            usuario.persona.segundo_apellido,
+            usuario.persona.email,
+            usuario.persona.telefono,
+            id_persona
+        )
+        cursor.execute(sql_persona, values_persona)
+    
+    @staticmethod
+    def _actualizar_usuario_en_bd(cursor, usuario, id, tenant_id):
+        """Actualiza los datos del usuario en la BD."""
+        sql_usuario = """
+            UPDATE usuarios SET
+                id_rol = %s,
+                estado = %s
+            WHERE id = %s
+        """
+        params_usuario = (usuario.id_rol, usuario.estado.value, id)
+        if tenant_id is not None:
+            sql_usuario += UsuarioService.SQL_AND_TENANT_ID
+            params_usuario = params_usuario + (tenant_id,)
+        cursor.execute(sql_usuario, params_usuario)
+    
+    @staticmethod
+    def _actualizar_contrasena_en_bd(cursor, usuario, id, tenant_id):
+        """Actualiza la contraseña del usuario en la BD si es necesario."""
+        if not usuario.contrasena:
+            return
+        sql_actualizar_contrasena = """
+            UPDATE usuarios SET
+                contrasena = %s
+            WHERE id = %s
+        """
+        params_contrasena = (usuario.contrasena, id)
+        if tenant_id is not None:
+            sql_actualizar_contrasena += UsuarioService.SQL_AND_TENANT_ID
+            params_contrasena = params_contrasena + (tenant_id,)
+        cursor.execute(sql_actualizar_contrasena, params_contrasena)
+    
+    @staticmethod
     def actualizar_usuario_completo(id: int, usuario: Usuario, tenant_id_override: Optional[int] = None) -> bool:
         """
         Actualizar usuario completo con validación de tenant.
@@ -1051,93 +1131,19 @@ class UsuarioService:
             cursor = conn.cursor(dictionary=True)
 
             tenant_id = tenant_id_override if tenant_id_override is not None else UsuarioService._obtener_tenant_id()
-
-            # Verificar que el usuario existe y obtener id_persona
-            # IMPORTANTE: tenant_id está en personas, no en usuarios
-            sql_check = "SELECT u.id_persona, p.tenant_id FROM usuarios u INNER JOIN personas p ON u.id_persona = p.id WHERE u.id = %s"
-            cursor.execute(sql_check, (id,))
-            result = cursor.fetchone()
-            if not result:
+            id_persona = UsuarioService._validar_usuario_para_actualizacion(cursor, id, tenant_id)
+            if id_persona is None:
                 return False
-
-            # Validar tenant_id si no es super_admin
-            # IMPORTANTE: tenant_id viene de personas (p.tenant_id)
-            if tenant_id is not None and result.get('tenant_id') != tenant_id:
-                return False
-
-            id_persona = result['id_persona']
 
             try:
-                original_autocommit = getattr(conn, 'autocommit', None)
-                if original_autocommit is not None and original_autocommit:
-                    conn.autocommit = False
-
-                if hasattr(conn, 'in_transaction') and conn.in_transaction:
-                    conn.rollback()
-
-                # Iniciar transacción
-                conn.start_transaction()
-
-                # Actualizar persona
-                sql_persona = """
-                    UPDATE personas SET
-                        id_rol = %s,
-                        primer_nombre = %s,
-                        segundo_nombre = %s,
-                        primer_apellido = %s,
-                        segundo_apellido = %s,
-                        email = %s,
-                        telefono = %s
-                    WHERE id = %s
-                """
-
-                values_persona = (
-                    usuario.persona.id_rol,
-                    usuario.persona.primer_nombre,
-                    usuario.persona.segundo_nombre,
-                    usuario.persona.primer_apellido,
-                    usuario.persona.segundo_apellido,
-                    usuario.persona.email,
-                    usuario.persona.telefono,
-                    id_persona
-                )
-
-                cursor.execute(sql_persona, values_persona)
-
-                # Actualizar usuario (con validación de tenant si aplica)
-                sql_usuario = """
-                    UPDATE usuarios SET
-                        id_rol = %s,
-                        estado = %s
-                    WHERE id = %s
-                """
-                params_usuario = (usuario.id_rol, usuario.estado.value, id)
-                if tenant_id is not None:
-                    sql_usuario += UsuarioService.SQL_AND_TENANT_ID
-                    params_usuario = params_usuario + (tenant_id,)
-
-                cursor.execute(sql_usuario, params_usuario)
-
-                # Si hay nueva contraseña, actualizarla (con validación de tenant si aplica)
-                if usuario.contrasena:
-                    sql_actualizar_contrasena = """
-                        UPDATE usuarios SET
-                            contrasena = %s
-                        WHERE id = %s
-                    """
-                    params_contrasena = (usuario.contrasena, id)
-                    if tenant_id is not None:
-                        sql_actualizar_contrasena += UsuarioService.SQL_AND_TENANT_ID
-                        params_contrasena = params_contrasena + (tenant_id,)
-                    cursor.execute(sql_actualizar_contrasena, params_contrasena)
-
-                # Commit de la transacción
+                original_autocommit = UsuarioService._preparar_transaccion(conn)
+                UsuarioService._actualizar_persona_en_bd(cursor, usuario, id_persona)
+                UsuarioService._actualizar_usuario_en_bd(cursor, usuario, id, tenant_id)
+                UsuarioService._actualizar_contrasena_en_bd(cursor, usuario, id, tenant_id)
                 conn.commit()
-
                 return True
 
             except Exception as e:
-                # Rollback en caso de error
                 conn.rollback()
                 raise e
             finally:

@@ -160,13 +160,13 @@ export default {
     // Configurar callback para actualizar la lista desde el JS
     setUpdateCallback(this.actualizarLista);
     // Escuchar cambios de tenant (el TenantSelector en AdminLayout emite este evento)
-    window.addEventListener('tenant-changed', this.onTenantChanged);
+    globalThis.addEventListener('tenant-changed', this.onTenantChanged);
   },
   beforeUnmount() {
     // Cancelar peticiones pendientes cuando el componente se desmonte
     cancelPendingRequests();
     // Remover listener de eventos
-    window.removeEventListener('tenant-changed', this.onTenantChanged);
+    globalThis.removeEventListener('tenant-changed', this.onTenantChanged);
   },
   beforeRouteLeave(to, from, next) {
     // Cancelar peticiones y resetear estado antes de cambiar de ruta

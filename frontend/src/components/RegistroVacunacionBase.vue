@@ -5,7 +5,7 @@
       <div class="spinner-border text-primary" role="status">
         <span class="visually-hidden">Cargando...</span>
       </div>
-      <p class="mt-3 text-muted">Cargando vacunaciones...</p>
+      <output class="d-block mt-3 text-muted">Cargando vacunaciones...</output>
     </div>
 
     <!-- Mensaje cuando no hay vacunaciones -->
@@ -107,6 +107,7 @@ export default {
           day: '2-digit'
         });
       } catch (error) {
+        console.error('[RegistroVacunacionBase] Error formateando fecha:', error);
         return dateString.split('T')[0] || 'No definida';
       }
     },

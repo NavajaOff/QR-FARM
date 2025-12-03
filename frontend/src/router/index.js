@@ -176,106 +176,110 @@ function isRootOrLogin(path) {
   return path === '/' || path === '/login';
 }
 
+// Funciones auxiliares para el guard de navegación
+function getRoleInfo(userRole) {
+  return {
+    isSuperAdmin: userRole === 'super_admin',
+    isAdmin: userRole === 'admin' || userRole === 'administrador',
+    isUser: userRole === 'usuario' || userRole === 'user'
+  };
+}
+
+function redirectByRole(roleInfo) {
+  if (roleInfo.isSuperAdmin || roleInfo.isAdmin) return '/admin/dashboard';
+  if (roleInfo.isUser) return '/user/inicio';
+  return '/login';
+}
+
+function lacksAuth(to, token) {
+  return to.meta.requiresAuth && !token;
+}
+
+function checkRoleAlias(userRole, allowedRoles) {
+  if (userRole === 'user' && allowedRoles.includes('usuario')) {
+    return true;
+  }
+  if (userRole === 'administrador' && allowedRoles.includes('admin')) {
+    return true;
+  }
+  return false;
+}
+
+function invalidRole(to, userRole, roleInfo) {
+  if (!to.meta.allowedRoles || !Array.isArray(to.meta.allowedRoles)) {
+    return false;
+  }
+
+  const roleAllowed = to.meta.allowedRoles.includes(userRole) || 
+                     checkRoleAlias(userRole, to.meta.allowedRoles);
+  
+  if (!roleAllowed) {
+    return true;
+  }
+
+  if (to.meta.requiresTenant && roleInfo.isSuperAdmin) {
+    return true;
+  }
+
+  return false;
+}
+
+function handleSuperAdminRedirect(to) {
+  const tenantRoutes = ['/scan-qr', '/ganado', '/potreros', '/vacunacion', '/reportes'];
+  if (to.meta.requiresTenant || tenantRoutes.some(route => to.path.includes(route))) {
+    return '/admin/dashboard';
+  }
+  return null;
+}
+
+function handleUserRedirect(to) {
+  if (to.path.includes('/admin/') && !to.path.includes('/admin/dashboard')) {
+    return '/user/inicio';
+  }
+  if (to.path.includes('/reportes')) {
+    return '/user/inicio';
+  }
+  return null;
+}
+
+function handleAdminRedirect(to) {
+  if (to.meta.allowedRoles && to.meta.allowedRoles.includes('super_admin') && 
+      !to.meta.allowedRoles.includes('admin')) {
+    return '/admin/dashboard';
+  }
+  return null;
+}
+
+function handleInvalidRoleRedirect(to, roleInfo) {
+  if (isRootOrLogin(to.path)) {
+    return redirectByRole(roleInfo);
+  }
+  
+  const redirect = roleInfo.isSuperAdmin ? handleSuperAdminRedirect(to) :
+                   roleInfo.isUser ? handleUserRedirect(to) :
+                   roleInfo.isAdmin ? handleAdminRedirect(to) : null;
+  
+  return redirect || redirectByRole(roleInfo);
+}
+
 // Guard de navegación
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token');
   const userRole = localStorage.getItem('userRole');
+  const roleInfo = getRoleInfo(userRole);
 
-  const isSuperAdmin = userRole === 'super_admin';
-  const isAdmin = userRole === 'admin' || userRole === 'administrador';
-  const isUser = userRole === 'usuario' || userRole === 'user';
-
-  function redirectByRole() {
-    if (isSuperAdmin) return '/admin/dashboard';
-    if (isAdmin) return '/admin/dashboard';
-    if (isUser) return '/user/inicio';
-    return '/login';
-  }
-
-  function lacksAuth() {
-    return to.meta.requiresAuth && !token;
-  }
-
-  function invalidRole() {
-    // Si no hay roles permitidos definidos, permitir
-    if (!to.meta.allowedRoles || !Array.isArray(to.meta.allowedRoles)) {
-      return false;
-    }
-
-    // Verificar si el rol del usuario está en los roles permitidos
-    // Manejar alias: 'user' es equivalente a 'usuario', 'administrador' es equivalente a 'admin'
-    let roleAllowed = to.meta.allowedRoles.includes(userRole);
-    
-    // Si no está permitido directamente, verificar alias
-    if (!roleAllowed) {
-      if (userRole === 'user' && to.meta.allowedRoles.includes('usuario')) {
-        roleAllowed = true;
-      } else if (userRole === 'administrador' && to.meta.allowedRoles.includes('admin')) {
-        roleAllowed = true;
-      }
-    }
-    
-    if (!roleAllowed) {
-      return true;
-    }
-
-    // Validar si la ruta requiere tenant (super_admin no tiene tenant)
-    if (to.meta.requiresTenant && isSuperAdmin) {
-      return true;
-    }
-
-    return false;
-  }
-
-  // 1️⃣ Si requiere auth y NO hay token → LOGIN
-  if (lacksAuth()) {
+  if (lacksAuth(to, token)) {
     return next('/login');
   }
 
-  // 2️⃣ Si requiere rol y no coincide → redirigir según caso
-  if (invalidRole()) {
-    if (isRootOrLogin(to.path)) {
-      return next(redirectByRole());
-    }
-    
-    // Redirecciones específicas según el rol
-    if (isSuperAdmin) {
-      // Super admin intentando acceder a rutas de tenant (ganado, potreros, QR, etc.)
-      if (to.meta.requiresTenant || to.path.includes('/scan-qr') || 
-          to.path.includes('/ganado') || to.path.includes('/potreros') ||
-          to.path.includes('/vacunacion') || to.path.includes('/reportes')) {
-        return next('/admin/dashboard');
-      }
-    }
-    
-    if (isUser) {
-      // Usuario intentando acceder a rutas de admin
-      if (to.path.includes('/admin/') && !to.path.includes('/admin/dashboard')) {
-        return next('/user/inicio');
-      }
-      // Usuario intentando acceder a reportes
-      if (to.path.includes('/reportes')) {
-        return next('/user/inicio');
-      }
-    }
-    
-    if (isAdmin) {
-      // Admin intentando acceder a rutas de super_admin
-      if (to.meta.allowedRoles && to.meta.allowedRoles.includes('super_admin') && 
-          !to.meta.allowedRoles.includes('admin')) {
-        return next('/admin/dashboard');
-      }
-    }
-    
-    return next(redirectByRole());
+  if (invalidRole(to, userRole, roleInfo)) {
+    return next(handleInvalidRoleRedirect(to, roleInfo));
   }
 
-  // 3️⃣ Si ya está autenticado y va a login → mandarlo a su dashboard
   if (token && isRootOrLogin(to.path)) {
-    return next(redirectByRole());
+    return next(redirectByRole(roleInfo));
   }
 
-  // 4️⃣ Permitir navegación normal
   next();
 });
 
