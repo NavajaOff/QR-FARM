@@ -226,10 +226,22 @@ class Usuario:
             'tenant_id': self.tenant_id
         }
 
-        if include_persona and self.persona:
-            data['persona'] = self.persona.to_dict()
+        # Campos planos para compatibilidad con frontend
+        if self.persona:
+            data['nombre'] = self.persona.nombre_completo
+            data['email'] = self.persona.email
+            if include_persona:
+                data['persona'] = self.persona.to_dict()
+        else:
+            data['nombre'] = ''
+            data['email'] = ''
 
+        # Rol como string para compatibilidad con frontend
         if self.rol:
-            data['rol'] = self.rol.to_dict()
+            data['rol'] = self.rol.nombre_rol
+            # Mantener objeto completo para compatibilidad
+            data['rol_obj'] = self.rol.to_dict()
+        else:
+            data['rol'] = 'usuario'  # Valor por defecto
 
         return data
