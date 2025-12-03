@@ -6,7 +6,6 @@ import { mount } from '@vue/test-utils'
 const mockComponent = { template: '<div>Mock Component</div>' }
 
 vi.mock('../views/public/Login.vue', () => ({ default: mockComponent }))
-vi.mock('../views/public/CrearCuenta.vue', () => ({ default: mockComponent }))
 vi.mock('../views/public/Home.vue', () => ({ default: mockComponent }))
 vi.mock('../views/public/Contacto.vue', () => ({ default: mockComponent }))
 vi.mock('../layouts/AdminLayout.vue', () => ({ default: mockComponent }))
@@ -85,13 +84,6 @@ describe('Router Configuration', () => {
       await router.isReady()
       expect(router.currentRoute.value.name).toBe('Login')
       expect(router.currentRoute.value.path).toBe('/login')
-    })
-
-    it('should have CrearCuenta route', async () => {
-      await router.push('/crear_cuenta')
-      await router.isReady()
-      expect(router.currentRoute.value.name).toBe('CrearCuenta')
-      expect(router.currentRoute.value.path).toBe('/crear_cuenta')
     })
 
     it('should have Home route', async () => {
@@ -357,13 +349,6 @@ describe('Router Navigation Guards', () => {
       await router.push('/home')
       await router.isReady()
       expect(router.currentRoute.value.path).toBe('/home')
-    })
-
-    it('should allow access to crear_cuenta without token', async () => {
-      localStorage.clear()
-      await router.push('/crear_cuenta')
-      await router.isReady()
-      expect(router.currentRoute.value.path).toBe('/crear_cuenta')
     })
 
     it('should allow access to contacto without token', async () => {

@@ -2,7 +2,7 @@
   <div class="registro-vacunacion-base">
     <!-- Estado de carga -->
     <div v-if="loading" class="text-center py-5">
-      <div class="spinner-border text-primary" role="status">
+      <div class="spinner-border text-primary">
         <span class="visually-hidden">Cargando...</span>
       </div>
       <output class="d-block mt-3 text-muted">Cargando vacunaciones...</output>

@@ -11,11 +11,6 @@ const routes = [
     component: () => import('../views/public/Login.vue')
   },
   {
-    path: '/crear_cuenta',
-    name: 'CrearCuenta',
-    component: () => import('../views/public/CrearCuenta.vue')
-  },
-  {
     path: '/home',
     name: 'Home',
     component: () => import('../views/public/Home.vue')
@@ -250,14 +245,25 @@ function handleAdminRedirect(to) {
   return null;
 }
 
+function getRoleBasedRedirect(to, roleInfo) {
+  if (roleInfo.isSuperAdmin) {
+    return handleSuperAdminRedirect(to);
+  }
+  if (roleInfo.isUser) {
+    return handleUserRedirect(to);
+  }
+  if (roleInfo.isAdmin) {
+    return handleAdminRedirect(to);
+  }
+  return null;
+}
+
 function handleInvalidRoleRedirect(to, roleInfo) {
   if (isRootOrLogin(to.path)) {
     return redirectByRole(roleInfo);
   }
   
-  const redirect = roleInfo.isSuperAdmin ? handleSuperAdminRedirect(to) :
-                   roleInfo.isUser ? handleUserRedirect(to) :
-                   roleInfo.isAdmin ? handleAdminRedirect(to) : null;
+  const redirect = getRoleBasedRedirect(to, roleInfo);
   
   return redirect || redirectByRole(roleInfo);
 }

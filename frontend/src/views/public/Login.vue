@@ -63,20 +63,11 @@
                       placeholder="Contraseña" required />
                   </div>
 
-                  <div class="d-grid gap-2 mb-3">
+                  <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-success btn-lg fw-bold" :disabled="loading">
                       <span v-if="loading" class="spinner-border spinner-border-sm me-2" aria-hidden="true" aria-label="Cargando"></span>
                       {{ loading ? 'Iniciando...' : 'Iniciar Sesión' }}
                     </button>
-                  </div>
-
-                  <div class="text-center">
-                    <p class="text-white mb-0">
-                      ¿No tienes cuenta?
-                      <router-link to="/crear_cuenta" class="text-info fw-bold">
-                        Crear cuenta
-                      </router-link>
-                    </p>
                   </div>
                 </form>
 

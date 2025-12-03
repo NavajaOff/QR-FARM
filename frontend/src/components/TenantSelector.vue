@@ -44,7 +44,7 @@
         </li>
         <li v-if="loading">
           <div class="dropdown-item text-center">
-            <div class="spinner-border spinner-border-sm text-primary" role="status">
+            <div class="spinner-border spinner-border-sm text-primary">
               <span class="visually-hidden">Cargando...</span>
             </div>
             <output class="d-block mt-2 text-muted">Cargando tenants...</output>
