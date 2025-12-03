@@ -123,22 +123,8 @@
                   required
                   placeholder="Ej: Finca San José"
                 >
-              </div>
-              
-              <div class="mb-3" v-if="!editMode">
-                <label for="codigo_tenant" class="form-label">Código del Tenant *</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="codigo_tenant"
-                  v-model="form.codigo_tenant"
-                  required
-                  placeholder="Ej: finca-san-jose"
-                  pattern="[a-z0-9-]+"
-                  title="Solo letras minúsculas, números y guiones"
-                >
-                <small class="form-text text-muted">
-                  Solo letras minúsculas, números y guiones. Debe ser único.
+                <small class="form-text text-muted" v-if="!editMode">
+                  El código del tenant se generará automáticamente a partir del nombre.
                 </small>
               </div>
 
@@ -244,8 +230,7 @@ const saveTenant = async () => {
       }, activosOnly)
     } else {
       result = await crearTenant({
-        nombre: form.value.nombre,
-        codigo_tenant: form.value.codigo_tenant.toLowerCase().replaceAll(' ', '-').replaceAll('--', '-')
+        nombre: form.value.nombre
       })
     }
 

@@ -86,7 +86,8 @@ const routes = [
       {
         path: 'scan-qr',
         name: 'EscanearQRAdmin',
-        component: () => import('../views/admin/EscanearQRAdmin.vue')
+        component: () => import('../views/admin/EscanearQRAdmin.vue'),
+        meta: { requiresAuth: true, role: 'admin', requiresTenant: true }
       }
     ]
   },
@@ -189,10 +190,18 @@ router.beforeEach((to, from, next) => {
     // Si no hay rol requerido, permitir
     if (!to.meta.role) return false;
 
-    // Super admin puede acceder a todas las rutas protegidas (excepto usuario si no es usuario)
+    // Validar si la ruta requiere tenant (no super admin)
+    if (to.meta.requiresTenant && isSuperAdmin) {
+      console.log('[ROUTER GUARD] Ruta requiere tenant pero usuario es super admin, bloqueando acceso');
+      return true;
+    }
+
+    // Super admin puede acceder a todas las rutas protegidas (excepto usuario si no es usuario y rutas que requieren tenant)
     if (isSuperAdmin) {
-      // Super admin puede acceder a cualquier ruta excepto las específicas de usuario
-      return to.meta.role === 'usuario' && !isUser;
+      // Super admin puede acceder a cualquier ruta excepto las específicas de usuario y las que requieren tenant
+      if (to.meta.role === 'usuario' && !isUser) return true;
+      if (to.meta.requiresTenant) return true;
+      return false;
     }
 
     // Si la ruta requiere super_admin y el usuario NO es super_admin, bloquear

@@ -26,6 +26,9 @@ from src.routes.vacunacion_routes import vacunacion_bp
 from src.routes.reporte_routes import reporte_bp
 from src.routes.tenant_routes import tenant_bp
 from src.utils.init_super_admin import inicializar_super_admin
+from src.utils.auth import token_required
+from src.utils.tenant import get_current_tenant_id, _es_super_admin_usuario
+from flask import g
 # Constantes para mensajes de error
 INTERNAL_SERVER_ERROR_MSG = "Error interno del servidor"
 
@@ -115,13 +118,37 @@ CORS(app, resources={
 
 
 @app.route('/api/ganado/<identifier>', methods=['GET', 'OPTIONS'])
+@token_required
 def obtener_ganado_detallado(identifier: str):
-    """Devuelve la ficha detallada de un ganado, incluida la información relacionada."""
+    """
+    Devuelve la ficha detallada de un ganado, incluida la información relacionada.
+    
+    Solo usuarios con tenant asignado pueden acceder (no super admin sin tenant).
+    """
     if request.method == 'OPTIONS':
         return ('', 204)
 
     try:
-        detalle = GanadoService.obtener_ganado_detallado(identifier)
+        # Validar que el usuario tenga tenant asignado (no super admin sin tenant)
+        is_super_admin = _es_super_admin_usuario()
+        tenant_id = get_current_tenant_id(require_tenant=False)
+        
+        # Si es super admin y no tiene tenant seleccionado, denegar acceso
+        if is_super_admin and tenant_id is None:
+            return jsonify({
+                "success": False,
+                "message": "El escáner QR solo está disponible para usuarios con tenant asignado."
+            }), 403
+        
+        # Si no es super admin y no tiene tenant, también denegar
+        if not is_super_admin and tenant_id is None:
+            return jsonify({
+                "success": False,
+                "message": "Usuario sin tenant asignado. Acceso denegado."
+            }), 403
+
+        # Obtener detalle del ganado con filtro de tenant
+        detalle = GanadoService.obtener_ganado_detallado(identifier, tenant_id_override=tenant_id)
         if not detalle:
             return jsonify({
                 "success": False,

@@ -42,15 +42,14 @@ class TenantController:
                 }), 400
             
             nombre = data.get('nombre')
-            codigo_tenant = data.get('codigo_tenant')
             
-            if not nombre or not codigo_tenant:
+            if not nombre or not nombre.strip():
                 return jsonify({
                     'status': 'error',
-                    'message': 'Nombre y código de tenant son requeridos'
+                    'message': 'El nombre del tenant es requerido'
                 }), 400
             
-            tenant = TenantService.crear_tenant(nombre, codigo_tenant)
+            tenant = TenantService.crear_tenant(nombre.strip())
             
             if tenant:
                 return jsonify({

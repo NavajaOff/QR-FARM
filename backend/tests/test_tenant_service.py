@@ -101,8 +101,10 @@ class TestTenantService:
         mock_conn.close.assert_called_once()
 
     @patch('src.services.tenant_service.get_connection')
-    def test_crear_tenant_success(self, mock_get_conn):
+    @patch('src.services.tenant_service.generar_codigo_tenant_unico')
+    def test_crear_tenant_success(self, mock_generar_codigo, mock_get_conn):
         """Test crear_tenant with successful creation"""
+        mock_generar_codigo.return_value = 'new-tenant'
         mock_conn = Mock()
         mock_cursor = Mock()
         mock_get_conn.return_value = mock_conn
@@ -111,24 +113,27 @@ class TestTenantService:
 
         # Mock the obtener_tenant call
         with patch.object(TenantService, 'obtener_tenant', return_value=Mock(id=123, nombre='New Tenant')):
-            result = TenantService.crear_tenant('New Tenant', 'code123')
+            result = TenantService.crear_tenant('New Tenant')
 
         assert result is not None
         assert result.id == 123
+        mock_generar_codigo.assert_called_once_with('New Tenant')
         mock_cursor.execute.assert_called_once()
         mock_conn.commit.assert_called_once()
         mock_conn.close.assert_called_once()
 
     @patch('src.services.tenant_service.get_connection')
-    def test_crear_tenant_exception(self, mock_get_conn):
+    @patch('src.services.tenant_service.generar_codigo_tenant_unico')
+    def test_crear_tenant_exception(self, mock_generar_codigo, mock_get_conn):
         """Test crear_tenant with database exception"""
+        mock_generar_codigo.return_value = 'new-tenant'
         mock_conn = Mock()
         mock_cursor = Mock()
         mock_get_conn.return_value = mock_conn
         mock_conn.cursor.return_value = mock_cursor
         mock_cursor.execute.side_effect = Exception("DB Error")
 
-        result = TenantService.crear_tenant('New Tenant', 'code123')
+        result = TenantService.crear_tenant('New Tenant')
 
         assert result is None
         # Note: close is not called due to exception before reaching close() calls

@@ -24,6 +24,9 @@
           <!-- Espaciador -->
           <div class="flex-grow-1"></div>
 
+          <!-- Selector de Tenant (solo para super admin) -->
+          <TenantSelector />
+
           <!-- Información del usuario -->
           <div class="d-flex align-items-center me-3">
             <div class="d-flex align-items-center text-white">
@@ -90,7 +93,8 @@
             <router-link class="nav-link mb-1 small" to="/admin/reportes">
               <i class="fas fa-chart-line me-2"></i>Reportes
             </router-link>
-            <router-link class="nav-link mb-1 small" to="/admin/scan-qr">
+            <!-- Escanear QR solo visible para usuarios con tenant (no super admin) -->
+            <router-link v-if="!isSuperAdmin" class="nav-link mb-1 small" to="/admin/scan-qr">
               <i class="fas fa-qrcode me-2"></i>Escanear QR
             </router-link>
           </div>
@@ -111,8 +115,12 @@
 
 <script>
 import authService from '../services/authService.js';
+import TenantSelector from '../components/TenantSelector.vue';
 
 export default {
+  components: {
+    TenantSelector
+  },
   name: 'AdminLayout',
   data() {
     return {
