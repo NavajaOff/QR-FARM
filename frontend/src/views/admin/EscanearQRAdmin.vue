@@ -1,7 +1,7 @@
 <template>
   <section class="scan-page">
     <QrScanner
-      role="admin"
+      :role="'admin'"
       resource-endpoint="/ganado/{id}"
       @resource-loaded="handleResourceLoaded"
       @error="handleScannerError"
