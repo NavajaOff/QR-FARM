@@ -652,11 +652,19 @@ class TestUsuarioService:
         id_usuario = UsuarioService._insertar_usuario(mock_cursor, 1, usuario, 1)
         assert id_usuario == 1
 
-    def test_determinar_si_es_super_admin(self):
+    def test_determinar_si_es_super_admin(self, app_context):
         """Test _determinar_si_es_super_admin."""
-        with patch('src.utils.tenant.get_current_tenant_id', return_value=None):
-            result = UsuarioService._determinar_si_es_super_admin()
-            assert result is True
+        from flask import g
+        from src.models.usuario import Usuario, Rol, EstadoUsuario
+        
+        # Crear un usuario super_admin
+        rol_super = Rol(id=1, nombre_rol='super_admin', descripcion='Super Administrator')
+        usuario_super = Usuario(id=1, rol=rol_super, estado=EstadoUsuario.ACTIVO)
+        
+        # app_context ya está activo, solo asignamos g.current_user
+        g.current_user = usuario_super
+        result = UsuarioService._determinar_si_es_super_admin()
+        assert result is True
 
     def test_construir_condiciones_sql(self):
         """Test _construir_condiciones_sql."""
@@ -900,18 +908,41 @@ class TestUsuarioService:
         result = UsuarioService._verificar_email_existente(mock_cursor, 'test@example.com')
         assert result is False
 
-    def test_determinar_si_es_super_admin_false(self):
+    def test_determinar_si_es_super_admin_false(self, app_context):
         """Test _determinar_si_es_super_admin returns False."""
-        with patch('src.utils.tenant.get_current_tenant_id', return_value=1):
-            result = UsuarioService._determinar_si_es_super_admin()
-            assert result is False
+        from flask import g
+        from src.models.usuario import Usuario, Rol, EstadoUsuario
+        
+        # Crear un usuario normal (no super_admin)
+        rol_normal = Rol(id=2, nombre_rol='admin', descripcion='Administrator')
+        usuario_normal = Usuario(id=1, rol=rol_normal, estado=EstadoUsuario.ACTIVO)
+        
+        # app_context ya está activo, solo asignamos g.current_user
+        g.current_user = usuario_normal
+        result = UsuarioService._determinar_si_es_super_admin()
+        assert result is False
 
-    def test_determinar_si_es_super_admin_exception(self):
+    def test_determinar_si_es_super_admin_exception(self, app_context):
         """Test _determinar_si_es_super_admin with exception."""
-        with patch('src.utils.tenant.get_current_tenant_id', side_effect=Exception("Error")):
+        from flask import g
+        from src.models.usuario import Usuario, Rol, EstadoUsuario
+        
+        # Crear un usuario super_admin
+        rol_super = Rol(id=1, nombre_rol='super_admin', descripcion='Super Administrator')
+        usuario_super = Usuario(id=1, rol=rol_super, estado=EstadoUsuario.ACTIVO)
+        
+        # app_context ya está activo
+        g.current_user = usuario_super
+        # Simular una excepción haciendo patch del import de flask dentro de la función
+        # Hacemos patch del módulo flask para que g lance una excepción
+        class ExceptionG:
+            def __getattribute__(self, name):
+                raise Exception("Error")
+        
+        with patch('flask.g', ExceptionG()):
             result = UsuarioService._determinar_si_es_super_admin()
-            # Si hay excepción, _obtener_tenant_id retorna None, así que es super admin
-            assert result is True
+            # Si hay excepción, retorna False
+            assert result is False
 
     def test_construir_condiciones_sql_all_false(self):
         """Test _construir_condiciones_sql with all False."""

@@ -682,7 +682,7 @@ class TestUsuarioController:
             
             tenant_id, error = UsuarioController._obtener_tenant_id_filtrado(mock_user)
             assert tenant_id is None
-            assert error == 'No se puede determinar el tenant del usuario'
+            assert error == 'No se puede determinar el tenant del usuario. Contacte al administrador.'
 
     def test_actualizar_datos_persona(self, app_context, mock_jsonify, mock_current_app):
         """Test _actualizar_datos_persona updates all fields."""
@@ -1116,6 +1116,12 @@ class TestUsuarioController:
             mock_user = Mock()
             mock_get_user.return_value = mock_user
             mock_get_tenant.return_value = (None, 'No se puede determinar el tenant')
+            
+            # Hacer que g.tenant_id sea None para forzar el uso de _obtener_tenant_id_filtrado
+            mock_g.tenant_id = None
+            mock_g.jwt_payload = {}
+            # También hacer que current_user no tenga tenant_id
+            mock_user.tenant_id = None
 
             result = UsuarioController.obtener_todos_usuarios()
             assert result[1] == 403

@@ -99,6 +99,8 @@ def token_required(f):
         # Asegurar que current_user tiene tenant_id asignado
         if tenant_id is not None:
             current_user.tenant_id = tenant_id
+            # Agregar tenant_id al payload para mantener consistencia
+            payload['tenant_id'] = tenant_id
             print(f"[AUTH] tenant_id asignado a current_user: {tenant_id}")
         else:
             print(f"[AUTH] ADVERTENCIA: Usuario {current_user.id} no tiene tenant_id asignado")

@@ -212,7 +212,10 @@ class TestUsuario:
         usuario = Usuario(id=1, rol=rol, estado=EstadoUsuario.ACTIVO)
         result = usuario.to_dict()
         assert result['id'] == 1
-        assert result['rol']['rol'] == 'admin'
+        # Ahora rol es un string para compatibilidad con frontend
+        assert result['rol'] == 'admin'
+        # El objeto completo está en rol_obj
+        assert result['rol_obj']['rol'] == 'admin'
 
     def test_persona_from_dict_con_rol(self):
         """Test Persona from_dict with rol"""
