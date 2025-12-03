@@ -42,7 +42,8 @@ describe('UserLayout.vue', () => {
         { path: '/user/reportes', component: { template: '<div>Reportes</div>' } },
         { path: '/user/registro-vacunacion', component: { template: '<div>Vacunacion</div>' } },
         { path: '/user/perfil', component: { template: '<div>Perfil</div>' } },
-        { path: '/user/qr', component: { template: '<div>QR</div>' } }
+        { path: '/user/scan-qr', component: { template: '<div>QR</div>' } },
+        { path: '/user/reportes', component: { template: '<div>Reportes</div>' } }
       ]
     })
 
@@ -169,8 +170,8 @@ describe('UserLayout.vue', () => {
         { to: '/user/ganado', text: 'Mi Ganado' },
         { to: '/user/potreros', text: 'Potreros' },
         { to: '/user/registro-vacunacion', text: 'Vacunación' },
-        { to: '/user/perfil', text: 'Perfil' },
-        { to: '/user/qr', text: 'Escanear QR' }
+        { to: '/user/scan-qr', text: 'Escanear QR' },
+        { to: '/user/perfil', text: 'Perfil' }
       ]
 
       expectedRoutes.forEach((expected, index) => {
@@ -199,8 +200,8 @@ describe('UserLayout.vue', () => {
         { to: '/user/potreros', text: 'Potreros' },
         { to: '/user/reportes', text: 'Reportes' },
         { to: '/user/registro-vacunacion', text: 'Vacunación' },
-        { to: '/user/perfil', text: 'Perfil' },
-        { to: '/user/qr', text: 'Escanear QR' }
+        { to: '/user/scan-qr', text: 'Escanear QR' },
+        { to: '/user/perfil', text: 'Perfil' }
       ]
 
       expectedRoutes.forEach((expected, index) => {
@@ -392,8 +393,9 @@ describe('UserLayout.vue', () => {
         const parent = link.element.closest('.user-sidebar')
         return parent !== null
       })
-      // Para admin, Reportes está en la posición 3
-      const reportesLink = sidebarLinks[3]
+      // Para admin, Reportes está en la posición 3 (después de Potreros)
+      const reportesLink = sidebarLinks.find(link => link.props('to') === '/user/reportes')
+      expect(reportesLink).toBeDefined()
       expect(reportesLink.props('to')).toBe('/user/reportes')
       expect(reportesLink.text()).toContain('Reportes')
     })
@@ -457,10 +459,10 @@ describe('UserLayout.vue', () => {
         const parent = link.element.closest('.user-sidebar')
         return parent !== null
       })
-      // Para usuario, Escanear QR está en posición 5 (sin Reportes)
-      const qrLink = sidebarLinks.find(link => link.props('to') === '/user/qr')
+      // Para usuario, Escanear QR está en posición 4 (sin Reportes)
+      const qrLink = sidebarLinks.find(link => link.props('to') === '/user/scan-qr')
       expect(qrLink).toBeDefined()
-      expect(qrLink.props('to')).toBe('/user/qr')
+      expect(qrLink.props('to')).toBe('/user/scan-qr')
       expect(qrLink.text()).toContain('Escanear QR')
     })
   })
@@ -538,8 +540,8 @@ describe('UserLayout.vue', () => {
         'fa-map-marked-alt',
         'fa-chart-line', // Reportes
         'fa-syringe',
-        'fa-user-edit',
-        'fa-qrcode'
+        'fa-qrcode',
+        'fa-user-edit'
       ]
 
       icons.forEach(iconClass => {

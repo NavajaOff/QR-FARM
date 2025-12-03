@@ -115,7 +115,8 @@ def test_get_current_tenant_id_from_query(app_context):
     from src.utils.tenant import get_current_tenant_id
     from flask import g
     
-    with patch('src.utils.tenant._obtener_tenant_desde_query_param', return_value=1):
+    with patch('src.utils.tenant._es_super_admin_usuario', return_value=True), \
+         patch('src.utils.tenant._obtener_tenant_desde_query_param', return_value=1):
         result = get_current_tenant_id(allow_query_param=True)
 
         assert result == 1

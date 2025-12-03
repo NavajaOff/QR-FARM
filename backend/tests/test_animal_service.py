@@ -707,7 +707,7 @@ class TestGanadoModel:
         result = GanadoService.eliminar_ganado(1)
 
         assert result is True
-        mock_dar_baja.assert_called_once_with(1, 'otra', 'Eliminación automática')
+        mock_dar_baja.assert_called_once_with(1, 'otra', 'Eliminación automática', tenant_id_override=None)
 
     @patch('src.services.animal_service.GanadoService.dar_baja_ganado')
     def test_eliminar_ganado_not_found(self, mock_dar_baja):

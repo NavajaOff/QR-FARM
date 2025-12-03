@@ -138,10 +138,10 @@ def test_crear_super_admin_desde_env_success(mock_get_connection, monkeypatch):
     with patch('src.utils.init_super_admin._cargar_env', return_value=True), \
          patch('src.utils.init_super_admin.existe_super_admin', return_value=False), \
          patch('src.utils.init_super_admin.obtener_rol_super_admin_id', return_value=3), \
-         patch('src.utils.init_super_admin.bcrypt') as mock_bcrypt, \
-         patch('src.utils.init_super_admin.hashlib') as mock_hashlib:
+         patch('src.utils.init_super_admin.bcrypt') as mock_bcrypt:
         mock_bcrypt.hash.return_value = 'hashed_password'
-        mock_hashlib.sha256.return_value.hexdigest.return_value = 'sha256_hash'
+        mock_conn.start_transaction = Mock()
+        mock_conn.commit = Mock()
 
         exito, mensaje = crear_super_admin_desde_env()
 
@@ -163,11 +163,14 @@ def test_crear_super_admin_desde_env_missing_vars(mock_get_connection, monkeypat
         assert 'no configuradas' in mensaje
 
 
+@patch('src.utils.init_super_admin.get_connection')
 @patch('src.utils.init_super_admin.crear_super_admin_desde_env')
-def test_inicializar_super_admin_success(mock_crear):
+def test_inicializar_super_admin_success(mock_crear, mock_get_connection):
     """Test inicializar_super_admin exitoso."""
     from src.utils.init_super_admin import inicializar_super_admin
     
+    mock_conn = Mock()
+    mock_get_connection.return_value = mock_conn
     mock_crear.return_value = (True, "Super admin creado")
 
     result = inicializar_super_admin()

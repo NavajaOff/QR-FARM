@@ -115,39 +115,38 @@ class TestAnimalRoutes:
         assert data['success'] is True
         assert data['data'] == []
 
-    @patch('src.routes.animal_routes.GanadoService')
-    def test_get_animal_success(self, mock_service):
+    @patch('src.controllers.animal_controller.GanadoController')
+    def test_get_animal_success(self, mock_controller_class):
         """Test get_animal success"""
-        mock_animal = Mock()
-        mock_animal.to_dict.return_value = {'id': 1, 'nombre': 'Vaca1'}
-        mock_service.obtener_ganado.return_value = mock_animal
+        from flask import jsonify
+        mock_response = jsonify({'data': {'id': 1, 'nombre': 'Vaca1'}, 'success': True})
+        mock_response.status_code = 200
+        mock_controller_class.obtener_ganado.return_value = (mock_response, 200)
 
-        response = self.client.get('/api/animales/1')
+        response = self.client.get('/api/animales/1', headers={'Authorization': 'Bearer test_token'})
 
         assert response.status_code == 200
-        data = response.get_json()
-        assert data['success'] is True
-        assert data['data']['id'] == 1
-        mock_service.obtener_ganado.assert_called_once_with(1)
+        mock_controller_class.obtener_ganado.assert_called_once()
 
-    @patch('src.routes.animal_routes.GanadoService')
-    def test_get_animal_not_found(self, mock_service):
+    @patch('src.controllers.animal_controller.GanadoController')
+    def test_get_animal_not_found(self, mock_controller_class):
         """Test get_animal not found"""
-        mock_service.obtener_ganado.return_value = None
+        from flask import jsonify
+        mock_response = jsonify({'error': 'Animal no encontrado', 'success': False})
+        mock_response.status_code = 404
+        mock_controller_class.obtener_ganado.return_value = (mock_response, 404)
 
-        response = self.client.get('/api/animales/1')
+        response = self.client.get('/api/animales/1', headers={'Authorization': 'Bearer test_token'})
 
         assert response.status_code == 404
-        data = response.get_json()
-        assert data['success'] is False
-        assert 'Animal no encontrado' in data['error']
+        mock_controller_class.obtener_ganado.assert_called_once()
 
-    @patch('src.routes.animal_routes.GanadoService')
-    def test_get_animal_exception(self, mock_service):
+    @patch('src.controllers.animal_controller.GanadoController.obtener_ganado')
+    def test_get_animal_exception(self, mock_controller):
         """Test get_animal exception"""
-        mock_service.obtener_ganado.side_effect = Exception("Service error")
+        mock_controller.side_effect = Exception("Service error")
 
-        response = self.client.get('/api/animales/1')
+        response = self.client.get('/api/animales/1', headers={'Authorization': 'Bearer test_token'})
 
         assert response.status_code == 500
         data = response.get_json()

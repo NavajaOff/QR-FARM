@@ -309,7 +309,7 @@ class TestUsuarioController:
         """Test eliminar_usuario exitoso."""
         with patch('src.controllers.usuario_controller.UsuarioService') as mock_service, \
              patch('src.controllers.usuario_controller.emit_update') as mock_emit:
-            mock_service.eliminar_usuario.return_value = True
+            mock_service.eliminar_usuario.return_value = (True, "Usuario eliminado exitosamente")
 
             result = UsuarioController.eliminar_usuario(1)
 
@@ -320,7 +320,7 @@ class TestUsuarioController:
     def test_eliminar_usuario_not_found(self, app_context, mock_jsonify, mock_current_app):
         """Test eliminar_usuario cuando no existe."""
         with patch('src.controllers.usuario_controller.UsuarioService') as mock_service:
-            mock_service.eliminar_usuario.return_value = False
+            mock_service.eliminar_usuario.return_value = (False, "Usuario no encontrado")
 
             result = UsuarioController.eliminar_usuario(999)
 
@@ -634,9 +634,9 @@ class TestUsuarioController:
         mock_service.registrar_usuario.return_value = (mock_usuario, "Usuario registrado")
         
         result = UsuarioController._crear_usuario_en_bd(False, None, mock_persona, mock_usuario)
-        
+
         assert result == (mock_usuario, "Usuario registrado")
-        mock_service.registrar_usuario.assert_called_once_with(mock_persona, mock_usuario)
+        mock_service.registrar_usuario.assert_called_once_with(mock_persona, mock_usuario, tenant_id_override=None)
 
     def test_obtener_tenant_id_filtrado_super_admin_with_param(self, app_context, mock_jsonify, mock_current_app, mock_request):
         """Test _obtener_tenant_id_filtrado for super admin with tenant_id param."""

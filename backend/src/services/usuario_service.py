@@ -997,25 +997,6 @@ class UsuarioService:
                 except Exception:
                     pass
 
-    @staticmethod
-    def eliminar_usuario(id: int) -> bool:
-        try:
-            conn = get_connection()
-            cursor = conn.cursor()
-
-            # Cambiar estado a inactivo
-            sql = "UPDATE usuarios SET estado = 'inactivo' WHERE id = %s"
-            cursor.execute(sql, (id,))
-            conn.commit()
-
-            return cursor.rowcount > 0
-
-        except Exception as e:
-            print(f"Error al eliminar usuario: {e}")
-            return False
-        finally:
-            if 'conn' in locals():
-                conn.close()
 
     @staticmethod
     def buscar_por_email(email: str) -> Optional[Usuario]:
