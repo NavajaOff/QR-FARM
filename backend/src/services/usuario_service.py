@@ -11,6 +11,7 @@ class UsuarioService:
     # Constantes para mensajes y queries
     EMAIL_DUPLICADO_MSG = "El email ya está registrado"
     QUERY_PERSONA_ID = "SELECT id_persona FROM usuarios WHERE id = %s"
+    SQL_AND_TENANT_ID = " AND tenant_id = %s"
     @staticmethod
     def _obtener_tenant_id() -> Optional[int]:
         """Obtiene el tenant_id del contexto actual."""
@@ -60,13 +61,62 @@ class UsuarioService:
         if not incluir_inactivos:
             conditions.append("u.estado = 'activo'")
         if tenant_id is not None:
-            # Filtrar estrictamente por tenant_id desde personas - esto es crítico para el aislamiento
             conditions.append("p.tenant_id = %s")
             params.append(tenant_id)
             print(f"[USUARIO_SERVICE] Filtro de tenant_id aplicado desde personas: {tenant_id}")
         if excluir_super_admin:
             conditions.append("(r.rol IS NULL OR LOWER(TRIM(r.rol)) != 'super_admin')")
         return conditions, params
+    
+    @staticmethod
+    def _validar_y_agregar_tenant_id_sql(sql, params, tenant_id):
+        """Valida y agrega filtro de tenant_id al SQL si es necesario."""
+        if tenant_id is not None and "p.tenant_id = %s" not in sql:
+            if "WHERE" in sql:
+                sql += " AND p.tenant_id = %s"
+            else:
+                sql += " WHERE p.tenant_id = %s"
+            if tenant_id not in params:
+                params = params + (tenant_id,)
+        return sql, params
+    
+    @staticmethod
+    def _procesar_resultados_usuarios(results, tenant_id):
+        """Procesa resultados de BD y filtra por tenant_id."""
+        usuarios = []
+        for result in results:
+            usuario = UsuarioService._crear_usuario_desde_resultado(result)
+            if not usuario:
+                continue
+            if tenant_id is not None and usuario.tenant_id != tenant_id:
+                print(f"[USUARIO_SERVICE] BLOQUEADO: Usuario {usuario.id} tiene p.tenant_id={usuario.tenant_id} pero se esperaba {tenant_id}, OMITIENDO por seguridad")
+                continue
+            usuarios.append(usuario)
+        return usuarios
+    
+    @staticmethod
+    def _obtener_tenant_id_desde_g():
+        """Obtiene tenant_id desde Flask g."""
+        try:
+            from flask import g
+            if hasattr(g, 'tenant_id') and g.tenant_id is not None:
+                return g.tenant_id
+            if hasattr(g, 'jwt_payload') and g.jwt_payload.get('tenant_id'):
+                return g.jwt_payload.get('tenant_id')
+            if hasattr(g, 'current_user') and g.current_user:
+                return getattr(g.current_user, 'tenant_id', None)
+        except Exception:
+            pass
+        return None
+    
+    @staticmethod
+    def _obtener_tenant_id_para_listado(tenant_id, es_super_admin):
+        """Obtiene tenant_id para listado de usuarios."""
+        if tenant_id is not None:
+            return tenant_id
+        if es_super_admin:
+            return None
+        return UsuarioService._obtener_tenant_id_desde_g()
 
     @staticmethod
     def _crear_usuario_desde_resultado(result):
@@ -626,7 +676,7 @@ class UsuarioService:
                 sql_delete_usuario = "DELETE FROM usuarios WHERE id = %s"
                 params_usuario = (id,)
                 if tenant_id is not None:
-                    sql_delete_usuario += " AND tenant_id = %s"
+                    sql_delete_usuario += UsuarioService.SQL_AND_TENANT_ID
                     params_usuario = (id, tenant_id)
                 
                 cursor.execute(sql_delete_usuario, params_usuario)
@@ -654,120 +704,145 @@ class UsuarioService:
                 except Exception:
                     pass
     @staticmethod
+    def _validar_rol_super_admin_registro(cursor, persona, usuario):
+        """Valida que no se intente crear super_admin desde registro público."""
+        if not (persona.id_rol or usuario.id_rol):
+            return None
+        rol_id = persona.id_rol or usuario.id_rol
+        cursor.execute("SELECT rol FROM roles WHERE id = %s", (rol_id,))
+        rol = cursor.fetchone()
+        if rol and rol.get('rol') == 'super_admin':
+            return "No se puede crear usuarios super_admin desde el registro público."
+        return None
+    
+    @staticmethod
+    def _validar_email_duplicado(cursor, email):
+        """Valida que el email no esté duplicado."""
+        cursor.execute("SELECT id FROM personas WHERE email = %s", (email,))
+        if cursor.fetchone():
+            return UsuarioService.EMAIL_DUPLICADO_MSG
+        return None
+    
+    @staticmethod
+    def _obtener_tenant_id_desde_token_bd(cursor):
+        """Obtiene tenant_id desde el token JWT decodificado."""
+        try:
+            from flask import request, current_app, g
+            import jwt
+            if hasattr(g, 'tenant_id') and g.tenant_id:
+                return g.tenant_id
+            
+            auth_header = request.headers.get('Authorization', '').strip()
+            if not auth_header:
+                return None
+            
+            parts = auth_header.split()
+            if len(parts) != 2 or parts[0].lower() != 'bearer':
+                return None
+            
+            token = parts[1]
+            payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+            user_id = payload.get('user_id')
+            if not user_id:
+                return None
+            
+            cursor.execute("SELECT u.id_persona FROM usuarios u WHERE u.id = %s", (user_id,))
+            usuario_result = cursor.fetchone()
+            if not usuario_result or not usuario_result.get('id_persona'):
+                return None
+            
+            id_persona = usuario_result['id_persona']
+            cursor.execute("SELECT tenant_id FROM personas WHERE id = %s", (id_persona,))
+            result = cursor.fetchone()
+            if result and result.get('tenant_id'):
+                return result['tenant_id']
+        except Exception:
+            pass
+        return None
+    
+    @staticmethod
+    def _obtener_tenant_id_registro(tenant_id_override, cursor):
+        """Obtiene tenant_id para registro desde múltiples fuentes."""
+        if tenant_id_override is not None:
+            return tenant_id_override
+        
+        from ..utils.tenant import get_current_tenant_id
+        tenant_id = get_current_tenant_id()
+        if tenant_id is not None:
+            return tenant_id
+        
+        return UsuarioService._obtener_tenant_id_desde_token_bd(cursor)
+    
+    @staticmethod
+    def _insertar_persona_registro(cursor, persona, tenant_id):
+        """Inserta persona en la BD y retorna el ID."""
+        sql_persona = """
+            INSERT INTO personas (
+                id_rol, primer_nombre, segundo_nombre, primer_apellido,
+                segundo_apellido, email, telefono, fecha_creacion, tenant_id
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, NOW(), %s
+            )
+        """
+        values_persona = (
+            persona.id_rol, persona.primer_nombre, persona.segundo_nombre,
+            persona.primer_apellido, persona.segundo_apellido,
+            persona.email, persona.telefono, tenant_id
+        )
+        cursor.execute(sql_persona, values_persona)
+        return cursor.lastrowid
+    
+    @staticmethod
+    def _insertar_usuario_registro(cursor, id_persona, usuario, tenant_id):
+        """Inserta usuario en la BD y retorna el ID."""
+        sql_usuario = """
+            INSERT INTO usuarios (
+                id_persona, id_rol, contrasena, estado, tenant_id
+            ) VALUES (
+                %s, %s, %s, %s, %s
+            )
+        """
+        values_usuario = (
+            id_persona, usuario.id_rol or 1, usuario.contrasena,
+            usuario.estado.value, tenant_id
+        )
+        cursor.execute(sql_usuario, values_usuario)
+        return cursor.lastrowid
+    
+    @staticmethod
     def registrar_usuario(persona: Persona, usuario: Usuario, tenant_id_override: Optional[int] = None) -> Tuple[Optional[Usuario], str]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
-            # DEBUG: Verificar estado de la conexión
-            print(f"DEBUG - Conexión obtenida: {conn}")
-            print(f"DEBUG - Autocommit: {conn.autocommit}")
+            error = UsuarioService._validar_rol_super_admin_registro(cursor, persona, usuario)
+            if error:
+                return None, error
 
-            # BLOQUEO: No permitir crear super_admin desde el registro público
-            if persona.id_rol or usuario.id_rol:
-                rol_id = persona.id_rol or usuario.id_rol
-                cursor.execute("SELECT rol FROM roles WHERE id = %s", (rol_id,))
-                rol = cursor.fetchone()
-                if rol and rol.get('rol') == 'super_admin':
-                    return None, "No se puede crear usuarios super_admin desde el registro público."
-
-            # Verificar si el email ya existe
-            cursor.execute("SELECT id FROM personas WHERE email = %s", (persona.email,))
-            if cursor.fetchone():
-                return None, UsuarioService.EMAIL_DUPLICADO_MSG
+            error = UsuarioService._validar_email_duplicado(cursor, persona.email)
+            if error:
+                return None, error
 
             try:
                 if hasattr(conn, 'in_transaction') and conn.in_transaction:
                     conn.rollback()
-
                 conn.start_transaction()
 
-                # Obtener tenant_id: primero usar override si está disponible, luego del contexto
-                if tenant_id_override is not None:
-                    tenant_id_contexto = tenant_id_override
-                else:
-                    from ..utils.tenant import get_current_tenant_id
-                    tenant_id_contexto = get_current_tenant_id()
-                    
-                    # Si aún es None, intentar obtenerlo del usuario actual desde la BD
-                    if tenant_id_contexto is None:
-                        try:
-                            from flask import request, current_app, g
-                            import jwt
-                            # Intentar obtener desde g (si está disponible desde @token_required)
-                            if hasattr(g, 'tenant_id') and g.tenant_id:
-                                tenant_id_contexto = g.tenant_id
-                            else:
-                                # Obtenerlo directamente desde la BD usando el user_id del token
-                                auth_header = request.headers.get('Authorization', '').strip()
-                                if auth_header:
-                                    parts = auth_header.split()
-                                    if len(parts) == 2 and parts[0].lower() == 'bearer':
-                                        token = parts[1]
-                                        payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
-                                        user_id = payload.get('user_id')
-                                        if user_id:
-                                            # IMPORTANTE: tenant_id está en personas, no en usuarios
-                                            # Necesitamos obtener id_persona primero, luego tenant_id desde personas
-                                            cursor.execute("SELECT u.id_persona FROM usuarios u WHERE u.id = %s", (user_id,))
-                                            usuario_result = cursor.fetchone()
-                                            if usuario_result and usuario_result.get('id_persona'):
-                                                id_persona = usuario_result['id_persona']
-                                                cursor.execute("SELECT tenant_id FROM personas WHERE id = %s", (id_persona,))
-                                                result = cursor.fetchone()
-                                                if result and result.get('tenant_id'):
-                                                    tenant_id_contexto = result['tenant_id']
-                        except Exception:
-                            pass  # Si falla, continuar con None
+                tenant_id = UsuarioService._obtener_tenant_id_registro(tenant_id_override, cursor)
+                id_persona = UsuarioService._insertar_persona_registro(cursor, persona, tenant_id)
+                id_usuario = UsuarioService._insertar_usuario_registro(cursor, id_persona, usuario, tenant_id)
 
-                # Insertar persona con tenant_id
-                sql_persona = """
-                    INSERT INTO personas (
-                        id_rol, primer_nombre, segundo_nombre, primer_apellido,
-                        segundo_apellido, email, telefono, fecha_creacion, tenant_id
-                    ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, NOW(), %s
-                    )
-                """
-
-                values_persona = (
-                    persona.id_rol, persona.primer_nombre, persona.segundo_nombre,
-                    persona.primer_apellido, persona.segundo_apellido,
-                    persona.email, persona.telefono, tenant_id_contexto
-                )
-
-                cursor.execute(sql_persona, values_persona)
-                id_persona = cursor.lastrowid
-
-                # Luego crear el usuario con tenant_id
-                sql_usuario = """
-                    INSERT INTO usuarios (
-                        id_persona, id_rol, contrasena, estado, tenant_id
-                    ) VALUES (
-                        %s, %s, %s, %s, %s
-                    )
-                """
-
-                values_usuario = (
-                    id_persona, usuario.id_rol or 1, usuario.contrasena,
-                    usuario.estado.value, tenant_id_contexto
-                )
-
-                cursor.execute(sql_usuario, values_usuario)
-
-                # Commit de la transacción
                 conn.commit()
 
-                usuario.id = cursor.lastrowid
+                usuario.id = id_usuario
                 usuario.id_persona = id_persona
-                usuario.tenant_id = tenant_id_contexto
+                usuario.tenant_id = tenant_id
                 persona.id = id_persona
                 usuario.persona = persona
 
                 return usuario, "Usuario registrado exitosamente"
 
             except Exception as e:
-                # Rollback en caso de error
                 conn.rollback()
                 raise e
 
@@ -883,41 +958,13 @@ class UsuarioService:
         """
         print(f"[USUARIO_SERVICE] obtener_todos_usuarios called with incluir_inactivos={incluir_inactivos}, tenant_id={tenant_id}, excluir_super_admin={excluir_super_admin}")
 
-        # Verificar si es super_admin basándose en el ROL, no en tenant_id
         es_super_admin_actual = UsuarioService._determinar_si_es_super_admin()
-        print(f"[USUARIO_SERVICE] Usuario actual es super_admin (por rol): {es_super_admin_actual}")
-
-        # Si NO es super_admin y tenant_id es None, intentar obtenerlo desde g
-        if not es_super_admin_actual and tenant_id is None:
-            print(f"[USUARIO_SERVICE] ADVERTENCIA: Usuario no es super_admin pero tenant_id es None. Intentando obtener desde g...")
-            # Intentar obtener tenant_id desde múltiples fuentes en g
-            try:
-                from flask import g
-                # Prioridad 1: g.tenant_id
-                if hasattr(g, 'tenant_id') and g.tenant_id is not None:
-                    tenant_id = g.tenant_id
-                    print(f"[USUARIO_SERVICE] tenant_id obtenido desde g.tenant_id: {tenant_id}")
-                # Prioridad 2: g.jwt_payload['tenant_id']
-                elif hasattr(g, 'jwt_payload') and g.jwt_payload.get('tenant_id'):
-                    tenant_id = g.jwt_payload.get('tenant_id')
-                    print(f"[USUARIO_SERVICE] tenant_id obtenido desde g.jwt_payload: {tenant_id}")
-                # Prioridad 3: g.current_user.tenant_id
-                elif hasattr(g, 'current_user') and g.current_user:
-                    tenant_id = getattr(g.current_user, 'tenant_id', None)
-                    if tenant_id:
-                        print(f"[USUARIO_SERVICE] tenant_id obtenido desde g.current_user.tenant_id: {tenant_id}")
-            except Exception as e:
-                print(f"[USUARIO_SERVICE] Error obteniendo tenant_id desde g: {e}")
-
+        tenant_id = UsuarioService._obtener_tenant_id_para_listado(tenant_id, es_super_admin_actual)
+        
         if not es_super_admin_actual:
             excluir_super_admin = True
-            print("[USUARIO_SERVICE] Usuario no es super_admin, forzando excluir_super_admin=True")
-            
-            # Usuarios normales DEBEN tener tenant_id
-            # Si después de todos los intentos sigue siendo None, retornar lista vacía por seguridad
             if tenant_id is None:
-                print(f"[USUARIO_SERVICE] ERROR CRÍTICO: Usuario normal sin tenant_id después de todos los intentos. Retornando lista vacía por seguridad.")
-                print(f"[USUARIO_SERVICE] DEBUG: es_super_admin_actual={es_super_admin_actual}, tenant_id={tenant_id}")
+                print("[USUARIO_SERVICE] ERROR CRÍTICO: Usuario normal sin tenant_id después de todos los intentos. Retornando lista vacía por seguridad.")
                 return []
 
         try:
@@ -946,46 +993,10 @@ class UsuarioService:
             if conditions:
                 sql += " WHERE " + " AND ".join(conditions)
             
-            # VALIDACIÓN CRÍTICA: Si tenant_id está definido, DEBE estar en las condiciones
-            if tenant_id is not None:
-                # Verificar que p.tenant_id esté en las condiciones
-                if "p.tenant_id = %s" not in sql:
-                    print(f"[USUARIO_SERVICE] ERROR CRÍTICO: tenant_id={tenant_id} pero no está en el SQL. Agregando filtro manualmente.")
-                    if "WHERE" in sql:
-                        sql += " AND p.tenant_id = %s"
-                    else:
-                        sql += " WHERE p.tenant_id = %s"
-                    # Agregar tenant_id a params si no está ya incluido
-                    if tenant_id not in params:
-                        params = params + (tenant_id,)
-                    print(f"[USUARIO_SERVICE] Filtro p.tenant_id agregado manualmente. SQL final: {sql}, params: {params}")
-
-            print(f"[USUARIO_SERVICE] SQL: {sql}, params: {params}")
-            print(f"[USUARIO_SERVICE] Condiciones aplicadas: tenant_id={tenant_id}, excluir_super_admin={excluir_super_admin}")
-            if tenant_id is not None:
-                print(f"[TENANT] Filtrando usuarios con p.tenant_id: {tenant_id}")
+            sql, params = UsuarioService._validar_y_agregar_tenant_id_sql(sql, params, tenant_id)
             cursor.execute(sql, params)
             results = cursor.fetchall()
-            print(f"[USUARIO_SERVICE] Resultados obtenidos: {len(results)} usuarios")
-            # Log de tenant_id de cada usuario para depuración
-            for result in results:
-                print(f"[TENANT] Usuario {result.get('id')} tiene p.tenant_id: {result.get('tenant_id')}")
-
-            usuarios = []
-            for result in results:
-                usuario = UsuarioService._crear_usuario_desde_resultado(result)
-                if usuario:
-                    # VALIDACIÓN CRÍTICA: Verificar que el tenant_id coincida si se está filtrando
-                    # Esto es una doble validación para asegurar el aislamiento
-                    if tenant_id is not None:
-                        if usuario.tenant_id != tenant_id:
-                            print(f"[USUARIO_SERVICE] BLOQUEADO: Usuario {usuario.id} tiene p.tenant_id={usuario.tenant_id} pero se esperaba {tenant_id}, OMITIENDO por seguridad")
-                            continue
-                        else:
-                            print(f"[USUARIO_SERVICE] Usuario {usuario.id} validado - p.tenant_id={usuario.tenant_id} coincide con filtro")
-                    usuarios.append(usuario)
-                    print(f"[USUARIO_SERVICE] Usuario agregado: id={usuario.id}, email={usuario.persona.email}, rol={result.get('rol_nombre')}, tenant_id={usuario.tenant_id}")
-
+            usuarios = UsuarioService._procesar_resultados_usuarios(results, tenant_id)
             return usuarios
 
         except Exception as e:
@@ -1102,7 +1113,7 @@ class UsuarioService:
                 """
                 params_usuario = (usuario.id_rol, usuario.estado.value, id)
                 if tenant_id is not None:
-                    sql_usuario += " AND tenant_id = %s"
+                    sql_usuario += UsuarioService.SQL_AND_TENANT_ID
                     params_usuario = params_usuario + (tenant_id,)
 
                 cursor.execute(sql_usuario, params_usuario)
@@ -1116,7 +1127,7 @@ class UsuarioService:
                     """
                     params_contrasena = (usuario.contrasena, id)
                     if tenant_id is not None:
-                        sql_actualizar_contrasena += " AND tenant_id = %s"
+                        sql_actualizar_contrasena += UsuarioService.SQL_AND_TENANT_ID
                         params_contrasena = params_contrasena + (tenant_id,)
                     cursor.execute(sql_actualizar_contrasena, params_contrasena)
 
@@ -1211,6 +1222,26 @@ class UsuarioService:
             if 'conn' in locals():
                 conn.close()
 
+    @staticmethod
+    def _cargar_tenant_id_si_falta(usuario):
+        """Carga tenant_id desde BD si falta en el usuario."""
+        if hasattr(usuario, 'tenant_id') and usuario.tenant_id is not None:
+            return
+        try:
+            conn = get_connection()
+            if not conn:
+                return
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT tenant_id FROM personas WHERE id = %s", (usuario.id_persona,))
+            result = cursor.fetchone()
+            if result and result.get('tenant_id') is not None:
+                usuario.tenant_id = result['tenant_id']
+                print(f"[AUTENTICACION] tenant_id cargado desde personas para usuario {usuario.id} (persona_id={usuario.id_persona}): {usuario.tenant_id}")
+            cursor.close()
+            conn.close()
+        except Exception as e:
+            print(f"[AUTENTICACION] Error obteniendo tenant_id desde personas: {e}")
+
     # Remover método buscar_por_documento ya que no existen campos tipo_documento y numero_documento en la nueva BD
 
     @staticmethod
@@ -1224,23 +1255,7 @@ class UsuarioService:
                     rol = UsuarioService.obtener_rol(usuario.id_rol)
                     usuario.rol = rol
                 
-                # Asegurar que tenant_id está cargado
-                # IMPORTANTE: tenant_id está en personas, no en usuarios
-                if not hasattr(usuario, 'tenant_id') or usuario.tenant_id is None:
-                    try:
-                        conn = get_connection()
-                        if conn:
-                            cursor = conn.cursor(dictionary=True)
-                            # IMPORTANTE: tenant_id está en personas, no en usuarios
-                            cursor.execute("SELECT tenant_id FROM personas WHERE id = %s", (usuario.id_persona,))
-                            result = cursor.fetchone()
-                            if result and result.get('tenant_id') is not None:
-                                usuario.tenant_id = result['tenant_id']
-                                print(f"[AUTENTICACION] tenant_id cargado desde personas para usuario {usuario.id} (persona_id={usuario.id_persona}): {usuario.tenant_id}")
-                            cursor.close()
-                            conn.close()
-                    except Exception as e:
-                        print(f"[AUTENTICACION] Error obteniendo tenant_id desde personas: {e}")
+                UsuarioService._cargar_tenant_id_si_falta(usuario)
                 
                 return usuario
             return None

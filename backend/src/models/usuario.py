@@ -152,7 +152,7 @@ class Usuario:
         try:
             self.contrasena = bcrypt.hash(password)
             self.password_hash = self.contrasena
-        except Exception as e:
+        except Exception:
             # Si hay error con bcrypt, usar método alternativo
             import hashlib
             self.contrasena = hashlib.sha256(password.encode()).hexdigest()
@@ -166,7 +166,7 @@ class Usuario:
         # Intentar verificar como hash bcrypt primero
         try:
             return bcrypt.verify(password, self.contrasena)
-        except (ValueError, AttributeError, Exception):
+        except (ValueError, AttributeError):
             # Si falla, intentar comparación directa (para usuarios antiguos sin hash)
             # Esto permite compatibilidad con usuarios existentes
             try:

@@ -430,6 +430,65 @@ class UsuarioController:
         return current_user, None, None
     
     @staticmethod
+    def _obtener_tenant_id_desde_token():
+        """Obtiene tenant_id desde g.tenant_id o g.jwt_payload."""
+        tenant_id = None
+        if hasattr(g, 'tenant_id') and g.tenant_id is not None:
+            tenant_id = g.tenant_id
+        elif hasattr(g, 'jwt_payload'):
+            tenant_id = g.jwt_payload.get('tenant_id')
+        return tenant_id
+    
+    @staticmethod
+    def _obtener_tenant_id_desde_bd(current_user):
+        """Obtiene tenant_id desde la base de datos para el usuario actual."""
+        try:
+            from ..database.db import get_connection
+            conn = get_connection()
+            if not conn:
+                return None
+            
+            cursor = conn.cursor(dictionary=True)
+            if not hasattr(current_user, 'id_persona') or current_user.id_persona is None:
+                cursor.execute("SELECT id_persona FROM usuarios WHERE id = %s", (current_user.id,))
+                usuario_result = cursor.fetchone()
+                if usuario_result:
+                    current_user.id_persona = usuario_result['id_persona']
+            
+            if hasattr(current_user, 'id_persona') and current_user.id_persona:
+                cursor.execute("SELECT tenant_id FROM personas WHERE id = %s", (current_user.id_persona,))
+                result = cursor.fetchone()
+                if result and result.get('tenant_id') is not None:
+                    tenant_id = result['tenant_id']
+                    current_user.tenant_id = tenant_id
+                    logger.info(f"[USUARIO_CONTROLLER] tenant_id obtenido desde personas para usuario {current_user.id} (persona_id={current_user.id_persona}): {tenant_id}")
+                    cursor.close()
+                    conn.close()
+                    return tenant_id
+            
+            cursor.close()
+            conn.close()
+        except Exception as e:
+            logger.error(f"[USUARIO_CONTROLLER] Error obteniendo tenant_id del usuario desde personas: {e}")
+        return None
+    
+    @staticmethod
+    def _obtener_tenant_id_super_admin():
+        """Obtiene tenant_id para super admin desde query params."""
+        tenant_id_param = request.args.get('tenant_id')
+        if not tenant_id_param:
+            logger.info("[USUARIO_CONTROLLER] Super admin sin tenant_id, verá todos los usuarios")
+            return None, None
+        
+        try:
+            tenant_id = int(tenant_id_param)
+            logger.info(f"[USUARIO_CONTROLLER] Super admin filtrando por tenant_id: {tenant_id}")
+            return tenant_id, None
+        except (ValueError, TypeError):
+            logger.warning(f"[USUARIO_CONTROLLER] tenant_id inválido en query params: {tenant_id_param}")
+            return None, None
+    
+    @staticmethod
     def _obtener_tenant_id_filtrado(current_user):
         """
         Obtiene el tenant_id según el tipo de usuario (super_admin o normal).
@@ -437,121 +496,83 @@ class UsuarioController:
         IMPORTANTE: tenant_id está en personas (p.tenant_id), NO en usuarios (u.tenant_id).
         Esta función asegura que el tenant_id se obtenga correctamente desde personas.
         """
-        # PRIMERO: Obtener tenant_id desde múltiples fuentes (token JWT)
-        # Esto es crítico porque el token ya tiene el tenant_id
-        tenant_id_from_token = None
-        
-        # DEBUG: Verificar qué hay en g
-        g_attrs = [k for k in dir(g) if not k.startswith('_')]
-        print(f"[USUARIO_CONTROLLER] DEBUG _obtener_tenant_id_filtrado - g tiene: {g_attrs}")
-        print(f"[USUARIO_CONTROLLER] DEBUG - hasattr(g, 'tenant_id'): {hasattr(g, 'tenant_id')}")
-        if hasattr(g, 'tenant_id'):
-            print(f"[USUARIO_CONTROLLER] DEBUG - g.tenant_id: {g.tenant_id}")
-        print(f"[USUARIO_CONTROLLER] DEBUG - hasattr(g, 'jwt_payload'): {hasattr(g, 'jwt_payload')}")
-        if hasattr(g, 'jwt_payload'):
-            print(f"[USUARIO_CONTROLLER] DEBUG - g.jwt_payload: {g.jwt_payload}")
-        
-        # Prioridad 1: g.tenant_id (asignado por token_required)
-        if hasattr(g, 'tenant_id') and g.tenant_id is not None:
-            tenant_id_from_token = g.tenant_id
+        tenant_id_from_token = UsuarioController._obtener_tenant_id_desde_token()
+        if tenant_id_from_token:
             current_user.tenant_id = tenant_id_from_token
-            logger.info(f"[USUARIO_CONTROLLER] tenant_id obtenido desde g.tenant_id (token): {tenant_id_from_token}")
-            print(f"[USUARIO_CONTROLLER] ✅ tenant_id obtenido desde g.tenant_id (token): {tenant_id_from_token}")
         
-        # Prioridad 2: g.jwt_payload['tenant_id'] (del token decodificado)
-        if tenant_id_from_token is None and hasattr(g, 'jwt_payload'):
-            tenant_id_from_token = g.jwt_payload.get('tenant_id')
-            if tenant_id_from_token:
-                current_user.tenant_id = tenant_id_from_token
-                g.tenant_id = tenant_id_from_token  # Actualizar g.tenant_id también
-                logger.info(f"[USUARIO_CONTROLLER] tenant_id obtenido desde g.jwt_payload (token): {tenant_id_from_token}")
-                print(f"[USUARIO_CONTROLLER] ✅ tenant_id obtenido desde g.jwt_payload (token): {tenant_id_from_token}")
-        
-        if tenant_id_from_token is None:
-            logger.warning(f"[USUARIO_CONTROLLER] g.tenant_id y g.jwt_payload no tienen tenant_id. g tiene: {g_attrs}")
-            print(f"[USUARIO_CONTROLLER] ⚠️ ADVERTENCIA: g.tenant_id y g.jwt_payload no tienen tenant_id. g tiene: {g_attrs}")
-        
-        # Verificar si es super_admin basándose en el ROL, no en tenant_id
-        # Si es super_admin, puede ver todos o filtrar por tenant_id en query params
         es_super_admin = UsuarioController._es_super_admin(current_user)
-        print(f"[USUARIO_CONTROLLER] _obtener_tenant_id_filtrado - es_super_admin: {es_super_admin}")
-        
         if es_super_admin:
-            tenant_id_param = request.args.get('tenant_id')
-            if tenant_id_param:
-                try:
-                    tenant_id = int(tenant_id_param)
-                    logger.info(f"[USUARIO_CONTROLLER] Super admin filtrando por tenant_id: {tenant_id}")
-                    return tenant_id, None
-                except (ValueError, TypeError):
-                    logger.warning(f"[USUARIO_CONTROLLER] tenant_id inválido en query params: {tenant_id_param}")
-                    return None, None
-            logger.info(f"[USUARIO_CONTROLLER] Super admin sin tenant_id, verá todos los usuarios")
-            return None, None
+            return UsuarioController._obtener_tenant_id_super_admin()
         
-        # Para usuarios normales, usar tenant_id del token (ya obtenido arriba)
-        tenant_id = tenant_id_from_token
-        print(f"[USUARIO_CONTROLLER] tenant_id_from_token: {tenant_id_from_token}, current_user.id: {getattr(current_user, 'id', 'N/A')}")
-        
-        # Si no está en el token, intentar desde current_user.tenant_id
-        if tenant_id is None:
-            tenant_id = getattr(current_user, 'tenant_id', None)
-            print(f"[USUARIO_CONTROLLER] tenant_id desde current_user.tenant_id: {tenant_id}")
-            if tenant_id:
-                logger.info(f"[USUARIO_CONTROLLER] tenant_id obtenido desde current_user.tenant_id: {tenant_id}")
-                print(f"[USUARIO_CONTROLLER] tenant_id obtenido desde current_user.tenant_id: {tenant_id}")
-        
-        # También verificar g.jwt_payload que puede tener el tenant_id
+        tenant_id = tenant_id_from_token or getattr(current_user, 'tenant_id', None)
         if tenant_id is None and hasattr(g, 'jwt_payload'):
             tenant_id = g.jwt_payload.get('tenant_id')
             if tenant_id:
                 current_user.tenant_id = tenant_id
-                logger.info(f"[USUARIO_CONTROLLER] tenant_id obtenido desde g.jwt_payload: {tenant_id}")
-                print(f"[USUARIO_CONTROLLER] tenant_id obtenido desde g.jwt_payload: {tenant_id}")
         
-        # PRIORIDAD 3: Desde la BD desde personas si no está en el objeto
-        # IMPORTANTE: tenant_id está en personas, no en usuarios
-        # FORZAR obtención desde BD si no está disponible
         if tenant_id is None and current_user:
-            print(f"[USUARIO_CONTROLLER] tenant_id es None, intentando obtener desde BD...")
-            try:
-                from ..database.db import get_connection
-                conn = get_connection()
-                if conn:
-                    cursor = conn.cursor(dictionary=True)
-                    # Obtener id_persona primero si no está disponible
-                    if not hasattr(current_user, 'id_persona') or current_user.id_persona is None:
-                        cursor.execute("SELECT id_persona FROM usuarios WHERE id = %s", (current_user.id,))
-                        usuario_result = cursor.fetchone()
-                        if usuario_result:
-                            current_user.id_persona = usuario_result['id_persona']
-                    
-                    # IMPORTANTE: tenant_id está en personas, no en usuarios
-                    if hasattr(current_user, 'id_persona') and current_user.id_persona:
-                        cursor.execute("SELECT tenant_id FROM personas WHERE id = %s", (current_user.id_persona,))
-                        result = cursor.fetchone()
-                        if result and result.get('tenant_id') is not None:
-                            tenant_id = result['tenant_id']
-                            # Actualizar el current_user con el tenant_id obtenido
-                            current_user.tenant_id = tenant_id
-                            logger.info(f"[USUARIO_CONTROLLER] tenant_id obtenido desde personas para usuario {current_user.id} (persona_id={current_user.id_persona}): {tenant_id}")
-                            print(f"[USUARIO_CONTROLLER] tenant_id obtenido desde personas: {tenant_id} para usuario {current_user.id}")
-                        else:
-                            logger.warning(f"[USUARIO_CONTROLLER] No se encontró tenant_id en personas para persona_id={current_user.id_persona}")
-                            print(f"[USUARIO_CONTROLLER] ADVERTENCIA: No se encontró tenant_id en personas para persona_id={current_user.id_persona}")
-                    cursor.close()
-                    conn.close()
-            except Exception as e:
-                logger.error(f"[USUARIO_CONTROLLER] Error obteniendo tenant_id del usuario desde personas: {e}")
-                print(f"[USUARIO_CONTROLLER] ERROR obteniendo tenant_id: {e}")
+            tenant_id = UsuarioController._obtener_tenant_id_desde_bd(current_user)
         
-        # Validación final: usuarios normales DEBEN tener tenant_id
         if not tenant_id:
-            logger.error(f"[USUARIO_CONTROLLER] CRÍTICO: No se puede determinar tenant_id para usuario {getattr(current_user, 'id', 'unknown')} (persona_id={getattr(current_user, 'id_persona', 'unknown')})")
+            user_id = getattr(current_user, 'id', 'unknown')
+            persona_id = getattr(current_user, 'id_persona', 'unknown')
+            logger.error(f"[USUARIO_CONTROLLER] CRÍTICO: No se puede determinar tenant_id para usuario {user_id} (persona_id={persona_id})")
             return None, 'No se puede determinar el tenant del usuario. Contacte al administrador.'
         
         logger.info(f"[USUARIO_CONTROLLER] tenant_id final para usuario {current_user.id}: {tenant_id} (desde personas)")
         return tenant_id, None
+    
+    @staticmethod
+    def _obtener_tenant_id_para_listado(current_user):
+        """Obtiene tenant_id para listado de usuarios."""
+        es_super = UsuarioController._es_super_admin(current_user)
+        if es_super:
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    return int(tenant_id_param), None
+                except (ValueError, TypeError):
+                    logger.warning(f"[USUARIO_CONTROLLER] tenant_id inválido en query params: {tenant_id_param}")
+            return None, None
+        
+        if hasattr(g, 'tenant_id') and g.tenant_id is not None:
+            current_user.tenant_id = g.tenant_id
+            return g.tenant_id, None
+        
+        if hasattr(g, 'jwt_payload') and g.jwt_payload.get('tenant_id'):
+            tenant_id = g.jwt_payload.get('tenant_id')
+            current_user.tenant_id = tenant_id
+            g.tenant_id = tenant_id
+            return tenant_id, None
+        
+        if hasattr(current_user, 'tenant_id') and current_user.tenant_id is not None:
+            return current_user.tenant_id, None
+        
+        tenant_id, tenant_error = UsuarioController._obtener_tenant_id_filtrado(current_user)
+        if tenant_error:
+            return None, tenant_error
+        if tenant_id is None:
+            logger.error(f"[USUARIO_CONTROLLER] CRÍTICO: No se pudo obtener tenant_id para usuario {current_user.id}")
+            return None, 'No se puede determinar el tenant del usuario. Por favor, cierre sesión y vuelva a iniciar sesión.'
+        
+        return tenant_id, None
+    
+    @staticmethod
+    def _filtrar_usuarios_por_tenant(usuarios, tenant_id):
+        """Filtra usuarios por tenant_id y retorna lista filtrada."""
+        if tenant_id is None:
+            return usuarios
+        
+        usuarios_filtrados = []
+        for usuario in usuarios:
+            if usuario.tenant_id == tenant_id:
+                usuarios_filtrados.append(usuario)
+            else:
+                logger.warning(f"[USUARIO_CONTROLLER] Usuario {usuario.id} con tenant_id={usuario.tenant_id} no coincide con tenant_id esperado={tenant_id}, omitiendo")
+                print(f"[USUARIO_CONTROLLER] BLOQUEADO: Usuario {usuario.id} (email={usuario.persona.email}) con tenant_id={usuario.tenant_id} != {tenant_id}")
+        
+        logger.info(f"[USUARIO_CONTROLLER] Después de validación adicional: {len(usuarios_filtrados)} usuarios del tenant {tenant_id}")
+        return usuarios_filtrados
     
     @staticmethod
     def obtener_todos_usuarios():
@@ -562,109 +583,26 @@ class UsuarioController:
         - Super admin puede ver todos o filtrar por tenant_id en query params
         - Usuarios normales SOLO ven usuarios de su mismo tenant_id (desde personas)
         """
-        print(f"[USUARIO_CONTROLLER] 🚀 obtener_todos_usuarios() INICIADO")
+        print("[USUARIO_CONTROLLER] 🚀 obtener_todos_usuarios() INICIADO")
         try:
-            print(f"[USUARIO_CONTROLLER] 🔍 Verificando g antes de _validar_autenticacion_para_listado...")
-            print(f"[USUARIO_CONTROLLER] 🔍 g.tenant_id: {getattr(g, 'tenant_id', 'N/A')}")
-            print(f"[USUARIO_CONTROLLER] 🔍 g.jwt_payload: {getattr(g, 'jwt_payload', 'N/A')}")
-            print(f"[USUARIO_CONTROLLER] 🔍 g.current_user: {getattr(g, 'current_user', 'N/A')}")
-            
             current_user, error_response, error_status = UsuarioController._validar_autenticacion_para_listado()
             if error_response:
                 return error_response, error_status
             
-            print(f"[USUARIO_CONTROLLER] ✅ Autenticación validada. current_user.id: {getattr(current_user, 'id', 'N/A')}")
-            print(f"[USUARIO_CONTROLLER] 🔍 Verificando g DESPUÉS de _validar_autenticacion_para_listado...")
-            print(f"[USUARIO_CONTROLLER] 🔍 g.tenant_id: {getattr(g, 'tenant_id', 'N/A')}")
-            print(f"[USUARIO_CONTROLLER] 🔍 g.jwt_payload: {getattr(g, 'jwt_payload', 'N/A')}")
+            tenant_id, tenant_error = UsuarioController._obtener_tenant_id_para_listado(current_user)
+            if tenant_error:
+                return jsonify({'status': 'error', 'message': tenant_error}), 403
             
-            # PRIORIDAD 1: Obtener tenant_id directamente desde g.tenant_id (asignado por token_required)
-            # Esto es lo más confiable porque token_required ya lo asignó desde el JWT
-            tenant_id = None
             es_super = UsuarioController._es_super_admin(current_user)
-            
-            if es_super:
-                # Super admin puede ver todos o filtrar por tenant_id en query params
-                tenant_id_param = request.args.get('tenant_id')
-                if tenant_id_param:
-                    try:
-                        tenant_id = int(tenant_id_param)
-                        logger.info(f"[USUARIO_CONTROLLER] Super admin filtrando por tenant_id: {tenant_id}")
-                        print(f"[USUARIO_CONTROLLER] Super admin filtrando por tenant_id: {tenant_id}")
-                    except (ValueError, TypeError):
-                        logger.warning(f"[USUARIO_CONTROLLER] tenant_id inválido en query params: {tenant_id_param}")
-                else:
-                    logger.info(f"[USUARIO_CONTROLLER] Super admin sin tenant_id, verá todos los usuarios")
-                    print(f"[USUARIO_CONTROLLER] Super admin sin tenant_id, verá todos los usuarios")
-                    tenant_id = None
-            else:
-                # Para usuarios normales, OBTENER tenant_id desde g.tenant_id (asignado por token_required)
-                if hasattr(g, 'tenant_id') and g.tenant_id is not None:
-                    tenant_id = g.tenant_id
-                    current_user.tenant_id = tenant_id
-                    logger.info(f"[USUARIO_CONTROLLER] ✅ tenant_id obtenido desde g.tenant_id: {tenant_id}")
-                    print(f"[USUARIO_CONTROLLER] ✅ tenant_id obtenido desde g.tenant_id: {tenant_id}")
-                elif hasattr(g, 'jwt_payload') and g.jwt_payload.get('tenant_id'):
-                    tenant_id = g.jwt_payload.get('tenant_id')
-                    current_user.tenant_id = tenant_id
-                    g.tenant_id = tenant_id
-                    logger.info(f"[USUARIO_CONTROLLER] ✅ tenant_id obtenido desde g.jwt_payload: {tenant_id}")
-                    print(f"[USUARIO_CONTROLLER] ✅ tenant_id obtenido desde g.jwt_payload: {tenant_id}")
-                elif hasattr(current_user, 'tenant_id') and current_user.tenant_id is not None:
-                    tenant_id = current_user.tenant_id
-                    logger.info(f"[USUARIO_CONTROLLER] ✅ tenant_id obtenido desde current_user.tenant_id: {tenant_id}")
-                    print(f"[USUARIO_CONTROLLER] ✅ tenant_id obtenido desde current_user.tenant_id: {tenant_id}")
-                else:
-                    # Último recurso: usar _obtener_tenant_id_filtrado (que consulta BD)
-                    tenant_id, tenant_error = UsuarioController._obtener_tenant_id_filtrado(current_user)
-                    if tenant_error:
-                        return jsonify({
-                            'status': 'error',
-                            'message': tenant_error
-                        }), 403
-                    if tenant_id is None:
-                        logger.error(f"[USUARIO_CONTROLLER] CRÍTICO: No se pudo obtener tenant_id para usuario {current_user.id}")
-                        return jsonify({
-                            'status': 'error',
-                            'message': 'No se puede determinar el tenant del usuario. Por favor, cierre sesión y vuelva a iniciar sesión.'
-                        }), 403
-            
-            print(f"[USUARIO_CONTROLLER] 🎯 tenant_id FINAL para obtener_todos_usuarios: {tenant_id}")
-            
-            # Log crítico para depuración
-            es_super = UsuarioController._es_super_admin(current_user)
-            logger.info(f"[USUARIO_CONTROLLER] obtener_todos_usuarios - Usuario: {current_user.id}, tenant_id: {tenant_id}, es_super_admin: {es_super}")
-            print(f"[USUARIO_CONTROLLER] obtener_todos_usuarios - Usuario: {current_user.id}, tenant_id: {tenant_id}, es_super_admin: {es_super}")
-            
-            # VALIDACIÓN CRÍTICA: Si NO es super_admin, tenant_id DEBE estar definido
             if not es_super and tenant_id is None:
                 logger.error(f"[USUARIO_CONTROLLER] ERROR CRÍTICO: Usuario {current_user.id} no es super_admin pero tenant_id es None")
-                print(f"[USUARIO_CONTROLLER] ❌ ERROR CRÍTICO: Usuario {current_user.id} no es super_admin pero tenant_id es None")
                 return jsonify({
                     'status': 'error',
                     'message': 'No se puede determinar el tenant del usuario. Por favor, cierre sesión y vuelva a iniciar sesión.'
                 }), 403
             
-            # Obtener usuarios con filtrado estricto por tenant_id
-            print(f"[USUARIO_CONTROLLER] 📞 Llamando a UsuarioService.obtener_todos_usuarios con tenant_id={tenant_id}")
-            usuarios = UsuarioService.obtener_todos_usuarios(
-                incluir_inactivos=True,
-                tenant_id=tenant_id
-            )
-            print(f"[USUARIO_CONTROLLER] ✅ UsuarioService.obtener_todos_usuarios retornó {len(usuarios)} usuarios")
-            
-            # Validación adicional CRÍTICA: verificar que todos los usuarios retornados pertenecen al tenant correcto
-            if tenant_id is not None:
-                usuarios_filtrados = []
-                for usuario in usuarios:
-                    if usuario.tenant_id == tenant_id:
-                        usuarios_filtrados.append(usuario)
-                    else:
-                        logger.warning(f"[USUARIO_CONTROLLER] Usuario {usuario.id} con tenant_id={usuario.tenant_id} no coincide con tenant_id esperado={tenant_id}, omitiendo")
-                        print(f"[USUARIO_CONTROLLER] BLOQUEADO: Usuario {usuario.id} (email={usuario.persona.email}) con tenant_id={usuario.tenant_id} != {tenant_id}")
-                usuarios = usuarios_filtrados
-                logger.info(f"[USUARIO_CONTROLLER] Después de validación adicional: {len(usuarios)} usuarios del tenant {tenant_id}")
-                print(f"[USUARIO_CONTROLLER] RESULTADO FINAL: {len(usuarios)} usuarios del tenant {tenant_id}")
+            usuarios = UsuarioService.obtener_todos_usuarios(incluir_inactivos=True, tenant_id=tenant_id)
+            usuarios = UsuarioController._filtrar_usuarios_por_tenant(usuarios, tenant_id)
             
             return jsonify({
                 'status': 'success',

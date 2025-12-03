@@ -480,7 +480,7 @@ class PotreroService:
             params = (estado,)
             
             if tenant_id is not None:
-                sql += " AND p.tenant_id = %s"
+                sql += PotreroService.SQL_AND_TENANT_ID
                 params = (estado, tenant_id)
             
             sql += " ORDER BY p.id DESC"
@@ -640,7 +640,7 @@ class PotreroService:
                 params = ()
                 if tenant_id is not None:
                     # IMPORTANTE: tenant_id está en personas (p.tenant_id), NO en usuarios (u.tenant_id)
-                    sql += " AND p.tenant_id = %s"
+                    sql += PotreroService.SQL_AND_TENANT_ID
                     params = (tenant_id,)
                     print(f"[POTRERO_SERVICE] Filtrando personas con p.tenant_id: {tenant_id}")
                 

@@ -168,7 +168,7 @@ def crear_super_admin_desde_env() -> Tuple[bool, str]:
         # Hashear contraseña con manejo de errores de bcrypt
         try:
             password_hash = bcrypt.hash(password)
-        except (AttributeError, Exception) as bcrypt_error:
+        except Exception as bcrypt_error:
             # Manejar error de bcrypt (versión incompatible)
             print(f"⚠️  Error con bcrypt: {bcrypt_error}")
             # Usar método alternativo si bcrypt falla
