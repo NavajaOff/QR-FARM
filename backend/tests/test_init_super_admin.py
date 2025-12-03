@@ -138,8 +138,10 @@ def test_crear_super_admin_desde_env_success(mock_get_connection, monkeypatch):
     with patch('src.utils.init_super_admin._cargar_env', return_value=True), \
          patch('src.utils.init_super_admin.existe_super_admin', return_value=False), \
          patch('src.utils.init_super_admin.obtener_rol_super_admin_id', return_value=3), \
-         patch('src.utils.init_super_admin.bcrypt') as mock_bcrypt:
+         patch('src.utils.init_super_admin.bcrypt') as mock_bcrypt, \
+         patch('src.utils.init_super_admin.hashlib') as mock_hashlib:
         mock_bcrypt.hash.return_value = 'hashed_password'
+        mock_hashlib.sha256.return_value.hexdigest.return_value = 'sha256_hash'
 
         exito, mensaje = crear_super_admin_desde_env()
 
@@ -179,6 +181,54 @@ def test_inicializar_super_admin_failure(mock_crear):
     from src.utils.init_super_admin import inicializar_super_admin
     
     mock_crear.return_value = (False, "Error")
+
+    result = inicializar_super_admin()
+
+    assert result is False
+
+
+@patch('src.utils.init_super_admin.get_connection')
+def test_crear_super_admin_desde_env_bcrypt_error(mock_get_connection, monkeypatch):
+    """Test crear_super_admin_desde_env cuando bcrypt falla y usa fallback."""
+    import hashlib
+    from src.utils.init_super_admin import crear_super_admin_desde_env
+    
+    monkeypatch.setenv('ROOT_SUPER_ADMIN_EMAIL', 'test@example.com')
+    monkeypatch.setenv('ROOT_SUPER_ADMIN_PASSWORD', 'password123')
+    monkeypatch.setenv('ROOT_SUPER_ADMIN_NOMBRE', 'Super Admin')
+
+    mock_conn = Mock()
+    mock_cursor = Mock(dictionary=True)
+    mock_get_connection.return_value = mock_conn
+    mock_conn.cursor.return_value = mock_cursor
+    mock_cursor.lastrowid = 1
+
+    with patch('src.utils.init_super_admin._cargar_env', return_value=True), \
+         patch('src.utils.init_super_admin.existe_super_admin', return_value=False), \
+         patch('src.utils.init_super_admin.obtener_rol_super_admin_id', return_value=3), \
+         patch('src.utils.init_super_admin.bcrypt') as mock_bcrypt:
+        # Simular error de bcrypt
+        mock_bcrypt.hash.side_effect = AttributeError("module 'bcrypt' has no attribute 'about'")
+        
+        # Verificar que se llama a hashlib cuando bcrypt falla
+        with patch('hashlib.sha256') as mock_sha256:
+            mock_sha256_instance = Mock()
+            mock_sha256_instance.hexdigest.return_value = 'sha256_hash'
+            mock_sha256.return_value = mock_sha256_instance
+
+            exito, mensaje = crear_super_admin_desde_env()
+
+            # Debe usar el fallback de hashlib
+            assert exito is True
+            mock_sha256.assert_called_once()
+
+
+@patch('src.utils.init_super_admin.get_connection')
+def test_inicializar_super_admin_no_db(mock_get_connection):
+    """Test inicializar_super_admin cuando la BD no está disponible."""
+    from src.utils.init_super_admin import inicializar_super_admin
+    
+    mock_get_connection.return_value = None
 
     result = inicializar_super_admin()
 

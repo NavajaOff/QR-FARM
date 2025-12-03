@@ -35,12 +35,14 @@ const routes = [
       {
         path: 'dashboard',
         name: 'DashboardAdmin',
-        component: () => import('../views/admin/DashboardContent.vue')
+        component: () => import('../views/admin/DashboardContent.vue'),
+        meta: { requiresAuth: true, role: 'admin', allowSuperAdmin: true }
       },
       {
         path: 'gestionar-usuarios',
         name: 'GestionarUsuarios',
-        component: () => import('../views/admin/GestionarUsuarios.vue')
+        component: () => import('../views/admin/GestionarUsuarios.vue'),
+        meta: { requiresAuth: true, role: 'admin', allowSuperAdmin: true }
       },
       {
         path: 'gestionar-tenants',
@@ -51,43 +53,50 @@ const routes = [
       {
         path: 'gestionar-animales',
         name: 'GestionarAnimalesAdmin',
-        component: () => import('../views/admin/GestionarAnimalesAdmin.vue')
+        component: () => import('../views/admin/GestionarAnimalesAdmin.vue'),
+        meta: { requiresAuth: true, role: 'admin', requiresTenant: true, blockSuperAdmin: true }
       },
       {
         path: 'gestionar-ganado',
         name: 'GestionarGanadoAdmin',
-        component: () => import('../views/admin/GestionarAnimalesAdmin.vue')
+        component: () => import('../views/admin/GestionarAnimalesAdmin.vue'),
+        meta: { requiresAuth: true, role: 'admin', requiresTenant: true, blockSuperAdmin: true }
       },
       {
         path: 'gestionar-ganados',
         name: 'GestionarGanadosAdmin',
-        component: () => import('../views/admin/GestionarAnimalesAdmin.vue')
+        component: () => import('../views/admin/GestionarAnimalesAdmin.vue'),
+        meta: { requiresAuth: true, role: 'admin', requiresTenant: true, blockSuperAdmin: true }
       },
       {
         path: 'gestionar-potreros',
         name: 'GestionarPotrerosAdmin',
-        component: () => import('../views/admin/GestionarPotrerosAdmin.vue')
+        component: () => import('../views/admin/GestionarPotrerosAdmin.vue'),
+        meta: { requiresAuth: true, role: 'admin', requiresTenant: true, blockSuperAdmin: true }
       },
       {
         path: 'reportes',
         name: 'ReportesAdmin',
-        component: () => import('../views/admin/ReportesAdmin.vue')
+        component: () => import('../views/admin/ReportesAdmin.vue'),
+        meta: { requiresAuth: true, role: 'admin', requiresTenant: true, blockSuperAdmin: true }
       },
       {
         path: 'vacunacion',
         name: 'RegistroVacunacionAdmin',
-        component: () => import('../views/admin/RegistroVacunacionAdmin.vue')
+        component: () => import('../views/admin/RegistroVacunacionAdmin.vue'),
+        meta: { requiresAuth: true, role: 'admin', requiresTenant: true, blockSuperAdmin: true }
       },
       {
         path: 'perfil',
         name: 'PerfilAdmin',
-        component: () => import('../views/admin/PerfilAdmin.vue')
+        component: () => import('../views/admin/PerfilAdmin.vue'),
+        meta: { requiresAuth: true, role: 'admin' }
       },
       {
         path: 'scan-qr',
         name: 'EscanearQRAdmin',
         component: () => import('../views/admin/EscanearQRAdmin.vue'),
-        meta: { requiresAuth: true, role: 'admin', requiresTenant: true }
+        meta: { requiresAuth: true, role: 'admin', requiresTenant: true, blockSuperAdmin: true }
       }
     ]
   },
@@ -128,7 +137,8 @@ const routes = [
       {
         path: 'reportes',
         name: 'ReportesUsuario',
-        component: () => import('../views/user/ReportesUsuario.vue')
+        component: () => import('../views/user/ReportesUsuario.vue'),
+        meta: { requiresAuth: true, role: 'admin', requiresAdmin: true }
       },
       {
         path: 'registro-vacunacion',
@@ -147,7 +157,8 @@ const routes = [
       {
         path: 'scan-qr',
         name: 'EscanearQRUsuario',
-        component: () => import('../views/user/EscanearQRUsuario.vue')
+        component: () => import('../views/user/EscanearQRUsuario.vue'),
+        meta: { requiresAuth: true, role: 'usuario', requiresTenant: true, allowAdmin: true }
       },
       {
         path: 'qr',
@@ -190,28 +201,49 @@ router.beforeEach((to, from, next) => {
     // Si no hay rol requerido, permitir
     if (!to.meta.role) return false;
 
-    // Validar si la ruta requiere tenant (no super admin)
-    if (to.meta.requiresTenant && isSuperAdmin) {
-      console.log('[ROUTER GUARD] Ruta requiere tenant pero usuario es super admin, bloqueando acceso');
+    // Bloquear super_admin de rutas que explícitamente lo bloquean
+    if (to.meta.blockSuperAdmin && isSuperAdmin) {
       return true;
     }
 
-    // Super admin puede acceder a todas las rutas protegidas (excepto usuario si no es usuario y rutas que requieren tenant)
+    // Validar si la ruta requiere tenant (no super admin)
+    if (to.meta.requiresTenant && isSuperAdmin) {
+      return true;
+    }
+
+    // Validar si la ruta requiere admin (para reportes de usuario)
+    if (to.meta.requiresAdmin) {
+      // Solo admin puede acceder (no super_admin)
+      if (!isAdmin || isSuperAdmin) {
+        return true;
+      }
+    }
+
+    // Super admin solo puede acceder a rutas de organización (tenants, usuarios, dashboard)
     if (isSuperAdmin) {
-      // Super admin puede acceder a cualquier ruta excepto las específicas de usuario y las que requieren tenant
-      if (to.meta.role === 'usuario' && !isUser) return true;
-      if (to.meta.requiresTenant) return true;
-      return false;
+      // Super admin puede acceder a rutas de super_admin
+      if (to.meta.role === 'super_admin') return false;
+      // Super admin puede acceder a rutas admin si allowSuperAdmin está habilitado (usuarios, dashboard)
+      if (to.meta.role === 'admin' && to.meta.allowSuperAdmin) return false;
+      // Bloquear todas las demás rutas para super_admin
+      return true;
     }
 
     // Si la ruta requiere super_admin y el usuario NO es super_admin, bloquear
     if (to.meta.role === 'super_admin' && !isSuperAdmin) return true;
 
-    // Si la ruta requiere admin y el usuario es admin o super_admin, permitir
-    if (to.meta.role === 'admin' && isAdmin) return false;
+    // Si la ruta requiere admin, permitir solo si es admin (no super_admin)
+    if (to.meta.role === 'admin') {
+      return !isAdmin || isSuperAdmin;
+    }
 
-    // Si la ruta requiere usuario y el usuario es usuario, permitir
-    if (to.meta.role === 'usuario' && isUser) return false;
+    // Si la ruta requiere usuario, permitir si es usuario O admin (admin puede acceder a rutas de usuario con allowAdmin)
+    if (to.meta.role === 'usuario') {
+      if (isUser) return false;
+      // Admin también puede acceder a rutas de usuario si allowAdmin está habilitado (para scan-qr, etc.)
+      if (to.meta.allowAdmin && isAdmin && !isSuperAdmin) return false;
+      return true;
+    }
 
     // Si el rol requerido no coincide con el rol del usuario, bloquear
     if (to.meta.role !== userRole) return true;
@@ -219,19 +251,23 @@ router.beforeEach((to, from, next) => {
     return false;
   }
 
-  console.log(`[ROUTER GUARD] Navegando de ${from.path} a ${to.path}`);
-  console.log(`[ROUTER GUARD] Token: ${token ? 'presente' : 'ausente'}`);
-  console.log(`[ROUTER GUARD] UserRole: ${userRole}`);
-
   // 1️⃣ Si requiere auth y NO hay token → LOGIN
   if (lacksAuth()) {
     return next('/login');
   }
 
-  // 2️⃣ Si requiere rol y no coincide → LOGIN o dashboard según caso
+  // 2️⃣ Si requiere rol y no coincide → redirigir según caso
   if (invalidRole()) {
     if (isRootOrLogin(to.path)) {
       return next(redirectByRole());
+    }
+    // Si un usuario normal intenta acceder a reportes, redirigir al inicio
+    if (to.path === '/user/reportes' && isUser && !isAdmin && !isSuperAdmin) {
+      return next('/user/inicio');
+    }
+    // Si super_admin intenta acceder a rutas bloqueadas, redirigir al dashboard
+    if (isSuperAdmin && (to.meta.blockSuperAdmin || to.meta.requiresTenant || to.path.includes('/scan-qr'))) {
+      return next('/admin/dashboard');
     }
     return next('/login');
   }

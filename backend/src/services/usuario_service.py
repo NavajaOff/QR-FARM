@@ -567,7 +567,7 @@ class UsuarioService:
             if 'conn' in locals():
                 conn.close()
     @staticmethod
-    def registrar_usuario(persona: Persona, usuario: Usuario) -> Tuple[Optional[Usuario], str]:
+    def registrar_usuario(persona: Persona, usuario: Usuario, tenant_id_override: Optional[int] = None) -> Tuple[Optional[Usuario], str]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
@@ -595,9 +595,37 @@ class UsuarioService:
 
                 conn.start_transaction()
 
-                # Obtener tenant_id del contexto (para tenant_admin creando usuarios)
-                from ..utils.tenant import get_current_tenant_id
-                tenant_id_contexto = get_current_tenant_id()
+                # Obtener tenant_id: primero usar override si está disponible, luego del contexto
+                if tenant_id_override is not None:
+                    tenant_id_contexto = tenant_id_override
+                else:
+                    from ..utils.tenant import get_current_tenant_id
+                    tenant_id_contexto = get_current_tenant_id()
+                    
+                    # Si aún es None, intentar obtenerlo del usuario actual desde la BD
+                    if tenant_id_contexto is None:
+                        try:
+                            from flask import request, current_app, g
+                            import jwt
+                            # Intentar obtener desde g (si está disponible desde @token_required)
+                            if hasattr(g, 'tenant_id') and g.tenant_id:
+                                tenant_id_contexto = g.tenant_id
+                            else:
+                                # Obtenerlo directamente desde la BD usando el user_id del token
+                                auth_header = request.headers.get('Authorization', '').strip()
+                                if auth_header:
+                                    parts = auth_header.split()
+                                    if len(parts) == 2 and parts[0].lower() == 'bearer':
+                                        token = parts[1]
+                                        payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+                                        user_id = payload.get('user_id')
+                                        if user_id:
+                                            cursor.execute("SELECT tenant_id FROM usuarios WHERE id = %s", (user_id,))
+                                            result = cursor.fetchone()
+                                            if result and result.get('tenant_id'):
+                                                tenant_id_contexto = result['tenant_id']
+                        except Exception:
+                            pass  # Si falla, continuar con None
 
                 # Insertar persona con tenant_id
                 sql_persona = """

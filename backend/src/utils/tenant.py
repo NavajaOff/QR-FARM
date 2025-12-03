@@ -119,16 +119,17 @@ def tenant_required(f: Callable) -> Callable:
     """
     Decorator que requiere tenant válido.
     
-    Para super_admin: permite None (ver todos) o tenant_id específico desde query param.
+    Para super_admin: SIEMPRE permite acceso (con o sin tenant).
     Para otros usuarios: requiere tenant_id del usuario.
+    
+    Nota: El super admin puede trabajar sin tenant (ver todos) o con tenant (filtrar).
     """
     @wraps(f)
     def decorated(*args: Any, **kwargs: Any) -> Any:
         is_super_admin = _es_super_admin_usuario()
         
+        # Super admin SIEMPRE puede acceder, con o sin tenant
         if is_super_admin:
-            # Super admin puede tener tenant_id o None (ver todos)
-            tenant_id = get_current_tenant_id(require_tenant=False)
             return f(*args, **kwargs)
         
         # Usuarios normales deben tener tenant_id

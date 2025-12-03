@@ -75,21 +75,27 @@
             <i class="fas fa-chevron-down transition-all"></i>
           </button>
           <div class="collapse ps-4" id="gestionMenu">
+            <!-- Tenants solo para super admin -->
             <router-link v-if="isSuperAdmin" class="nav-link mb-1 small" to="/admin/gestionar-tenants">
               <i class="fas fa-building me-2"></i>Tenants
             </router-link>
+            <!-- Usuarios para admin y super admin -->
             <router-link class="nav-link mb-1 small" to="/admin/gestionar-usuarios">
               <i class="fas fa-users me-2"></i>Usuarios
             </router-link>
+            <!-- Ganado para admin y super admin -->
             <router-link class="nav-link mb-1 small" to="/admin/gestionar-animales">
               <i class="fas fa-cow me-2"></i>Ganado
             </router-link>
+            <!-- Potreros para admin y super admin -->
             <router-link class="nav-link mb-1 small" to="/admin/gestionar-potreros">
               <i class="fas fa-map-marked-alt me-2"></i>Potreros
             </router-link>
+            <!-- Vacunación para admin y super admin -->
             <router-link class="nav-link mb-1 small" to="/admin/vacunacion">
               <i class="fas fa-syringe me-2"></i>Vacunación
             </router-link>
+            <!-- Reportes para admin y super admin -->
             <router-link class="nav-link mb-1 small" to="/admin/reportes">
               <i class="fas fa-chart-line me-2"></i>Reportes
             </router-link>
@@ -130,6 +136,10 @@ export default {
   computed: {
     isSuperAdmin() {
       return authService.getRole() === 'super_admin';
+    },
+    isAdmin() {
+      const role = authService.getRole();
+      return role === 'admin' || role === 'administrador';
     },
     userRoleDisplay() {
       const role = authService.getRole();

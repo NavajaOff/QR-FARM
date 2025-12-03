@@ -2,6 +2,7 @@ import { ref } from 'vue';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import io from 'socket.io-client';
+import api from '../../services/api.js';
 
 // Variables reactivas
 export const currentIndex = ref(0);
@@ -216,9 +217,9 @@ export const cargarPersonasUsuario = async () => {
 export const cargarAnimales = async (incluirBajas = false) => {
   try {
     console.log('[DEBUG] cargarAnimales - incluirBajas:', incluirBajas);
-    const url = `${API_BASE}/animales/`;
+    const url = '/animales/';
     console.log('[DEBUG] URL de la petición:', url);
-    const response = await axios.get(url, {
+    const response = await api.get(url, {
       cancelToken: cancelTokenSource?.token,
       timeout: 15000  // Timeout más largo para listas grandes
     });

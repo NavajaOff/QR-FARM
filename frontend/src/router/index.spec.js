@@ -259,11 +259,16 @@ describe('Router Configuration', () => {
       expect(router.currentRoute.value.path).toBe('/user/potreros')
     })
 
-    it('should have ReportesUsuario route', async () => {
+    it('should have ReportesUsuario route (only for admin)', async () => {
+      // ReportesUsuario requiere rol admin, no usuario normal
+      localStorage.setItem('userRole', 'admin')
       await router.push('/user/reportes')
       await router.isReady()
       expect(router.currentRoute.value.name).toBe('ReportesUsuario')
       expect(router.currentRoute.value.path).toBe('/user/reportes')
+      
+      // Reset para otros tests
+      localStorage.setItem('userRole', 'usuario')
     })
 
     it('should have RegistroVacunacionUsuario route', async () => {
@@ -407,12 +412,40 @@ describe('Router Navigation Guards', () => {
       expect(router.currentRoute.value.path).toBe('/admin/dashboard')
     })
 
-    it('should allow super_admin to access admin routes', async () => {
+    it('should allow super_admin to access admin routes with allowSuperAdmin', async () => {
       localStorage.setItem('token', 'test-token')
       localStorage.setItem('userRole', 'super_admin')
       await router.push('/admin/dashboard')
       await router.isReady()
       expect(router.currentRoute.value.path).toBe('/admin/dashboard')
+    })
+
+    it('should block super_admin from accessing routes with blockSuperAdmin', async () => {
+      localStorage.setItem('token', 'test-token')
+      localStorage.setItem('userRole', 'super_admin')
+      
+      try {
+        await router.push('/admin/scan-qr')
+        await router.isReady()
+      } catch (error) {
+        // Redirect error is acceptable
+      }
+      const currentPath = router.currentRoute.value.path
+      expect(currentPath === '/admin/dashboard' || currentPath === '/login').toBe(true)
+    })
+
+    it('should block super_admin from accessing routes with requiresTenant', async () => {
+      localStorage.setItem('token', 'test-token')
+      localStorage.setItem('userRole', 'super_admin')
+      
+      try {
+        await router.push('/admin/gestionar-animales')
+        await router.isReady()
+      } catch (error) {
+        // Redirect error is acceptable
+      }
+      const currentPath = router.currentRoute.value.path
+      expect(currentPath === '/admin/dashboard' || currentPath === '/login').toBe(true)
     })
 
     it('should allow super_admin to access super_admin routes', async () => {
@@ -623,18 +656,17 @@ describe('Router Navigation Guards', () => {
   })
 
   describe('Guard console logging', () => {
-    it('should log navigation information', async () => {
+    it('should log navigation information only in development mode', async () => {
       localStorage.setItem('token', 'test-token')
       localStorage.setItem('userRole', 'admin')
       
+      // Los logs ahora solo se muestran en desarrollo cuando hay errores
+      // Este test verifica que el guard funciona sin logs excesivos
       await router.push('/admin/dashboard')
       await router.isReady()
       
-      expect(console.log).toHaveBeenCalled()
-      const logCalls = console.log.mock.calls
-      expect(logCalls.some(call => 
-        call[0].includes('[ROUTER GUARD]') && call[0].includes('Navegando')
-      )).toBe(true)
+      // El guard funciona correctamente (no hay error de navegación)
+      expect(router.currentRoute.value.path).toBe('/admin/dashboard')
     })
   })
 

@@ -10,7 +10,8 @@ vi.mock('../services/authService.js', () => ({
     isAuthenticated: vi.fn(),
     isUser: vi.fn(),
     getUser: vi.fn(),
-    logout: vi.fn()
+    logout: vi.fn(),
+    getRole: vi.fn()
   }
 }))
 
@@ -48,6 +49,7 @@ describe('UserLayout.vue', () => {
     // Setup default mocks
     authService.isAuthenticated.mockReturnValue(true)
     authService.isUser.mockReturnValue(true)
+    authService.getRole.mockReturnValue('usuario')
     authService.getUser.mockReturnValue({
       persona: {
         primer_nombre: 'Juan'
@@ -148,7 +150,8 @@ describe('UserLayout.vue', () => {
       expect(sidebar.classes()).toContain('d-md-block')
     })
 
-    it('should render all sidebar navigation links', async () => {
+    it('should render all sidebar navigation links for usuario', async () => {
+      authService.getRole.mockReturnValue('usuario')
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
 
@@ -158,6 +161,36 @@ describe('UserLayout.vue', () => {
         const parent = link.element.closest('.user-sidebar')
         return parent !== null
       })
+      // Usuario normal tiene 6 links (sin Reportes)
+      expect(sidebarLinks.length).toBe(6)
+
+      const expectedRoutes = [
+        { to: '/user/inicio', text: 'Inicio' },
+        { to: '/user/ganado', text: 'Mi Ganado' },
+        { to: '/user/potreros', text: 'Potreros' },
+        { to: '/user/registro-vacunacion', text: 'Vacunación' },
+        { to: '/user/perfil', text: 'Perfil' },
+        { to: '/user/qr', text: 'Escanear QR' }
+      ]
+
+      expectedRoutes.forEach((expected, index) => {
+        const link = sidebarLinks[index]
+        expect(link.props('to')).toBe(expected.to)
+        expect(link.text()).toContain(expected.text)
+      })
+    })
+
+    it('should render all sidebar navigation links for admin (including Reportes)', async () => {
+      authService.getRole.mockReturnValue('admin')
+      wrapper = createWrapper()
+      await wrapper.vm.$nextTick()
+
+      const navLinks = wrapper.findAllComponents({ name: 'RouterLink' })
+      const sidebarLinks = navLinks.filter(link => {
+        const parent = link.element.closest('.user-sidebar')
+        return parent !== null
+      })
+      // Admin tiene 7 links (con Reportes)
       expect(sidebarLinks.length).toBe(7)
 
       const expectedRoutes = [
@@ -349,7 +382,8 @@ describe('UserLayout.vue', () => {
       expect(potrerosLink.text()).toContain('Potreros')
     })
 
-    it('should have correct route for Reportes link', async () => {
+    it('should have correct route for Reportes link (only for admin)', async () => {
+      authService.getRole.mockReturnValue('admin')
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
 
@@ -358,12 +392,14 @@ describe('UserLayout.vue', () => {
         const parent = link.element.closest('.user-sidebar')
         return parent !== null
       })
+      // Para admin, Reportes está en la posición 3
       const reportesLink = sidebarLinks[3]
       expect(reportesLink.props('to')).toBe('/user/reportes')
       expect(reportesLink.text()).toContain('Reportes')
     })
 
-    it('should have correct route for Vacunación link', async () => {
+    it('should NOT show Reportes link for usuario', async () => {
+      authService.getRole.mockReturnValue('usuario')
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
 
@@ -372,12 +408,30 @@ describe('UserLayout.vue', () => {
         const parent = link.element.closest('.user-sidebar')
         return parent !== null
       })
-      const vacunacionLink = sidebarLinks[4]
+      // Usuario no debe tener link de Reportes
+      const reportesLinks = sidebarLinks.filter(link => link.props('to') === '/user/reportes')
+      expect(reportesLinks.length).toBe(0)
+    })
+
+    it('should have correct route for Vacunación link', async () => {
+      authService.getRole.mockReturnValue('usuario')
+      wrapper = createWrapper()
+      await wrapper.vm.$nextTick()
+
+      const navLinks = wrapper.findAllComponents({ name: 'RouterLink' })
+      const sidebarLinks = navLinks.filter(link => {
+        const parent = link.element.closest('.user-sidebar')
+        return parent !== null
+      })
+      // Para usuario, Vacunación está en posición 3 (sin Reportes)
+      const vacunacionLink = sidebarLinks.find(link => link.props('to') === '/user/registro-vacunacion')
+      expect(vacunacionLink).toBeDefined()
       expect(vacunacionLink.props('to')).toBe('/user/registro-vacunacion')
       expect(vacunacionLink.text()).toContain('Vacunación')
     })
 
     it('should have correct route for Perfil link', async () => {
+      authService.getRole.mockReturnValue('usuario')
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
 
@@ -386,12 +440,15 @@ describe('UserLayout.vue', () => {
         const parent = link.element.closest('.user-sidebar')
         return parent !== null
       })
-      const perfilLink = sidebarLinks[5]
+      // Para usuario, Perfil está en posición 4 (sin Reportes)
+      const perfilLink = sidebarLinks.find(link => link.props('to') === '/user/perfil')
+      expect(perfilLink).toBeDefined()
       expect(perfilLink.props('to')).toBe('/user/perfil')
       expect(perfilLink.text()).toContain('Perfil')
     })
 
     it('should have correct route for Escanear QR link', async () => {
+      authService.getRole.mockReturnValue('usuario')
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
 
@@ -400,7 +457,9 @@ describe('UserLayout.vue', () => {
         const parent = link.element.closest('.user-sidebar')
         return parent !== null
       })
-      const qrLink = sidebarLinks[6]
+      // Para usuario, Escanear QR está en posición 5 (sin Reportes)
+      const qrLink = sidebarLinks.find(link => link.props('to') === '/user/qr')
+      expect(qrLink).toBeDefined()
       expect(qrLink.props('to')).toBe('/user/qr')
       expect(qrLink.text()).toContain('Escanear QR')
     })
@@ -439,23 +498,58 @@ describe('UserLayout.vue', () => {
       expect(menuIcon.exists()).toBe(true)
     })
 
-    it('should render icons in sidebar links', async () => {
+    it('should render icons in sidebar links for usuario', async () => {
+      authService.getRole.mockReturnValue('usuario')
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
 
+      // Para usuario normal (sin Reportes)
       const icons = [
         'fa-home',
         'fa-cow',
         'fa-map-marked-alt',
-        'fa-chart-line',
         'fa-syringe',
         'fa-user-edit',
         'fa-qrcode'
       ]
 
       icons.forEach(iconClass => {
-        const icon = wrapper.find(`.user-sidebar .${iconClass}`)
-        expect(icon.exists()).toBe(true)
+        // Buscar iconos usando selector más flexible
+        const icon = wrapper.find(`.user-sidebar i.${iconClass}`)
+        if (!icon.exists()) {
+          // Intentar con selector alternativo
+          const iconAlt = wrapper.find(`.user-sidebar .fas.${iconClass}`)
+          expect(iconAlt.exists()).toBe(true)
+        } else {
+          expect(icon.exists()).toBe(true)
+        }
+      })
+    })
+
+    it('should render icons in sidebar links for admin (including Reportes)', async () => {
+      authService.getRole.mockReturnValue('admin')
+      wrapper = createWrapper()
+      await wrapper.vm.$nextTick()
+
+      // Para admin (con Reportes)
+      const icons = [
+        'fa-home',
+        'fa-cow',
+        'fa-map-marked-alt',
+        'fa-chart-line', // Reportes
+        'fa-syringe',
+        'fa-user-edit',
+        'fa-qrcode'
+      ]
+
+      icons.forEach(iconClass => {
+        const icon = wrapper.find(`.user-sidebar i.${iconClass}`)
+        if (!icon.exists()) {
+          const iconAlt = wrapper.find(`.user-sidebar .fas.${iconClass}`)
+          expect(iconAlt.exists()).toBe(true)
+        } else {
+          expect(icon.exists()).toBe(true)
+        }
       })
     })
   })

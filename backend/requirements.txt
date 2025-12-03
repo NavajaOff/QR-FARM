@@ -34,7 +34,7 @@ reportlab==4.4.5
 
 # Hashing y seguridad
 passlib==1.7.4
-bcrypt==4.1.3
+bcrypt==4.0.1
 cryptography==46.0.3
 
 # Utilidades opcionales

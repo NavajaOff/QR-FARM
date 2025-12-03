@@ -43,16 +43,29 @@ def _obtener_rol_usuario(usuario):
     return None
 
 def _validar_permiso(rol_nombre, permission):
-    """Valida si el rol tiene el permiso requerido."""
+    """Valida si el rol tiene el permiso requerido.
+    
+    Returns:
+        tuple: (tiene_permiso: bool, error_response: tuple | None)
+        - Si tiene permiso: (True, None)
+        - Si no tiene permiso: (False, (jsonify_response, status_code))
+    """
     if rol_nombre == 'super_admin':
         return True, None
+    
+    # Mapear "admin" a "tenant_admin" para compatibilidad
+    # El rol "admin" debe tener los mismos permisos que "tenant_admin"
+    if rol_nombre == 'admin':
+        rol_nombre = 'tenant_admin'
+    
     roles_permitidos = PERMISOS.get(permission, [])
     if rol_nombre not in roles_permitidos:
-        return False, jsonify({
+        error_response = (jsonify({
             'status': 'error',
             'code': 'insufficient_permissions',
             'message': f'No tiene permiso para: {permission}'
-        }), 403
+        }), 403)
+        return False, error_response
     return True, None
 
 def permission_required(permission: str):
@@ -74,6 +87,9 @@ def permission_required(permission: str):
             
             tiene_permiso, error_response = _validar_permiso(rol_nombre, permission)
             if not tiene_permiso:
+                # error_response es una tupla (jsonify_response, status_code) cuando no hay permiso
+                if error_response and isinstance(error_response, tuple):
+                    return error_response[0], error_response[1]
                 return error_response
             
             return f(*args, **kwargs)

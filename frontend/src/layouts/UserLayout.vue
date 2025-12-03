@@ -39,7 +39,8 @@
         <router-link class="nav-link" to="/user/potreros">
           <i class="fas fa-map-marked-alt me-2"></i>Potreros
         </router-link>
-        <router-link class="nav-link" to="/user/reportes">
+        <!-- Reportes solo visible para admin (no para usuarios normales) -->
+        <router-link v-if="canViewReports" class="nav-link" to="/user/reportes">
           <i class="fas fa-chart-line me-2"></i>Reportes
         </router-link>
         <router-link class="nav-link" to="/user/registro-vacunacion">
@@ -70,6 +71,14 @@ export default {
     return {
       userName: ''
     };
+  },
+  computed: {
+    // Verificar si el usuario puede ver reportes (admin o super_admin, no usuarios normales)
+    canViewReports() {
+      const role = authService.getRole();
+      // Solo admin y super_admin pueden ver reportes
+      return role === 'admin' || role === 'administrador' || role === 'super_admin';
+    }
   },
   mounted() {
     if (!authService.isAuthenticated() || !authService.isUser()) {
