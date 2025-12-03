@@ -342,9 +342,18 @@ class GanadoController:
     @tenant_required
     @permission_required('eliminar_ganado')
     def eliminar_ganado(id):
-        """Elimina un ganado usando GanadoService.eliminar_ganado()."""
+        """Elimina un ganado usando GanadoService.eliminar_ganado(). Acepta tenant_id como query param para super admin."""
         try:
-            result = GanadoService.eliminar_ganado(id)
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
+            result = GanadoService.eliminar_ganado(id, tenant_id_override=tenant_id)
             
             if result is True:
                 return jsonify({
@@ -396,7 +405,7 @@ class GanadoController:
     @staticmethod
     @token_required
     @tenant_required
-    @permission_required('ver_ganado')
+    @permission_required('escanear_qr')
     def buscar_por_codigo_qr(codigo_qr):
         """Buscar ganado por código QR. Acepta tenant_id como query param para super admin."""
         try:
@@ -409,7 +418,7 @@ class GanadoController:
                 except (ValueError, TypeError):
                     pass
             
-            ganado = GanadoService.buscar_por_codigo_qr(codigo_qr)
+            ganado = GanadoService.buscar_por_codigo_qr(codigo_qr, tenant_id_override=tenant_id)
 
             if ganado:
                 detalle = GanadoService.obtener_ganado_detallado(ganado.id, tenant_id_override=tenant_id) if ganado.id else None

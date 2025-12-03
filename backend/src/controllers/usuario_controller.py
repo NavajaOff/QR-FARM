@@ -230,6 +230,7 @@ class UsuarioController:
     @staticmethod
     def _crear_usuario_en_bd(es_super_admin, tenant_id_override, persona, usuario):
         """Crea el usuario en la base de datos usando el servicio apropiado."""
+        # Si es super_admin y tiene tenant_id_override, usar crear_usuario
         if es_super_admin and tenant_id_override is not None:
             return UsuarioService.crear_usuario(
                 persona, usuario, 
@@ -237,7 +238,25 @@ class UsuarioController:
                 es_super_admin=True
             )
         
-        return UsuarioService.registrar_usuario(persona, usuario)
+        # Si es super_admin pero no tiene tenant_id_override, obtener tenant_id del usuario actual
+        if es_super_admin:
+            current_user = UsuarioController._obtener_usuario_desde_token()
+            tenant_id_del_usuario = None
+            if current_user and hasattr(current_user, 'tenant_id'):
+                tenant_id_del_usuario = current_user.tenant_id
+            
+            # Si el usuario actual tiene tenant_id, usarlo
+            if tenant_id_del_usuario:
+                return UsuarioService.crear_usuario(
+                    persona, usuario,
+                    tenant_id_override=tenant_id_del_usuario,
+                    es_super_admin=True
+                )
+            # Si no tiene tenant_id, pasar None a registrar_usuario para que lo obtenga del contexto
+            return UsuarioService.registrar_usuario(persona, usuario, tenant_id_override=None)
+        
+        # Para usuarios normales (tenant_admin), usar registrar_usuario que obtiene el tenant_id del contexto
+        return UsuarioService.registrar_usuario(persona, usuario, tenant_id_override=None)
     
     @staticmethod
     def registrar_usuario():
@@ -254,9 +273,15 @@ class UsuarioController:
             current_user = UsuarioController._obtener_usuario_desde_token()
             es_super_admin_flag = UsuarioController._es_super_admin(current_user)
             
+            # Si no es super_admin y tiene tenant_id, usar ese tenant_id automáticamente
             tenant_id_override, tenant_error = UsuarioController._obtener_tenant_id_override(es_super_admin_flag, data)
             if tenant_error:
                 return UsuarioController._error(tenant_error, 400)
+            
+            # Si no es super_admin y no se especificó tenant_id, usar el tenant_id del usuario actual
+            if not es_super_admin_flag and tenant_id_override is None:
+                if current_user and hasattr(current_user, 'tenant_id') and current_user.tenant_id:
+                    tenant_id_override = current_user.tenant_id
             
             persona, usuario = Usuario.from_registration_data(data)
             UsuarioController._asignar_rol_si_es_super_admin(es_super_admin_flag, data, persona, usuario)
@@ -341,7 +366,12 @@ class UsuarioController:
     @staticmethod
     def obtener_usuario(id):
         try:
-            usuario = UsuarioService.obtener_usuario(id)
+            current_user = _obtener_usuario_actual()
+            tenant_id = None
+            if current_user and not UsuarioController._es_super_admin(current_user):
+                tenant_id = getattr(current_user, 'tenant_id', None)
+            
+            usuario = UsuarioService.obtener_usuario(id, tenant_id_override=tenant_id)
 
             if usuario:
                 return jsonify({
@@ -355,7 +385,7 @@ class UsuarioController:
                 }), 404
 
         except Exception as e:
-            logger.error("Error en login: %s", e, exc_info=True)
+            logger.error("Error en obtener_usuario: %s", e, exc_info=True)
             return jsonify({
                 'status': 'error',
                 'message': ERROR_PROCESAR_SOLICITUD
@@ -434,7 +464,12 @@ class UsuarioController:
                     'message': 'Estado inválido. Debe ser "activo" o "inactivo"'
                 }), 400
 
-            usuario_existente = UsuarioService.obtener_usuario(id, incluir_inactivos=True)
+            current_user = _obtener_usuario_actual()
+            tenant_id = None
+            if current_user and not UsuarioController._es_super_admin(current_user):
+                tenant_id = getattr(current_user, 'tenant_id', None)
+
+            usuario_existente = UsuarioService.obtener_usuario(id, incluir_inactivos=True, tenant_id_override=tenant_id)
             if not usuario_existente:
                 return jsonify({
                     'status': 'error',
@@ -539,7 +574,12 @@ class UsuarioController:
             if not data:
                 return UsuarioController._error("No se recibieron datos para actualizar", 400)
 
-            usuario = UsuarioService.obtener_usuario(id, incluir_inactivos=True)
+            current_user = _obtener_usuario_actual()
+            tenant_id = None
+            if current_user and not UsuarioController._es_super_admin(current_user):
+                tenant_id = getattr(current_user, 'tenant_id', None)
+
+            usuario = UsuarioService.obtener_usuario(id, incluir_inactivos=True, tenant_id_override=tenant_id)
             if not usuario:
                 return UsuarioController._error(UsuarioController.MSG_USER_NOT_FOUND, 404)
 
@@ -550,7 +590,7 @@ class UsuarioController:
             UsuarioController._actualizar_datos_persona(usuario, data)
             UsuarioController._actualizar_datos_usuario(usuario, data)
 
-            if UsuarioService.actualizar_usuario_completo(id, usuario):
+            if UsuarioService.actualizar_usuario_completo(id, usuario, tenant_id_override=tenant_id):
                 UsuarioController._emitir_actualizacion(id, usuario)
                 return jsonify({
                     'status': 'success',
@@ -671,7 +711,13 @@ class UsuarioController:
     @staticmethod
     def eliminar_usuario(id):
         try:
-            if UsuarioService.eliminar_usuario(id):
+            current_user = _obtener_usuario_actual()
+            tenant_id = None
+            if current_user and not UsuarioController._es_super_admin(current_user):
+                tenant_id = getattr(current_user, 'tenant_id', None)
+
+            success, message = UsuarioService.eliminar_usuario(id, tenant_id_override=tenant_id)
+            if success:
                 # Emitir actualización en tiempo real para usuario eliminado
                 try:
                     emit_update('usuario_deleted', {
@@ -686,7 +732,7 @@ class UsuarioController:
             else:
                 return jsonify({
                     'status': 'error',
-                    'message': UsuarioController.MSG_USER_NOT_FOUND
+                    'message': message or UsuarioController.MSG_USER_NOT_FOUND
                 }), 404
                 
         except Exception as e:

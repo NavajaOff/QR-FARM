@@ -30,63 +30,73 @@ const routes = [
   {
     path: '/admin',
     component: () => import('../layouts/AdminLayout.vue'),
-    meta: { requiresAuth: true, role: 'admin' },
+    meta: { requiresAuth: true, allowedRoles: ['admin', 'super_admin'] },
     children: [
       {
         path: 'dashboard',
         name: 'DashboardAdmin',
-        component: () => import('../views/admin/DashboardContent.vue')
+        component: () => import('../views/admin/DashboardContent.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['admin', 'super_admin'] }
       },
       {
         path: 'gestionar-usuarios',
         name: 'GestionarUsuarios',
-        component: () => import('../views/admin/GestionarUsuarios.vue')
+        component: () => import('../views/admin/GestionarUsuarios.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['admin', 'super_admin'] }
       },
       {
         path: 'gestionar-tenants',
         name: 'GestionarTenants',
         component: () => import('../views/admin/GestionarTenants.vue'),
-        meta: { requiresAuth: true, role: 'super_admin' }
+        meta: { requiresAuth: true, allowedRoles: ['super_admin'] }
       },
       {
         path: 'gestionar-animales',
         name: 'GestionarAnimalesAdmin',
-        component: () => import('../views/admin/GestionarAnimalesAdmin.vue')
+        component: () => import('../views/admin/GestionarAnimalesAdmin.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['admin'], requiresTenant: true }
       },
       {
         path: 'gestionar-ganado',
         name: 'GestionarGanadoAdmin',
-        component: () => import('../views/admin/GestionarAnimalesAdmin.vue')
+        component: () => import('../views/admin/GestionarAnimalesAdmin.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['admin'], requiresTenant: true }
       },
       {
         path: 'gestionar-ganados',
         name: 'GestionarGanadosAdmin',
-        component: () => import('../views/admin/GestionarAnimalesAdmin.vue')
+        component: () => import('../views/admin/GestionarAnimalesAdmin.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['admin'], requiresTenant: true }
       },
       {
         path: 'gestionar-potreros',
         name: 'GestionarPotrerosAdmin',
-        component: () => import('../views/admin/GestionarPotrerosAdmin.vue')
+        component: () => import('../views/admin/GestionarPotrerosAdmin.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['admin'], requiresTenant: true }
       },
       {
         path: 'reportes',
         name: 'ReportesAdmin',
-        component: () => import('../views/admin/ReportesAdmin.vue')
+        component: () => import('../views/admin/ReportesAdmin.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['admin'], requiresTenant: true }
       },
       {
         path: 'vacunacion',
         name: 'RegistroVacunacionAdmin',
-        component: () => import('../views/admin/RegistroVacunacionAdmin.vue')
+        component: () => import('../views/admin/RegistroVacunacionAdmin.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['admin'], requiresTenant: true }
       },
       {
         path: 'perfil',
         name: 'PerfilAdmin',
-        component: () => import('../views/admin/PerfilAdmin.vue')
+        component: () => import('../views/admin/PerfilAdmin.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['admin', 'super_admin'] }
       },
       {
         path: 'scan-qr',
         name: 'EscanearQRAdmin',
-        component: () => import('../views/admin/EscanearQRAdmin.vue')
+        component: () => import('../views/admin/EscanearQRAdmin.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['admin'], requiresTenant: true }
       }
     ]
   },
@@ -95,7 +105,7 @@ const routes = [
   {
     path: '/user',
     component: () => import('../layouts/UserLayout.vue'),
-    meta: { requiresAuth: true, role: 'usuario' },
+    meta: { requiresAuth: true, allowedRoles: ['usuario'] },
     children: [
       {
         path: '',
@@ -104,7 +114,8 @@ const routes = [
       {
         path: 'inicio',
         name: 'InicioUsuario',
-        component: () => import('../views/user/DashboardContent.vue')
+        component: () => import('../views/user/DashboardContent.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['usuario'] }
       },
       {
         path: 'dashboard',
@@ -113,7 +124,8 @@ const routes = [
       {
         path: 'ganado',
         name: 'GanadoUsuario',
-        component: () => import('../views/user/GestionarAnimalesUsuario.vue')
+        component: () => import('../views/user/GestionarAnimalesUsuario.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['usuario'], requiresTenant: true }
       },
       {
         path: 'gestionar-animales',
@@ -122,17 +134,14 @@ const routes = [
       {
         path: 'potreros',
         name: 'PotrerosUsuario',
-        component: () => import('../views/user/GestionarPotrerosUsuario.vue')
-      },
-      {
-        path: 'reportes',
-        name: 'ReportesUsuario',
-        component: () => import('../views/user/ReportesUsuario.vue')
+        component: () => import('../views/user/GestionarPotrerosUsuario.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['usuario'], requiresTenant: true }
       },
       {
         path: 'registro-vacunacion',
         name: 'RegistroVacunacionUsuario',
-        component: () => import('../views/user/RegistroVacunacionUsuario.vue')
+        component: () => import('../views/user/RegistroVacunacionUsuario.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['usuario'], requiresTenant: true }
       },
       {
         path: 'vacunacion',
@@ -141,12 +150,14 @@ const routes = [
       {
         path: 'perfil',
         name: 'PerfilUsuario',
-        component: () => import('../views/user/PerfilUsuario.vue')
+        component: () => import('../views/user/PerfilUsuario.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['usuario'] }
       },
       {
         path: 'scan-qr',
         name: 'EscanearQRUsuario',
-        component: () => import('../views/user/EscanearQRUsuario.vue')
+        component: () => import('../views/user/EscanearQRUsuario.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['usuario'], requiresTenant: true }
       },
       {
         path: 'qr',
@@ -170,14 +181,14 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token');
   const userRole = localStorage.getItem('userRole');
 
-  const isAdmin = userRole === 'admin' || userRole === 'administrador' || userRole === 'super_admin';
   const isSuperAdmin = userRole === 'super_admin';
+  const isAdmin = userRole === 'admin' || userRole === 'administrador';
   const isUser = userRole === 'usuario' || userRole === 'user';
 
   function redirectByRole() {
-    // Super admin y admin van al dashboard de admin
-    if (isSuperAdmin || isAdmin) return '/admin/dashboard';
-    if (isUser) return '/user/dashboard';
+    if (isSuperAdmin) return '/admin/dashboard';
+    if (isAdmin) return '/admin/dashboard';
+    if (isUser) return '/user/inicio';
     return '/login';
   }
 
@@ -186,45 +197,77 @@ router.beforeEach((to, from, next) => {
   }
 
   function invalidRole() {
-    // Si no hay rol requerido, permitir
-    if (!to.meta.role) return false;
-
-    // Super admin puede acceder a todas las rutas protegidas (excepto usuario si no es usuario)
-    if (isSuperAdmin) {
-      // Super admin puede acceder a cualquier ruta excepto las específicas de usuario
-      return to.meta.role === 'usuario' && !isUser;
+    // Si no hay roles permitidos definidos, permitir
+    if (!to.meta.allowedRoles || !Array.isArray(to.meta.allowedRoles)) {
+      return false;
     }
 
-    // Si la ruta requiere super_admin y el usuario NO es super_admin, bloquear
-    if (to.meta.role === 'super_admin' && !isSuperAdmin) return true;
+    // Verificar si el rol del usuario está en los roles permitidos
+    // Manejar alias: 'user' es equivalente a 'usuario', 'administrador' es equivalente a 'admin'
+    let roleAllowed = to.meta.allowedRoles.includes(userRole);
+    
+    // Si no está permitido directamente, verificar alias
+    if (!roleAllowed) {
+      if (userRole === 'user' && to.meta.allowedRoles.includes('usuario')) {
+        roleAllowed = true;
+      } else if (userRole === 'administrador' && to.meta.allowedRoles.includes('admin')) {
+        roleAllowed = true;
+      }
+    }
+    
+    if (!roleAllowed) {
+      return true;
+    }
 
-    // Si la ruta requiere admin y el usuario es admin o super_admin, permitir
-    if (to.meta.role === 'admin' && isAdmin) return false;
-
-    // Si la ruta requiere usuario y el usuario es usuario, permitir
-    if (to.meta.role === 'usuario' && isUser) return false;
-
-    // Si el rol requerido no coincide con el rol del usuario, bloquear
-    if (to.meta.role !== userRole) return true;
+    // Validar si la ruta requiere tenant (super_admin no tiene tenant)
+    if (to.meta.requiresTenant && isSuperAdmin) {
+      return true;
+    }
 
     return false;
   }
-
-  console.log(`[ROUTER GUARD] Navegando de ${from.path} a ${to.path}`);
-  console.log(`[ROUTER GUARD] Token: ${token ? 'presente' : 'ausente'}`);
-  console.log(`[ROUTER GUARD] UserRole: ${userRole}`);
 
   // 1️⃣ Si requiere auth y NO hay token → LOGIN
   if (lacksAuth()) {
     return next('/login');
   }
 
-  // 2️⃣ Si requiere rol y no coincide → LOGIN o dashboard según caso
+  // 2️⃣ Si requiere rol y no coincide → redirigir según caso
   if (invalidRole()) {
     if (isRootOrLogin(to.path)) {
       return next(redirectByRole());
     }
-    return next('/login');
+    
+    // Redirecciones específicas según el rol
+    if (isSuperAdmin) {
+      // Super admin intentando acceder a rutas de tenant (ganado, potreros, QR, etc.)
+      if (to.meta.requiresTenant || to.path.includes('/scan-qr') || 
+          to.path.includes('/ganado') || to.path.includes('/potreros') ||
+          to.path.includes('/vacunacion') || to.path.includes('/reportes')) {
+        return next('/admin/dashboard');
+      }
+    }
+    
+    if (isUser) {
+      // Usuario intentando acceder a rutas de admin
+      if (to.path.includes('/admin/') && !to.path.includes('/admin/dashboard')) {
+        return next('/user/inicio');
+      }
+      // Usuario intentando acceder a reportes
+      if (to.path.includes('/reportes')) {
+        return next('/user/inicio');
+      }
+    }
+    
+    if (isAdmin) {
+      // Admin intentando acceder a rutas de super_admin
+      if (to.meta.allowedRoles && to.meta.allowedRoles.includes('super_admin') && 
+          !to.meta.allowedRoles.includes('admin')) {
+        return next('/admin/dashboard');
+      }
+    }
+    
+    return next(redirectByRole());
   }
 
   // 3️⃣ Si ya está autenticado y va a login → mandarlo a su dashboard

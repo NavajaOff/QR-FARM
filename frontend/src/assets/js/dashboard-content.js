@@ -93,17 +93,16 @@ export default {
     },
     async cargarTenantActual() {
       try {
-        const user = authService.getUser();
-        const tenantId = user?.tenant_id;
-        
-        if (tenantId) {
-          const response = await tenantAPI.getById(tenantId);
-          if (response.data?.status === 'success') {
-            this.currentTenant = response.data.data;
-          }
+        // Usar el endpoint /tenants/actual que maneja super admin y usuarios normales
+        const response = await tenantAPI.getCurrent();
+        if (response.data?.success) {
+          this.currentTenant = response.data.tenant; // Puede ser null para super admin
+          console.log('[DashboardContent] Tenant actual cargado:', this.currentTenant);
         }
       } catch (error) {
         console.warn('Error cargando tenant actual:', error);
+        // No es crítico si falla, continuar sin tenant
+        this.currentTenant = null;
       }
     },
     onTenantChanged() {

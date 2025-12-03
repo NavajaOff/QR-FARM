@@ -26,7 +26,8 @@ vi.mock('../../services/api.js', () => ({
   },
   tenantAPI: {
     getAll: vi.fn(),
-    getById: vi.fn()
+    getById: vi.fn(),
+    getCurrent: vi.fn()
   }
 }))
 
@@ -193,8 +194,8 @@ describe('dashboard-content.js', () => {
     it('should load current tenant for normal admin', async () => {
       authService.getRole.mockReturnValue('admin')
       authService.getUser.mockReturnValue({ tenant_id: 1 })
-      tenantAPI.getById.mockResolvedValue({
-        data: { status: 'success', data: { id: 1, nombre: 'Tenant 1' } }
+      tenantAPI.getCurrent.mockResolvedValue({
+        data: { success: true, tenant: { id: 1, nombre: 'Tenant 1' } }
       })
       userAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
       ganadoAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
@@ -204,7 +205,7 @@ describe('dashboard-content.js', () => {
       await wrapper.vm.$nextTick()
       await new Promise(resolve => setTimeout(resolve, 100))
 
-      expect(tenantAPI.getById).toHaveBeenCalledWith(1)
+      expect(tenantAPI.getCurrent).toHaveBeenCalled()
     })
 
     it('should add event listener for tenant-selected', async () => {
@@ -323,39 +324,53 @@ describe('dashboard-content.js', () => {
     beforeEach(() => {
       wrapper = createWrapper()
       wrapper.vm.currentTenant = null
-      tenantAPI.getById.mockClear()
+      tenantAPI.getCurrent.mockClear()
     })
 
     it('should load current tenant successfully', async () => {
-      authService.getUser.mockReturnValue({ tenant_id: 1 })
-      tenantAPI.getById.mockResolvedValue({
-        data: { status: 'success', data: { id: 1, nombre: 'Tenant 1' } }
+      tenantAPI.getCurrent.mockResolvedValue({
+        data: { success: true, tenant: { id: 1, nombre: 'Tenant 1' } }
       })
 
       await wrapper.vm.cargarTenantActual()
 
-      expect(tenantAPI.getById).toHaveBeenCalledWith(1)
+      expect(tenantAPI.getCurrent).toHaveBeenCalled()
       expect(wrapper.vm.currentTenant).toEqual({ id: 1, nombre: 'Tenant 1' })
     })
 
-    it('should not load tenant if user has no tenant_id', async () => {
-      // Ensure clean state
-      wrapper.vm.currentTenant = null
-      authService.getUser.mockReturnValue({})
-      tenantAPI.getById.mockClear()
+    it('should handle null tenant for super admin', async () => {
+      tenantAPI.getCurrent.mockResolvedValue({
+        data: { success: true, tenant: null }
+      })
 
       await wrapper.vm.cargarTenantActual()
 
-      expect(tenantAPI.getById).not.toHaveBeenCalled()
+      expect(tenantAPI.getCurrent).toHaveBeenCalled()
       expect(wrapper.vm.currentTenant).toBeNull()
     })
 
-    it('should not load tenant if user is null', async () => {
-      authService.getUser.mockReturnValue(null)
+    it('should not load tenant if API call fails', async () => {
+      // Ensure clean state
+      wrapper.vm.currentTenant = null
+      tenantAPI.getCurrent.mockRejectedValue(new Error('API Error'))
 
       await wrapper.vm.cargarTenantActual()
 
-      expect(tenantAPI.getById).not.toHaveBeenCalled()
+      expect(tenantAPI.getCurrent).toHaveBeenCalled()
+      expect(wrapper.vm.currentTenant).toBeNull()
+      expect(wrapper.vm.currentTenant).toBeNull()
+    })
+
+    it('should handle null user gracefully', async () => {
+      authService.getUser.mockReturnValue(null)
+      tenantAPI.getCurrent.mockResolvedValue({
+        data: { success: true, tenant: null }
+      })
+
+      await wrapper.vm.cargarTenantActual()
+
+      // getCurrent siempre se llama, pero puede retornar null
+      expect(tenantAPI.getCurrent).toHaveBeenCalled()
     })
 
     it('should handle errors gracefully', async () => {

@@ -2,7 +2,7 @@
 from flask import request, jsonify
 from src.services.tenant_service import TenantService
 from src.utils.auth import token_required
-from src.utils.tenant import super_admin_required
+from src.utils.tenant import super_admin_required, get_current_tenant_id, _es_super_admin_usuario
 
 
 class TenantController:
@@ -42,15 +42,14 @@ class TenantController:
                 }), 400
             
             nombre = data.get('nombre')
-            codigo_tenant = data.get('codigo_tenant')
             
-            if not nombre or not codigo_tenant:
+            if not nombre or not nombre.strip():
                 return jsonify({
                     'status': 'error',
-                    'message': 'Nombre y código de tenant son requeridos'
+                    'message': 'El nombre del tenant es requerido'
                 }), 400
             
-            tenant = TenantService.crear_tenant(nombre, codigo_tenant)
+            tenant = TenantService.crear_tenant(nombre.strip())
             
             if tenant:
                 return jsonify({
@@ -130,6 +129,46 @@ class TenantController:
         except Exception as e:
             return jsonify({
                 'status': 'error',
+                'message': str(e)
+            }), 500
+
+    @staticmethod
+    @token_required
+    def obtener_tenant_actual():
+        """
+        Obtener el tenant actual del usuario.
+        
+        Para super admin: retorna null (no tiene tenant asignado).
+        Para usuarios normales: retorna su tenant asignado.
+        """
+        try:
+            is_super_admin = _es_super_admin_usuario()
+            tenant_id = get_current_tenant_id(require_tenant=False)
+            
+            # Si es super admin y no tiene tenant seleccionado, retornar null
+            if is_super_admin and tenant_id is None:
+                return jsonify({
+                    'success': True,
+                    'tenant': None
+                }), 200
+            
+            # Si tiene tenant_id, obtener los datos del tenant
+            if tenant_id:
+                tenant = TenantService.obtener_tenant(tenant_id)
+                if tenant:
+                    return jsonify({
+                        'success': True,
+                        'tenant': tenant.to_dict()
+                    }), 200
+            
+            # Si no es super admin y no tiene tenant, retornar null también
+            return jsonify({
+                'success': True,
+                'tenant': None
+            }), 200
+        except Exception as e:
+            return jsonify({
+                'success': False,
                 'message': str(e)
             }), 500
 

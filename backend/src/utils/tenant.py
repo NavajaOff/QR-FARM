@@ -40,22 +40,41 @@ def _obtener_tenant_del_usuario():
         return g.current_user.tenant_id
     return None
 
-def get_current_tenant_id(allow_query_param: bool = True) -> Optional[int]:
+def get_current_tenant_id(allow_query_param: bool = True, require_tenant: bool = False) -> Optional[int]:
     """
     Obtiene el tenant_id del usuario actual.
     
     Args:
         allow_query_param: Si es True, permite obtener tenant_id desde query params
                           (útil para super admin que quiere filtrar por tenant específico)
+        require_tenant: Si es True, requiere que el super admin tenga un tenant seleccionado.
+                       Si es False, permite que el super admin vea todos los datos (None).
     
     Returns:
-        Optional[int]: El tenant_id o None si no se puede determinar
-    """
-    if allow_query_param:
-        tenant_id = _obtener_tenant_desde_query_param()
-        if tenant_id is not None:
-            return tenant_id
+        Optional[int]: El tenant_id, None si es super admin sin tenant (ver todos),
+                      o None si no se puede determinar
     
+    Nota:
+        - Para super_admin: Si no hay tenant_id en query params, retorna None (ver todos)
+        - Para usuarios normales: Siempre retorna su tenant_id asignado
+    """
+    # Verificar si es super admin
+    is_super_admin = _es_super_admin_usuario()
+    
+    if is_super_admin:
+        # Super admin puede tener tenant_id desde query params o None (ver todos)
+        if allow_query_param:
+            tenant_id = _obtener_tenant_desde_query_param()
+            # Si hay tenant_id en query params, usarlo
+            if tenant_id is not None:
+                return tenant_id
+            # Si no hay tenant_id y require_tenant es False, retornar None (ver todos)
+            if not require_tenant:
+                return None
+        # Si require_tenant es True y no hay tenant_id, retornar None (se validará en el decorator)
+        return None
+    
+    # Para usuarios normales, obtener su tenant_id
     tenant_id = _obtener_tenant_del_usuario()
     if tenant_id is not None:
         return tenant_id
@@ -100,18 +119,24 @@ def tenant_required(f: Callable) -> Callable:
     """
     Decorator que requiere tenant válido.
     
-    Para super_admin: requiere que se pase tenant_id como query param explícitamente.
-    Para otros usuarios: usa el tenant_id del usuario.
+    Para super_admin: SIEMPRE permite acceso (con o sin tenant).
+    Para otros usuarios: requiere tenant_id del usuario.
+    
+    Nota: El super admin puede trabajar sin tenant (ver todos) o con tenant (filtrar).
     """
     @wraps(f)
     def decorated(*args: Any, **kwargs: Any) -> Any:
-        tenant_id = get_current_tenant_id()
+        is_super_admin = _es_super_admin_usuario()
+        
+        # Super admin SIEMPRE puede acceder, con o sin tenant
+        if is_super_admin:
+            return f(*args, **kwargs)
+        
+        # Usuarios normales deben tener tenant_id
+        tenant_id = get_current_tenant_id(require_tenant=True)
         if tenant_id is not None:
             return f(*args, **kwargs)
         
-        is_super_admin = _es_super_admin_usuario()
-        if is_super_admin:
-            return _validar_tenant_super_admin()
         return _validar_tenant_usuario_normal()
     
     return decorated

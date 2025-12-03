@@ -35,7 +35,7 @@ export function useTenants() {
       error.value = null
       const response = await tenantAPI.create(data)
       if (response.data?.status === 'success') {
-        await cargarTenants(false) // Recargar lista incluyendo inactivos
+        await cargarTenants(true) // Recargar lista solo activos (los tenants se crean activos por defecto)
         return { success: true, data: response.data.data }
       }
       return { success: false, message: response.data?.message || 'Error al crear tenant' }

@@ -647,9 +647,15 @@ class GanadoService:
                     pass
 
     @staticmethod
-    def eliminar_ganado(id: int) -> bool | str:
-        """Elimina un ganado dando de baja con causa 'otra'."""
-        result = GanadoService.dar_baja_ganado(id, 'otra', 'Eliminación automática')
+    def eliminar_ganado(id: int, tenant_id_override: Optional[int] = None) -> bool | str:
+        """
+        Elimina un ganado dando de baja con causa 'otra'.
+        
+        Args:
+            id: ID del ganado
+            tenant_id_override: Si se proporciona, valida que el ganado pertenezca a este tenant
+        """
+        result = GanadoService.dar_baja_ganado(id, 'otra', 'Eliminación automática', tenant_id_override=tenant_id_override)
         
         # Convertir mensajes de error específicos a False para casos de "no encontrado"
         if isinstance(result, str) and "no encontrado" in result.lower():
@@ -659,13 +665,27 @@ class GanadoService:
         return result
 
     @staticmethod
-    def buscar_por_potrero(potrero_id: int) -> List[Ganado]:
+    def buscar_por_potrero(potrero_id: int, tenant_id_override: Optional[int] = None) -> List[Ganado]:
+        """
+        Buscar ganado por potrero con validación de tenant.
+        
+        Args:
+            potrero_id: ID del potrero
+            tenant_id_override: Si se proporciona, filtra por este tenant
+        """
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
+            tenant_id = tenant_id_override if tenant_id_override is not None else GanadoService._obtener_tenant_id()
+
             sql = "SELECT * FROM ganado WHERE id_potrero = %s"
-            cursor.execute(sql, (potrero_id,))
+            params = (potrero_id,)
+            if tenant_id is not None:
+                sql += SQL_AND_TENANT_ID
+                params = (potrero_id, tenant_id)
+            
+            cursor.execute(sql, params)
             results = cursor.fetchall()
 
             return [Ganado.from_dict(result) for result in results]
@@ -673,17 +693,34 @@ class GanadoService:
         except Exception as e:
             return []
         finally:
-            if 'conn' in locals():
-                conn.close()
+            if 'conn' in locals() and conn is not None:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     @staticmethod
-    def buscar_por_codigo_qr(codigo_qr: str) -> Optional[Ganado]:
+    def buscar_por_codigo_qr(codigo_qr: str, tenant_id_override: Optional[int] = None) -> Optional[Ganado]:
+        """
+        Buscar ganado por código QR con validación de tenant.
+        
+        Args:
+            codigo_qr: Código QR del ganado
+            tenant_id_override: Si se proporciona, filtra por este tenant
+        """
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
+            tenant_id = tenant_id_override if tenant_id_override is not None else GanadoService._obtener_tenant_id()
+
             sql = "SELECT * FROM ganado WHERE codigo_qr = %s"
-            cursor.execute(sql, (codigo_qr,))
+            params = (codigo_qr,)
+            if tenant_id is not None:
+                sql += SQL_AND_TENANT_ID
+                params = (codigo_qr, tenant_id)
+            
+            cursor.execute(sql, params)
 
             result = cursor.fetchone()
             if result:

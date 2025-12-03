@@ -3,12 +3,18 @@
 from flask import jsonify, send_file
 
 from ..services.reporte_service import ReporteService
+from ..utils.auth import token_required
+from ..utils.tenant import tenant_required
+from ..utils.permissions import permission_required
 
 
 class ReporteController:
     """Expone endpoints para consultar y descargar reportes."""
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('ver_reportes')
     def obtener_resumen():
         try:
             resumen = ReporteService.obtener_resumen()
@@ -32,6 +38,9 @@ class ReporteController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('ver_reportes')
     def descargar_resumen_pdf():
         try:
             resumen = ReporteService.obtener_resumen()

@@ -69,6 +69,7 @@ const mapPotreroFromApi = (potrero) => {
 };
 
 import { getApiBaseUrl, getBackendUrl } from '../../utils/config.js';
+import api from '../../services/api.js';
 
 // API configuration
 const API_BASE = getApiBaseUrl();
@@ -158,14 +159,10 @@ export const cargarPersonasUsuario = async () => {
 export const cargarPotreros = async () => {
   try {
     console.log('Cargando potreros desde API...');
-    const response = await fetch(`${API_BASE}/potreros/`);
+    const response = await api.get('/potreros/');
     console.log('Respuesta HTTP:', response.status);
 
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`);
-    }
-
-    const data = await response.json();
+    const data = response.data;
     console.log('Respuesta completa del backend:', data);
 
     // Validar si la respuesta contiene un array dentro de data.data
@@ -180,7 +177,7 @@ export const cargarPotreros = async () => {
     }
   } catch (error) {
     console.error('Error cargando potreros:', error);
-    error.value = error.message;
+    error.value = error.response?.data?.message || error.message || 'Error desconocido';
     potreros.value = [];
   } finally {
     loading.value = false;

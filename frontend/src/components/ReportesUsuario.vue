@@ -58,9 +58,7 @@
 <script>
 import reportesUsuario from '../assets/js/reportes-usuario.js'
 
-export default {
-  ...reportesUsuario
-}
+export default reportesUsuario
 </script>
 
 <style scoped>

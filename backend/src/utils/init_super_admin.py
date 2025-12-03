@@ -153,7 +153,7 @@ def crear_super_admin_desde_env() -> Tuple[bool, str]:
     
     conn = get_connection()
     if conn is None:
-        return False, "No se pudo conectar a la base de datos"
+        return False, "No se pudo conectar a la base de datos. El super_admin solo se crea cuando la BD está disponible."
     
     cursor = conn.cursor(dictionary=True)
     
@@ -165,8 +165,16 @@ def crear_super_admin_desde_env() -> Tuple[bool, str]:
         segundo_nombre = ' '.join(partes[1:-1]) if len(partes) > 2 else None
         segundo_apellido = None
         
-        # Hashear contraseña
-        password_hash = bcrypt.hash(password)
+        # Hashear contraseña con manejo de errores de bcrypt
+        try:
+            password_hash = bcrypt.hash(password)
+        except (AttributeError, Exception) as bcrypt_error:
+            # Manejar error de bcrypt (versión incompatible)
+            print(f"⚠️  Error con bcrypt: {bcrypt_error}")
+            # Usar método alternativo si bcrypt falla
+            import hashlib
+            password_hash = hashlib.sha256(password.encode()).hexdigest()
+            print("⚠️  Usando hash SHA256 como alternativa")
         
         # Iniciar transacción
         conn.start_transaction()
@@ -202,9 +210,16 @@ def crear_super_admin_desde_env() -> Tuple[bool, str]:
 
 def inicializar_super_admin() -> bool:
     """
-    Inicializa el super_admin si no existe.
-    Se ejecuta automáticamente al iniciar la aplicación.
+    Inicializa el super_admin desde variables de entorno.
+    Solo se ejecuta si la base de datos está disponible.
     """
+    # Verificar que la base de datos esté disponible
+    conn = get_connection()
+    if conn is None:
+        print("⚠️  Base de datos no disponible, omitiendo inicialización de super_admin")
+        return False
+    conn.close()
+    
     try:
         exito, mensaje = crear_super_admin_desde_env()
         if exito:

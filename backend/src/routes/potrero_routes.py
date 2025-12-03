@@ -9,8 +9,8 @@ except ImportError:
         print(f"WebSocket no disponible, evento omitido: {event}")
 
 POTRERO_ID_ROUTE = '/<int:potrero_id>'
-# Create blueprint
-potrero_bp = Blueprint('potrero', __name__, url_prefix='/api/potreros')
+# Create blueprint (sin url_prefix, se agrega al registrar en app.py)
+potrero_bp = Blueprint('potrero', __name__)
 
 # Register routes
 potrero_bp.route('/', methods=['GET'])(PotreroController.get_all)

@@ -354,7 +354,7 @@ describe('GestionarTenants.vue', () => {
       expect(modal.exists()).toBe(false)
     })
 
-    it('should show codigo_tenant input in create mode', async () => {
+    it('should NOT show codigo_tenant input in create mode (generated automatically)', async () => {
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
 
@@ -362,9 +362,13 @@ describe('GestionarTenants.vue', () => {
       await createButton.trigger('click')
       await wrapper.vm.$nextTick()
 
+      // El campo codigo_tenant NO debe aparecer en modo creación (se genera automáticamente)
       const codigoInput = wrapper.find('#codigo_tenant')
-      expect(codigoInput.exists()).toBe(true)
-      expect(codigoInput.attributes('required')).toBeDefined()
+      expect(codigoInput.exists()).toBe(false)
+      
+      // Solo debe aparecer el campo nombre
+      const nombreInput = wrapper.find('#nombre')
+      expect(nombreInput.exists()).toBe(true)
     })
 
     it('should show disabled codigo_tenant input in edit mode', async () => {
@@ -439,11 +443,9 @@ describe('GestionarTenants.vue', () => {
       await createButton.trigger('click')
       await wrapper.vm.$nextTick()
 
-      // Fill form
+      // Fill form (solo nombre, codigo_tenant se genera automáticamente)
       const nombreInput = wrapper.find('#nombre')
       await nombreInput.setValue('Nuevo Tenant')
-      const codigoInput = wrapper.find('#codigo_tenant')
-      await codigoInput.setValue('nuevo-tenant')
       await wrapper.vm.$nextTick()
 
       // Submit form
@@ -452,9 +454,9 @@ describe('GestionarTenants.vue', () => {
       await wrapper.vm.$nextTick()
       await new Promise(resolve => setTimeout(resolve, 100))
 
+      // El backend genera el codigo_tenant automáticamente, solo enviamos nombre
       expect(mockTenants.crearTenant).toHaveBeenCalledWith({
-        nombre: 'Nuevo Tenant',
-        codigo_tenant: 'nuevo-tenant'
+        nombre: 'Nuevo Tenant'
       })
     })
 
@@ -467,9 +469,7 @@ describe('GestionarTenants.vue', () => {
       await wrapper.vm.$nextTick()
 
       const nombreInput = wrapper.find('#nombre')
-      await nombreInput.setValue('Nuevo Tenant')
-      const codigoInput = wrapper.find('#codigo_tenant')
-      await codigoInput.setValue('NUEVO  TENANT')
+      await nombreInput.setValue('NUEVO  TENANT')
       await wrapper.vm.$nextTick()
 
       const form = wrapper.find('form')
@@ -477,9 +477,9 @@ describe('GestionarTenants.vue', () => {
       await wrapper.vm.$nextTick()
       await new Promise(resolve => setTimeout(resolve, 100))
 
+      // El backend normaliza y genera el codigo_tenant automáticamente
       expect(mockTenants.crearTenant).toHaveBeenCalledWith({
-        nombre: 'Nuevo Tenant',
-        codigo_tenant: 'nuevo-tenant'
+        nombre: 'NUEVO  TENANT'
       })
     })
 
@@ -530,8 +530,6 @@ describe('GestionarTenants.vue', () => {
 
       const nombreInput = wrapper.find('#nombre')
       await nombreInput.setValue('Nuevo Tenant')
-      const codigoInput = wrapper.find('#codigo_tenant')
-      await codigoInput.setValue('nuevo-tenant')
       await wrapper.vm.$nextTick()
 
       const form = wrapper.find('form')
@@ -562,8 +560,6 @@ describe('GestionarTenants.vue', () => {
 
       const nombreInput = wrapper.find('#nombre')
       await nombreInput.setValue('Nuevo Tenant')
-      const codigoInput = wrapper.find('#codigo_tenant')
-      await codigoInput.setValue('nuevo-tenant')
       await wrapper.vm.$nextTick()
 
       const form = wrapper.find('form')
@@ -626,8 +622,6 @@ describe('GestionarTenants.vue', () => {
 
       const nombreInput = wrapper.find('#nombre')
       await nombreInput.setValue('Nuevo Tenant')
-      const codigoInput = wrapper.find('#codigo_tenant')
-      await codigoInput.setValue('nuevo-tenant')
       await wrapper.vm.$nextTick()
 
       const form = wrapper.find('form')
@@ -651,8 +645,6 @@ describe('GestionarTenants.vue', () => {
 
       const nombreInput = wrapper.find('#nombre')
       await nombreInput.setValue('Nuevo Tenant')
-      const codigoInput = wrapper.find('#codigo_tenant')
-      await codigoInput.setValue('nuevo-tenant')
       await wrapper.vm.$nextTick()
 
       const form = wrapper.find('form')

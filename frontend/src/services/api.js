@@ -140,6 +140,7 @@ export const tenantAPI = {
     return api.get(`/tenants?activos_only=${activosOnlyStr}`)
   },
   getById: (id) => api.get(`/tenants/${id}`),
+  getCurrent: () => api.get('/tenants/actual'),
   create: (data) => api.post('/tenants', data),
   update: (id, data) => api.put(`/tenants/${id}`, data),
 };

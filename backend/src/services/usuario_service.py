@@ -9,14 +9,19 @@ class UsuarioService:
     EMAIL_DUPLICADO_MSG = "El email ya está registrado"
     QUERY_PERSONA_ID = "SELECT id_persona FROM usuarios WHERE id = %s"
     @staticmethod
+    def _obtener_tenant_id() -> Optional[int]:
+        """Obtiene el tenant_id del contexto actual."""
+        try:
+            from ..utils.tenant import get_current_tenant_id
+            return get_current_tenant_id()
+        except Exception:
+            return None
+
+    @staticmethod
     def _determinar_si_es_super_admin():
         """Determina si el usuario actual es super admin."""
-        from ..utils.tenant import get_current_tenant_id
-        try:
-            current_tenant_id = get_current_tenant_id()
-            return current_tenant_id is None
-        except Exception:
-            return False
+        tenant_id = UsuarioService._obtener_tenant_id()
+        return tenant_id is None
 
     @staticmethod
     def _construir_condiciones_sql(incluir_inactivos, tenant_id, excluir_super_admin):
@@ -527,16 +532,30 @@ class UsuarioService:
                 conn.close()
 
     @staticmethod
-    def eliminar_usuario(id: int) -> Tuple[bool, str]:
+    def eliminar_usuario(id: int, tenant_id_override: Optional[int] = None) -> Tuple[bool, str]:
+        """
+        Eliminar usuario por ID con validación de tenant.
+        
+        Args:
+            id: ID del usuario
+            tenant_id_override: Si se proporciona, valida que el usuario pertenezca a este tenant
+        """
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
             
-            # Verificar que el usuario existe y obtener id_persona
-            cursor.execute(UsuarioService.QUERY_PERSONA_ID, (id,))
+            tenant_id = tenant_id_override if tenant_id_override is not None else UsuarioService._obtener_tenant_id()
+            
+            # Verificar que el usuario existe y obtener id_persona y tenant_id
+            sql_check = "SELECT id_persona, tenant_id FROM usuarios WHERE id = %s"
+            cursor.execute(sql_check, (id,))
             result = cursor.fetchone()
             if not result:
                 return False, "Usuario no encontrado"
+            
+            # Validar tenant_id si no es super_admin
+            if tenant_id is not None and result.get('tenant_id') != tenant_id:
+                return False, "No tiene permisos para eliminar este usuario"
                 
             id_persona = result['id_persona']
             
@@ -544,8 +563,14 @@ class UsuarioService:
                 # Iniciar transacción
                 conn.start_transaction()
                 
-                # Eliminar usuario
-                cursor.execute("DELETE FROM usuarios WHERE id = %s", (id,))
+                # Eliminar usuario (con validación de tenant si aplica)
+                sql_delete_usuario = "DELETE FROM usuarios WHERE id = %s"
+                params_usuario = (id,)
+                if tenant_id is not None:
+                    sql_delete_usuario += " AND tenant_id = %s"
+                    params_usuario = (id, tenant_id)
+                
+                cursor.execute(sql_delete_usuario, params_usuario)
                 
                 # Eliminar persona
                 cursor.execute("DELETE FROM personas WHERE id = %s", (id_persona,))
@@ -564,10 +589,13 @@ class UsuarioService:
             print(f"Error al eliminar usuario: {e}")
             return False, str(e)
         finally:
-            if 'conn' in locals():
-                conn.close()
+            if 'conn' in locals() and conn is not None:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
     @staticmethod
-    def registrar_usuario(persona: Persona, usuario: Usuario) -> Tuple[Optional[Usuario], str]:
+    def registrar_usuario(persona: Persona, usuario: Usuario, tenant_id_override: Optional[int] = None) -> Tuple[Optional[Usuario], str]:
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
@@ -595,9 +623,37 @@ class UsuarioService:
 
                 conn.start_transaction()
 
-                # Obtener tenant_id del contexto (para tenant_admin creando usuarios)
-                from ..utils.tenant import get_current_tenant_id
-                tenant_id_contexto = get_current_tenant_id()
+                # Obtener tenant_id: primero usar override si está disponible, luego del contexto
+                if tenant_id_override is not None:
+                    tenant_id_contexto = tenant_id_override
+                else:
+                    from ..utils.tenant import get_current_tenant_id
+                    tenant_id_contexto = get_current_tenant_id()
+                    
+                    # Si aún es None, intentar obtenerlo del usuario actual desde la BD
+                    if tenant_id_contexto is None:
+                        try:
+                            from flask import request, current_app, g
+                            import jwt
+                            # Intentar obtener desde g (si está disponible desde @token_required)
+                            if hasattr(g, 'tenant_id') and g.tenant_id:
+                                tenant_id_contexto = g.tenant_id
+                            else:
+                                # Obtenerlo directamente desde la BD usando el user_id del token
+                                auth_header = request.headers.get('Authorization', '').strip()
+                                if auth_header:
+                                    parts = auth_header.split()
+                                    if len(parts) == 2 and parts[0].lower() == 'bearer':
+                                        token = parts[1]
+                                        payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+                                        user_id = payload.get('user_id')
+                                        if user_id:
+                                            cursor.execute("SELECT tenant_id FROM usuarios WHERE id = %s", (user_id,))
+                                            result = cursor.fetchone()
+                                            if result and result.get('tenant_id'):
+                                                tenant_id_contexto = result['tenant_id']
+                        except Exception:
+                            pass  # Si falla, continuar con None
 
                 # Insertar persona con tenant_id
                 sql_persona = """
@@ -658,10 +714,20 @@ class UsuarioService:
                 conn.close()
 
     @staticmethod
-    def obtener_usuario(id: int, incluir_inactivos: bool = False) -> Optional[Usuario]:
+    def obtener_usuario(id: int, incluir_inactivos: bool = False, tenant_id_override: Optional[int] = None) -> Optional[Usuario]:
+        """
+        Obtener usuario por ID con validación de tenant.
+        
+        Args:
+            id: ID del usuario
+            incluir_inactivos: Incluir usuarios inactivos
+            tenant_id_override: Si se proporciona, valida que el usuario pertenezca a este tenant
+        """
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
+
+            tenant_id = tenant_id_override if tenant_id_override is not None else UsuarioService._obtener_tenant_id()
 
             sql = """
                 SELECT u.*, p.*, r.rol as rol_nombre FROM usuarios u
@@ -673,6 +739,11 @@ class UsuarioService:
 
             if not incluir_inactivos:
                 sql += " AND u.estado = 'activo'"
+            
+            # Validar tenant_id para usuarios no super_admin
+            if tenant_id is not None:
+                sql += " AND u.tenant_id = %s"
+                params = params + (tenant_id,)
 
             cursor.execute(sql, params)
 
@@ -808,15 +879,30 @@ class UsuarioService:
                 conn.close()
 
     @staticmethod
-    def actualizar_usuario_completo(id: int, usuario: Usuario) -> bool:
+    def actualizar_usuario_completo(id: int, usuario: Usuario, tenant_id_override: Optional[int] = None) -> bool:
+        """
+        Actualizar usuario completo con validación de tenant.
+        
+        Args:
+            id: ID del usuario
+            usuario: Objeto Usuario con los datos actualizados
+            tenant_id_override: Si se proporciona, valida que el usuario pertenezca a este tenant
+        """
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
-            # Verificar que el usuario existe y obtener id_persona
-            cursor.execute(UsuarioService.QUERY_PERSONA_ID, (id,))
+            tenant_id = tenant_id_override if tenant_id_override is not None else UsuarioService._obtener_tenant_id()
+
+            # Verificar que el usuario existe y obtener id_persona y tenant_id
+            sql_check = "SELECT id_persona, tenant_id FROM usuarios WHERE id = %s"
+            cursor.execute(sql_check, (id,))
             result = cursor.fetchone()
             if not result:
+                return False
+
+            # Validar tenant_id si no es super_admin
+            if tenant_id is not None and result.get('tenant_id') != tenant_id:
                 return False
 
             id_persona = result['id_persona']
@@ -858,25 +944,32 @@ class UsuarioService:
 
                 cursor.execute(sql_persona, values_persona)
 
-                # Actualizar usuario
+                # Actualizar usuario (con validación de tenant si aplica)
                 sql_usuario = """
                     UPDATE usuarios SET
                         id_rol = %s,
                         estado = %s
                     WHERE id = %s
                 """
+                params_usuario = (usuario.id_rol, usuario.estado.value, id)
+                if tenant_id is not None:
+                    sql_usuario += " AND tenant_id = %s"
+                    params_usuario = params_usuario + (tenant_id,)
 
-                values_usuario = (usuario.id_rol, usuario.estado.value, id)
-                cursor.execute(sql_usuario, values_usuario)
+                cursor.execute(sql_usuario, params_usuario)
 
-                # Si hay nueva contraseña, actualizarla
+                # Si hay nueva contraseña, actualizarla (con validación de tenant si aplica)
                 if usuario.contrasena:
                     sql_actualizar_contrasena = """
                         UPDATE usuarios SET
                             contrasena = %s
                         WHERE id = %s
                     """
-                    cursor.execute(sql_actualizar_contrasena, (usuario.contrasena, id))
+                    params_contrasena = (usuario.contrasena, id)
+                    if tenant_id is not None:
+                        sql_actualizar_contrasena += " AND tenant_id = %s"
+                        params_contrasena = params_contrasena + (tenant_id,)
+                    cursor.execute(sql_actualizar_contrasena, params_contrasena)
 
                 # Commit de la transacción
                 conn.commit()
@@ -904,25 +997,6 @@ class UsuarioService:
                 except Exception:
                     pass
 
-    @staticmethod
-    def eliminar_usuario(id: int) -> bool:
-        try:
-            conn = get_connection()
-            cursor = conn.cursor()
-
-            # Cambiar estado a inactivo
-            sql = "UPDATE usuarios SET estado = 'inactivo' WHERE id = %s"
-            cursor.execute(sql, (id,))
-            conn.commit()
-
-            return cursor.rowcount > 0
-
-        except Exception as e:
-            print(f"Error al eliminar usuario: {e}")
-            return False
-        finally:
-            if 'conn' in locals():
-                conn.close()
 
     @staticmethod
     def buscar_por_email(email: str) -> Optional[Usuario]:

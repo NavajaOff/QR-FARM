@@ -39,17 +39,17 @@
         <router-link class="nav-link" to="/user/potreros">
           <i class="fas fa-map-marked-alt me-2"></i>Potreros
         </router-link>
-        <router-link class="nav-link" to="/user/reportes">
+        <router-link v-if="canViewReports" class="nav-link" to="/user/reportes">
           <i class="fas fa-chart-line me-2"></i>Reportes
         </router-link>
         <router-link class="nav-link" to="/user/registro-vacunacion">
           <i class="fas fa-syringe me-2"></i>Vacunación
         </router-link>
+        <router-link v-if="canViewQrScanner" class="nav-link" to="/user/scan-qr">
+          <i class="fas fa-qrcode me-2"></i>Escanear QR
+        </router-link>
         <router-link class="nav-link" to="/user/perfil">
           <i class="fas fa-user-edit me-2"></i>Perfil
-        </router-link>
-        <router-link class="nav-link" to="/user/qr">
-          <i class="fas fa-qrcode me-2"></i>Escanear QR
         </router-link>
       </nav>
     </div>
@@ -70,6 +70,28 @@ export default {
     return {
       userName: ''
     };
+  },
+  computed: {
+    canViewReports() {
+      const role = authService.getRole();
+      return role === 'admin' || role === 'administrador' || role === 'super_admin';
+    },
+    isUser() {
+      const role = authService.getRole();
+      return role === 'user' || role === 'usuario';
+    },
+    isAdmin() {
+      const role = authService.getRole();
+      return role === 'admin' || role === 'administrador';
+    },
+    isSuperAdmin() {
+      const role = authService.getRole();
+      return role === 'super_admin';
+    },
+    canViewQrScanner() {
+      // Solo usuario y admin pueden ver QR, NO super_admin
+      return this.isUser || this.isAdmin;
+    }
   },
   mounted() {
     if (!authService.isAuthenticated() || !authService.isUser()) {

@@ -138,29 +138,56 @@ const renderChart = async () => {
 
   await nextTick()
 
-  if (!chartCanvas.value) return
-
-  const { labels, datasets } = generarDatosGrafica()
-  if (chartInstance) {
-    chartInstance.data.labels = labels
-    chartInstance.data.datasets = datasets
-    chartInstance.update()
+  if (!chartCanvas.value) {
+    console.warn('[ReportesUsuario] chartCanvas no está disponible')
     return
   }
 
-  chartInstance = new Chart(chartCanvas.value, {
-    type: 'pie',
-    data: { labels, datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          position: 'bottom'
+  // Verificar que el elemento canvas existe en el DOM
+  if (!chartCanvas.value.parentNode) {
+    console.warn('[ReportesUsuario] canvas no está en el DOM')
+    return
+  }
+
+  const { labels, datasets } = generarDatosGrafica()
+  
+  // Si ya existe una instancia, actualizarla
+  if (chartInstance) {
+    try {
+      chartInstance.data.labels = labels
+      chartInstance.data.datasets = datasets
+      chartInstance.update('none') // 'none' evita animaciones que pueden causar problemas
+      return
+    } catch (err) {
+      console.error('[ReportesUsuario] Error actualizando gráfico:', err)
+      // Si falla, destruir y recrear
+      chartInstance.destroy()
+      chartInstance = null
+    }
+  }
+
+  // Crear nueva instancia del gráfico
+  try {
+    chartInstance = new Chart(chartCanvas.value, {
+      type: 'pie',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: {
+          duration: 0 // Desactivar animaciones para evitar problemas de renderizado
+        },
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
         }
       }
-    }
-  })
+    })
+  } catch (err) {
+    console.error('[ReportesUsuario] Error creando gráfico:', err)
+    chartInstance = null
+  }
 }
 
 export default {
@@ -172,9 +199,12 @@ export default {
 
     watch([resumen, loading], () => {
       if (!loading.value && resumen.value) {
-        renderChart()
+        // Usar nextTick para asegurar que el DOM esté actualizado
+        nextTick(() => {
+          renderChart()
+        })
       }
-    })
+    }, { immediate: false })
 
     onUnmounted(() => {
       if (chartInstance) {

@@ -2,9 +2,7 @@
   <div>
     <div class="row">
       <div class="col-12">
-        <!-- Selector de Tenant para Super Admin -->
-        <TenantSelector v-if="isSuperAdmin" @tenant-changed="onTenantChanged" />
-
+        <!-- El TenantSelector ya está en AdminLayout, no es necesario duplicarlo aquí -->
         <div class="d-flex justify-content-between align-items-center mb-4">
           <h2 class="mb-0">Gestión de Ganado</h2>
           <div class="d-flex gap-3 align-items-center">
@@ -125,7 +123,7 @@
 </template>
 
 <script>
-import TenantSelector from '../../components/TenantSelector.vue';
+// TenantSelector ya está en AdminLayout, no es necesario importarlo aquí
 import authService from '../../services/authService.js';
 import {
   cargarDatosIniciales,
@@ -145,9 +143,6 @@ import {
 
 export default {
   name: 'GestionarAnimalesAdmin',
-  components: {
-    TenantSelector
-  },
   data() {
     return {
       ganado: [],
@@ -164,10 +159,14 @@ export default {
     this.cargarGanado();
     // Configurar callback para actualizar la lista desde el JS
     setUpdateCallback(this.actualizarLista);
+    // Escuchar cambios de tenant (el TenantSelector en AdminLayout emite este evento)
+    window.addEventListener('tenant-changed', this.onTenantChanged);
   },
   beforeUnmount() {
     // Cancelar peticiones pendientes cuando el componente se desmonte
     cancelPendingRequests();
+    // Remover listener de eventos
+    window.removeEventListener('tenant-changed', this.onTenantChanged);
   },
   beforeRouteLeave(to, from, next) {
     // Cancelar peticiones y resetear estado antes de cambiar de ruta

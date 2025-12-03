@@ -346,9 +346,18 @@ class PotreroController:
 
     @staticmethod
     def get_personas_usuario() -> Tuple[Any, int]:
-        """Get personas usuario endpoint."""
+        """Get personas usuario endpoint. Acepta tenant_id como query param para super admin."""
         try:
-            personas = PotreroService.get_personas_usuario()
+            # Obtener tenant_id desde query params si existe (para super admin)
+            tenant_id = None
+            tenant_id_param = request.args.get('tenant_id')
+            if tenant_id_param:
+                try:
+                    tenant_id = int(tenant_id_param)
+                except (ValueError, TypeError):
+                    pass
+            
+            personas = PotreroService.get_personas_usuario(tenant_id_override=tenant_id)
             return jsonify({'data': personas, 'success': True}), 200
         except DatabaseError as e:
             return jsonify({

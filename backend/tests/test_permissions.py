@@ -90,14 +90,26 @@ def test_obtener_rol_usuario_none(app_context):
     assert result is None
 
 
-def test_validar_permiso_super_admin(app_context):
-    """Test _validar_permiso con super admin."""
+def test_validar_permiso_super_admin_global_permission(app_context):
+    """Test _validar_permiso con super admin para permisos globales."""
     from src.utils.permissions import _validar_permiso
     
-    tiene_permiso, error_response = _validar_permiso('super_admin', 'ver_ganado')
+    # Super admin puede gestionar tenants (permiso global)
+    tiene_permiso, error_response = _validar_permiso('super_admin', 'gestionar_tenants')
 
     assert tiene_permiso is True
     assert error_response is None
+
+
+def test_validar_permiso_super_admin_tenant_permission_blocked(app_context):
+    """Test _validar_permiso con super admin para permisos de tenant (bloqueado)."""
+    from src.utils.permissions import _validar_permiso
+    
+    # Super admin NO puede ver ganado (permiso de tenant)
+    tiene_permiso, error_response = _validar_permiso('super_admin', 'ver_ganado')
+
+    assert tiene_permiso is False
+    assert error_response is not None
 
 
 def test_validar_permiso_authorized(app_context):
@@ -114,11 +126,12 @@ def test_validar_permiso_unauthorized(app_context):
     """Test _validar_permiso sin permiso."""
     from src.utils.permissions import _validar_permiso
     
-    tiene_permiso, error_response, status_code = _validar_permiso('usuario', 'gestionar_tenants')
+    tiene_permiso, error_response = _validar_permiso('usuario', 'gestionar_tenants')
 
     assert tiene_permiso is False
     assert error_response is not None
-    assert status_code == 403
+    # error_response es una tupla (response, status_code)
+    assert error_response[1] == 403
 
 
 def test_permission_required_success(app_context):

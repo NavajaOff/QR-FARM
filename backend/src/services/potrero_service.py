@@ -617,18 +617,32 @@ class PotreroService:
             return []
 
     @staticmethod
-    def get_personas_usuario() -> List[Dict[str, Any]]:
-        """Get all personas with rol usuario."""
+    def get_personas_usuario(tenant_id_override: Optional[int] = None) -> List[Dict[str, Any]]:
+        """
+        Get all personas with rol usuario, filtrado por tenant.
+        
+        Args:
+            tenant_id_override: Si se proporciona, filtra por este tenant
+        """
         try:
+            tenant_id = tenant_id_override if tenant_id_override is not None else PotreroService._obtener_tenant_id()
+            
             with db.get_cursor() as cursor:
-                cursor.execute("""
+                sql = """
                     SELECT p.id, p.primer_nombre, p.segundo_nombre, p.primer_apellido, p.segundo_apellido,
                            CONCAT(p.primer_nombre, ' ', p.primer_apellido) as nombre_completo
                     FROM personas p
                     JOIN usuarios u ON p.id = u.id_persona
                     WHERE u.estado = 'activo'
-                    ORDER BY p.primer_apellido, p.primer_nombre
-                """)
+                """
+                params = ()
+                if tenant_id is not None:
+                    sql += " AND u.tenant_id = %s"
+                    params = (tenant_id,)
+                
+                sql += " ORDER BY p.primer_apellido, p.primer_nombre"
+                
+                cursor.execute(sql, params)
                 results = cursor.fetchall()
 
                 # Transformar la estructura para que coincida con lo que espera el frontend

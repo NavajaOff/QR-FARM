@@ -26,6 +26,9 @@ from src.routes.vacunacion_routes import vacunacion_bp
 from src.routes.reporte_routes import reporte_bp
 from src.routes.tenant_routes import tenant_bp
 from src.utils.init_super_admin import inicializar_super_admin
+from src.utils.auth import token_required
+from src.utils.tenant import get_current_tenant_id, _es_super_admin_usuario
+from flask import g
 # Constantes para mensajes de error
 INTERNAL_SERVER_ERROR_MSG = "Error interno del servidor"
 
@@ -103,25 +106,47 @@ socketio = SocketIO(app, cors_allowed_origins=ALLOWED_CORS_ORIGINS)
 from flask_migrate import init, migrate, upgrade, revision
 
 # Configuración CORS completa para permitir peticiones desde el frontend
-CORS(app, resources={
-    r"/api/*": {
-        "origins": ALLOWED_CORS_ORIGINS,
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
-        "supports_credentials": True,
-        "expose_headers": ["Content-Type", "Authorization"]
-    }
-})
+# Aplicar CORS a todas las rutas, no solo /api/*
+CORS(app, 
+    resources={
+        r"/*": {
+            "origins": ALLOWED_CORS_ORIGINS,
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+            "supports_credentials": True,
+            "expose_headers": ["Content-Type", "Authorization"]
+        }
+    },
+    supports_credentials=True
+)
 
 
 @app.route('/api/ganado/<identifier>', methods=['GET', 'OPTIONS'])
+@token_required
 def obtener_ganado_detallado(identifier: str):
-    """Devuelve la ficha detallada de un ganado, incluida la información relacionada."""
+    """
+    Devuelve la ficha detallada de un ganado, incluida la información relacionada.
+    
+    Super admin puede acceder sin tenant (ver todos).
+    Usuarios normales requieren tenant asignado.
+    """
     if request.method == 'OPTIONS':
         return ('', 204)
 
     try:
-        detalle = GanadoService.obtener_ganado_detallado(identifier)
+        # Obtener tenant_id (puede ser None para super admin)
+        is_super_admin = _es_super_admin_usuario()
+        tenant_id = get_current_tenant_id(require_tenant=False)
+        
+        # Si no es super admin y no tiene tenant, denegar acceso
+        if not is_super_admin and tenant_id is None:
+            return jsonify({
+                "success": False,
+                "message": "Usuario sin tenant asignado. Acceso denegado."
+            }), 403
+
+        # Obtener detalle del ganado con filtro de tenant (None para super admin = ver todos)
+        detalle = GanadoService.obtener_ganado_detallado(identifier, tenant_id_override=tenant_id)
         if not detalle:
             return jsonify({
                 "success": False,
@@ -143,6 +168,35 @@ def obtener_ganado_detallado(identifier: str):
 @app.before_request
 def log_request_info():
     print(f"PETICION: {request.method} {request.url}")
+
+# Middleware para asegurar headers CORS en todas las respuestas
+# Se ejecuta después de Flask-CORS para asegurar que los headers estén presentes
+@app.after_request
+def after_request(response):
+    """Agregar headers CORS a todas las respuestas si no están ya presentes."""
+    origin = request.headers.get('Origin')
+    
+    # Solo agregar headers si no están ya presentes (Flask-CORS puede haberlos agregado)
+    if 'Access-Control-Allow-Origin' not in response.headers:
+        if origin and origin in ALLOWED_CORS_ORIGINS:
+            response.headers['Access-Control-Allow-Origin'] = origin
+        elif origin:
+            # En desarrollo, permitir cualquier origin
+            response.headers['Access-Control-Allow-Origin'] = origin
+        elif ALLOWED_CORS_ORIGINS:
+            response.headers['Access-Control-Allow-Origin'] = ALLOWED_CORS_ORIGINS[0]
+    
+    # Asegurar otros headers importantes
+    if 'Access-Control-Allow-Credentials' not in response.headers:
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+    
+    if 'Access-Control-Allow-Methods' not in response.headers:
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH'
+    
+    if 'Access-Control-Allow-Headers' not in response.headers:
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept'
+    
+    return response
 
 def generate_token(user_id, email, role, tenant_id=None):
     """Genera un token JWT para el usuario"""
@@ -182,7 +236,13 @@ def _verify_password(stored_password, password):
     """Verifica la contraseña con diferentes métodos de hash"""
     try:
         if stored_password and stored_password.startswith('$2b$'):
-            return bcrypt.verify(password, stored_password)
+            try:
+                return bcrypt.verify(password, stored_password)
+            except (AttributeError, Exception) as bcrypt_error:
+                # Manejar error de bcrypt (versión incompatible)
+                print(f"Advertencia al verificar hash bcrypt: {bcrypt_error}")
+                # Fallback a comparación directa solo si no es hash bcrypt válido
+                return stored_password == password
         else:
             # Para contraseñas sin hash (compatibilidad)
             return stored_password == password
@@ -371,9 +431,18 @@ app.register_blueprint(vacunacion_bp, url_prefix='/api/vacunaciones')
 app.register_blueprint(reporte_bp, url_prefix='/api/reportes')
 app.register_blueprint(tenant_bp, url_prefix='/api/tenants')
 
-# Inicializar super_admin desde variables de entorno (se ejecuta al iniciar la app)
+# Inicializar super_admin desde variables de entorno (solo si la BD está disponible)
 print("🔐 Inicializando super_admin desde variables de entorno...")
-inicializar_super_admin()
+try:
+    # Verificar que la BD esté disponible antes de inicializar
+    test_conn = get_connection()
+    if test_conn:
+        test_conn.close()
+        inicializar_super_admin()
+    else:
+        print("⚠️  Base de datos no disponible. El super_admin se creará cuando la BD esté disponible.")
+except Exception as e:
+    print(f"⚠️  No se pudo inicializar super_admin: {e}")
 
 # Eventos SocketIO para actualizaciones en tiempo real
 @socketio.on('connect')

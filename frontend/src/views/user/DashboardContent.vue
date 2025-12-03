@@ -65,25 +65,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Información del usuario -->
-        <div class="card mt-4">
-          <div class="card-header">
-            <h5 class="mb-0">Mi Información</h5>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-6">
-                <p><strong>Nombre:</strong> {{ userInfo.nombre }}</p>
-                <p><strong>Email:</strong> {{ userInfo.email }}</p>
-              </div>
-              <div class="col-md-6">
-                <p><strong>Rol:</strong> Usuario</p>
-                <p><strong>Estado:</strong> <span class="badge bg-success">Activo</span></p>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>

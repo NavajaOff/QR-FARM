@@ -63,19 +63,26 @@ def get_animales():
         print(f"Error obteniendo animales: {e}")
         return jsonify({'data': [], 'success': True}), 200
 
+@animal_bp.route('/qr/<codigo_qr>', methods=['GET'])
+def get_animal_by_qr(codigo_qr):
+    """Obtener un animal por código QR."""
+    try:
+        from src.controllers.animal_controller import GanadoController
+        return GanadoController.buscar_por_codigo_qr(codigo_qr)
+    except Exception as e:
+        print(f"Error obteniendo animal por QR {codigo_qr}: {e}")
+        return jsonify({
+            'error': ERROR_INTERNO_SERVIDOR,
+            'message': str(e),
+            'success': False
+        }), 500
+
 @animal_bp.route('/<int:animal_id>', methods=['GET'])
 def get_animal(animal_id):
     """Obtener un animal por ID."""
     try:
-        animal = GanadoService.obtener_ganado(animal_id)
-        if animal:
-            return jsonify({'data': animal.to_dict(), 'success': True}), 200
-        else:
-            return jsonify({
-                'error': ANIMAL_NO_ENCONTRADO,
-                'message': f'No se encontró el animal con ID {animal_id}',
-                'success': False
-            }), 404
+        from src.controllers.animal_controller import GanadoController
+        return GanadoController.obtener_ganado(animal_id)
     except Exception as e:
         print(f"Error obteniendo animal {animal_id}: {e}")
         return jsonify({

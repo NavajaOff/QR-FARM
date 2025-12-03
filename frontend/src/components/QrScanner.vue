@@ -143,7 +143,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, withDefaults } from 'vue';
 import type { CameraDevice, Html5QrcodeResult } from 'html5-qrcode';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { fetchQrResource, transformEmbeddedPayload } from '../services/qr';
@@ -201,10 +201,12 @@ interface ScannerState {
   isSyncing: boolean;
 }
 
-const props = defineProps<{
-  role: QrScannerRole;
+const props = withDefaults(defineProps<{
+  role?: QrScannerRole;
   resourceEndpoint: string;
-}>();
+}>(), {
+  role: 'user' as QrScannerRole
+});
 
 const emit = defineEmits<{
   (event: 'qr-detected', payload: NormalizedPayload): void;
@@ -327,9 +329,16 @@ const ensureHtml5QrCodeInstance = async (): Promise<void> => {
 const loadCameras = async (): Promise<void> => {
   try {
     await ensureHtml5QrCodeInstance();
+    
+    // Verificar si el navegador soporta acceso a cámaras
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      appendError('Tu navegador no soporta acceso a la cámara. Usa Chrome, Firefox o Edge actualizado.');
+      return;
+    }
+    
     const cameras = await Html5Qrcode.getCameras();
     if (!Array.isArray(cameras) || cameras.length === 0) {
-      appendError('No se detectaron cámaras disponibles.');
+      appendError('No se detectaron cámaras disponibles. Verifica que tengas una cámara conectada.');
       return;
     }
     state.availableCameras = cameras;
@@ -338,9 +347,25 @@ const loadCameras = async (): Promise<void> => {
       state.selectedCameraId = preferred.id;
       pushTelemetry(`Cámara seleccionada: ${preferred.label}`);
     }
-  } catch (error) {
-    appendError('No fue posible obtener las cámaras. Verifica los permisos.');
-    console.error(error);
+    clearError(); // Limpiar errores previos si se cargaron correctamente
+  } catch (error: any) {
+    console.error('[QR-SCANNER] Error cargando cámaras:', error);
+    
+    // Mensajes de error más específicos según el tipo de error
+    let errorMessage = 'No fue posible obtener las cámaras.';
+    
+    if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+      errorMessage = 'Permisos de cámara denegados. Por favor, permite el acceso a la cámara en la configuración de tu navegador y recarga la página.';
+    } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+      errorMessage = 'No se encontraron cámaras. Verifica que tengas una cámara conectada y habilitada.';
+    } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+      errorMessage = 'La cámara está siendo usada por otra aplicación. Cierra otras aplicaciones que usen la cámara e intenta de nuevo.';
+    } else if (error.message) {
+      errorMessage = `Error al acceder a las cámaras: ${error.message}`;
+    }
+    
+    appendError(errorMessage);
+    pushTelemetry(`Error: ${errorMessage}`);
   }
 };
 

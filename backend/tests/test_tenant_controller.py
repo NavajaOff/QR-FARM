@@ -96,7 +96,7 @@ class TestTenantController:
         
         app.config['SECRET_KEY'] = 'test-secret-key'
         with app.test_request_context(
-            json={'nombre': 'Nuevo Tenant', 'codigo_tenant': 'TENANT001'},
+            json={'nombre': 'Nuevo Tenant'},
             content_type='application/json',
             headers={'Authorization': 'Bearer fake_token'}
         ):
@@ -112,7 +112,7 @@ class TestTenantController:
             result = TenantController.crear_tenant()
 
             assert result[1] == 201
-            mock_service.crear_tenant.assert_called_once()
+            mock_service.crear_tenant.assert_called_once_with('Nuevo Tenant')
 
     @patch('src.utils.auth.UsuarioService')
     @patch('src.utils.auth.jwt')
@@ -146,7 +146,7 @@ class TestTenantController:
         
         app.config['SECRET_KEY'] = 'test-secret-key'
         with app.test_request_context(
-            json={'nombre': 'Tenant', 'codigo_tenant': 'TENANT002'},
+            json={'nombre': 'Tenant'},
             content_type='application/json',
             headers={'Authorization': 'Bearer fake_token'}
         ):

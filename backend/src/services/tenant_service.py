@@ -2,22 +2,40 @@
 from typing import List, Optional, Dict, Any
 from src.database.db import get_connection
 from src.models.tenant import Tenant, EstadoTenant
+from src.utils.slug import generar_codigo_tenant_unico
 
 
 class TenantService:
     """Servicio para operaciones de tenant."""
 
     @staticmethod
-    def crear_tenant(nombre: str, codigo_tenant: str) -> Optional[Tenant]:
-        """Crear nuevo tenant."""
+    def crear_tenant(nombre: str) -> Optional[Tenant]:
+        """
+        Crear nuevo tenant.
+        
+        El código del tenant se genera automáticamente a partir del nombre.
+        
+        Args:
+            nombre: Nombre del tenant
+            
+        Returns:
+            Tenant creado o None si hay error
+        """
         try:
+            if not nombre or not nombre.strip():
+                print("Error: El nombre del tenant no puede estar vacío")
+                return None
+            
+            # Generar código único automáticamente
+            codigo_tenant = generar_codigo_tenant_unico(nombre.strip())
+            
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
             
             cursor.execute("""
                 INSERT INTO tenants (nombre, codigo_tenant, estado)
                 VALUES (%s, %s, 'activo')
-            """, (nombre, codigo_tenant))
+            """, (nombre.strip(), codigo_tenant))
             
             tenant_id = cursor.lastrowid
             conn.commit()
@@ -83,6 +101,8 @@ class TenantService:
             query = "SELECT * FROM tenants"
             if activos_only:
                 query += " WHERE estado = 'activo'"
+            else:
+                query += " WHERE estado = 'inactivo'"
             query += " ORDER BY nombre"
             
             cursor.execute(query)

@@ -151,29 +151,19 @@ describe('GestionarAnimalesAdmin.vue', () => {
   })
 
   describe('TenantSelector', () => {
-    it('should render TenantSelector for super_admin', () => {
+    it('should NOT render TenantSelector (moved to AdminLayout)', () => {
+      // El TenantSelector ahora está en AdminLayout, no en este componente
       mockGetRole.mockReturnValue('super_admin')
       wrapper = mount(GestionarAnimalesAdmin)
-      expect(wrapper.findComponent({ name: 'TenantSelector' }).exists()).toBe(true)
-    })
-
-    it('should not render TenantSelector for admin', () => {
-      mockGetRole.mockReturnValue('admin')
-      wrapper = mount(GestionarAnimalesAdmin)
+      // El componente ya no tiene TenantSelector directamente
       expect(wrapper.findComponent({ name: 'TenantSelector' }).exists()).toBe(false)
     })
 
-    it('should call cargarGanado when tenant changes', async () => {
-      mockGetRole.mockReturnValue('super_admin')
-      mockCargarAnimales.mockResolvedValue()
+    it('should work correctly for admin without TenantSelector', () => {
+      mockGetRole.mockReturnValue('admin')
       wrapper = mount(GestionarAnimalesAdmin)
-      await nextTick()
-      
-      const tenantSelector = wrapper.findComponent({ name: 'TenantSelector' })
-      await tenantSelector.vm.$emit('tenant-changed')
-      await nextTick()
-      
-      expect(mockCargarAnimales).toHaveBeenCalledTimes(2) // Once on mount, once on change
+      // Admin no necesita TenantSelector
+      expect(wrapper.findComponent({ name: 'TenantSelector' }).exists()).toBe(false)
     })
   })
 
