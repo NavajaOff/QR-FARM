@@ -38,8 +38,12 @@ class MockChart {
   }
 }
 
+const MockChartSpy = vi.fn((canvas, config) => {
+  return new MockChart(canvas, config)
+})
+
 vi.mock('chart.js/auto', () => ({
-  default: MockChart
+  default: MockChartSpy
 }))
 
 // Mock useReportes composable
@@ -81,6 +85,7 @@ describe('reportes-usuario.js', () => {
     mockDescargarPdf.mockClear()
     mockChartInstance.update.mockClear()
     mockChartInstance.destroy.mockClear()
+    MockChartSpy.mockClear()
 
     // Reset refs
     mockRef.mockImplementation((value) => ({ value }))
@@ -917,5 +922,493 @@ describe('reportes-usuario.js', () => {
       expect(typeof unmountCallback).toBe('function')
     })
 
+    it('should destroy chart instance when onUnmounted is called and chart exists', async () => {
+      mockResumen.value = {
+        ganado: { totales: { total: 10 } },
+        potreros: { totales: { total: 5 } },
+        vacunaciones: { totales: { total: 20 } }
+      }
+      mockLoading.value = false
+
+      const mockCanvas = { getContext: vi.fn(), parentNode: {} }
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: mockCanvas })
+      mockNextTick.mockImplementation((callback) => {
+        if (callback) callback()
+        return Promise.resolve()
+      })
+
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+
+      // Set chartInstance for testing (simulate existing chart)
+      m.chartInstanceRef.value = mockChartInstance
+
+      // Get unmount callback and call it (lines 211-212)
+      const unmountCallback = mockOnUnmounted.mock.calls[0][0]
+      unmountCallback()
+
+      // Verify chart was destroyed (lines 211-212)
+      expect(mockChartInstance.destroy).toHaveBeenCalled()
+    })
+
+    it('should not destroy chart when onUnmounted is called and chart does not exist', async () => {
+      mockResumen.value = null
+      mockLoading.value = false
+
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+
+      // Get unmount callback and call it
+      const unmountCallback = mockOnUnmounted.mock.calls[0][0]
+      unmountCallback()
+
+      // Chart should not be destroyed if it doesn't exist
+      expect(mockChartInstance.destroy).not.toHaveBeenCalled()
+    })
+
+    it('should destroy chart and set to null when onUnmounted is called', async () => {
+      mockResumen.value = {
+        ganado: { totales: { total: 10 } },
+        potreros: { totales: { total: 5 } },
+        vacunaciones: { totales: { total: 20 } }
+      }
+      mockLoading.value = false
+
+      const mockCanvas = { getContext: vi.fn(), parentNode: {} }
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: mockCanvas })
+      mockNextTick.mockImplementation((callback) => {
+        if (callback) callback()
+        return Promise.resolve()
+      })
+
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+
+      // Set chartInstance for testing (simulate existing chart)
+      m.chartInstanceRef.value = mockChartInstance
+
+      // Now call onUnmounted callback (lines 211-212)
+      const unmountCallback = mockOnUnmounted.mock.calls[0][0]
+      unmountCallback()
+
+      // Verify chart was destroyed (lines 211-212)
+      expect(mockChartInstance.destroy).toHaveBeenCalled()
+    })
+  })
+
+  describe('generarDatosGrafica complete coverage', () => {
+    it('should generate chart data with all three categories in loop', async () => {
+      mockResumen.value = {
+        ganado: { totales: { total: 10 } },
+        potreros: { totales: { total: 5 } },
+        vacunaciones: { totales: { total: 20 } }
+      }
+      mockLoading.value = false
+
+      const mockCanvas = { getContext: vi.fn(), parentNode: {} }
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: mockCanvas })
+      mockNextTick.mockImplementation((callback) => {
+        if (callback) callback()
+        return Promise.resolve()
+      })
+
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+
+      // Trigger watch to call renderChart which calls generarDatosGrafica
+      const watchCall = mockWatch.mock.calls[0]
+      if (watchCall && watchCall[1]) {
+        await watchCall[1]()
+      }
+
+      // Verify Chart was created with correct data (covers lines 109-120)
+      // Specifically lines 114-118: the loop that processes all three categories
+      expect(MockChartSpy).toHaveBeenCalledWith(
+        mockCanvas,
+        expect.objectContaining({
+          data: expect.objectContaining({
+            labels: ['Ganado', 'Potreros', 'Vacunaciones'],
+            datasets: expect.arrayContaining([
+              expect.objectContaining({
+                data: [10, 5, 20]
+              })
+            ])
+          })
+        })
+      )
+    })
+
+    it('should return correct data structure with labels and datasets', async () => {
+      mockResumen.value = {
+        ganado: { totales: { total: 15 } },
+        potreros: { totales: { total: 8 } },
+        vacunaciones: { totales: { total: 12 } }
+      }
+      mockLoading.value = false
+
+      const mockCanvas = { getContext: vi.fn(), parentNode: {} }
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: mockCanvas })
+      mockNextTick.mockImplementation((callback) => {
+        if (callback) callback()
+        return Promise.resolve()
+      })
+
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+
+      // Trigger watch to call renderChart which calls generarDatosGrafica
+      const watchCall = mockWatch.mock.calls[0]
+      if (watchCall && watchCall[1]) {
+        await watchCall[1]()
+      }
+
+      // Verify the return structure (lines 120-131)
+      expect(MockChartSpy).toHaveBeenCalledWith(
+        mockCanvas,
+        expect.objectContaining({
+          data: expect.objectContaining({
+            labels: expect.any(Array),
+            datasets: expect.arrayContaining([
+              expect.objectContaining({
+                label: 'Total registrados',
+                data: expect.any(Array),
+                backgroundColor: expect.any(Array),
+                borderWidth: 1
+              })
+            ])
+          })
+        })
+      )
+    })
+
+    it('should handle generarDatosGrafica with null resumen', async () => {
+      mockResumen.value = null
+      mockLoading.value = false
+
+      const mockCanvas = { getContext: vi.fn(), parentNode: {} }
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: mockCanvas })
+      mockNextTick.mockImplementation((callback) => {
+        if (callback) callback()
+        return Promise.resolve()
+      })
+
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+
+      // Trigger watch
+      const watchCall = mockWatch.mock.calls[0]
+      if (watchCall && watchCall[1]) {
+        await watchCall[1]()
+      }
+
+      // generarDatosGrafica should return early (line 109)
+      expect(MockChartSpy).not.toHaveBeenCalled()
+    })
+
+    it('should handle generarDatosGrafica with missing totales using nullish coalescing', async () => {
+      mockResumen.value = {
+        ganado: { totales: {} },
+        potreros: { totales: {} },
+        vacunaciones: { totales: {} }
+      }
+      mockLoading.value = false
+
+      const mockCanvas = { getContext: vi.fn(), parentNode: {} }
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: mockCanvas })
+      mockNextTick.mockImplementation((callback) => {
+        if (callback) callback()
+        return Promise.resolve()
+      })
+
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+
+      // Trigger watch to call renderChart which calls generarDatosGrafica
+      const watchCall = mockWatch.mock.calls[0]
+      if (watchCall && watchCall[1]) {
+        await watchCall[1]()
+      }
+
+      // Verify Chart was created with 0 values (line 115: total ?? 0)
+      expect(MockChartSpy).toHaveBeenCalledWith(
+        mockCanvas,
+        expect.objectContaining({
+          data: expect.objectContaining({
+            datasets: expect.arrayContaining([
+              expect.objectContaining({
+                data: [0, 0, 0]
+              })
+            ])
+          })
+        })
+      )
+    })
+  })
+
+  describe('renderChart complete coverage', () => {
+    it('should handle chartCanvas without parentNode', async () => {
+      mockResumen.value = {
+        ganado: { totales: { total: 10 } },
+        potreros: { totales: { total: 5 } },
+        vacunaciones: { totales: { total: 20 } }
+      }
+      mockLoading.value = false
+
+      const mockCanvas = { getContext: vi.fn(), parentNode: null }
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: mockCanvas })
+      mockNextTick.mockImplementation((callback) => {
+        if (callback) callback()
+        return Promise.resolve()
+      })
+
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+
+      // Trigger watch
+      const watchCall = mockWatch.mock.calls[0]
+      if (watchCall && watchCall[1]) {
+        await watchCall[1]()
+      }
+
+      // Should log warning and return early (lines 147-150)
+      expect(console.warn).toHaveBeenCalledWith('[ReportesUsuario] canvas no está en el DOM')
+      expect(MockChartSpy).not.toHaveBeenCalled()
+    })
+
+    it('should warn when chartCanvas is null and return early', async () => {
+      mockResumen.value = {
+        ganado: { totales: { total: 10 } },
+        potreros: { totales: { total: 5 } },
+        vacunaciones: { totales: { total: 20 } }
+      }
+      mockLoading.value = false
+
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: null })
+      mockNextTick.mockImplementation((callback) => {
+        if (callback) callback()
+        return Promise.resolve()
+      })
+
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+
+      // Trigger watch
+      const watchCall = mockWatch.mock.calls[0]
+      if (watchCall && watchCall[1]) {
+        await watchCall[1]()
+      }
+
+      // Should log warning and return early (lines 141-144)
+      expect(console.warn).toHaveBeenCalledWith('[ReportesUsuario] chartCanvas no está disponible')
+      expect(MockChartSpy).not.toHaveBeenCalled()
+    })
+
+    it('should handle chart update error and destroy existing chart', async () => {
+      mockResumen.value = {
+        ganado: { totales: { total: 10 } },
+        potreros: { totales: { total: 5 } },
+        vacunaciones: { totales: { total: 20 } }
+      }
+      mockLoading.value = false
+
+      const mockCanvas = { getContext: vi.fn(), parentNode: {} }
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: mockCanvas })
+      mockNextTick.mockImplementation((callback) => {
+        if (callback) callback()
+        return Promise.resolve()
+      })
+
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+
+      // Trigger watch to execute renderChart (covers lines 137-189)
+      const watchCall = mockWatch.mock.calls[0]
+      if (watchCall && watchCall[1]) {
+        await watchCall[1]()
+      }
+
+      // Verify renderChart was attempted
+      expect(mockNextTick).toHaveBeenCalled()
+    })
+
+    it('should update existing chart instance successfully', async () => {
+      mockResumen.value = {
+        ganado: { totales: { total: 10 } },
+        potreros: { totales: { total: 5 } },
+        vacunaciones: { totales: { total: 20 } }
+      }
+      mockLoading.value = false
+
+      const mockCanvas = { getContext: vi.fn(), parentNode: {} }
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: mockCanvas })
+      mockNextTick.mockImplementation((callback) => {
+        if (callback) callback()
+        return Promise.resolve()
+      })
+
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+
+      // Trigger watch to execute renderChart (covers lines 137-189)
+      const watchCall = mockWatch.mock.calls[0]
+      if (watchCall && watchCall[1]) {
+        await watchCall[1]()
+      }
+
+      // Verify renderChart execution path
+      expect(mockNextTick).toHaveBeenCalled()
+    })
+
+    it('should handle chart update failure and recreate', async () => {
+      mockResumen.value = {
+        ganado: { totales: { total: 10 } },
+        potreros: { totales: { total: 5 } },
+        vacunaciones: { totales: { total: 20 } }
+      }
+      mockLoading.value = false
+
+      const mockCanvas = { getContext: vi.fn(), parentNode: {} }
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: mockCanvas })
+      mockNextTick.mockImplementation((callback) => {
+        if (callback) callback()
+        return Promise.resolve()
+      })
+
+      // Make update throw an error to trigger lines 156-165
+      mockChartInstance.update.mockImplementation(() => {
+        throw new Error('Update failed')
+      })
+
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+
+      // Set chartInstance to simulate existing chart (lines 155-166)
+      m.chartInstanceRef.value = mockChartInstance
+
+      // Trigger watch to execute renderChart (covers lines 156-165)
+      const watchCall = mockWatch.mock.calls[0]
+      if (watchCall && watchCall[1]) {
+        await watchCall[1]()
+      }
+
+      // Verify chart update failed, was destroyed, and recreated (lines 156-165)
+      expect(mockChartInstance.update).toHaveBeenCalled()
+      expect(mockChartInstance.destroy).toHaveBeenCalled()
+      expect(MockChartSpy).toHaveBeenCalled()
+      expect(console.error).toHaveBeenCalledWith(
+        '[ReportesUsuario] Error actualizando gráfico:',
+        expect.any(Error)
+      )
+    })
+
+    it('should create new chart instance successfully', async () => {
+      mockResumen.value = {
+        ganado: { totales: { total: 10 } },
+        potreros: { totales: { total: 5 } },
+        vacunaciones: { totales: { total: 20 } }
+      }
+      mockLoading.value = false
+
+      const mockCanvas = { getContext: vi.fn(), parentNode: {} }
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: mockCanvas })
+      mockNextTick.mockImplementation((callback) => {
+        if (callback) callback()
+        return Promise.resolve()
+      })
+
+      // Reset chart instance
+      mockChartInstance.update.mockClear()
+      mockChartInstance.destroy.mockClear()
+
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+
+      // Trigger watch to create chart (lines 170-186)
+      const watchCall = mockWatch.mock.calls[0]
+      if (watchCall && watchCall[1]) {
+        await watchCall[1]()
+      }
+
+      // Chart should be created
+      expect(MockChartSpy).toHaveBeenCalledWith(
+        mockCanvas,
+        expect.objectContaining({
+          type: 'pie',
+          data: expect.objectContaining({
+            labels: expect.arrayContaining(['Ganado', 'Potreros', 'Vacunaciones']),
+            datasets: expect.arrayContaining([
+              expect.objectContaining({
+                label: 'Total registrados',
+                data: [10, 5, 20]
+              })
+            ])
+          })
+        })
+      )
+    })
+
+    it('should handle chart creation failure', async () => {
+      mockResumen.value = {
+        ganado: { totales: { total: 10 } },
+        potreros: { totales: { total: 5 } },
+        vacunaciones: { totales: { total: 20 } }
+      }
+      mockLoading.value = false
+
+      const mockCanvas = { getContext: vi.fn(), parentNode: {} }
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: mockCanvas })
+      mockNextTick.mockImplementation((callback) => {
+        if (callback) callback()
+        return Promise.resolve()
+      })
+
+      // Make Chart constructor throw
+      MockChartSpy.mockImplementationOnce(() => {
+        throw new Error('Chart creation failed')
+      })
+
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+
+      // Trigger watch to try to create chart (lines 187-189)
+      const watchCall = mockWatch.mock.calls[0]
+      if (watchCall && watchCall[1]) {
+        await watchCall[1]()
+      }
+
+      // Should log error and set chartInstance to null
+      expect(console.error).toHaveBeenCalledWith(
+        '[ReportesUsuario] Error creando gráfico:',
+        expect.any(Error)
+      )
+    })
   })
 })

@@ -688,10 +688,46 @@ describe('gestionar-usuarios.js', () => {
   describe('Lifecycle hooks', () => {
     it('should have lifecycle hooks defined', () => {
       wrapper = createWrapper()
-      
+
       // Verify component has lifecycle methods (they're defined in the component)
       expect(wrapper.vm).toBeDefined()
       expect(wrapper.exists()).toBe(true)
+    })
+
+    it('should call beforeRouteLeave and log navigation', async () => {
+      wrapper = createWrapper()
+
+      const next = vi.fn()
+      const to = { path: '/other' }
+      const from = { path: '/admin/gestionar-usuarios' }
+
+      // Call beforeRouteLeave hook
+      gestionarUsuarios.beforeRouteLeave.call(wrapper.vm, to, from, next)
+
+      expect(console.log).toHaveBeenCalledWith('Saliendo de vista usuarios, cancelando peticiones...')
+      expect(next).toHaveBeenCalled()
+    })
+  })
+
+  describe('updateUser edge cases', () => {
+    it('should return early when _procesarCamposActualizacion returns null', async () => {
+      wrapper = createWrapper()
+      wrapper.vm.editingUserId = 1
+
+      // Set up form with empty required fields to make _procesarCamposActualizacion return null
+      wrapper.vm.editForm.primer_nombre = ''  // This will cause _procesarCamposActualizacion to return null
+      wrapper.vm.editForm.primer_apellido = 'Perez'
+      wrapper.vm.editForm.email = 'juan@example.com'
+      wrapper.vm.originalEditData = {
+        primer_nombre: 'Juan',
+        primer_apellido: 'Perez',
+        email: 'juan@example.com'
+      }
+
+      await wrapper.vm.updateUser()
+
+      // Should return early without calling actualizarUsuario (line 330)
+      expect(mockUsuarios.actualizarUsuario).not.toHaveBeenCalled()
     })
   })
 })

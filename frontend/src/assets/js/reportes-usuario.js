@@ -11,6 +11,15 @@ const descargando = ref(false)
 const chartCanvas = ref(null)
 let chartInstance = null
 
+// Export for testing (mutable reference)
+export const chartInstanceRef = { value: null }
+
+// Sync with local variable
+Object.defineProperty(chartInstanceRef, 'value', {
+  get() { return chartInstance },
+  set(v) { chartInstance = v }
+})
+
 /**
  * Datos de las tarjetas de resumen
  */

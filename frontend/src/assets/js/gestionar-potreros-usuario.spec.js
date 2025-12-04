@@ -338,6 +338,24 @@ describe('useGestionarPotrerosUsuario', () => {
       expect(formatted).toBeTruthy()
       expect(typeof formatted).toBe('string')
     })
+
+    it('should return original value when Date constructor throws', () => {
+      const result = useGestionarPotrerosUsuario()
+
+      // Mock Date to throw an error
+      const originalDate = globalThis.Date
+      globalThis.Date = vi.fn(() => {
+        throw new Error('Invalid date')
+      })
+
+      try {
+        const formatted = result.formatearFecha('invalid-date')
+        // Should return the original value (line 52)
+        expect(formatted).toBe('invalid-date')
+      } finally {
+        globalThis.Date = originalDate
+      }
+    })
   })
 })
 
