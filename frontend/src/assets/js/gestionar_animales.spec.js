@@ -569,16 +569,60 @@ describe('gestionar_animales.js', () => {
         value: { nombre: 'Updated Animal', peso: 500 }
       }))
 
-      const mockResponse = {
-        ok: true,
-        json: vi.fn().mockResolvedValue({ success: true })
-      }
-      globalThis.fetch.mockResolvedValue(mockResponse)
+      const mockApiPut = (await import('../../services/api.js')).default.put
+      mockApiPut.mockResolvedValue({ 
+        data: { 
+          success: true, 
+          data: { id: 1, nombre: 'Updated Animal', estado: 'saludable' },
+          message: 'Animal actualizado correctamente'
+        } 
+      })
 
       const { editarAnimal } = await import('./gestionar_animales.js')
       await editarAnimal(1)
 
-      expect(true).toBe(true)
+      expect(mockApiPut).toHaveBeenCalled()
+      expect(globalThis.Swal.fire).toHaveBeenCalled()
+    })
+
+    it('should update animal estado correctly', async () => {
+      const mockAnimal = {
+        id: 1,
+        nombre: 'Test Animal',
+        peso: 450,
+        raza: 'Holstein',
+        estado: 'revision',  // Current estado
+        estado_tipo: 'revision',  // estado_tipo from JOIN
+        sexo: 'hembra',
+        id_potrero: 1,
+        id_persona: 1
+      }
+      animales.value = [mockAnimal]
+
+      globalThis.Swal.fire.mockImplementation(() => Promise.resolve({
+        isConfirmed: true,
+        value: { estado: 'saludable' }  // Changing estado to 'saludable'
+      }))
+
+      const mockApiPut = (await import('../../services/api.js')).default.put
+      mockApiPut.mockResolvedValue({ 
+        data: { 
+          success: true, 
+          data: { id: 1, nombre: 'Test Animal', estado: 'saludable', id_estado: 1 },
+          message: 'Animal actualizado correctamente'
+        } 
+      })
+
+      const { editarAnimal } = await import('./gestionar_animales.js')
+      await editarAnimal(1)
+
+      // Verify that the API was called with the new estado
+      expect(mockApiPut).toHaveBeenCalledWith(
+        '/animales/1',
+        expect.objectContaining({
+          estado: 'saludable'
+        })
+      )
     })
 
     it('should do nothing if animal not found', async () => {

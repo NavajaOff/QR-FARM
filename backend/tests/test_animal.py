@@ -116,3 +116,43 @@ class TestGanado:
         ganado = Ganado.from_dict(data)
         assert ganado.estado == EstadoGanado.SALUDABLE
         assert ganado.sexo == SexoGanado.MACHO
+
+    def test_from_dict_prioriza_estado_sobre_estado_tipo(self):
+        """Test that from_dict prioritizes estado over estado_tipo when both are present"""
+        # When both estado and estado_tipo are present, estado should be used (for updates)
+        data = {
+            'id': 1,
+            'nombre': 'Test Animal',
+            'estado': 'saludable',  # New estado
+            'estado_tipo': 'revision',  # Old estado_tipo from JOIN
+            'sexo': 'macho'
+        }
+        ganado = Ganado.from_dict(data)
+        # Should use 'saludable' (estado) not 'revision' (estado_tipo)
+        assert ganado.estado == 'saludable'
+
+    def test_from_dict_usa_estado_tipo_cuando_estado_no_existe(self):
+        """Test that from_dict uses estado_tipo when estado is not present"""
+        # When only estado_tipo is present (from database JOIN), use it
+        data = {
+            'id': 1,
+            'nombre': 'Test Animal',
+            'estado_tipo': 'revision',  # From JOIN
+            'sexo': 'macho'
+        }
+        ganado = Ganado.from_dict(data)
+        # Should use 'revision' from estado_tipo
+        assert ganado.estado == 'revision'
+
+    def test_from_dict_estado_vacio_no_sobrescribe_estado_tipo(self):
+        """Test that empty estado doesn't override estado_tipo"""
+        data = {
+            'id': 1,
+            'nombre': 'Test Animal',
+            'estado': '',  # Empty estado
+            'estado_tipo': 'revision',  # estado_tipo from JOIN
+            'sexo': 'macho'
+        }
+        ganado = Ganado.from_dict(data)
+        # Should use 'revision' from estado_tipo since estado is empty
+        assert ganado.estado == 'revision'

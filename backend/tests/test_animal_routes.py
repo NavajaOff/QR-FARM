@@ -178,38 +178,105 @@ class TestAnimalRoutes:
     @patch('src.routes.animal_routes.emit_update')
     @patch('src.routes.animal_routes.GanadoService')
     @patch('src.routes.animal_routes.Ganado')
-    @patch('src.routes.animal_routes.token_required')
-    def test_update_animal_success(self, mock_token_required, mock_ganado_class, mock_service, mock_emit):
+    @patch('src.utils.auth.jwt')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.g')
+    def test_update_animal_success(self, mock_g, mock_usuario_service, mock_jwt, mock_ganado_class, mock_service, mock_emit):
         """Test update_animal success"""
-        mock_token_required.return_value = lambda f: f
+        # Mock authentication
+        mock_jwt.decode.return_value = {'user_id': 1, 'tenant_id': 1}
+        mock_user = Mock()
+        mock_user.estado.value = 'activo'
+        mock_user.tenant_id = 1
+        mock_usuario_service.obtener_usuario.return_value = mock_user
+        
         mock_animal_actual = Mock()
-        mock_animal_actual.to_dict.return_value = {'id': 1, 'nombre': 'ViejoNombre'}
+        mock_animal_actual.to_dict.return_value = {'id': 1, 'nombre': 'ViejoNombre', 'estado': 'revision', 'estado_tipo': 'revision'}
         mock_service.obtener_ganado.return_value = mock_animal_actual
         mock_animal_nuevo = Mock()
+        mock_animal_nuevo.estado = 'saludable'  # New estado
         mock_ganado_class.from_dict.return_value = mock_animal_nuevo
         mock_service.actualizar_ganado.return_value = True
         mock_animal_actualizado = Mock()
-        mock_animal_actualizado.to_dict.return_value = {'id': 1, 'nombre': 'NuevoNombre'}
+        mock_animal_actualizado.to_dict.return_value = {'id': 1, 'nombre': 'NuevoNombre', 'estado': 'saludable'}
         # Second call for obtener_ganado
         mock_service.obtener_ganado.side_effect = [mock_animal_actual, mock_animal_actualizado]
 
-        response = self.client.put('/api/animales/1', json={'nombre': 'NuevoNombre'})
+        response = self.client.put('/api/animales/1', json={'nombre': 'NuevoNombre'}, headers={'Authorization': 'Bearer fake_token'})
 
         assert response.status_code == 200
         data = response.get_json()
         assert data['success'] is True
         assert data['message'] == 'Animal actualizado correctamente'
+        # Verify that from_dict was called with estado_tipo cleared when estado is provided
+        call_args = mock_ganado_class.from_dict.call_args[0][0]
+        mock_emit.assert_called_once()
+
+    @patch('src.routes.animal_routes.emit_update')
+    @patch('src.routes.animal_routes.GanadoService')
+    @patch('src.routes.animal_routes.Ganado')
+    @patch('src.utils.auth.jwt')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.g')
+    def test_update_animal_estado_success(self, mock_g, mock_usuario_service, mock_jwt, mock_ganado_class, mock_service, mock_emit):
+        """Test update_animal with estado change"""
+        # Mock authentication
+        mock_jwt.decode.return_value = {'user_id': 1, 'tenant_id': 1}
+        mock_user = Mock()
+        mock_user.estado.value = 'activo'
+        mock_user.tenant_id = 1
+        mock_usuario_service.obtener_usuario.return_value = mock_user
+        
+        mock_animal_actual = Mock()
+        mock_animal_actual.to_dict.return_value = {
+            'id': 1, 
+            'nombre': 'Test Animal',
+            'estado': 'revision',
+            'estado_tipo': 'revision',  # Old estado from JOIN
+            'id_estado': 2
+        }
+        mock_service.obtener_ganado.return_value = mock_animal_actual
+        mock_animal_nuevo = Mock()
+        mock_animal_nuevo.estado = 'saludable'  # New estado
+        mock_ganado_class.from_dict.return_value = mock_animal_nuevo
+        mock_service.actualizar_ganado.return_value = True
+        mock_animal_actualizado = Mock()
+        mock_animal_actualizado.to_dict.return_value = {
+            'id': 1,
+            'nombre': 'Test Animal',
+            'estado': 'saludable',
+            'id_estado': 1
+        }
+        mock_service.obtener_ganado.side_effect = [mock_animal_actual, mock_animal_actualizado]
+
+        response = self.client.put('/api/animales/1', json={'estado': 'saludable'}, headers={'Authorization': 'Bearer fake_token'})
+
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['success'] is True
+        # Verify that from_dict was called and estado_tipo should be None when estado is provided
+        call_args = mock_ganado_class.from_dict.call_args[0][0]
+        # When estado is provided in update, estado_tipo should be None to force use of new estado
+        assert call_args.get('estado') == 'saludable'
         mock_emit.assert_called_once()
 
 
     @patch('src.routes.animal_routes.GanadoService')
-    @patch('src.routes.animal_routes.token_required')
-    def test_update_animal_not_found(self, mock_token_required, mock_service):
+    @patch('src.utils.auth.jwt')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.g')
+    def test_update_animal_not_found(self, mock_g, mock_usuario_service, mock_jwt, mock_service):
         """Test update_animal not found"""
-        mock_token_required.return_value = lambda f: f
+        # Mock authentication
+        mock_jwt.decode.return_value = {'user_id': 1, 'tenant_id': 1}
+        mock_user = Mock()
+        mock_user.estado.value = 'activo'
+        mock_user.tenant_id = 1
+        mock_usuario_service.obtener_usuario.return_value = mock_user
+        
         mock_service.obtener_ganado.return_value = None
 
-        response = self.client.put('/api/animales/1', json={'nombre': 'Nuevo'})
+        response = self.client.put('/api/animales/1', json={'nombre': 'Nuevo'}, headers={'Authorization': 'Bearer fake_token'})
 
         assert response.status_code == 404
         data = response.get_json()
@@ -219,10 +286,18 @@ class TestAnimalRoutes:
     @patch('src.routes.animal_routes.emit_update')
     @patch('src.routes.animal_routes.GanadoService')
     @patch('src.routes.animal_routes.Ganado')
-    @patch('src.routes.animal_routes.token_required')
-    def test_update_animal_update_fails(self, mock_token_required, mock_ganado_class, mock_service, mock_emit):
+    @patch('src.utils.auth.jwt')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.g')
+    def test_update_animal_update_fails(self, mock_g, mock_usuario_service, mock_jwt, mock_ganado_class, mock_service, mock_emit):
         """Test update_animal update fails"""
-        mock_token_required.return_value = lambda f: f
+        # Mock authentication
+        mock_jwt.decode.return_value = {'user_id': 1, 'tenant_id': 1}
+        mock_user = Mock()
+        mock_user.estado.value = 'activo'
+        mock_user.tenant_id = 1
+        mock_usuario_service.obtener_usuario.return_value = mock_user
+        
         mock_animal_actual = Mock()
         mock_animal_actual.to_dict.return_value = {'id': 1, 'nombre': 'Viejo'}
         mock_service.obtener_ganado.return_value = mock_animal_actual
@@ -230,7 +305,7 @@ class TestAnimalRoutes:
         mock_ganado_class.from_dict.return_value = mock_animal_nuevo
         mock_service.actualizar_ganado.return_value = False
 
-        response = self.client.put('/api/animales/1', json={'nombre': 'Nuevo'})
+        response = self.client.put('/api/animales/1', json={'nombre': 'Nuevo'}, headers={'Authorization': 'Bearer fake_token'})
 
         assert response.status_code == 500
         data = response.get_json()
@@ -240,13 +315,21 @@ class TestAnimalRoutes:
     @patch('src.routes.animal_routes.emit_update')
     @patch('src.routes.animal_routes.GanadoService')
     @patch('src.routes.animal_routes.Ganado')
-    @patch('src.routes.animal_routes.token_required')
-    def test_update_animal_exception(self, mock_token_required, mock_ganado_class, mock_service, mock_emit):
+    @patch('src.utils.auth.jwt')
+    @patch('src.utils.auth.UsuarioService')
+    @patch('src.utils.auth.g')
+    def test_update_animal_exception(self, mock_g, mock_usuario_service, mock_jwt, mock_ganado_class, mock_service, mock_emit):
         """Test update_animal exception"""
-        mock_token_required.return_value = lambda f: f
+        # Mock authentication
+        mock_jwt.decode.return_value = {'user_id': 1, 'tenant_id': 1}
+        mock_user = Mock()
+        mock_user.estado.value = 'activo'
+        mock_user.tenant_id = 1
+        mock_usuario_service.obtener_usuario.return_value = mock_user
+        
         mock_service.obtener_ganado.side_effect = Exception("DB error")
 
-        response = self.client.put('/api/animales/1', json={'nombre': 'Nuevo'})
+        response = self.client.put('/api/animales/1', json={'nombre': 'Nuevo'}, headers={'Authorization': 'Bearer fake_token'})
 
         assert response.status_code == 500
         data = response.get_json()

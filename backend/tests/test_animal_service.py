@@ -29,11 +29,12 @@ class TestGanadoService:
         assert result == 1
 
     def test_convertir_fecha_nacimiento_datetime(self):
-        """Test converting datetime to isoformat"""
+        """Test converting datetime to date only (YYYY-MM-DD format for MySQL)"""
         from datetime import datetime
         dt = datetime(2023, 1, 1, 10, 0, 0)
         result = GanadoService._convertir_fecha_nacimiento(dt)
-        assert result == '2023-01-01T10:00:00'
+        # Should return only the date part (YYYY-MM-DD) for MySQL compatibility
+        assert result == '2023-01-01'
 
     def test_convertir_fecha_nacimiento_string(self):
         """Test converting string fecha"""
