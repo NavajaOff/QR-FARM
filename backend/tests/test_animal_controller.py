@@ -88,7 +88,7 @@ class TestGanadoController:
     @patch('src.controllers.animal_controller.jsonify')
     def test_crear_ganado_error(self, mock_jsonify, mock_crear, mock_jwt, mock_usuario_service):
         """Test crear_ganado con error."""
-        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'tenant_admin'}
+        mock_jwt.decode.return_value = {'user_id': 1, 'role': 'tenant_admin', 'tenant_id': 1}
         mock_user = _create_mock_user()
         mock_usuario_service.obtener_usuario.return_value = mock_user
 
@@ -102,13 +102,23 @@ class TestGanadoController:
             _setup_mock_user()
             mock_crear.return_value = None
 
-            mock_response = Mock()
-            mock_response.json = {'status': 'error', 'message': 'Error al crear el ganado'}
-            mock_jsonify.return_value = (mock_response, 400)
+            from flask import jsonify
+            mock_response = jsonify({
+                'status': 'error',
+                'message': 'No se pudo crear el animal',
+                'success': False
+            })
+            mock_response.status_code = 500
+            mock_jsonify.return_value = mock_response
 
             result, status = GanadoController.crear_ganado()
 
-            assert status == 400
+            assert status == 500
+            # Verificar que se llamó con tenant_id_override
+            mock_crear.assert_called_once()
+            call_args = mock_crear.call_args
+            # Verificar que se pasó tenant_id_override como keyword argument
+            assert call_args.kwargs.get('tenant_id_override') == 1
 
     @patch('src.utils.auth.UsuarioService')
     @patch('src.utils.auth.jwt')

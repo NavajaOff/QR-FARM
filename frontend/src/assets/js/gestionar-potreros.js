@@ -101,14 +101,10 @@ export const cargarDatosIniciales = async () => {
 
 export const cargarTiposPasto = async () => {
   try {
-    const response = await fetch(`${API_BASE}/potreros/tipos-pasto`);
-    if (response.ok) {
-      const data = await response.json();
-      if (data.success) {
-        tiposPasto.value = data.data;
-      } else {
-        tiposPasto.value = [];
-      }
+    const response = await api.get('/potreros/tipos-pasto');
+    const data = response.data;
+    if (data.success) {
+      tiposPasto.value = data.data;
     } else {
       tiposPasto.value = [];
     }
@@ -120,14 +116,10 @@ export const cargarTiposPasto = async () => {
 
 export const cargarEstadosPotrero = async () => {
   try {
-    const response = await fetch(`${API_BASE}/potreros/estados`);
-    if (response.ok) {
-      const data = await response.json();
-      if (data.success) {
-        estadosPotrero.value = data.data;
-      } else {
-        estadosPotrero.value = [];
-      }
+    const response = await api.get('/potreros/estados');
+    const data = response.data;
+    if (data.success) {
+      estadosPotrero.value = data.data;
     } else {
       estadosPotrero.value = [];
     }
@@ -139,14 +131,10 @@ export const cargarEstadosPotrero = async () => {
 
 export const cargarPersonasUsuario = async () => {
   try {
-    const response = await fetch(`${API_BASE}/potreros/personas-usuario`);
-    if (response.ok) {
-      const data = await response.json();
-      if (data.success) {
-        personasUsuario.value = data.data;
-      } else {
-        personasUsuario.value = [];
-      }
+    const response = await api.get('/potreros/personas-usuario');
+    const data = response.data;
+    if (data.success) {
+      personasUsuario.value = data.data;
     } else {
       personasUsuario.value = [];
     }
@@ -276,28 +264,19 @@ export const crearPotrero = () => {
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
-        const response = await fetch(`${API_BASE}/potreros/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(result.value)
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            Swal.fire('¡Éxito!', 'Potrero creado correctamente', 'success');
-            await cargarPotreros();
-          } else {
-            console.log('Respuesta de potreros:', data);
-            throw new Error(data.message || 'Error desconocido');
-          }
+        const response = await api.post('/potreros/', result.value);
+        const data = response.data;
+        if (data.success) {
+          Swal.fire('¡Éxito!', 'Potrero creado correctamente', 'success');
+          await cargarPotreros();
         } else {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `Error HTTP: ${response.status}`);
+          console.log('Respuesta de potreros:', data);
+          throw new Error(data.message || 'Error desconocido');
         }
       } catch (error) {
         console.error('Error creando potrero:', error);
-        Swal.fire('Error', error.message, 'error');
+        const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
+        Swal.fire('Error', errorMessage, 'error');
       }
     }
   });
@@ -433,27 +412,18 @@ export const editarPotrero = async (id) => {
   }).then(async (result) => {
     if (result.isConfirmed) {
       try {
-        const response = await fetch(`${API_BASE}/potreros/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(result.value)
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            Swal.fire('¡Éxito!', 'Potrero actualizado correctamente', 'success');
-            await cargarPotreros();
-          } else {
-            throw new Error(data.message || 'Error desconocido');
-          }
+        const response = await api.put(`/potreros/${id}`, result.value);
+        const data = response.data;
+        if (data.success) {
+          Swal.fire('¡Éxito!', 'Potrero actualizado correctamente', 'success');
+          await cargarPotreros();
         } else {
-          const errorData = await response.json();
-          throw new Error(errorData.message || `Error HTTP: ${response.status}`);
+          throw new Error(data.message || 'Error desconocido');
         }
       } catch (error) {
         console.error('Error actualizando potrero:', error);
-        Swal.fire('Error', error.message, 'error');
+        const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
+        Swal.fire('Error', errorMessage, 'error');
       }
     }
   });
@@ -518,19 +488,10 @@ export const toggleAccordion = () => {
 
 export const actualizarProximaLimpieza = async (id, fecha) => {
   try {
-    const response = await fetch(`${API_BASE}/potreros/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ proxima_limpieza: fecha })
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (!data.success) {
-        console.error('Error actualizando próxima limpieza:', data.message);
-      }
-    } else {
-      console.error('Error HTTP actualizando próxima limpieza:', response.status);
+    const response = await api.put(`/potreros/${id}`, { proxima_limpieza: fecha });
+    const data = response.data;
+    if (!data.success) {
+      console.error('Error actualizando próxima limpieza:', data.message);
     }
   } catch (error) {
     console.error('Error actualizando próxima limpieza:', error);

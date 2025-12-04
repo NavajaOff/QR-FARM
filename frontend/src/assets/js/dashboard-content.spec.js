@@ -165,9 +165,9 @@ describe('dashboard-content.js', () => {
   describe('Mounted Hook', () => {
     it('should check user role on mount', async () => {
       authService.getRole.mockReturnValue('admin')
-      userAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      ganadoAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      potreroAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
+      userAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      ganadoAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      potreroAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
 
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
@@ -179,9 +179,9 @@ describe('dashboard-content.js', () => {
     it('should load tenants for super admin', async () => {
       authService.getRole.mockReturnValue('super_admin')
       tenantAPI.getAll.mockResolvedValue({
-        data: { status: 'success', data: [{ id: 1 }, { id: 2 }] }
+        data: { success: true, data: [{ id: 1 }, { id: 2 }] }
       })
-      userAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
+      userAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
 
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
@@ -197,9 +197,9 @@ describe('dashboard-content.js', () => {
       tenantAPI.getCurrent.mockResolvedValue({
         data: { success: true, tenant: { id: 1, nombre: 'Tenant 1' } }
       })
-      userAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      ganadoAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      potreroAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
+      userAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      ganadoAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      potreroAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
 
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
@@ -210,9 +210,9 @@ describe('dashboard-content.js', () => {
 
     it('should add event listener for tenant-selected', async () => {
       authService.getRole.mockReturnValue('admin')
-      userAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      ganadoAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      potreroAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
+      userAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      ganadoAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      potreroAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
 
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
@@ -224,9 +224,9 @@ describe('dashboard-content.js', () => {
   describe('beforeUnmount Hook', () => {
     it('should remove event listener on unmount', async () => {
       authService.getRole.mockReturnValue('admin')
-      userAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      ganadoAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      potreroAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
+      userAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      ganadoAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      potreroAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
 
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
@@ -263,7 +263,7 @@ describe('dashboard-content.js', () => {
 
     it('should load tenants successfully', async () => {
       tenantAPI.getAll.mockResolvedValue({
-        data: { status: 'success', data: [{ id: 1 }, { id: 2 }, { id: 3 }] }
+        data: { success: true, data: [{ id: 1 }, { id: 2 }, { id: 3 }] }
       })
 
       await wrapper.vm.cargarTenants()
@@ -275,7 +275,7 @@ describe('dashboard-content.js', () => {
 
     it('should handle empty tenants response', async () => {
       tenantAPI.getAll.mockResolvedValue({
-        data: { status: 'success', data: [] }
+        data: { success: true, data: [] }
       })
 
       await wrapper.vm.cargarTenants()
@@ -286,7 +286,7 @@ describe('dashboard-content.js', () => {
 
     it('should handle response without data property', async () => {
       tenantAPI.getAll.mockResolvedValue({
-        data: { status: 'success' }
+        data: { success: true }
       })
 
       await wrapper.vm.cargarTenants()
@@ -297,7 +297,7 @@ describe('dashboard-content.js', () => {
 
     it('should handle response with status not success', async () => {
       tenantAPI.getAll.mockResolvedValue({
-        data: { status: 'error', message: 'Failed' }
+        data: { success: false, message: 'Failed' }
       })
 
       await wrapper.vm.cargarTenants()
@@ -403,7 +403,7 @@ describe('dashboard-content.js', () => {
 
     it('should load usuarios successfully', async () => {
       userAPI.getAll.mockResolvedValue({
-        data: { status: 'success', data: [{ id: 1 }, { id: 2 }] }
+        data: { success: true, data: [{ id: 1 }, { id: 2 }] }
       })
 
       await wrapper.vm._cargarUsuarios()
@@ -414,7 +414,7 @@ describe('dashboard-content.js', () => {
 
     it('should handle response without data property', async () => {
       userAPI.getAll.mockResolvedValue({
-        data: { status: 'success' }
+        data: { success: true }
       })
 
       await wrapper.vm._cargarUsuarios()
@@ -452,7 +452,7 @@ describe('dashboard-content.js', () => {
 
     it('should load ganado successfully', async () => {
       ganadoAPI.getAll.mockResolvedValue({
-        data: { status: 'success', data: [{ id: 1 }, { id: 2 }, { id: 3 }] }
+        data: { success: true, data: [{ id: 1 }, { id: 2 }, { id: 3 }] }
       })
 
       await wrapper.vm._cargarGanado()
@@ -462,7 +462,7 @@ describe('dashboard-content.js', () => {
 
     it('should handle response without data property', async () => {
       ganadoAPI.getAll.mockResolvedValue({
-        data: { status: 'success' }
+        data: { success: true }
       })
 
       await wrapper.vm._cargarGanado()
@@ -500,7 +500,7 @@ describe('dashboard-content.js', () => {
 
     it('should load potreros successfully', async () => {
       potreroAPI.getAll.mockResolvedValue({
-        data: { status: 'success', data: [{ id: 1 }, { id: 2 }] }
+        data: { success: true, data: [{ id: 1 }, { id: 2 }] }
       })
 
       await wrapper.vm._cargarPotreros()
@@ -510,7 +510,7 @@ describe('dashboard-content.js', () => {
 
     it('should handle response without data property', async () => {
       potreroAPI.getAll.mockResolvedValue({
-        data: { status: 'success' }
+        data: { success: true }
       })
 
       await wrapper.vm._cargarPotreros()
@@ -550,13 +550,13 @@ describe('dashboard-content.js', () => {
     it('should load statistics for super admin with selected tenant', async () => {
       localStorage.setItem('qr_farm_selected_tenant_id', '123')
       userAPI.getAll.mockResolvedValue({
-        data: { status: 'success', data: [{ id: 1 }] }
+        data: { success: true, data: [{ id: 1 }] }
       })
       ganadoAPI.getAll.mockResolvedValue({
-        data: { status: 'success', data: [{ id: 1 }, { id: 2 }] }
+        data: { success: true, data: [{ id: 1 }, { id: 2 }] }
       })
       potreroAPI.getAll.mockResolvedValue({
-        data: { status: 'success', data: [{ id: 1 }] }
+        data: { success: true, data: [{ id: 1 }] }
       })
 
       await wrapper.vm._cargarEstadisticasSuperAdmin()
@@ -570,7 +570,7 @@ describe('dashboard-content.js', () => {
     it('should set ganado and potreros to 0 when no tenant selected', async () => {
       localStorage.removeItem('qr_farm_selected_tenant_id')
       userAPI.getAll.mockResolvedValue({
-        data: { status: 'success', data: [{ id: 1 }] }
+        data: { success: true, data: [{ id: 1 }] }
       })
 
       await wrapper.vm._cargarEstadisticasSuperAdmin()
@@ -590,13 +590,13 @@ describe('dashboard-content.js', () => {
 
     it('should load statistics for normal admin', async () => {
       userAPI.getAll.mockResolvedValue({
-        data: { status: 'success', data: [{ id: 1 }] }
+        data: { success: true, data: [{ id: 1 }] }
       })
       ganadoAPI.getAll.mockResolvedValue({
-        data: { status: 'success', data: [{ id: 1 }, { id: 2 }] }
+        data: { success: true, data: [{ id: 1 }, { id: 2 }] }
       })
       potreroAPI.getAll.mockResolvedValue({
-        data: { status: 'success', data: [{ id: 1 }] }
+        data: { success: true, data: [{ id: 1 }] }
       })
 
       await wrapper.vm._cargarEstadisticasAdminNormal()
@@ -619,7 +619,7 @@ describe('dashboard-content.js', () => {
       wrapper.vm.isSuperAdmin = true
       wrapper.vm._cargarEstadisticasSuperAdmin = vi.fn().mockResolvedValue()
       userAPI.getAll.mockResolvedValue({
-        data: { status: 'success', data: [] }
+        data: { success: true, data: [] }
       })
 
       await wrapper.vm.cargarEstadisticas()
@@ -666,9 +666,9 @@ describe('dashboard-content.js', () => {
     it('should return a number between min and max when crypto is available', async () => {
       wrapper = createWrapper()
       wrapper.vm.isSuperAdmin = false
-      userAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      ganadoAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      potreroAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
+      userAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      ganadoAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      potreroAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
 
       await wrapper.vm._cargarEstadisticasAdminNormal()
 
@@ -684,9 +684,9 @@ describe('dashboard-content.js', () => {
 
       wrapper = createWrapper()
       wrapper.vm.isSuperAdmin = false
-      userAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      ganadoAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      potreroAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
+      userAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      ganadoAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      potreroAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
 
       await wrapper.vm._cargarEstadisticasAdminNormal()
 
@@ -702,9 +702,9 @@ describe('dashboard-content.js', () => {
 
       wrapper = createWrapper()
       wrapper.vm.isSuperAdmin = false
-      userAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      ganadoAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      potreroAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
+      userAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      ganadoAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      potreroAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
 
       // Test with invalid min (NaN) - this should trigger line 8 return
       // We can't directly test secureRandomInt, but we can test the edge case
@@ -727,9 +727,9 @@ describe('dashboard-content.js', () => {
 
       wrapper = createWrapper()
       wrapper.vm.isSuperAdmin = false
-      userAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      ganadoAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      potreroAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
+      userAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      ganadoAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      potreroAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
 
       await wrapper.vm._cargarEstadisticasAdminNormal()
 
@@ -746,9 +746,9 @@ describe('dashboard-content.js', () => {
 
       wrapper = createWrapper()
       wrapper.vm.isSuperAdmin = false
-      userAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      ganadoAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
-      potreroAPI.getAll.mockResolvedValue({ data: { status: 'success', data: [] } })
+      userAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      ganadoAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
+      potreroAPI.getAll.mockResolvedValue({ data: { success: true, data: [] } })
 
       await wrapper.vm._cargarEstadisticasAdminNormal()
 

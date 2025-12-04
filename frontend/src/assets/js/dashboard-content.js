@@ -71,7 +71,7 @@ export default {
         const response = await tenantAPI.getAll(true);
         console.log('[DashboardContent] Respuesta de tenants:', response);
         
-        if (response.data?.status === 'success') {
+        if (response.data?.success === true) {
           this.tenants = response.data.data || [];
           this.estadisticas.tenants = this.tenants.length;
           console.log('[DashboardContent] Tenants cargados:', this.tenants.length);
@@ -115,8 +115,10 @@ export default {
         const usuariosResponse = await userAPI.getAll();
         console.log('[DashboardContent] Respuesta de usuarios:', usuariosResponse);
         
-        if (usuariosResponse.data?.status === 'success') {
-          this.estadisticas.usuarios = usuariosResponse.data?.data?.length || 0;
+        if (usuariosResponse.data?.success === true) {
+          this.estadisticas.usuarios = Array.isArray(usuariosResponse.data?.data) 
+            ? usuariosResponse.data.data.length 
+            : 0;
           console.log('[DashboardContent] Usuarios cargados:', this.estadisticas.usuarios);
         } else {
           console.warn('[DashboardContent] Respuesta de usuarios sin éxito:', usuariosResponse.data);
@@ -138,8 +140,10 @@ export default {
         const ganadoResponse = await ganadoAPI.getAll();
         console.log('[DashboardContent] Respuesta de ganado:', ganadoResponse);
         
-        if (ganadoResponse.data?.status === 'success') {
-          this.estadisticas.ganado = ganadoResponse.data?.data?.length || 0;
+        if (ganadoResponse.data?.success === true) {
+          this.estadisticas.ganado = Array.isArray(ganadoResponse.data?.data) 
+            ? ganadoResponse.data.data.length 
+            : 0;
           console.log('[DashboardContent] Ganado cargado:', this.estadisticas.ganado);
         } else {
           console.warn('[DashboardContent] Respuesta de ganado sin éxito:', ganadoResponse.data);
@@ -161,8 +165,10 @@ export default {
         const potrerosResponse = await potreroAPI.getAll();
         console.log('[DashboardContent] Respuesta de potreros:', potrerosResponse);
         
-        if (potrerosResponse.data?.status === 'success') {
-          this.estadisticas.potreros = potrerosResponse.data?.data?.length || 0;
+        if (potrerosResponse.data?.success === true) {
+          this.estadisticas.potreros = Array.isArray(potrerosResponse.data?.data) 
+            ? potrerosResponse.data.data.length 
+            : 0;
           console.log('[DashboardContent] Potreros cargados:', this.estadisticas.potreros);
         } else {
           console.warn('[DashboardContent] Respuesta de potreros sin éxito:', potrerosResponse.data);

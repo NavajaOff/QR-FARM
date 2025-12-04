@@ -22,15 +22,86 @@ class GanadoController:
     @tenant_required
     @permission_required('crear_ganado')
     def crear_ganado():
+        print(f"[GANADO_CONTROLLER] 🚀 crear_ganado() INICIADO")
         try:
+            from flask import g
+            print(f"[GANADO_CONTROLLER] Verificando contexto Flask g...")
+            print(f"[GANADO_CONTROLLER] g.tenant_id: {getattr(g, 'tenant_id', 'NO EXISTE')}")
+            print(f"[GANADO_CONTROLLER] g.current_user existe: {hasattr(g, 'current_user')}")
+            
             data = request.get_json()
+            if not data:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'No se proporcionaron datos',
+                    'success': False
+                }), 400
+
+            print(f"[GANADO_CONTROLLER] Datos recibidos: {data}")
 
             # Convertir fechas de string a objeto date si están presentes
-            if 'fecha_nacimiento' in data:
-                data['fecha_nacimiento'] = datetime.strptime(data['fecha_nacimiento'], '%Y-%m-%d').date()
+            if 'fecha_nacimiento' in data and data['fecha_nacimiento']:
+                try:
+                    data['fecha_nacimiento'] = datetime.strptime(data['fecha_nacimiento'], '%Y-%m-%d').date()
+                except (ValueError, TypeError) as date_error:
+                    print(f"[GANADO_CONTROLLER] Error parseando fecha: {date_error}")
+                    return jsonify({
+                        'status': 'error',
+                        'message': f'Formato de fecha inválido: {data.get("fecha_nacimiento")}',
+                        'success': False
+                    }), 400
 
-            ganado = Ganado.from_dict(data)
-            nuevo_ganado = GanadoService.crear_ganado(ganado)
+            try:
+                ganado = Ganado.from_dict(data)
+            except (ValueError, KeyError) as model_error:
+                print(f"[GANADO_CONTROLLER] Error creando modelo Ganado: {model_error}")
+                import traceback
+                traceback.print_exc()
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Error en los datos del animal: {str(model_error)}',
+                    'success': False
+                }), 400
+
+            # Obtener tenant_id desde el contexto Flask antes de llamar al servicio
+            from flask import g
+            tenant_id = None
+            if hasattr(g, 'tenant_id') and g.tenant_id is not None:
+                tenant_id = g.tenant_id
+                print(f"[GANADO_CONTROLLER] Tenant ID obtenido desde g.tenant_id: {tenant_id}")
+            elif hasattr(g, 'current_user') and g.current_user and hasattr(g.current_user, 'tenant_id'):
+                tenant_id = g.current_user.tenant_id
+                print(f"[GANADO_CONTROLLER] Tenant ID obtenido desde g.current_user.tenant_id: {tenant_id}")
+            else:
+                from src.utils.tenant import get_current_tenant_id
+                tenant_id = get_current_tenant_id(require_tenant=True)
+                print(f"[GANADO_CONTROLLER] Tenant ID obtenido desde get_current_tenant_id(): {tenant_id}")
+            
+            if tenant_id is None:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'No se pudo determinar el tenant del usuario',
+                    'success': False
+                }), 403
+
+            try:
+                nuevo_ganado = GanadoService.crear_ganado(ganado, tenant_id_override=tenant_id)
+            except ValueError as service_error:
+                print(f"[GANADO_CONTROLLER] Error en servicio (ValueError): {service_error}")
+                return jsonify({
+                    'status': 'error',
+                    'message': str(service_error),
+                    'success': False
+                }), 400
+            except Exception as service_error:
+                print(f"[GANADO_CONTROLLER] Error en servicio: {service_error}")
+                import traceback
+                traceback.print_exc()
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Error al crear el animal: {str(service_error)}',
+                    'success': False
+                }), 500
 
             if nuevo_ganado:
                 payload = nuevo_ganado.to_dict()
@@ -44,23 +115,33 @@ class GanadoController:
                 return jsonify({
                     'status': 'success',
                     'message': 'Ganado creado exitosamente',
-                    'data': payload
+                    'data': payload,
+                    'success': True
                 }), 201
             else:
                 return jsonify({
                     'status': 'error',
-                    'message': 'Error al crear el ganado'
-                }), 400
+                    'message': 'No se pudo crear el animal',
+                    'success': False
+                }), 500
 
         except ValueError as e:
+            print(f"[GANADO_CONTROLLER] ValueError: {e}")
+            import traceback
+            traceback.print_exc()
             return jsonify({
                 'status': 'error',
-                'message': str(e)
+                'message': str(e),
+                'success': False
             }), 400
         except Exception as e:
+            print(f"[GANADO_CONTROLLER] Error inesperado: {e}")
+            import traceback
+            traceback.print_exc()
             return jsonify({
                 'status': 'error',
-                'message': str(e)
+                'message': f'Error interno del servidor: {str(e)}',
+                'success': False
             }), 500
 
     @staticmethod

@@ -22,9 +22,43 @@ class GanadoService:
         """Obtiene el tenant_id del contexto actual."""
         try:
             from flask import g
-            tenant_id = get_current_tenant_id()
-            return tenant_id
-        except Exception:
+            print(f"[GANADO_SERVICE] _obtener_tenant_id() - Verificando contexto Flask g...")
+            print(f"[GANADO_SERVICE] g.tenant_id: {getattr(g, 'tenant_id', 'NO EXISTE')}")
+            print(f"[GANADO_SERVICE] g.current_user existe: {hasattr(g, 'current_user')}")
+            if hasattr(g, 'current_user') and g.current_user:
+                print(f"[GANADO_SERVICE] g.current_user.tenant_id: {getattr(g.current_user, 'tenant_id', 'NO EXISTE')}")
+            
+            # Primero intentar desde g.tenant_id directamente (más confiable)
+            if hasattr(g, 'tenant_id') and g.tenant_id is not None:
+                print(f"[GANADO_SERVICE] Obteniendo tenant_id desde g.tenant_id: {g.tenant_id}")
+                return g.tenant_id
+            
+            # Intentar obtener tenant_id con require_tenant=True para usuarios normales
+            tenant_id = get_current_tenant_id(require_tenant=True)
+            if tenant_id is not None:
+                print(f"[GANADO_SERVICE] Obteniendo tenant_id desde get_current_tenant_id(): {tenant_id}")
+                return tenant_id
+            
+            # Si aún no hay, intentar desde g.current_user
+            if hasattr(g, 'current_user') and g.current_user:
+                if hasattr(g.current_user, 'tenant_id') and g.current_user.tenant_id is not None:
+                    print(f"[GANADO_SERVICE] Obteniendo tenant_id desde g.current_user.tenant_id: {g.current_user.tenant_id}")
+                    return g.current_user.tenant_id
+            
+            print(f"[GANADO_SERVICE] No se pudo obtener tenant_id de ninguna fuente")
+            return None
+        except Exception as e:
+            print(f"[GANADO_SERVICE] Error obteniendo tenant_id: {e}")
+            import traceback
+            traceback.print_exc()
+            # Intentar obtener desde g.tenant_id como fallback
+            try:
+                from flask import g
+                if hasattr(g, 'tenant_id') and g.tenant_id is not None:
+                    print(f"[GANADO_SERVICE] Fallback: Obteniendo tenant_id desde g.tenant_id: {g.tenant_id}")
+                    return g.tenant_id
+            except Exception as fallback_error:
+                print(f"[GANADO_SERVICE] Error en fallback: {fallback_error}")
             return None
 
     @staticmethod
@@ -151,7 +185,9 @@ class GanadoService:
         return vacunas
 
     @staticmethod
-    def crear_ganado(ganado: Ganado) -> Optional[Ganado]:
+    def crear_ganado(ganado: Ganado, tenant_id_override: Optional[int] = None) -> Optional[Ganado]:
+        conn = None
+        cursor = None
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
@@ -159,9 +195,15 @@ class GanadoService:
             if ganado.id_potrero:
                 PotreroService.verificar_capacidad_disponible(ganado.id_potrero)
 
-            tenant_id = GanadoService._obtener_tenant_id()
+            # Usar tenant_id_override si se proporciona, sino intentar obtenerlo del contexto
+            print(f"[GANADO_SERVICE] tenant_id_override recibido: {tenant_id_override}")
+            tenant_id = tenant_id_override
+            if tenant_id is None:
+                print(f"[GANADO_SERVICE] tenant_id_override es None, intentando obtener del contexto...")
+                tenant_id = GanadoService._obtener_tenant_id()
             if tenant_id is None:
                 raise ValueError("Tenant requerido para crear ganado")
+            print(f"[GANADO_SERVICE] tenant_id final a usar: {tenant_id}")
 
             sql = """
                 INSERT INTO ganado (
@@ -185,13 +227,19 @@ class GanadoService:
             estado_id = GanadoService._obtener_estado_id_desde_db(ganado.estado)
             if estado_id is None:
                 estado_id = GanadoService._mapear_estado_string_a_id(ganado.estado)
+            
+            # Validar que sexo sea un enum válido
+            sexo_value = ganado.sexo.value if hasattr(ganado.sexo, 'value') else str(ganado.sexo)
+            
             values = (
                 ganado.nombre, ganado.raza,
-                fecha_nac, ganado.sexo.value,
+                fecha_nac, sexo_value,
                 ganado.peso, estado_id,
                 ganado.id_potrero, ganado.id_persona, tenant_id
             )
 
+            print(f"[GANADO_SERVICE] Insertando ganado con valores: nombre={ganado.nombre}, raza={ganado.raza}, sexo={sexo_value}, estado_id={estado_id}, tenant_id={tenant_id}")
+            
             cursor.execute(sql, values)
             conn.commit()
 
@@ -199,15 +247,33 @@ class GanadoService:
             if ganado.id_potrero:
                 try:
                     PotreroService.sincronizar_ocupacion(ganado.id_potrero)
-                except Exception:
+                except Exception as sync_error:
+                    print(f"[GANADO_SERVICE] Error sincronizando ocupación (no crítico): {sync_error}")
                     pass
             return ganado
 
         except Exception as e:
-            return None
+            print(f"[GANADO_SERVICE] Error creando ganado: {e}")
+            import traceback
+            traceback.print_exc()
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            raise e
         finally:
-            if 'conn' in locals():
-                conn.close()
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                try:
+                    if conn.is_connected():
+                        conn.close()
+                except Exception:
+                    pass
 
 
     @staticmethod

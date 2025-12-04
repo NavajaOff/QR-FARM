@@ -177,13 +177,13 @@ export const cargarDatosIniciales = async () => {
 
 export const cargarEstadosGanado = async (soloActivos = false, soloBajas = false) => {
   try {
-    let url = `${API_BASE}/animales/estados-ganado`;
+    let url = '/animales/estados-ganado';
     const params = [];
     if (soloActivos) params.push('solo_activos=true');
     if (soloBajas) params.push('solo_bajas=true');
     if (params.length > 0) url += '?' + params.join('&');
 
-    const response = await axios.get(url, {
+    const response = await api.get(url, {
       cancelToken: cancelTokenSource?.token,
       timeout: 10000
     });
@@ -199,7 +199,7 @@ export const cargarEstadosGanado = async (soloActivos = false, soloBajas = false
 
 export const cargarPersonasUsuario = async () => {
   try {
-    const response = await axios.get(`${API_BASE}/potreros/personas-usuario`, {
+    const response = await api.get('/potreros/personas-usuario', {
       cancelToken: cancelTokenSource?.token,
       timeout: 10000
     });
@@ -324,10 +324,8 @@ export const verPerfilAnimal = async (id) => {
 
   // Obtener datos actualizados del animal desde el backend
   try {
-    const response = await fetch(`${API_BASE}/animales/${animal.id}`);
-    if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-
-    const data = await response.json();
+    const response = await api.get(`/animales/${animal.id}`);
+    const data = response.data;
     if (data.success) {
       const animalActualizado = data.data;
 
@@ -554,14 +552,9 @@ function mostrarModalEditarAnimal(animal, opts, onConfirm) {
 
 async function actualizarAnimal(id, data) {
   try {
-    const res = await fetch(`${API_BASE}/animales/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-
-    const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.message || 'Error desconocido');
+    const res = await api.put(`/animales/${id}`, data);
+    const json = res.data;
+    if (!json.success) throw new Error(json.message || 'Error desconocido');
 
     Swal.fire('Éxito', 'Animal actualizado correctamente', 'success');
     await cargarPotreros();
@@ -687,25 +680,21 @@ export const agregarNuevoAnimal = async () => {
     if (!result.isConfirmed) return;
 
     try {
-      const response = await fetch(`${API_BASE}/animales/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(result.value)
-      });
+      const response = await api.post('/animales/', result.value);
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
+      if (data.success === true || data.status === 'success') {
+        Swal.fire('Éxito', 'Animal agregado', 'success');
+        await cargarPotreros();
+        await cargarAnimales();
+        if (updateCallback) updateCallback();
+      } else {
         throw new Error(data.message || 'Error desconocido');
       }
-
-      Swal.fire('Éxito', 'Animal agregado', 'success');
-      await cargarPotreros();
-      await cargarAnimales();
-      if (updateCallback) updateCallback();
     } catch (error) {
       console.error('Error creando animal:', error);
-      Swal.fire('Error', error.message, 'error');
+      const errorMessage = error.response?.data?.message || error.message || 'No se pudo crear el animal';
+      Swal.fire('Error', errorMessage, 'error');
     }
   });
 };
@@ -764,15 +753,10 @@ export const darBajaAnimal = async (id, incluirBajas = false) => {
   
   if (result.isConfirmed && result.value.valid) {
     try {
-      const response = await fetch(`${API_BASE}/animales/${id}/baja`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(result.value.data)
-      });
+      const response = await api.put(`/animales/${id}/baja`, result.value.data);
+      const data = response.data;
       
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
+      if (data.success) {
         Swal.fire('Éxito', 'Animal dado de baja correctamente', 'success');
         await cargarPotreros();
         await cargarAnimales();
@@ -783,8 +767,9 @@ export const darBajaAnimal = async (id, incluirBajas = false) => {
       }
     } catch (error) {
       console.error('Error dando de baja animal:', error);
-      Swal.fire('Error', error.message, 'error');
-      return { success: false, message: error.message };
+      const errorMessage = error.response?.data?.message || error.message || 'Baja failed';
+      Swal.fire('Error', errorMessage, 'error');
+      return { success: false, message: errorMessage };
     }
   }
   
@@ -794,7 +779,7 @@ export const darBajaAnimal = async (id, incluirBajas = false) => {
 export const reactivarAnimal = async (id, incluirBajas = false) => {
   // Cargar estados activos
   try {
-    const estadosResponse = await axios.get(`${API_BASE}/animales/estados-ganado?solo_activos=true`);
+    const estadosResponse = await api.get('/animales/estados-ganado?solo_activos=true');
     const estadosActivos = estadosResponse.data.data || estadosResponse.data || [];
     
     const estadoOptions = estadosActivos.map(e => 
@@ -835,15 +820,10 @@ export const reactivarAnimal = async (id, incluirBajas = false) => {
     
     if (result.isConfirmed && result.value.valid) {
       try {
-        const response = await fetch(`${API_BASE}/animales/${id}/reactivar`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(result.value.data)
-        });
+        const response = await api.put(`/animales/${id}/reactivar`, result.value.data);
+        const data = response.data;
         
-        const data = await response.json();
-        
-        if (response.ok && data.success) {
+        if (data.success) {
           Swal.fire('Éxito', 'Animal reactivado correctamente', 'success');
           await cargarPotreros();
           await cargarAnimales();
@@ -854,8 +834,9 @@ export const reactivarAnimal = async (id, incluirBajas = false) => {
         }
       } catch (error) {
         console.error('Error reactivando animal:', error);
-        Swal.fire('Error', error.message, 'error');
-        return { success: false, message: error.message };
+        const errorMessage = error.response?.data?.message || error.message || 'Reactivar failed';
+        Swal.fire('Error', errorMessage, 'error');
+        return { success: false, message: errorMessage };
       }
     }
     

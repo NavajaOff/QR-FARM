@@ -171,20 +171,19 @@ describe('gestionar-potreros.js', () => {
         ]
       }
 
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockData
+      mockApiGet.mockResolvedValueOnce({
+        data: mockData
       })
 
       await gestionarPotreros.cargarTiposPasto()
 
-      expect(globalThis.fetch).toHaveBeenCalledWith('http://localhost:5000/api/potreros/tipos-pasto')
+      expect(mockApiGet).toHaveBeenCalledWith('/potreros/tipos-pasto')
       expect(gestionarPotreros.tiposPasto.value).toEqual(mockData.data)
     })
 
     it('should handle unsuccessful response', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: false
+      mockApiGet.mockResolvedValueOnce({
+        data: { success: false }
       })
 
       await gestionarPotreros.cargarTiposPasto()
@@ -193,9 +192,8 @@ describe('gestionar-potreros.js', () => {
     })
 
     it('should handle response without success flag', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: false })
+      mockApiGet.mockResolvedValueOnce({
+        data: { success: false }
       })
 
       await gestionarPotreros.cargarTiposPasto()
@@ -204,7 +202,7 @@ describe('gestionar-potreros.js', () => {
     })
 
     it('should handle fetch error', async () => {
-      globalThis.fetch.mockRejectedValueOnce(new Error('Network error'))
+      mockApiGet.mockRejectedValueOnce(new Error('Network error'))
 
       await gestionarPotreros.cargarTiposPasto()
 
@@ -222,20 +220,19 @@ describe('gestionar-potreros.js', () => {
         ]
       }
 
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockData
+      mockApiGet.mockResolvedValueOnce({
+        data: mockData
       })
 
       await gestionarPotreros.cargarEstadosPotrero()
 
-      expect(globalThis.fetch).toHaveBeenCalledWith('http://localhost:5000/api/potreros/estados')
+      expect(mockApiGet).toHaveBeenCalledWith('/potreros/estados')
       expect(gestionarPotreros.estadosPotrero.value).toEqual(mockData.data)
     })
 
     it('should handle unsuccessful response', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: false
+      mockApiGet.mockResolvedValueOnce({
+        data: { success: false }
       })
 
       await gestionarPotreros.cargarEstadosPotrero()
@@ -244,7 +241,7 @@ describe('gestionar-potreros.js', () => {
     })
 
     it('should handle fetch error', async () => {
-      globalThis.fetch.mockRejectedValueOnce(new Error('Network error'))
+      mockApiGet.mockRejectedValueOnce(new Error('Network error'))
 
       await gestionarPotreros.cargarEstadosPotrero()
 
@@ -262,20 +259,19 @@ describe('gestionar-potreros.js', () => {
         ]
       }
 
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockData
+      mockApiGet.mockResolvedValueOnce({
+        data: mockData
       })
 
       await gestionarPotreros.cargarPersonasUsuario()
 
-      expect(globalThis.fetch).toHaveBeenCalledWith('http://localhost:5000/api/potreros/personas-usuario')
+      expect(mockApiGet).toHaveBeenCalledWith('/potreros/personas-usuario')
       expect(gestionarPotreros.personasUsuario.value).toEqual(mockData.data)
     })
 
     it('should handle unsuccessful response', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: false
+      mockApiGet.mockResolvedValueOnce({
+        data: { success: false }
       })
 
       await gestionarPotreros.cargarPersonasUsuario()
@@ -284,7 +280,7 @@ describe('gestionar-potreros.js', () => {
     })
 
     it('should handle fetch error', async () => {
-      globalThis.fetch.mockRejectedValueOnce(new Error('Network error'))
+      mockApiGet.mockRejectedValueOnce(new Error('Network error'))
 
       await gestionarPotreros.cargarPersonasUsuario()
 
@@ -295,8 +291,8 @@ describe('gestionar-potreros.js', () => {
       // Ensure personasUsuario has some data initially
       gestionarPotreros.personasUsuario.value = [{ id: 1, nombre: 'Test' }]
 
-      // Mock fetch to reject
-      globalThis.fetch.mockRejectedValueOnce(new Error('Network error'))
+      // Mock api to reject
+      mockApiGet.mockRejectedValueOnce(new Error('Network error'))
 
       await gestionarPotreros.cargarPersonasUsuario()
 
@@ -355,9 +351,8 @@ describe('gestionar-potreros.js', () => {
 
     it('should handle HTTP error', async () => {
       gestionarPotreros.error.value = null
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 500
+      mockApiGet.mockRejectedValueOnce({
+        response: { status: 500, data: { message: 'Server error' } }
       })
 
       await gestionarPotreros.cargarPotreros()
@@ -371,7 +366,7 @@ describe('gestionar-potreros.js', () => {
     it('should handle fetch error', async () => {
       gestionarPotreros.error.value = null
       const errorMessage = 'Network error'
-      globalThis.fetch.mockRejectedValueOnce(new Error(errorMessage))
+      mockApiGet.mockRejectedValueOnce(new Error(errorMessage))
 
       await gestionarPotreros.cargarPotreros()
 
@@ -384,23 +379,11 @@ describe('gestionar-potreros.js', () => {
 
   describe('cargarDatosIniciales', () => {
     it('should load all initial data successfully', async () => {
-      globalThis.fetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: true, data: [{ id: 1 }] })
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: true, data: [{ id: 1 }] })
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: true, data: [{ id: 1 }] })
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ success: true, data: [] })
-        })
+      mockApiGet
+        .mockResolvedValueOnce({ data: { success: true, data: [{ id: 1 }] } })
+        .mockResolvedValueOnce({ data: { success: true, data: [{ id: 1 }] } })
+        .mockResolvedValueOnce({ data: { success: true, data: [{ id: 1 }] } })
+        .mockResolvedValueOnce({ data: { success: true, data: [] } })
 
       gestionarPotreros.error.value = null
       await gestionarPotreros.cargarDatosIniciales()
@@ -413,8 +396,8 @@ describe('gestionar-potreros.js', () => {
       gestionarPotreros.loading.value = true
       const errorMessage = 'Error loading data'
       
-      // Mock fetch to fail for cargarPersonasUsuario
-      globalThis.fetch.mockRejectedValueOnce(new Error(errorMessage))
+      // Mock api to fail for cargarPersonasUsuario
+      mockApiGet.mockRejectedValueOnce(new Error(errorMessage))
 
       // The function should complete without throwing
       await gestionarPotreros.cargarDatosIniciales()
@@ -422,8 +405,8 @@ describe('gestionar-potreros.js', () => {
       // Note: The original code has a bug where error parameter shadows the error ref
       // So error.value may not be set correctly, but loading should be false
       expect(gestionarPotreros.loading.value).toBe(false)
-      // Verify fetch was called (for cargarPersonasUsuario)
-      expect(globalThis.fetch).toHaveBeenCalled()
+      // Verify api was called (for cargarPersonasUsuario)
+      expect(mockApiGet).toHaveBeenCalled()
     })
   })
 
@@ -522,66 +505,58 @@ describe('gestionar-potreros.js', () => {
       const id = 1
       const fecha = '2024-12-31'
 
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true })
+      mockApiPut.mockResolvedValueOnce({
+        data: { success: true }
       })
 
       await gestionarPotreros.actualizarProximaLimpieza(id, fecha)
 
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        `http://localhost:5000/api/potreros/${id}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ proxima_limpieza: fecha })
-        }
+      expect(mockApiPut).toHaveBeenCalledWith(
+        `/potreros/${id}`,
+        { proxima_limpieza: fecha }
       )
     })
 
     it('should handle unsuccessful response', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: false, message: 'Error' })
+      mockApiPut.mockResolvedValueOnce({
+        data: { success: false, message: 'Error' }
       })
 
       await gestionarPotreros.actualizarProximaLimpieza(1, '2024-12-31')
 
       // Should not throw, just log error
-      expect(globalThis.fetch).toHaveBeenCalled()
+      expect(mockApiPut).toHaveBeenCalled()
     })
 
     it('should handle HTTP error', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 500
+      mockApiPut.mockRejectedValueOnce({
+        response: { status: 500, data: { message: 'Server error' } }
       })
 
       await gestionarPotreros.actualizarProximaLimpieza(1, '2024-12-31')
 
       // Should not throw, just log error
-      expect(globalThis.fetch).toHaveBeenCalled()
+      expect(mockApiPut).toHaveBeenCalled()
     })
 
     it('should handle fetch error', async () => {
-      globalThis.fetch.mockRejectedValueOnce(new Error('Network error'))
+      mockApiPut.mockRejectedValueOnce(new Error('Network error'))
 
       await gestionarPotreros.actualizarProximaLimpieza(1, '2024-12-31')
 
       // Should not throw, just log error
-      expect(globalThis.fetch).toHaveBeenCalled()
+      expect(mockApiPut).toHaveBeenCalled()
     })
 
     it('should handle success response but no data.success', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: false, message: 'Error' })
+      mockApiPut.mockResolvedValueOnce({
+        data: { success: false, message: 'Error' }
       })
 
       await gestionarPotreros.actualizarProximaLimpieza(1, '2024-12-31')
 
       // Should not throw, just log error
-      expect(globalThis.fetch).toHaveBeenCalled()
+      expect(mockApiPut).toHaveBeenCalled()
     })
   })
 
@@ -663,6 +638,8 @@ describe('gestionar-potreros.js', () => {
       Swal.fire.mockResolvedValueOnce({
         isConfirmed: true,
         value: {
+          nombre: null,
+          estado: 'disponible',
           capacidad: 25,
           hectareas: 2.5,
           id_tipo_pasto: 1,
@@ -673,9 +650,8 @@ describe('gestionar-potreros.js', () => {
         }
       })
 
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
+      mockApiPost.mockResolvedValueOnce({
+        data: mockResponse
       })
 
       // Spy on cargarPotreros
@@ -686,11 +662,12 @@ describe('gestionar-potreros.js', () => {
       // Wait for async operations
       await new Promise(resolve => setTimeout(resolve, 100))
 
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        'http://localhost:5000/api/potreros/',
+      expect(mockApiPost).toHaveBeenCalledWith(
+        '/potreros/',
         expect.objectContaining({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
+          nombre: null,
+          estado: 'disponible',
+          capacidad: 25
         })
       )
 
@@ -703,10 +680,8 @@ describe('gestionar-potreros.js', () => {
         value: { capacidad: 25 }
       })
 
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        json: async () => ({ message: 'Server error' })
+      mockApiPost.mockRejectedValueOnce({
+        response: { status: 500, data: { message: 'Server error' } }
       })
 
       gestionarPotreros.crearPotrero()
@@ -734,9 +709,8 @@ describe('gestionar-potreros.js', () => {
         return Promise.resolve({ isConfirmed: false })
       })
 
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: false, message: 'Error message' })
+      mockApiPost.mockResolvedValueOnce({
+        data: { success: false, message: 'Error message' }
       })
 
       gestionarPotreros.crearPotrero()
@@ -757,7 +731,7 @@ describe('gestionar-potreros.js', () => {
 
       const errorWithoutMessage = new Error('Test error')
       errorWithoutMessage.message = ''
-      globalThis.fetch.mockRejectedValueOnce(errorWithoutMessage)
+      mockApiPost.mockRejectedValueOnce(errorWithoutMessage)
 
       gestionarPotreros.crearPotrero()
 
@@ -814,9 +788,8 @@ describe('gestionar-potreros.js', () => {
         value: mockPreConfirm()
       })
 
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true })
+      mockApiPost.mockResolvedValueOnce({
+        data: { success: true }
       })
 
       gestionarPotreros.crearPotrero()
@@ -892,16 +865,16 @@ describe('gestionar-potreros.js', () => {
       gestionarPotreros.tiposPasto.value = []
       gestionarPotreros.personasUsuario.value = []
 
-      globalThis.fetch
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: [] }) })
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: [] }) })
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true, data: [] }) })
+      mockApiGet
+        .mockResolvedValueOnce({ data: { success: true, data: [] } })
+        .mockResolvedValueOnce({ data: { success: true, data: [] } })
+        .mockResolvedValueOnce({ data: { success: true, data: [] } })
 
       Swal.fire.mockResolvedValueOnce({ isConfirmed: false })
 
       await gestionarPotreros.editarPotrero(1)
 
-      expect(globalThis.fetch).toHaveBeenCalledTimes(3)
+      expect(mockApiGet).toHaveBeenCalledTimes(3)
     })
 
     it('should show Swal dialog with form pre-filled', async () => {
@@ -929,9 +902,8 @@ describe('gestionar-potreros.js', () => {
         }
       })
 
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse
+      mockApiPut.mockResolvedValueOnce({
+        data: mockResponse
       })
 
       const cargarPotrerosSpy = vi.spyOn(gestionarPotreros, 'cargarPotreros').mockResolvedValue()
@@ -940,11 +912,11 @@ describe('gestionar-potreros.js', () => {
 
       await new Promise(resolve => setTimeout(resolve, 150))
 
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        'http://localhost:5000/api/potreros/1',
+      expect(mockApiPut).toHaveBeenCalledWith(
+        '/potreros/1',
         expect.objectContaining({
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' }
+          estado: 'En uso',
+          capacidad: 30
         })
       )
 
@@ -957,10 +929,8 @@ describe('gestionar-potreros.js', () => {
         value: { estado: 'En uso' }
       })
 
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        json: async () => ({ message: 'Server error' })
+      mockApiPut.mockRejectedValueOnce({
+        response: { status: 500, data: { message: 'Server error' } }
       })
 
       await gestionarPotreros.editarPotrero(1)
@@ -976,9 +946,8 @@ describe('gestionar-potreros.js', () => {
         value: { estado: 'En uso' }
       })
 
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: false, message: 'Error message' })
+      mockApiPut.mockResolvedValueOnce({
+        data: { success: false, message: 'Error message' }
       })
 
       await gestionarPotreros.editarPotrero(1)
@@ -996,7 +965,7 @@ describe('gestionar-potreros.js', () => {
 
       const errorWithoutMessage = new Error('Test error')
       errorWithoutMessage.message = ''
-      globalThis.fetch.mockRejectedValueOnce(errorWithoutMessage)
+      mockApiPut.mockRejectedValueOnce(errorWithoutMessage)
 
       await gestionarPotreros.editarPotrero(1)
 
@@ -1075,9 +1044,8 @@ describe('gestionar-potreros.js', () => {
         return { isConfirmed: false }
       })
 
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true })
+      mockApiPut.mockResolvedValueOnce({
+        data: { success: true }
       })
 
       await gestionarPotreros.editarPotrero(1)
@@ -1144,9 +1112,8 @@ describe('gestionar-potreros.js', () => {
         }
       })
 
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true })
+      mockApiPut.mockResolvedValueOnce({
+        data: { success: true }
       })
 
       await gestionarPotreros.editarPotrero(1)
@@ -1231,7 +1198,7 @@ describe('gestionar-potreros.js', () => {
       await gestionarPotreros.editarPotrero(1)
       await new Promise(resolve => setTimeout(resolve, 100))
 
-      expect(globalThis.fetch).toHaveBeenCalled()
+      expect(mockApiPut).toHaveBeenCalled()
       cargarPotrerosSpy.mockRestore()
     })
 
@@ -1278,7 +1245,7 @@ describe('gestionar-potreros.js', () => {
       await gestionarPotreros.editarPotrero(1)
       await new Promise(resolve => setTimeout(resolve, 100))
 
-      expect(globalThis.fetch).toHaveBeenCalled()
+      expect(mockApiPut).toHaveBeenCalled()
       cargarPotrerosSpy.mockRestore()
     })
   })
@@ -1627,10 +1594,8 @@ describe('gestionar-potreros.js', () => {
         value: { capacidad: 25 }
       })
 
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        json: async () => ({})
+      mockApiPost.mockRejectedValueOnce({
+        response: { status: 500, data: {} }
       })
 
       gestionarPotreros.crearPotrero()
@@ -1646,9 +1611,8 @@ describe('gestionar-potreros.js', () => {
         value: { capacidad: 25 }
       })
 
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: false, message: 'Error message' })
+      mockApiPost.mockResolvedValueOnce({
+        data: { success: false, message: 'Error message' }
       })
 
       gestionarPotreros.crearPotrero()
@@ -1666,7 +1630,7 @@ describe('gestionar-potreros.js', () => {
 
       const errorWithoutMessage = new Error('Simulated error without message')
       errorWithoutMessage.message = ''
-      globalThis.fetch.mockRejectedValueOnce(errorWithoutMessage)
+      mockApiPut.mockRejectedValueOnce(errorWithoutMessage)
 
       gestionarPotreros.crearPotrero()
 
@@ -1755,10 +1719,8 @@ describe('gestionar-potreros.js', () => {
         value: { estado: 'En uso' }
       })
 
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        json: async () => ({})
+      mockApiPut.mockRejectedValueOnce({
+        response: { status: 500, data: {} }
       })
 
       await gestionarPotreros.editarPotrero(1)
@@ -1776,7 +1738,7 @@ describe('gestionar-potreros.js', () => {
 
       const errorWithoutMessage = new Error('Simulated error without message')
       errorWithoutMessage.message = ''
-      globalThis.fetch.mockRejectedValueOnce(errorWithoutMessage)
+      mockApiPut.mockRejectedValueOnce(errorWithoutMessage)
 
       await gestionarPotreros.editarPotrero(1)
 
@@ -1791,7 +1753,7 @@ describe('gestionar-potreros.js', () => {
       gestionarPotreros.error.value = null
       gestionarPotreros.loading.value = true
 
-      globalThis.fetch.mockRejectedValueOnce(new Error('Error loading personas'))
+      mockApiPut.mockRejectedValueOnce(new Error('Error loading personas'))
 
       await gestionarPotreros.cargarDatosIniciales()
 
@@ -1902,12 +1864,11 @@ describe('gestionar-potreros.js', () => {
 
   describe('cargarPotreros edge cases', () => {
     it('should handle response with data but not an array', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
+      mockApiGet.mockResolvedValueOnce({
+        data: {
           success: true,
           data: { id: 1, nombre: 'Potrero 1' } // Not an array
-        })
+        }
       })
 
       await gestionarPotreros.cargarPotreros()
@@ -1917,12 +1878,11 @@ describe('gestionar-potreros.js', () => {
     })
 
     it('should handle response with success false', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
+      mockApiGet.mockResolvedValueOnce({
+        data: {
           success: false,
           data: []
-        })
+        }
       })
 
       await gestionarPotreros.cargarPotreros()
@@ -1932,12 +1892,11 @@ describe('gestionar-potreros.js', () => {
     })
 
     it('should handle response with null data', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
+      mockApiGet.mockResolvedValueOnce({
+        data: {
           success: true,
           data: null
-        })
+        }
       })
 
       await gestionarPotreros.cargarPotreros()
@@ -1949,36 +1908,34 @@ describe('gestionar-potreros.js', () => {
 
   describe('actualizarProximaLimpieza edge cases', () => {
     it('should handle success response with data.success false', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
+      mockApiPut.mockResolvedValueOnce({
+        data: {
           success: false,
           message: 'Error message'
-        })
+        }
       })
 
       await gestionarPotreros.actualizarProximaLimpieza(1, '2024-12-31')
 
-      expect(globalThis.fetch).toHaveBeenCalled()
+      expect(mockApiPut).toHaveBeenCalled()
     })
 
     it('should handle HTTP error response', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 500
+      mockApiPut.mockRejectedValueOnce({
+        response: { status: 500, data: { message: 'Server error' } }
       })
 
       await gestionarPotreros.actualizarProximaLimpieza(1, '2024-12-31')
 
-      expect(globalThis.fetch).toHaveBeenCalled()
+      expect(mockApiPut).toHaveBeenCalled()
     })
 
     it('should handle fetch error', async () => {
-      globalThis.fetch.mockRejectedValueOnce(new Error('Network error'))
+      mockApiPut.mockRejectedValueOnce(new Error('Network error'))
 
       await gestionarPotreros.actualizarProximaLimpieza(1, '2024-12-31')
 
-      expect(globalThis.fetch).toHaveBeenCalled()
+      expect(mockApiPut).toHaveBeenCalled()
     })
   })
 
@@ -1989,7 +1946,7 @@ describe('gestionar-potreros.js', () => {
       gestionarPotreros.crearPotrero()
 
       expect(Swal.fire).toHaveBeenCalled()
-      expect(globalThis.fetch).not.toHaveBeenCalled()
+      expect(mockApiPost).not.toHaveBeenCalled()
     })
 
     it('should handle crearPotrero with fetch error that has no message property', async () => {
@@ -1999,7 +1956,7 @@ describe('gestionar-potreros.js', () => {
       })
 
       const errorWithoutMessage = {}
-      globalThis.fetch.mockRejectedValueOnce(errorWithoutMessage)
+      mockApiPost.mockRejectedValueOnce(errorWithoutMessage)
 
       gestionarPotreros.crearPotrero()
 
@@ -2039,7 +1996,7 @@ describe('gestionar-potreros.js', () => {
       })
 
       const errorWithoutMessage = {}
-      globalThis.fetch.mockRejectedValueOnce(errorWithoutMessage)
+      mockApiPut.mockRejectedValueOnce(errorWithoutMessage)
 
       await gestionarPotreros.editarPotrero(1)
 
@@ -2110,12 +2067,12 @@ describe('gestionar-potreros.js', () => {
     })
 
     it('should handle response with data but not array', async () => {
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
+      mockApiGet.mockResolvedValueOnce({
+        data: {
           success: true,
           data: { id: 1, nombre: 'Potrero 1' } // Not an array
-        })
+        },
+        status: 200
       })
 
       await gestionarPotreros.cargarPotreros()
@@ -2127,9 +2084,8 @@ describe('gestionar-potreros.js', () => {
     it('should handle HTTP error response', async () => {
       // Ensure loading starts as true
       gestionarPotreros.loading.value = true
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 500
+      mockApiGet.mockRejectedValueOnce({
+        response: { status: 500, data: { message: 'Server error' } }
       })
 
       await gestionarPotreros.cargarPotreros()
@@ -2146,7 +2102,7 @@ describe('gestionar-potreros.js', () => {
     it('should handle fetch error', async () => {
       // Ensure loading starts as true
       gestionarPotreros.loading.value = true
-      globalThis.fetch.mockRejectedValueOnce(new Error('Network error'))
+      mockApiGet.mockRejectedValueOnce(new Error('Network error'))
 
       await gestionarPotreros.cargarPotreros()
 
@@ -2170,7 +2126,7 @@ describe('gestionar-potreros.js', () => {
 
       await gestionarPotreros.crearPotrero()
 
-      expect(globalThis.fetch).not.toHaveBeenCalled()
+      expect(mockApiPost).not.toHaveBeenCalled()
     })
 
     it('should handle create error', async () => {
@@ -2191,9 +2147,8 @@ describe('gestionar-potreros.js', () => {
         return mocks[id] || null
       })
 
-      globalThis.fetch.mockResolvedValue({
-        ok: false,
-        json: () => Promise.resolve({ message: 'Create failed' })
+      mockApiPost.mockRejectedValue({
+        response: { data: { message: 'Create failed' } }
       })
 
       Swal.fire.mockResolvedValue({
@@ -2232,14 +2187,17 @@ describe('gestionar-potreros.js', () => {
         return mocks[id] || null
       })
 
-      globalThis.fetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ success: false, message: 'Error message' })
+      mockApiPost.mockResolvedValueOnce({
+        data: { success: false, message: 'Error message' }
       })
 
       Swal.fire.mockResolvedValue({
         isConfirmed: true,
-        value: { capacidad: 10 }
+        value: {
+          nombre: null,
+          estado: 'disponible',
+          capacidad: 10
+        }
       })
 
       await gestionarPotreros.crearPotrero()
@@ -2274,13 +2232,14 @@ describe('gestionar-potreros.js', () => {
       gestionarPotreros.tiposPasto.value = []
       gestionarPotreros.personasUsuario.value = []
 
-      // Mock fetch para cargarEstadosPotrero, cargarTiposPasto, cargarPersonasUsuario
+      // Mock api.get para cargarEstadosPotrero, cargarTiposPasto, cargarPersonasUsuario
       // Estas funciones se llaman en asegurarDatosCargados() antes de construirOpcionesEstado
-      globalThis.fetch
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: [{ estado: 'Disponible' }] }) })
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: [{ id: 1, tipo_pasto: 'Bermuda' }] }) })
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: [{ id: 1, primer_nombre: 'Test', primer_apellido: 'User' }] }) })
+      mockApiGet
+        .mockResolvedValueOnce({ data: { success: true, data: [{ estado: 'Disponible' }] } })
+        .mockResolvedValueOnce({ data: { success: true, data: [{ id: 1, tipo_pasto: 'Bermuda' }] } })
+        .mockResolvedValueOnce({ data: { success: true, data: [{ id: 1, primer_nombre: 'Test', primer_apellido: 'User' }] } })
 
+      gestionarPotreros.potreros.value = [{ id: 1, nombre: 'Potrero 1' }]
       mockSwalFire.mockResolvedValue({ isConfirmed: false })
 
       await gestionarPotreros.editarPotrero(1)
@@ -2333,16 +2292,17 @@ describe('gestionar-potreros.js', () => {
       })
 
       // Primero mockear las cargas de datos (asegurarDatosCargados)
-      globalThis.fetch
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: [{ estado: 'Disponible' }] }) })
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: [{ id: 1, tipo_pasto: 'Bermuda' }] }) })
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: [{ id: 1, primer_nombre: 'Test', primer_apellido: 'User' }] }) })
-        // Luego mockear el error de actualización (ok: false)
-        .mockResolvedValueOnce({
-          ok: false,
+      mockApiGet
+        .mockResolvedValueOnce({ data: { success: true, data: [{ estado: 'Disponible' }] } })
+        .mockResolvedValueOnce({ data: { success: true, data: [{ id: 1, tipo_pasto: 'Bermuda' }] } })
+        .mockResolvedValueOnce({ data: { success: true, data: [{ id: 1, primer_nombre: 'Test', primer_apellido: 'User' }] } })
+      // Luego mockear el error de actualización
+      mockApiPut.mockRejectedValueOnce({
+        response: {
           status: 400,
-          json: () => Promise.resolve({ message: 'Update failed' })
-        })
+          data: { message: 'Update failed' }
+        }
+      })
 
       // Mock Swal.fire para que retorne isConfirmed: true para el modal
       // y luego cuando se llame con el error, debe mostrar el error
@@ -2417,16 +2377,14 @@ describe('gestionar-potreros.js', () => {
       })
 
       // Primero mockear las cargas de datos (asegurarDatosCargados)
-      globalThis.fetch
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: [{ estado: 'Disponible' }] }) })
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: [{ id: 1, tipo_pasto: 'Bermuda' }] }) })
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true, data: [{ id: 1, primer_nombre: 'Test', primer_apellido: 'User' }] }) })
-        // Luego mockear el error de actualización (ok: true pero success: false)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve({ success: false, message: 'Error message' })
-        })
+      mockApiGet
+        .mockResolvedValueOnce({ data: { success: true, data: [{ estado: 'Disponible' }] } })
+        .mockResolvedValueOnce({ data: { success: true, data: [{ id: 1, tipo_pasto: 'Bermuda' }] } })
+        .mockResolvedValueOnce({ data: { success: true, data: [{ id: 1, primer_nombre: 'Test', primer_apellido: 'User' }] } })
+      // Luego mockear el error de actualización (success: false)
+      mockApiPut.mockResolvedValueOnce({
+        data: { success: false, message: 'Error message' }
+      })
 
       // Mock Swal.fire para que retorne isConfirmed: true para el modal
       // y luego cuando se llame con el error, debe mostrar el error
@@ -2480,9 +2438,8 @@ describe('gestionar-potreros.js', () => {
       gestionarPotreros.tiposPasto.value = [{ id: 1 }]
       gestionarPotreros.personasUsuario.value = [{ id: 1 }]
 
-      globalThis.fetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ success: true, data: [{ estado: 'Disponible' }] })
+      mockApiGet.mockResolvedValue({
+        data: { success: true, data: [{ estado: 'Disponible' }] }
       })
 
       // Test through editarPotrero
@@ -2492,10 +2449,8 @@ describe('gestionar-potreros.js', () => {
       await gestionarPotreros.editarPotrero(1)
       await new Promise(resolve => setTimeout(resolve, 100))
 
-      // Verify fetch was called with estados endpoint
-      const fetchCalls = globalThis.fetch.mock.calls
-      const estadosCall = fetchCalls.find(call => call[0] && call[0].includes('estados'))
-      expect(estadosCall).toBeDefined()
+      // Verify api.get was called with estados endpoint
+      expect(mockApiGet).toHaveBeenCalledWith('/potreros/estados')
     })
 
     it('should load missing tiposPasto', async () => {
@@ -2503,9 +2458,8 @@ describe('gestionar-potreros.js', () => {
       gestionarPotreros.tiposPasto.value = []
       gestionarPotreros.personasUsuario.value = [{ id: 1 }]
 
-      globalThis.fetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ success: true, data: [{ id: 1, tipo_pasto: 'Bermuda' }] })
+      mockApiGet.mockResolvedValue({
+        data: { success: true, data: [{ id: 1, tipo_pasto: 'Bermuda' }] }
       })
 
       gestionarPotreros.potreros.value = [{ id: 1, nombre: 'Potrero 1' }]
@@ -2514,10 +2468,8 @@ describe('gestionar-potreros.js', () => {
       await gestionarPotreros.editarPotrero(1)
       await new Promise(resolve => setTimeout(resolve, 100))
 
-      // Verify fetch was called with tipos-pasto endpoint
-      const fetchCalls = globalThis.fetch.mock.calls
-      const tiposPastoCall = fetchCalls.find(call => call[0] && call[0].includes('tipos-pasto'))
-      expect(tiposPastoCall).toBeDefined()
+      // Verify api.get was called with tipos-pasto endpoint
+      expect(mockApiGet).toHaveBeenCalledWith('/potreros/tipos-pasto')
     })
 
     it('should load missing personasUsuario', async () => {
@@ -2525,9 +2477,8 @@ describe('gestionar-potreros.js', () => {
       gestionarPotreros.tiposPasto.value = [{ id: 1 }]
       gestionarPotreros.personasUsuario.value = []
 
-      globalThis.fetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ success: true, data: [{ id: 1, primer_nombre: 'Test', primer_apellido: 'User' }] })
+      mockApiGet.mockResolvedValue({
+        data: { success: true, data: [{ id: 1, primer_nombre: 'Test', primer_apellido: 'User' }] }
       })
 
       gestionarPotreros.potreros.value = [{ id: 1, nombre: 'Potrero 1' }]
@@ -2536,10 +2487,8 @@ describe('gestionar-potreros.js', () => {
       await gestionarPotreros.editarPotrero(1)
       await new Promise(resolve => setTimeout(resolve, 100))
 
-      // Verify fetch was called with personas-usuario endpoint
-      const fetchCalls = globalThis.fetch.mock.calls
-      const personasCall = fetchCalls.find(call => call[0] && call[0].includes('personas-usuario'))
-      expect(personasCall).toBeDefined()
+      // Verify api.get was called with personas-usuario endpoint
+      expect(mockApiGet).toHaveBeenCalledWith('/potreros/personas-usuario')
     })
   })
 
@@ -2645,58 +2594,53 @@ describe('gestionar-potreros.js', () => {
   describe('actualizarProximaLimpieza Function', () => {
     it('should update proxima limpieza successfully', async () => {
       globalThis.fetch.mockClear()
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ success: true })
+      mockApiPut.mockResolvedValueOnce({
+        data: { success: true }
       })
 
       await gestionarPotreros.actualizarProximaLimpieza(1, '2024-12-31')
       await new Promise(resolve => setTimeout(resolve, 100))
 
-      expect(globalThis.fetch).toHaveBeenCalled()
-      const callArgs = globalThis.fetch.mock.calls[0]
+      expect(mockApiPut).toHaveBeenCalled()
+      const callArgs = mockApiPut.mock.calls[0]
       expect(callArgs[0]).toMatch(/\/potreros\/1/)
-      expect(callArgs[1].method).toBe('PUT')
-      expect(callArgs[1].body).toBe(JSON.stringify({ proxima_limpieza: '2024-12-31' }))
+      expect(callArgs[1]).toEqual({ proxima_limpieza: '2024-12-31' })
     })
 
     it('should handle update error', async () => {
-      globalThis.fetch.mockClear()
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: false,
-        status: 400,
-        json: () => Promise.resolve({ message: 'Update failed' })
+      mockApiPut.mockClear()
+      mockApiPut.mockRejectedValueOnce({
+        response: { status: 400, data: { message: 'Update failed' } }
       })
 
       await gestionarPotreros.actualizarProximaLimpieza(1, '2024-12-31')
       await new Promise(resolve => setTimeout(resolve, 100))
 
-      expect(globalThis.fetch).toHaveBeenCalled()
+      expect(mockApiPut).toHaveBeenCalled()
       expect(console.error).toHaveBeenCalled()
     })
 
     it('should handle response without success', async () => {
-      globalThis.fetch.mockClear()
-      globalThis.fetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ success: false, message: 'Error message' })
+      mockApiPut.mockClear()
+      mockApiPut.mockResolvedValueOnce({
+        data: { success: false, message: 'Error message' }
       })
 
       await gestionarPotreros.actualizarProximaLimpieza(1, '2024-12-31')
       await new Promise(resolve => setTimeout(resolve, 100))
 
-      expect(globalThis.fetch).toHaveBeenCalled()
+      expect(mockApiPut).toHaveBeenCalled()
       expect(console.error).toHaveBeenCalled()
     })
 
     it('should handle network error', async () => {
-      globalThis.fetch.mockClear()
-      globalThis.fetch.mockRejectedValueOnce(new Error('Network error'))
+      mockApiPut.mockClear()
+      mockApiPut.mockRejectedValueOnce(new Error('Network error'))
 
       await gestionarPotreros.actualizarProximaLimpieza(1, '2024-12-31')
       await new Promise(resolve => setTimeout(resolve, 100))
 
-      expect(globalThis.fetch).toHaveBeenCalled()
+      expect(mockApiPut).toHaveBeenCalled()
       expect(console.error).toHaveBeenCalled()
     })
   })
@@ -2751,8 +2695,8 @@ describe('gestionar-potreros.js', () => {
 
   describe('cargarDatosIniciales Edge Cases', () => {
     it('should handle error in cargarDatosIniciales', async () => {
-      // Mock all fetch calls to fail
-      globalThis.fetch.mockRejectedValue(new Error('Load error'))
+      // Mock all api calls to fail
+      mockApiGet.mockRejectedValue(new Error('Load error'))
 
       await gestionarPotreros.cargarDatosIniciales()
 
@@ -2782,7 +2726,9 @@ describe('gestionar-potreros.js', () => {
       })
 
       await gestionarPotreros.cargarPotreros()
+      await new Promise(resolve => setTimeout(resolve, 50))
 
+      expect(gestionarPotreros.potreros.value.length).toBeGreaterThan(0)
       expect(gestionarPotreros.potreros.value[0].fechaUso).toBe('')
     })
 
@@ -2802,7 +2748,9 @@ describe('gestionar-potreros.js', () => {
       })
 
       await gestionarPotreros.cargarPotreros()
+      await new Promise(resolve => setTimeout(resolve, 50))
 
+      expect(gestionarPotreros.potreros.value.length).toBeGreaterThan(0)
       expect(gestionarPotreros.potreros.value[0].responsable).toBe('No asignado')
     })
   })
@@ -2843,7 +2791,7 @@ describe('gestionar-potreros.js', () => {
       expect(true).toBe(true)
     })
 
-    it('should handle obtenerResponsableNombre with valid personaId', () => {
+    it('should handle obtenerResponsableNombre with valid personaId', async () => {
       gestionarPotreros.personasUsuario.value = [
         { id: 1, primer_nombre: 'Juan', primer_apellido: 'Pérez' }
       ]
@@ -2861,14 +2809,15 @@ describe('gestionar-potreros.js', () => {
         status: 200
       })
 
-      gestionarPotreros.cargarPotreros()
+      await gestionarPotreros.cargarPotreros()
+      await new Promise(resolve => setTimeout(resolve, 50))
 
       // Line 29: const persona = personasUsuario.value.find(p => p.id == personaId);
       // This line should be executed when responsable_persona_id is provided
       expect(gestionarPotreros.personasUsuario.value).toHaveLength(1)
     })
 
-    it('should handle obtenerResponsableNombre when persona not found', () => {
+    it('should handle obtenerResponsableNombre when persona not found', async () => {
       gestionarPotreros.personasUsuario.value = [
         { id: 1, primer_nombre: 'Juan', primer_apellido: 'Pérez' }
       ]
@@ -2886,7 +2835,8 @@ describe('gestionar-potreros.js', () => {
         status: 200
       })
 
-      gestionarPotreros.cargarPotreros()
+      await gestionarPotreros.cargarPotreros()
+      await new Promise(resolve => setTimeout(resolve, 50))
 
       // Line 29: const persona = personasUsuario.value.find(p => p.id == personaId);
       // Should return undefined, then line 32: return `Persona ${personaId}`;
@@ -2894,4 +2844,3 @@ describe('gestionar-potreros.js', () => {
     })
   })
 })
-

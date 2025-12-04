@@ -210,48 +210,8 @@ def delete_animal(animal_id):
 def create_animal():
     """Create a new animal."""
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({
-                'error': DATOS_INVALIDOS,
-                'message': 'No se proporcionaron datos',
-                'success': False
-            }), 400
-
-        # Validaciones básicas
-        if not data.get('nombre'):
-            return jsonify({
-                'error': DATOS_INVALIDOS,
-                'message': 'El nombre es requerido',
-                'success': False
-            }), 400
-
-        if not data.get('raza'):
-            return jsonify({
-                'error': DATOS_INVALIDOS,
-                'message': 'La raza es requerida',
-                'success': False
-            }), 400
-
-        if not data.get('fecha_nacimiento'):
-            return jsonify({
-                'error': DATOS_INVALIDOS,
-                'message': 'La fecha de nacimiento es requerida',
-                'success': False
-            }), 400
-
-        if not data.get('estado'):
-            return jsonify({
-                'error': DATOS_INVALIDOS,
-                'message': 'El estado es requerido',
-                'success': False
-            }), 400
-
-        # Crear instancia del modelo
-        animal = Ganado.from_dict(data)
-
-        # Guardar en la base de datos
-        animal_creado = GanadoService.crear_ganado(animal)
+        from src.controllers.animal_controller import GanadoController
+        return GanadoController.crear_ganado()
 
         if animal_creado:
             # Crear QR para el ganado

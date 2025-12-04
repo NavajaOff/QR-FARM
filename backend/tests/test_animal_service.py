@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import Mock, patch
+from flask import Flask
 from src.services.animal_service import GanadoService
 from src.models.animal import Ganado, EstadoGanado, SexoGanado
 
@@ -275,10 +276,8 @@ class TestGanadoModel:
 
         ganado = Ganado(nombre="Test", estado="saludable", sexo=SexoGanado.HEMBRA)
 
-        result = GanadoService.crear_ganado(ganado)
-
-        assert result is None
-        mock_conn.close.assert_called_once()
+        with pytest.raises(ValueError, match="Tenant requerido para crear ganado"):
+            GanadoService.crear_ganado(ganado)
 
     @patch('src.services.animal_service.get_connection')
     @patch('src.services.animal_service.GanadoService._obtener_tenant_id')
@@ -370,29 +369,31 @@ class TestGanadoModel:
         mock_obtener.assert_called_once_with(1, None)
 
     @patch('src.services.animal_service.get_connection')
+    @patch('src.services.animal_service.GanadoService._obtener_estado_id_desde_db')
     @patch('src.services.animal_service.GanadoService._obtener_tenant_id')
-    def test_crear_ganado_exception(self, mock_tenant, mock_get_conn):
+    def test_crear_ganado_exception(self, mock_tenant, mock_estado, mock_get_conn):
         """Test crear_ganado with database exception"""
         mock_conn = Mock()
         mock_cursor = Mock()
         mock_get_conn.return_value = mock_conn
         mock_conn.cursor.return_value = mock_cursor
-        mock_cursor.execute.side_effect = Exception("DB Error")
         mock_tenant.return_value = 1
+        mock_estado.return_value = 1
+        mock_cursor.execute.side_effect = Exception("DB Error")
 
         ganado = Ganado(nombre="Test", estado="saludable", sexo=SexoGanado.HEMBRA)
 
-        result = GanadoService.crear_ganado(ganado)
-
-        assert result is None
-        mock_conn.close.assert_called_once()
+        with pytest.raises(Exception, match="DB Error"):
+            GanadoService.crear_ganado(ganado)
 
     def test_ganado_es_estado_activo_none(self):
         """Test es_estado_activo returns True for None (default to active)"""
     def test_obtener_tenant_id(self):
         """Test _obtener_tenant_id"""
-        with patch('src.services.animal_service.get_current_tenant_id') as mock_get_tenant:
-            mock_get_tenant.return_value = 1
+        from flask import Flask, g
+        app = Flask(__name__)
+        with app.app_context():
+            g.tenant_id = 1
             result = GanadoService._obtener_tenant_id()
             assert result == 1
 
