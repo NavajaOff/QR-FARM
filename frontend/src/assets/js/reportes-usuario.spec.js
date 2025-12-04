@@ -942,24 +942,15 @@ describe('reportes-usuario.js', () => {
       const component = m.default
       component.setup()
 
-      // Trigger watch to create chart instance
-      const watchCall = mockWatch.mock.calls[0]
-      if (watchCall && watchCall[1]) {
-        await watchCall[1]()
-      }
+      // Set chartInstance for testing (simulate existing chart)
+      m.chartInstanceRef.value = mockChartInstance
 
-      // Verify chart was created
-      expect(MockChartSpy).toHaveBeenCalled()
-
-      // Simulate chartInstance being set (since it's module-level)
-      // We need to access the module's chartInstance variable
-      // For testing purposes, we'll call the unmount callback directly
+      // Get unmount callback and call it (lines 211-212)
       const unmountCallback = mockOnUnmounted.mock.calls[0][0]
       unmountCallback()
 
-      // Since chartInstance is module-level and we can't directly access it,
-      // we test that the callback was set up correctly
-      expect(mockOnUnmounted).toHaveBeenCalledWith(expect.any(Function))
+      // Verify chart was destroyed (lines 211-212)
+      expect(mockChartInstance.destroy).toHaveBeenCalled()
     })
 
     it('should not destroy chart when onUnmounted is called and chart does not exist', async () => {
@@ -999,18 +990,15 @@ describe('reportes-usuario.js', () => {
       const component = m.default
       component.setup()
 
-      // Trigger watch to attempt chart creation (lines 109-120, 137-189)
-      const watchCall = mockWatch.mock.calls[0]
-      if (watchCall && watchCall[1]) {
-        await watchCall[1]()
-      }
+      // Set chartInstance for testing (simulate existing chart)
+      m.chartInstanceRef.value = mockChartInstance
 
       // Now call onUnmounted callback (lines 211-212)
       const unmountCallback = mockOnUnmounted.mock.calls[0][0]
       unmountCallback()
 
-      // Verify that onUnmounted callback was set up correctly
-      expect(mockOnUnmounted).toHaveBeenCalledWith(expect.any(Function))
+      // Verify chart was destroyed (lines 211-212)
+      expect(mockChartInstance.destroy).toHaveBeenCalled()
     })
   })
 
@@ -1308,19 +1296,33 @@ describe('reportes-usuario.js', () => {
         return Promise.resolve()
       })
 
+      // Make update throw an error to trigger lines 156-165
+      mockChartInstance.update.mockImplementation(() => {
+        throw new Error('Update failed')
+      })
+
       vi.resetModules()
       const m = await import('./reportes-usuario.js')
       const component = m.default
       component.setup()
 
-      // Trigger watch to execute renderChart (covers lines 137-189)
+      // Set chartInstance to simulate existing chart (lines 155-166)
+      m.chartInstanceRef.value = mockChartInstance
+
+      // Trigger watch to execute renderChart (covers lines 156-165)
       const watchCall = mockWatch.mock.calls[0]
       if (watchCall && watchCall[1]) {
         await watchCall[1]()
       }
 
-      // Verify renderChart execution path
-      expect(mockNextTick).toHaveBeenCalled()
+      // Verify chart update failed, was destroyed, and recreated (lines 156-165)
+      expect(mockChartInstance.update).toHaveBeenCalled()
+      expect(mockChartInstance.destroy).toHaveBeenCalled()
+      expect(MockChartSpy).toHaveBeenCalled()
+      expect(console.error).toHaveBeenCalledWith(
+        '[ReportesUsuario] Error actualizando gráfico:',
+        expect.any(Error)
+      )
     })
 
     it('should create new chart instance successfully', async () => {
