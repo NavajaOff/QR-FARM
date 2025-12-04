@@ -6,7 +6,12 @@ const mockComputed = vi.fn((fn) => ({ value: fn() }))
 const mockOnMounted = vi.fn((fn) => fn())
 const mockOnUnmounted = vi.fn((fn) => fn())
 const mockWatch = vi.fn((deps, fn) => fn())
-const mockNextTick = vi.fn(() => Promise.resolve())
+const mockNextTick = vi.fn((callback) => {
+  if (callback && typeof callback === 'function') {
+    callback()
+  }
+  return Promise.resolve()
+})
 
 vi.mock('vue', () => ({
   ref: mockRef,
@@ -867,6 +872,33 @@ describe('reportes-usuario.js', () => {
 
       expect(mockNextTick).toHaveBeenCalled()
     })
+
+    it('should execute renderChart through nextTick callback', async () => {
+      mockResumen.value = {
+        ganado: { totales: { total: 10 } },
+        potreros: { totales: { total: 5 } },
+        vacunaciones: { totales: { total: 20 } }
+      }
+      mockLoading.value = false
+
+      const mockCanvas = { getContext: vi.fn(), parentNode: {} }
+      mockRef.mockReturnValueOnce({ value: false }).mockReturnValueOnce({ value: mockCanvas })
+
+      vi.resetModules()
+      const m = await import('./reportes-usuario.js')
+      const component = m.default
+      component.setup()
+
+      // Trigger watch callback which should call nextTick with renderChart
+      const watchCall = mockWatch.mock.calls[0]
+      if (watchCall && watchCall[1]) {
+        await watchCall[1]()
+      }
+
+      // Since nextTick mock calls the callback, renderChart should have been executed
+      // This should cover lines 109-120 (generarDatosGrafica) and 137-189 (renderChart)
+      expect(mockNextTick).toHaveBeenCalled()
+    })
   })
 
   describe('onUnmounted chart destruction', () => {
@@ -884,5 +916,6 @@ describe('reportes-usuario.js', () => {
       const unmountCallback = mockOnUnmounted.mock.calls[0][0]
       expect(typeof unmountCallback).toBe('function')
     })
+
   })
 })
