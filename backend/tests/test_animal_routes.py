@@ -178,8 +178,10 @@ class TestAnimalRoutes:
     @patch('src.routes.animal_routes.emit_update')
     @patch('src.routes.animal_routes.GanadoService')
     @patch('src.routes.animal_routes.Ganado')
-    def test_update_animal_success(self, mock_ganado_class, mock_service, mock_emit):
+    @patch('src.routes.animal_routes.token_required')
+    def test_update_animal_success(self, mock_token_required, mock_ganado_class, mock_service, mock_emit):
         """Test update_animal success"""
+        mock_token_required.return_value = lambda f: f
         mock_animal_actual = Mock()
         mock_animal_actual.to_dict.return_value = {'id': 1, 'nombre': 'ViejoNombre'}
         mock_service.obtener_ganado.return_value = mock_animal_actual
@@ -201,8 +203,10 @@ class TestAnimalRoutes:
 
 
     @patch('src.routes.animal_routes.GanadoService')
-    def test_update_animal_not_found(self, mock_service):
+    @patch('src.routes.animal_routes.token_required')
+    def test_update_animal_not_found(self, mock_token_required, mock_service):
         """Test update_animal not found"""
+        mock_token_required.return_value = lambda f: f
         mock_service.obtener_ganado.return_value = None
 
         response = self.client.put('/api/animales/1', json={'nombre': 'Nuevo'})
@@ -215,8 +219,10 @@ class TestAnimalRoutes:
     @patch('src.routes.animal_routes.emit_update')
     @patch('src.routes.animal_routes.GanadoService')
     @patch('src.routes.animal_routes.Ganado')
-    def test_update_animal_update_fails(self, mock_ganado_class, mock_service, mock_emit):
+    @patch('src.routes.animal_routes.token_required')
+    def test_update_animal_update_fails(self, mock_token_required, mock_ganado_class, mock_service, mock_emit):
         """Test update_animal update fails"""
+        mock_token_required.return_value = lambda f: f
         mock_animal_actual = Mock()
         mock_animal_actual.to_dict.return_value = {'id': 1, 'nombre': 'Viejo'}
         mock_service.obtener_ganado.return_value = mock_animal_actual
@@ -234,8 +240,10 @@ class TestAnimalRoutes:
     @patch('src.routes.animal_routes.emit_update')
     @patch('src.routes.animal_routes.GanadoService')
     @patch('src.routes.animal_routes.Ganado')
-    def test_update_animal_exception(self, mock_ganado_class, mock_service, mock_emit):
+    @patch('src.routes.animal_routes.token_required')
+    def test_update_animal_exception(self, mock_token_required, mock_ganado_class, mock_service, mock_emit):
         """Test update_animal exception"""
+        mock_token_required.return_value = lambda f: f
         mock_service.obtener_ganado.side_effect = Exception("DB error")
 
         response = self.client.put('/api/animales/1', json={'nombre': 'Nuevo'})

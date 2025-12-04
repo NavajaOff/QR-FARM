@@ -52,6 +52,33 @@ class Ganado:
         """
         Crea una instancia de Ganado desde un diccionario
         """
+        # Manejar sexo de forma segura
+        sexo_value = data.get('sexo', 'macho')
+        try:
+            if isinstance(sexo_value, SexoGanado):
+                sexo = sexo_value
+            else:
+                sexo = SexoGanado(sexo_value)
+        except (ValueError, TypeError):
+            # Si el valor no es válido, usar el valor por defecto
+            print(f"[GANADO] Advertencia: sexo inválido '{sexo_value}', usando 'macho' por defecto")
+            sexo = SexoGanado.MACHO
+        
+        # Mapear estado: 
+        # - Si estado_tipo es None o vacío, usar estado (útil cuando se actualiza)
+        # - Si estado_tipo existe y estado no está presente, usar estado_tipo (útil cuando se lee de BD)
+        # - Priorizar estado sobre estado_tipo cuando ambos están presentes (útil para actualizaciones)
+        estado_value = None
+        if data.get('estado'):
+            # Si hay un estado explícito, usarlo (prioridad para actualizaciones)
+            estado_value = data.get('estado')
+        elif data.get('estado_tipo'):
+            # Si no hay estado pero hay estado_tipo, usarlo (lectura desde BD)
+            estado_value = data.get('estado_tipo')
+        else:
+            # Por defecto
+            estado_value = 'saludable'
+        
         return Ganado(
             id=data.get('id'),
             codigo_qr=data.get('codigo_qr'),
@@ -61,10 +88,10 @@ class Ganado:
             raza=data.get('raza'),
             fecha_nacimiento=data.get('fecha_nacimiento'),
             edad=data.get('edad'),
-            sexo=SexoGanado(data.get('sexo', 'macho')),
+            sexo=sexo,
             peso=float(data.get('peso')) if data.get('peso') is not None else None,
             id_estado=data.get('id_estado'),
-            estado=data.get('estado_tipo') or data.get('estado') or 'saludable',
+            estado=estado_value,
             estado_salud=data.get('estado_salud'),
             estado_tipo=data.get('estado_tipo'),
             tenant_id=data.get('tenant_id'),

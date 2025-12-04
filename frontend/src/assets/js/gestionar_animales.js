@@ -243,26 +243,30 @@ export const cargarAnimales = async (incluirBajas = false) => {
         });
       }
 
-      animales.value = animalesFiltrados.map(animal => ({
-        id: animal.id,
-        nombre: animal.nombre,
-        peso: animal.peso,
-        raza: animal.raza,
-        fecha_nacimiento: animal.fecha_nacimiento,
-        sexo: animal.sexo,
-        id_estado: animal.id_estado,
-        id_potrero: animal.id_potrero,
-        id_persona: animal.id_persona,
-        // Determinar si está dado de baja:
-        // - Sistema nuevo: por id_estado (>= 4)
-        es_dado_de_baja: (animal.id_estado && animal.id_estado >= 4),
-        // Campos calculados
-        estado: animal.estado_tipo || animal.estado || 'No definido',
-        potreroActual: obtenerNombrePotreroDesdeEntidad(animal),
-        propietario: obtenerNombrePersonaDesdeEntidad(animal),
-        edad: animal.fecha_nacimiento ? calcularEdad(animal.fecha_nacimiento) : 'No definida',
-        codigo_qr: animal.codigo_qr
-      }));
+      animales.value = animalesFiltrados.map(animal => {
+        const estadoFinal = animal.estado_tipo || animal.estado || 'No definido';
+        console.log(`[DEBUG] Mapeando animal id=${animal.id}: estado_tipo=${animal.estado_tipo}, estado=${animal.estado}, id_estado=${animal.id_estado}, estadoFinal=${estadoFinal}`);
+        return {
+          id: animal.id,
+          nombre: animal.nombre,
+          peso: animal.peso,
+          raza: animal.raza,
+          fecha_nacimiento: animal.fecha_nacimiento,
+          sexo: animal.sexo,
+          id_estado: animal.id_estado,
+          id_potrero: animal.id_potrero,
+          id_persona: animal.id_persona,
+          // Determinar si está dado de baja:
+          // - Sistema nuevo: por id_estado (>= 4)
+          es_dado_de_baja: (animal.id_estado && animal.id_estado >= 4),
+          // Campos calculados
+          estado: estadoFinal,
+          potreroActual: obtenerNombrePotreroDesdeEntidad(animal),
+          propietario: obtenerNombrePersonaDesdeEntidad(animal),
+          edad: animal.fecha_nacimiento ? calcularEdad(animal.fecha_nacimiento) : 'No definida',
+          codigo_qr: animal.codigo_qr
+        };
+      });
       console.log('Animales cargados exitosamente:', animales.value.length, 'animales');
     } else {
       // Si no hay datos, mostrar lista vacía (modo sin BD)
@@ -528,13 +532,18 @@ function construirUpdateData() {
     id_persona: id_persona ? Number.parseInt(id_persona, 10) : null
   };
 
+  console.log('[DEBUG] construirUpdateData - estado seleccionado:', estado);
+  console.log('[DEBUG] construirUpdateData - data completa:', data);
   return limpiarCampos(data);
 }
 
 function limpiarCampos(data) {
-  return Object.fromEntries(
-    Object.entries(data).filter(([_, value]) => value !== null && value !== undefined)
+  const cleaned = Object.fromEntries(
+    Object.entries(data).filter(([_, value]) => value !== null && value !== undefined && value !== '')
   );
+  console.log('[DEBUG] limpiarCampos - data original:', data);
+  console.log('[DEBUG] limpiarCampos - data limpiada:', cleaned);
+  return cleaned;
 }
 
 function mostrarModalEditarAnimal(animal, opts, onConfirm) {
@@ -554,6 +563,11 @@ async function actualizarAnimal(id, data) {
   try {
     const res = await api.put(`/animales/${id}`, data);
     const json = res.data;
+    console.log('[DEBUG] Respuesta de actualizarAnimal:', json);
+    if (json.data) {
+      console.log('[DEBUG] Animal actualizado recibido:', json.data);
+      console.log('[DEBUG] Estado del animal actualizado: estado_tipo=', json.data.estado_tipo, ', estado=', json.data.estado, ', id_estado=', json.data.id_estado);
+    }
     if (!json.success) throw new Error(json.message || 'Error desconocido');
 
     Swal.fire('Éxito', 'Animal actualizado correctamente', 'success');

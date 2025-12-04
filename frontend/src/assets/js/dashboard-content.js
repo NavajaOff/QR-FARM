@@ -115,7 +115,7 @@ export default {
         const usuariosResponse = await userAPI.getAll();
         console.log('[DashboardContent] Respuesta de usuarios:', usuariosResponse);
         
-        if (usuariosResponse.data?.success === true) {
+        if (usuariosResponse.data?.status === 'success') {
           this.estadisticas.usuarios = Array.isArray(usuariosResponse.data?.data) 
             ? usuariosResponse.data.data.length 
             : 0;

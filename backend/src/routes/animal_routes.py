@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request, send_from_directory
 from src.services.potrero_service import PotreroService
 from src.services.animal_service import GanadoService
 from src.models.animal import Ganado
+from src.utils.auth import token_required
 import os
 
 # Constantes para mensajes de error
@@ -106,6 +107,7 @@ def get_qr_image(codigo_qr):
         }), 404
 
 @animal_bp.route('/<int:animal_id>', methods=['PUT'])
+@token_required
 def update_animal(animal_id):
     """Actualizar un animal."""
     try:
@@ -128,17 +130,40 @@ def update_animal(animal_id):
 
         # Crear instancia del modelo con los datos actualizados
         animal_data = animal_actual.to_dict()  # Empezar con los datos actuales
-        animal_data.update(data)  # Actualizar solo los campos enviados
+        print(f"[ANIMAL_ROUTES] Datos actuales del animal: estado={animal_data.get('estado')}, id_estado={animal_data.get('id_estado')}, estado_tipo={animal_data.get('estado_tipo')}")
+        print(f"[ANIMAL_ROUTES] Datos recibidos para actualizar: {data}")
+        print(f"[ANIMAL_ROUTES] Estado recibido en data: {data.get('estado')}")
+        
+        # Actualizar solo los campos enviados
+        animal_data.update(data)
+        # Si se envió un nuevo estado, limpiar estado_tipo para que from_dict use el nuevo estado
+        if 'estado' in data and data.get('estado'):
+            animal_data['estado_tipo'] = None  # Forzar que use el nuevo estado
+            print(f"[ANIMAL_ROUTES] Limpiando estado_tipo para usar nuevo estado: {data.get('estado')}")
+        
         animal_data['id'] = animal_id  # Asegurar que tenga el ID correcto
 
-        animal = Ganado.from_dict(animal_data)
+        print(f"[ANIMAL_ROUTES] Datos combinados después de update: estado={animal_data.get('estado')}, id_estado={animal_data.get('id_estado')}, estado_tipo={animal_data.get('estado_tipo')}")
+
+        try:
+            animal = Ganado.from_dict(animal_data)
+            print(f"[ANIMAL_ROUTES] Objeto Ganado creado: estado={animal.estado}, id_estado={animal.id_estado}")
+        except Exception as e:
+            print(f"[ANIMAL_ROUTES] Error creando objeto Ganado: {type(e).__name__}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            raise
 
         # Actualizar en la base de datos
         actualizado = GanadoService.actualizar_ganado(animal_id, animal)
+        print(f"[ANIMAL_ROUTES] Resultado de actualizar_ganado: {actualizado}")
 
         if actualizado:
             # Obtener el animal actualizado
             animal_actualizado = GanadoService.obtener_ganado(animal_id)
+            if animal_actualizado:
+                animal_dict = animal_actualizado.to_dict()
+                print(f"[ANIMAL_ROUTES] Animal actualizado devuelto: estado={animal_dict.get('estado')}, id_estado={animal_dict.get('id_estado')}, estado_tipo={animal_dict.get('estado_tipo')}")
             # Emitir actualización en tiempo real
             emit_update('animal_updated', {
                 'id': animal_id,
