@@ -212,6 +212,26 @@ describe('escanear-qr-base.js', () => {
 
       globalThis.setTimeout = originalSetTimeout
     })
+
+    it('should use console.error when Swal is undefined and error occurs', async () => {
+      const originalSwal = globalThis.Swal
+      globalThis.Swal = undefined
+
+      // Mock setTimeout to throw an error
+      const originalSetTimeout = globalThis.setTimeout
+      globalThis.setTimeout = vi.fn(() => {
+        throw new Error('Test error')
+      })
+
+      wrapper = createWrapper()
+      await wrapper.vm.iniciarEscaneo()
+
+      // Should call console.error instead of Swal.fire (line 63)
+      expect(console.error).toHaveBeenCalledWith('No se pudo completar el escaneo')
+
+      globalThis.setTimeout = originalSetTimeout
+      globalThis.Swal = originalSwal
+    })
   })
 
   describe('subirImagen Method', () => {
@@ -270,6 +290,15 @@ describe('escanear-qr-base.js', () => {
         allowOutsideClick: false,
         didOpen: expect.any(Function)
       })
+
+      // Execute the didOpen callback to cover line 94 (Swal.showLoading())
+      const didOpenCall = Swal.fire.mock.calls.find(call =>
+        call[0].title === 'Procesando imagen'
+      )
+      if (didOpenCall && didOpenCall[0].didOpen) {
+        didOpenCall[0].didOpen()
+        expect(Swal.showLoading).toHaveBeenCalled() // Line 94
+      }
 
       await vi.advanceTimersByTime(2000)
 

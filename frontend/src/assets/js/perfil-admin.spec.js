@@ -271,6 +271,31 @@ describe('perfil-admin.js', () => {
       })
       expect(wrapper.vm.passwordLoading).toBe(false)
     })
+
+    it('should handle errors when changing password fails', async () => {
+      wrapper = createWrapper()
+      wrapper.vm.passwordData = {
+        current: 'old',
+        new: 'new',
+        confirm: 'new'
+      }
+
+      // Simulate error by mocking setTimeout to throw
+      const originalSetTimeout = globalThis.setTimeout
+      globalThis.setTimeout = vi.fn((cb, delay) => {
+        throw new Error('Test error')
+      })
+
+      await wrapper.vm.changePassword()
+
+      // Should catch error and set error message (lines 93-95)
+      expect(console.error).toHaveBeenCalledWith('Error changing password:', expect.any(Error))
+      expect(wrapper.vm.message).toBe('Error al cambiar la contraseña')
+      expect(wrapper.vm.messageType).toBe('error')
+      expect(wrapper.vm.passwordLoading).toBe(false)
+
+      globalThis.setTimeout = originalSetTimeout
+    })
   })
 
   describe('formatDate Method', () => {
