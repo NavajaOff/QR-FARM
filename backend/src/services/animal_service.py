@@ -257,6 +257,30 @@ class GanadoService:
         return cursor.lastrowid
 
     @staticmethod
+    def _sincronizar_potrero_despues_crear(ganado: Ganado) -> None:
+        """Sincroniza la ocupación del potrero después de crear ganado."""
+        if ganado.id_potrero:
+            try:
+                PotreroService.sincronizar_ocupacion(ganado.id_potrero)
+            except Exception:
+                pass
+
+    @staticmethod
+    def _cerrar_conexion_ganado(cursor, conn) -> None:
+        """Cierra cursor y conexión de forma segura."""
+        if cursor:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+        if conn:
+            try:
+                if conn.is_connected():
+                    conn.close()
+            except Exception:
+                pass
+
+    @staticmethod
     def crear_ganado(ganado: Ganado, tenant_id_override: Optional[int] = None) -> Optional[Ganado]:
         """Crea un nuevo ganado en la base de datos."""
         conn = None
@@ -273,11 +297,7 @@ class GanadoService:
             ganado.id = GanadoService._insertar_ganado_en_db(cursor, ganado, values)
             conn.commit()
 
-            if ganado.id_potrero:
-                try:
-                    PotreroService.sincronizar_ocupacion(ganado.id_potrero)
-                except Exception:
-                    pass
+            GanadoService._sincronizar_potrero_despues_crear(ganado)
             return ganado
 
         except Exception as e:
@@ -288,17 +308,7 @@ class GanadoService:
                     pass
             raise e
         finally:
-            if cursor:
-                try:
-                    cursor.close()
-                except Exception:
-                    pass
-            if conn:
-                try:
-                    if conn.is_connected():
-                        conn.close()
-                except Exception:
-                    pass
+            GanadoService._cerrar_conexion_ganado(cursor, conn)
 
 
     @staticmethod

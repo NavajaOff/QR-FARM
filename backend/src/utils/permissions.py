@@ -102,6 +102,25 @@ def _validar_permiso(rol_nombre, permission):
     
     return True, None
 
+def _manejar_error_sin_permiso(error_response: Any) -> Any:
+    """Maneja el error cuando no hay permiso, extrayendo datos del response."""
+    if error_response and isinstance(error_response, tuple):
+        response_obj = error_response[0]
+        status_code = error_response[1]
+        # Manejar tanto objetos Response como diccionarios
+        if hasattr(response_obj, 'get_json'):
+            try:
+                response_data = response_obj.get_json()
+            except Exception:
+                response_data = str(response_obj)
+        elif isinstance(response_obj, dict):
+            response_data = response_obj
+        else:
+            response_data = str(response_obj)
+        print(f"[PERMISSIONS] DENEGADO: {status_code} - {response_data}")
+        return error_response[0], error_response[1]
+    return error_response
+
 def permission_required(permission: str):
     """Decorator que valida permisos."""
     def decorator(f: Callable) -> Callable:
@@ -126,23 +145,7 @@ def permission_required(permission: str):
             print(f"[PERMISSIONS] Resultado validación: tiene_permiso={tiene_permiso}")
             
             if not tiene_permiso:
-                # error_response es una tupla (jsonify_response, status_code) cuando no hay permiso
-                if error_response and isinstance(error_response, tuple):
-                    response_obj = error_response[0]
-                    status_code = error_response[1]
-                    # Manejar tanto objetos Response como diccionarios
-                    if hasattr(response_obj, 'get_json'):
-                        try:
-                            response_data = response_obj.get_json()
-                        except Exception:
-                            response_data = str(response_obj)
-                    elif isinstance(response_obj, dict):
-                        response_data = response_obj
-                    else:
-                        response_data = str(response_obj)
-                    print(f"[PERMISSIONS] DENEGADO: {status_code} - {response_data}")
-                    return error_response[0], error_response[1]
-                return error_response
+                return _manejar_error_sin_permiso(error_response)
             
             return f(*args, **kwargs)
         

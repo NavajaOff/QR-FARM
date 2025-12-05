@@ -426,47 +426,36 @@ class PotreroService:
             potrero['responsable_nombre'] = 'No asignado'
 
     @staticmethod
-    def create(data):
-        """Create new potrero."""
+    def _registrar_actividad_si_existe(potrero_id: int, data: Dict[str, Any], campo: str, 
+                                       tipo_evento: str, observaciones: str, tenant_id: int) -> None:
+        """Registra una actividad del potrero si existe en los datos."""
+        if not data.get(campo):
+            return
+        try:
+            from datetime import datetime
+            fecha = data.get(campo)
+            if isinstance(fecha, str):
+                fecha = datetime.fromisoformat(fecha.replace('Z', PotreroService.TIMEZONE_UTC_SUFFIX))
+            PotreroService._registrar_actividad_potrero(
+                potrero_id, tipo_evento, fecha, observaciones, tenant_id
+            )
+        except Exception as e:
+            print(f"Error registrando {campo}: {e}")
+
+    @staticmethod
+    def _registrar_actividades_potrero_create(potrero_id: int, data: Dict[str, Any], tenant_id: int) -> None:
+        """Registra todas las actividades del potrero al crearlo."""
         from datetime import datetime
         
-        values = PotreroService._preparar_datos_insercion(data)
-        potrero_id = PotreroService._insertar_potrero_en_db(values)
-        
-        # Registrar actividades si se proporcionan
-        tenant_id = PotreroService._obtener_tenant_id()
-        if data.get('fecha_ultimo_uso'):
-            try:
-                fecha_uso = data.get('fecha_ultimo_uso')
-                if isinstance(fecha_uso, str):
-                    fecha_uso = datetime.fromisoformat(fecha_uso.replace('Z', PotreroService.TIMEZONE_UTC_SUFFIX))
-                PotreroService._registrar_actividad_potrero(
-                    potrero_id, 'uso', fecha_uso, None, tenant_id
-                )
-            except Exception as e:
-                print(f"Error registrando fecha_ultimo_uso: {e}")
-        
-        if data.get('ultima_limpieza'):
-            try:
-                fecha_limpieza = data.get('ultima_limpieza')
-                if isinstance(fecha_limpieza, str):
-                    fecha_limpieza = datetime.fromisoformat(fecha_limpieza.replace('Z', PotreroService.TIMEZONE_UTC_SUFFIX))
-                PotreroService._registrar_actividad_potrero(
-                    potrero_id, 'limpieza', fecha_limpieza, None, tenant_id
-                )
-            except Exception as e:
-                print(f"Error registrando ultima_limpieza: {e}")
-        
-        if data.get('proxima_limpieza'):
-            try:
-                fecha_proxima = data.get('proxima_limpieza')
-                if isinstance(fecha_proxima, str):
-                    fecha_proxima = datetime.fromisoformat(fecha_proxima.replace('Z', PotreroService.TIMEZONE_UTC_SUFFIX))
-                PotreroService._registrar_actividad_potrero(
-                    potrero_id, 'limpieza', fecha_proxima, 'Programada', tenant_id
-                )
-            except Exception as e:
-                print(f"Error registrando proxima_limpieza: {e}")
+        PotreroService._registrar_actividad_si_existe(
+            potrero_id, data, 'fecha_ultimo_uso', 'uso', None, tenant_id
+        )
+        PotreroService._registrar_actividad_si_existe(
+            potrero_id, data, 'ultima_limpieza', 'limpieza', None, tenant_id
+        )
+        PotreroService._registrar_actividad_si_existe(
+            potrero_id, data, 'proxima_limpieza', 'limpieza', 'Programada', tenant_id
+        )
         
         # Registrar fecha_ultimo_uso automáticamente si no se proporcionó
         if not data.get('fecha_ultimo_uso'):
@@ -476,6 +465,15 @@ class PotreroService:
                 )
             except Exception as e:
                 print(f"Error registrando fecha_ultimo_uso automática: {e}")
+
+    @staticmethod
+    def create(data):
+        """Create new potrero."""
+        values = PotreroService._preparar_datos_insercion(data)
+        potrero_id = PotreroService._insertar_potrero_en_db(values)
+        
+        tenant_id = PotreroService._obtener_tenant_id()
+        PotreroService._registrar_actividades_potrero_create(potrero_id, data, tenant_id)
         
         return PotreroService._obtener_potrero_completo(potrero_id)
 
@@ -490,46 +488,39 @@ class PotreroService:
         return value
     
     @staticmethod
+    def _procesar_actividad_actualizacion(potrero_id: int, actividades_data: Dict[str, Any], 
+                                          campo: str, tipo_evento: str, observaciones: str, 
+                                          tenant_id: int) -> None:
+        """Procesa una actividad específica durante la actualización."""
+        if campo not in actividades_data or not actividades_data[campo]:
+            return
+        try:
+            from datetime import datetime
+            fecha = actividades_data[campo]
+            if isinstance(fecha, str):
+                fecha = datetime.fromisoformat(fecha.replace('Z', PotreroService.TIMEZONE_UTC_SUFFIX))
+            PotreroService._registrar_actividad_potrero(
+                potrero_id, tipo_evento, fecha, observaciones, tenant_id
+            )
+        except Exception as e:
+            print(f"Error actualizando {campo}: {e}")
+
+    @staticmethod
     def _actualizar_actividades_potrero(potrero_id: int, actividades_data: Dict[str, Any]) -> None:
         """Actualiza las actividades de un potrero."""
-        from datetime import datetime
-        
         tenant_id = PotreroService._obtener_tenant_id()
         if tenant_id is None:
             raise ValueError("Tenant requerido para actualizar actividades")
         
-        if 'fecha_ultimo_uso' in actividades_data and actividades_data['fecha_ultimo_uso']:
-            try:
-                fecha_uso = actividades_data['fecha_ultimo_uso']
-                if isinstance(fecha_uso, str):
-                    fecha_uso = datetime.fromisoformat(fecha_uso.replace('Z', PotreroService.TIMEZONE_UTC_SUFFIX))
-                PotreroService._registrar_actividad_potrero(
-                    potrero_id, 'uso', fecha_uso, None, tenant_id
-                )
-            except Exception as e:
-                print(f"Error actualizando fecha_ultimo_uso: {e}")
-        
-        if 'ultima_limpieza' in actividades_data and actividades_data['ultima_limpieza']:
-            try:
-                fecha_limpieza = actividades_data['ultima_limpieza']
-                if isinstance(fecha_limpieza, str):
-                    fecha_limpieza = datetime.fromisoformat(fecha_limpieza.replace('Z', PotreroService.TIMEZONE_UTC_SUFFIX))
-                PotreroService._registrar_actividad_potrero(
-                    potrero_id, 'limpieza', fecha_limpieza, None, tenant_id
-                )
-            except Exception as e:
-                print(f"Error actualizando ultima_limpieza: {e}")
-        
-        if 'proxima_limpieza' in actividades_data and actividades_data['proxima_limpieza']:
-            try:
-                fecha_proxima = actividades_data['proxima_limpieza']
-                if isinstance(fecha_proxima, str):
-                    fecha_proxima = datetime.fromisoformat(fecha_proxima.replace('Z', PotreroService.TIMEZONE_UTC_SUFFIX))
-                PotreroService._registrar_actividad_potrero(
-                    potrero_id, 'limpieza', fecha_proxima, 'Programada', tenant_id
-                )
-            except Exception as e:
-                print(f"Error actualizando proxima_limpieza: {e}")
+        PotreroService._procesar_actividad_actualizacion(
+            potrero_id, actividades_data, 'fecha_ultimo_uso', 'uso', None, tenant_id
+        )
+        PotreroService._procesar_actividad_actualizacion(
+            potrero_id, actividades_data, 'ultima_limpieza', 'limpieza', None, tenant_id
+        )
+        PotreroService._procesar_actividad_actualizacion(
+            potrero_id, actividades_data, 'proxima_limpieza', 'limpieza', 'Programada', tenant_id
+        )
 
     @staticmethod
     def _procesar_campo_estado(value: Any) -> str:
