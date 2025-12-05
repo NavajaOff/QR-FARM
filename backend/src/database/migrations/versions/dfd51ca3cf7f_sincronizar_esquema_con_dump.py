@@ -20,14 +20,9 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 
-def upgrade() -> None:
-    """Sincroniza el esquema con el dump SQL actual."""
-    connection = op.get_bind()
-    inspector = sa.inspect(connection)
-    
-    # 1. Agregar constraint UNIQUE en personas(email, telefono) si no existe
+def _agregar_constraint_unique_personas(inspector: sa.Inspector) -> None:
+    """Agrega constraint UNIQUE en personas(email, telefono) si no existe."""
     try:
-        # Verificar si el constraint ya existe
         personas_constraints = inspector.get_unique_constraints('personas')
         constraint_exists = any(
             constraint['name'] == 'email' and 
@@ -36,84 +31,60 @@ def upgrade() -> None:
         )
         
         if not constraint_exists:
-            # Crear el constraint UNIQUE compuesto
             op.create_unique_constraint(
                 'email',
                 'personas',
                 ['email', 'telefono']
             )
     except Exception as e:
-        # Si el constraint ya existe o hay otro problema, continuar
         print(f"Nota: No se pudo crear constraint UNIQUE en personas: {e}")
-    
-    # 2. Eliminar columna 'area' de potrero si existe (no está en el dump)
+
+
+def _eliminar_columna_area_potrero(inspector: sa.Inspector) -> None:
+    """Elimina columna 'area' de potrero si existe."""
     try:
         potrero_columns = [col['name'] for col in inspector.get_columns('potrero')]
         if 'area' in potrero_columns:
             op.drop_column('potrero', 'area')
     except Exception:
-        # La columna puede no existir
         pass
-    
-    # 3. Asegurar que la columna 'sexo' en ganado sea NOT NULL (según dump)
+
+
+def _asegurar_columna_not_null(
+    inspector: sa.Inspector,
+    tabla: str,
+    columna: str,
+    tipo: sa.TypeEngine
+) -> None:
+    """Asegura que una columna sea NOT NULL."""
     try:
-        ganado_columns = inspector.get_columns('ganado')
-        sexo_col = next((col for col in ganado_columns if col['name'] == 'sexo'), None)
-        if sexo_col and sexo_col['nullable']:
-            op.alter_column('ganado', 'sexo',
-                          existing_type=sa.Enum('macho', 'hembra'),
-                          nullable=False)
+        columns = inspector.get_columns(tabla)
+        target_col = next((col for col in columns if col['name'] == columna), None)
+        if target_col and target_col['nullable']:
+            op.alter_column(tabla, columna, existing_type=tipo, nullable=False)
     except Exception:
-        # La columna puede ya ser NOT NULL o no existir
         pass
+
+
+def _asegurar_tenant_id_not_null(inspector: sa.Inspector, tabla: str) -> None:
+    """Asegura que tenant_id en una tabla sea NOT NULL."""
+    _asegurar_columna_not_null(inspector, tabla, 'tenant_id', sa.Integer())
+
+
+def upgrade() -> None:
+    """Sincroniza el esquema con el dump SQL actual."""
+    connection = op.get_bind()
+    inspector = sa.inspect(connection)
     
-    # 4. Asegurar que tenant_id en ganado sea NOT NULL (según dump)
-    try:
-        ganado_columns = inspector.get_columns('ganado')
-        tenant_col = next((col for col in ganado_columns if col['name'] == 'tenant_id'), None)
-        if tenant_col and tenant_col['nullable']:
-            op.alter_column('ganado', 'tenant_id',
-                          existing_type=sa.Integer(),
-                          nullable=False)
-    except Exception:
-        # La columna puede ya ser NOT NULL
-        pass
+    _agregar_constraint_unique_personas(inspector)
+    _eliminar_columna_area_potrero(inspector)
+    _asegurar_columna_not_null(
+        inspector, 'ganado', 'sexo', sa.Enum('macho', 'hembra')
+    )
     
-    # 5. Asegurar que tenant_id en potrero sea NOT NULL (según dump)
-    try:
-        potrero_columns = inspector.get_columns('potrero')
-        tenant_col = next((col for col in potrero_columns if col['name'] == 'tenant_id'), None)
-        if tenant_col and tenant_col['nullable']:
-            op.alter_column('potrero', 'tenant_id',
-                          existing_type=sa.Integer(),
-                          nullable=False)
-    except Exception:
-        # La columna puede ya ser NOT NULL
-        pass
-    
-    # 6. Asegurar que tenant_id en vacunacion sea NOT NULL (según dump)
-    try:
-        vacunacion_columns = inspector.get_columns('vacunacion')
-        tenant_col = next((col for col in vacunacion_columns if col['name'] == 'tenant_id'), None)
-        if tenant_col and tenant_col['nullable']:
-            op.alter_column('vacunacion', 'tenant_id',
-                          existing_type=sa.Integer(),
-                          nullable=False)
-    except Exception:
-        # La columna puede ya ser NOT NULL
-        pass
-    
-    # 7. Asegurar que tenant_id en qr sea NOT NULL (según dump)
-    try:
-        qr_columns = inspector.get_columns('qr')
-        tenant_col = next((col for col in qr_columns if col['name'] == 'tenant_id'), None)
-        if tenant_col and tenant_col['nullable']:
-            op.alter_column('qr', 'tenant_id',
-                          existing_type=sa.Integer(),
-                          nullable=False)
-    except Exception:
-        # La columna puede ya ser NOT NULL
-        pass
+    tablas_tenant = ['ganado', 'potrero', 'vacunacion', 'qr']
+    for tabla in tablas_tenant:
+        _asegurar_tenant_id_not_null(inspector, tabla)
 
 
 def downgrade() -> None:

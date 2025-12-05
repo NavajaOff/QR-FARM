@@ -268,16 +268,15 @@ class PotreroService:
         """Prepara los datos para la inserción del potrero (sin campos de actividad)."""
         nombre = data.get('nombre') or PotreroService._generar_nombre_potrero()
 
-        # Auto-calcular área si se proporciona hectáreas
+        # Auto-calcular hectáreas si se proporciona área
         hectareas = data.get('hectareas')
-        area = data.get('area')
 
-        if hectareas is not None and area is None:
-            # Calcular metros cuadrados automáticamente: 1 hectárea = 10,000 m²
-            area = float(hectareas) * 10000
-        elif area is not None and hectareas is None:
-            # Calcular hectáreas automáticamente si se proporciona área
-            hectareas = float(area) / 10000
+        if hectareas is None:
+            area_value = data.get('area')
+            if area_value is not None:
+                # Calcular hectáreas automáticamente si se proporciona área
+                hectareas = float(area_value) / 10000
+        # Nota: 'area' no se persiste en BD (eliminada según dump SQL), solo se usa para calcular hectáreas
 
         # Nota: fecha_ultimo_uso, ultima_limpieza y proxima_limpieza ahora se gestionan
         # en la tabla historial_potrero, no en potrero
@@ -548,12 +547,11 @@ class PotreroService:
         data_copy = data.copy()
 
         # Auto-calcular hectáreas si se proporciona área (solo para el modelo, no se persiste)
-        hectareas = data_copy.get('hectareas')
-        area = data_copy.get('area')
-
-        if 'area' in data_copy and 'hectareas' not in data_copy and area is not None:
-            # Calcular hectáreas automáticamente si se proporciona área (solo para cálculo)
-            data_copy['hectareas'] = float(area) / 10000
+        if 'area' in data_copy and 'hectareas' not in data_copy:
+            area_value = data_copy.get('area')
+            if area_value is not None:
+                # Calcular hectáreas automáticamente si se proporciona área (solo para cálculo)
+                data_copy['hectareas'] = float(area_value) / 10000
         
         # Remover 'area' de data_copy ya que no se persiste en BD (según dump SQL)
         data_copy.pop('area', None)

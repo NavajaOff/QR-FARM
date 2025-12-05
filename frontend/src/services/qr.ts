@@ -277,16 +277,8 @@ const parseGanadoResponse = (input: unknown): GanadoResource => {
   };
 };
 
-export const fetchQrResource = async (params: QrResourceRequest): Promise<GanadoResource> => {
-  console.log('[QR-SERVICE] fetchQrResource llamado con:', {
-    endpoint: params.endpoint,
-    resourceId: params.resourceId,
-    alternatives: params.alternatives
-  });
-  
-  // Priorizar códigos QR sobre IDs numéricos
-  // Primero los alternativos (códigos), luego el resourceId
-  const allCandidates = [...(params.alternatives ?? []), params.resourceId]
+const prepareCandidateQueue = (alternatives: string[] | undefined, resourceId: string): string[] => {
+  const allCandidates = [...(alternatives ?? []), resourceId]
     .map((candidate) => {
       if (typeof candidate === 'number') {
         return String(candidate);
@@ -299,76 +291,117 @@ export const fetchQrResource = async (params: QrResourceRequest): Promise<Ganado
     .filter((value): value is string => value.length > 0);
 
   const seen = new Set<string>();
-  const queue = allCandidates.filter(candidate => {
+  return allCandidates.filter(candidate => {
     const normalized = candidate.trim();
     if (seen.has(normalized)) return false;
     seen.add(normalized);
     return true;
   });
+};
+
+const handleParseError = (error: unknown): void => {
+  if (error instanceof Error && error.name === 'QrInvalidResponseError') {
+    throw error;
+  }
+};
+
+const handleCancelError = (error: unknown): void => {
+  if (axios.isCancel(error)) {
+    throw createError('La consulta fue cancelada.', 'QrRequestCancelledError');
+  }
+};
+
+const tryFetchByQrCode = async (
+  qrUrl: string,
+  candidate: string,
+  signal?: AbortSignal
+): Promise<GanadoResource> => {
+  console.log('[QR-SERVICE] Intentando buscar por código QR:', qrUrl, 'candidate:', candidate);
+  const response = await api.get(qrUrl, { signal });
+  console.log('[QR-SERVICE] Respuesta exitosa por código QR:', response.data);
+  return parseGanadoResponse(response.data);
+};
+
+const tryFetchById = async (
+  idUrl: string,
+  candidate: string,
+  signal?: AbortSignal
+): Promise<GanadoResource> => {
+  console.log('[QR-SERVICE] Intentando buscar por ID:', idUrl);
+  const response = await api.get(idUrl, { signal });
+  console.log('[QR-SERVICE] Respuesta exitosa por ID:', response.data);
+  return parseGanadoResponse(response.data);
+};
+
+interface ProcessCandidateResult {
+  success: boolean;
+  resource?: GanadoResource;
+  error?: Error;
+}
+
+const processCandidate = async (
+  candidate: string,
+  qrEndpoint: string,
+  idEndpoint: string,
+  signal?: AbortSignal
+): Promise<ProcessCandidateResult> => {
+  const qrUrl = buildUrl(qrEndpoint, candidate);
+  try {
+    const resource = await tryFetchByQrCode(qrUrl, candidate, signal);
+    return { success: true, resource };
+  } catch (error) {
+    handleCancelError(error);
+    handleParseError(error);
+
+    if (isAxiosError(error) && error.response?.status === 404) {
+      if (!/^\d+$/.test(candidate)) {
+        return { success: false, error: mapAxiosError(error) };
+      }
+
+      console.log('[QR-SERVICE] No encontrado por código QR, intentando por ID:', candidate);
+      const idUrl = buildUrl(idEndpoint, candidate);
+      try {
+        const resource = await tryFetchById(idUrl, candidate, signal);
+        return { success: true, resource };
+      } catch (idError) {
+        handleCancelError(idError);
+        handleParseError(idError);
+
+        if (isAxiosError(idError) && idError.response?.status === 404) {
+          console.log('[QR-SERVICE] No encontrado por ID tampoco');
+          return { success: false, error: mapAxiosError(idError) };
+        }
+        throw mapAxiosError(idError);
+      }
+    }
+    throw mapAxiosError(error);
+  }
+};
+
+export const fetchQrResource = async (params: QrResourceRequest): Promise<GanadoResource> => {
+  console.log('[QR-SERVICE] fetchQrResource llamado con:', {
+    endpoint: params.endpoint,
+    resourceId: params.resourceId,
+    alternatives: params.alternatives
+  });
+  
+  const queue = prepareCandidateQueue(params.alternatives, params.resourceId);
 
   if (queue.length === 0) {
     throw createError('El identificador del código QR es obligatorio.', 'QrResourceIdError');
   }
 
+  const qrEndpoint = params.endpoint;
+  const idEndpoint = params.endpoint.replace('/qr/{id}', '/{id}').replace('/qr/', '/');
   let lastNotFoundError: Error | null = null;
 
-  // Usar el endpoint tal como está configurado (ya debería ser /animales/qr/{id})
-  const qrEndpoint = params.endpoint;
-  // Endpoint para buscar por ID numérico directamente (sin /qr/)
-  const idEndpoint = params.endpoint.replace('/qr/{id}', '/{id}').replace('/qr/', '/');
-
   for (const candidate of queue) {
-    // Primero intentar buscar por código QR
-    const qrUrl = buildUrl(qrEndpoint, candidate);
-    console.log('[QR-SERVICE] Intentando buscar por código QR:', qrUrl, 'candidate:', candidate, 'endpoint:', qrEndpoint);
-    try {
-      const response = await api.get(qrUrl, { signal: params.signal });
-      console.log('[QR-SERVICE] Respuesta exitosa por código QR:', response.data);
-      return parseGanadoResponse(response.data);
-    } catch (error) {
-      if (axios.isCancel(error)) {
-        throw createError('La consulta fue cancelada.', 'QrRequestCancelledError');
-      }
-
-      // Si el error es de parseGanadoResponse (QrInvalidResponseError), relanzarlo directamente
-      if (error instanceof Error && error.name === 'QrInvalidResponseError') {
-        throw error;
-      }
-
-      // Si es 404, intentar con el endpoint de ID (solo si el candidato es numérico)
-      if (isAxiosError(error) && error.response?.status === 404) {
-        console.log('[QR-SERVICE] No encontrado por código QR, intentando por ID:', candidate);
-        // Si el candidato es numérico, intentar también con el endpoint de ID
-        if (/^\d+$/.test(candidate)) {
-          try {
-            const idUrl = buildUrl(idEndpoint, candidate);
-            console.log('[QR-SERVICE] Intentando buscar por ID:', idUrl);
-            const response = await api.get(idUrl, { signal: params.signal });
-            console.log('[QR-SERVICE] Respuesta exitosa por ID:', response.data);
-            return parseGanadoResponse(response.data);
-          } catch (idError) {
-            if (axios.isCancel(idError)) {
-              throw createError('La consulta fue cancelada.', 'QrRequestCancelledError');
-            }
-            // Si el error es de parseGanadoResponse (QrInvalidResponseError), relanzarlo directamente
-            if (idError instanceof Error && idError.name === 'QrInvalidResponseError') {
-              throw idError;
-            }
-            if (isAxiosError(idError) && idError.response?.status === 404) {
-              console.log('[QR-SERVICE] No encontrado por ID tampoco');
-              lastNotFoundError = mapAxiosError(idError);
-              continue;
-            }
-            throw mapAxiosError(idError);
-          }
-        } else {
-          lastNotFoundError = mapAxiosError(error);
-          continue;
-        }
-      } else {
-        console.error('[QR-SERVICE] Error al buscar por código QR:', error);
-        throw mapAxiosError(error);
-      }
+    const result = await processCandidate(candidate, qrEndpoint, idEndpoint, params.signal);
+    if (result.success && result.resource) {
+      return result.resource;
+    }
+    if (result.error) {
+      lastNotFoundError = result.error;
     }
   }
 
