@@ -28,7 +28,6 @@ const createMockGanado = (overrides = {}) => ({
     estado: 'activo'
   },
   vacunas: [],
-  historial: [],
   ...overrides
 })
 
@@ -235,11 +234,10 @@ describe('GanadoDetailCard', () => {
         }
       })
       const tabs = wrapper.findAll('.ganado-tab')
-      expect(tabs.length).toBe(4)
+      expect(tabs.length).toBe(3)
       expect(wrapper.text()).toContain('Información general')
       expect(wrapper.text()).toContain('Potrero')
       expect(wrapper.text()).toContain('Vacunas')
-      expect(wrapper.text()).toContain('Historial')
     })
 
     it('should switch to potrero tab', async () => {
@@ -270,19 +268,6 @@ describe('GanadoDetailCard', () => {
       expect(wrapper.find('#ganado-panel-vacunas').exists()).toBe(true)
     })
 
-    it('should switch to historial tab', async () => {
-      const mockGanado = createMockGanado()
-      const wrapper = mount(GanadoDetailCard, {
-        props: {
-          ganado: mockGanado,
-          role: 'admin'
-        }
-      })
-      const historialTab = wrapper.findAll('.ganado-tab')[3]
-      await historialTab.trigger('click')
-      await nextTick()
-      expect(wrapper.find('#ganado-panel-historial').exists()).toBe(true)
-    })
   })
 
   describe('General section', () => {
@@ -514,47 +499,6 @@ describe('GanadoDetailCard', () => {
     })
   })
 
-  describe('Historial section', () => {
-    it('should display empty message when no historial', async () => {
-      const mockGanado = createMockGanado({ historial: [] })
-      const wrapper = mount(GanadoDetailCard, {
-        props: {
-          ganado: mockGanado,
-          role: 'admin'
-        }
-      })
-      const historialTab = wrapper.findAll('.ganado-tab')[3]
-      await historialTab.trigger('click')
-      await nextTick()
-      expect(wrapper.text()).toContain('No hay revisiones registradas')
-    })
-
-    it('should display historial list', async () => {
-      const mockGanado = createMockGanado({
-        historial: [
-          {
-            id: '1',
-            fecha: '2023-10-15',
-            observaciones: 'Revisión general',
-            resultado: 'Saludable',
-            veterinario: 'Dr. Juan'
-          }
-        ]
-      })
-      const wrapper = mount(GanadoDetailCard, {
-        props: {
-          ganado: mockGanado,
-          role: 'admin'
-        }
-      })
-      const historialTab = wrapper.findAll('.ganado-tab')[3]
-      await historialTab.trigger('click')
-      await nextTick()
-      expect(wrapper.text()).toContain('Revisión general')
-      expect(wrapper.text()).toContain('Saludable')
-      expect(wrapper.text()).toContain('Dr. Juan')
-    })
-  })
 
   describe('Footer actions', () => {
     it('should emit reanudar when button is clicked', async () => {
@@ -578,7 +522,6 @@ describe('GanadoDetailCard', () => {
           role: 'admin'
         }
       })
-      expect(wrapper.text()).toContain('Ver historial completo')
       expect(wrapper.text()).toContain('Descargar ficha')
     })
 
@@ -590,27 +533,9 @@ describe('GanadoDetailCard', () => {
           role: 'user'
         }
       })
-      expect(wrapper.text()).not.toContain('Ver historial completo')
       expect(wrapper.text()).not.toContain('Descargar ficha')
     })
 
-    it('should emit accion when admin action is clicked', async () => {
-      const mockGanado = createMockGanado()
-      const wrapper = mount(GanadoDetailCard, {
-        props: {
-          ganado: mockGanado,
-          role: 'admin'
-        }
-      })
-      const historialButton = wrapper.findAll('button.ganado-action').find(
-        btn => btn.text().includes('Ver historial completo')
-      )
-      if (historialButton) {
-        await historialButton.trigger('click')
-        expect(wrapper.emitted('accion')).toBeTruthy()
-        expect(wrapper.emitted('accion')[0]).toEqual(['ver-historial'])
-      }
-    })
 
     it('should emit accion for descargar-ficha', async () => {
       const mockGanado = createMockGanado()
@@ -744,8 +669,7 @@ describe('GanadoDetailCard', () => {
           fecha_ultimo_uso: null,
           estado: null
         },
-        vacunas: [],
-        historial: []
+        vacunas: []
       }
       const wrapper = mount(GanadoDetailCard, {
         props: {
@@ -780,26 +704,5 @@ describe('GanadoDetailCard', () => {
       expect(wrapper.text()).toContain('Vacuna sin ID')
     })
 
-    it('should handle historial without id', async () => {
-      const mockGanado = createMockGanado({
-        historial: [
-          {
-            fecha: '2023-10-15',
-            observaciones: 'Revisión',
-            resultado: 'OK'
-          }
-        ]
-      })
-      const wrapper = mount(GanadoDetailCard, {
-        props: {
-          ganado: mockGanado,
-          role: 'admin'
-        }
-      })
-      const historialTab = wrapper.findAll('.ganado-tab')[3]
-      await historialTab.trigger('click')
-      await nextTick()
-      expect(wrapper.text()).toContain('Revisión')
-    })
   })
 })

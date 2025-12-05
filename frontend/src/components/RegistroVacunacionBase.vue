@@ -49,11 +49,11 @@
               <tbody>
                 <tr v-for="vacunacion in vacunaciones" :key="vacunacion.id">
                   <td>
-                    <strong>{{ vacunacion.nombre_animal || `ID: ${vacunacion.id_animal}` }}</strong>
+                    <strong>{{ vacunacion.nombre || vacunacion.nombre_animal || `ID: ${vacunacion.idAnimal || vacunacion.id_animal}` }}</strong>
                   </td>
-                  <td>{{ vacunacion.tipo_vacuna || 'No especificado' }}</td>
-                  <td>{{ formatDate(vacunacion.fecha_aplicacion) }}</td>
-                  <td>{{ formatDate(vacunacion.proxima_dosis) }}</td>
+                  <td>{{ vacunacion.tipoVacuna || vacunacion.tipo_vacuna || 'No especificado' }}</td>
+                  <td>{{ formatDate(vacunacion.fechaAplicacion || vacunacion.fecha_aplicacion) }}</td>
+                  <td>{{ formatDate(vacunacion.proximaDosis || vacunacion.proxima_dosis) }}</td>
                   <td>{{ vacunacion.responsable || 'No especificado' }}</td>
                   <td>
                     <span :class="['badge', estadoClass(vacunacion.estado)]">
@@ -89,9 +89,21 @@ export default {
       this.loading = true;
       try {
         const response = await vacunacionAPI.getAll();
-        this.vacunaciones = response.data?.data || [];
+        // Manejar diferentes formatos de respuesta
+        let vacunacionesData = [];
+        if (response.data?.status === 'success' && Array.isArray(response.data?.data)) {
+          vacunacionesData = response.data.data;
+        } else if (Array.isArray(response.data?.data)) {
+          vacunacionesData = response.data.data;
+        }
+        this.vacunaciones = vacunacionesData;
       } catch (error) {
-        console.error('Error cargando vacunaciones:', error);
+        console.error('[RegistroVacunacionBase] Error cargando vacunaciones:', error);
+        console.error('[RegistroVacunacionBase] Detalles:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        });
         this.vacunaciones = [];
       } finally {
         this.loading = false;

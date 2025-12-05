@@ -401,7 +401,6 @@ class TestSecureSeed:
                 'id': 1,
                 'id_potrero': 1,
                 'id_persona': 1,
-                'id_revision': 1,
                 'nombre': 'Vaca 1',
                 'peso': 500.5,
                 'raza': 'Holstein',

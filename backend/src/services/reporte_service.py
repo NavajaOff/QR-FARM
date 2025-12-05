@@ -69,13 +69,30 @@ class ReporteService:
             """
             params = (dias,)
             if tenant_id is not None:
-                query += " AND tenant_id = %s"
-                params = (dias, tenant_id)
-            query += " GROUP BY DATE({columna_fecha}) ORDER BY fecha"
+                # Detectar si la tabla tiene alias o JOIN para aplicar tenant_id correctamente
+                tabla_lower = tabla.lower()
+                # Si la tabla ya tiene un JOIN con ganado (alias g), usar g.tenant_id directamente
+                if 'join ganado g' in tabla_lower or ('join g' in tabla_lower and 'ganado' in tabla_lower):
+                    # Tabla con JOIN a ganado, filtrar por g.tenant_id directamente
+                    query += " AND g.tenant_id = %s"
+                    params = (dias, tenant_id)
+                elif 'v.' in columna_fecha and 'vacunacion' in tabla_lower:
+                    # Para vacunaciones sin JOIN explícito, usar EXISTS con alias diferente
+                    query += " AND EXISTS (SELECT 1 FROM ganado g2 WHERE g2.id = v.id_animal AND g2.tenant_id = %s)"
+                    params = (dias, tenant_id)
+                else:
+                    # Tabla normal, filtrar por tenant_id directo
+                    query += " AND tenant_id = %s"
+                    params = (dias, tenant_id)
+            query += f" GROUP BY DATE({columna_fecha}) ORDER BY fecha"
+            print(f"[REPORTE_SERVICE] SQL generado: {query}")
+            print(f"[REPORTE_SERVICE] Params: {params}")
             cursor.execute(query, params)
             return cursor.fetchall()
         except Exception as exc:
-            print(f"Error obteniendo tendencia para {tabla}.{columna_fecha}: {exc}")
+            import traceback
+            print(f"[REPORTE_SERVICE] Error obteniendo tendencia para {tabla}.{columna_fecha}: {exc}")
+            print(f"[REPORTE_SERVICE] Traceback: {traceback.format_exc()}")
             return []
 
     @staticmethod
@@ -114,31 +131,41 @@ class ReporteService:
         tenant_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Construye un payload de tendencia usando la primera columna disponible."""
+        # Si no hay columnas de fecha, retornar trend vacío
+        if not columnas_fecha:
+            return ReporteService._empty_trend()
+        
         for columna in columnas_fecha:
-            resultados = ReporteService._fetch_daily_counts(cursor, tabla, columna, tenant_id=tenant_id)
-            if resultados:
-                serie: List[Dict[str, Any]] = []
-                total_periodo = 0
-                for row in resultados:
-                    fecha_valor = row.get("fecha")
-                    total = row.get("total", 0) or 0
-                    serie.append(
-                        {
-                            "fecha": ReporteService._normalizar_fecha(fecha_valor),
-                            "total": total,
-                        }
-                    )
-                    total_periodo += total
+            try:
+                resultados = ReporteService._fetch_daily_counts(cursor, tabla, columna, tenant_id=tenant_id)
+                if resultados:
+                    serie: List[Dict[str, Any]] = []
+                    total_periodo = 0
+                    for row in resultados:
+                        fecha_valor = row.get("fecha")
+                        total = row.get("total", 0) or 0
+                        serie.append(
+                            {
+                                "fecha": ReporteService._normalizar_fecha(fecha_valor),
+                                "total": total,
+                            }
+                        )
+                        total_periodo += total
 
-                promedio = round(total_periodo / len(serie), 2) if serie else 0.0
-                variacion = ReporteService._calcular_variacion(serie)
+                    promedio = round(total_periodo / len(serie), 2) if serie else 0.0
+                    variacion = ReporteService._calcular_variacion(serie)
 
-                return {
-                    "serie": serie,
-                    "total_periodo": total_periodo,
-                    "promedio_diario": promedio,
-                    **variacion,
-                }
+                    return {
+                        "serie": serie,
+                        "total_periodo": total_periodo,
+                        "promedio_diario": promedio,
+                        **variacion,
+                    }
+            except Exception as exc:
+                import traceback
+                print(f"[REPORTE_SERVICE] Error procesando columna {columna} de tabla {tabla}: {exc}")
+                print(f"[REPORTE_SERVICE] Traceback: {traceback.format_exc()}")
+                continue
 
         # Si ninguna columna devolvió datos, regresar estructura vacía
         return ReporteService._fallback_trend(fallback_total)
@@ -334,7 +361,9 @@ class ReporteService:
                 "potreros": ReporteService._build_trend_payload(
                     cursor,
                     "potrero",
-                    ("fecha_ultimo_uso", "proxima_limpieza", "ultima_limpieza"),
+                    (),  # Nota: fecha_ultimo_uso, proxima_limpieza y ultima_limpieza ahora se obtienen
+                    # desde historial_potrero, no desde potrero directamente
+                    # Usar fallback ya que las fechas están en historial_potrero
                     fallback_total=potreros_total_count,
                     tenant_id=tenant_id,
                 ),
@@ -370,8 +399,13 @@ class ReporteService:
             }
 
         except Exception as exc:
-            print("Error generando resumen de reportes")
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"[REPORTE_SERVICE] Error generando resumen de reportes: {exc}")
+            print(f"[REPORTE_SERVICE] Traceback completo:\n{error_trace}")
             return {
+                "error": True,
+                "error_message": str(exc),
                 "generado_en": datetime.now(timezone.utc).isoformat(),
                 "usuarios": {"totales": {"total": 0, "activos": 0, "inactivos": 0}, "por_estado": []},
                 "ganado": {"totales": {"total": 0}, "por_estado": []},

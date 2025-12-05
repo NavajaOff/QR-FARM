@@ -22,6 +22,8 @@ class PotreroData:
     descripcion: Optional[str] = None
     responsable_persona_id: Optional[int] = None
     propietario_persona_id: Optional[int] = None
+    # Nota: fecha_ultimo_uso, ultima_limpieza y proxima_limpieza ahora se obtienen
+    # desde la tabla historial_potrero. Se mantienen aquí para compatibilidad.
     fecha_ultimo_uso: Optional[datetime] = None
     ultima_limpieza: Optional[datetime] = None
     proxima_limpieza: Optional[datetime] = None

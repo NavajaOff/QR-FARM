@@ -345,8 +345,17 @@ class PotreroController:
             }), 500
 
     @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('ver_potreros')
     def get_personas_usuario() -> Tuple[Any, int]:
-        """Get personas usuario endpoint. Acepta tenant_id como query param para super admin."""
+        """
+        Get personas usuario endpoint. 
+        
+        IMPORTANTE: Solo muestra usuarios del tenant actual. Super admins pueden usar 
+        tenant_id como query param para filtrar por un tenant específico.
+        Excluye usuarios con rol 'super_admin' para evitar mostrar super admins de otros tenants.
+        """
         try:
             # Obtener tenant_id desde query params si existe (para super admin)
             tenant_id = None
@@ -356,6 +365,19 @@ class PotreroController:
                     tenant_id = int(tenant_id_param)
                 except (ValueError, TypeError):
                     pass
+            
+            # Si no hay tenant_id en query params, obtenerlo del usuario actual
+            if tenant_id is None:
+                from src.utils.tenant import get_current_tenant_id
+                tenant_id = get_current_tenant_id(allow_query_param=False, require_tenant=True)
+            
+            # CRÍTICO: Si aún no hay tenant_id, retornar error (seguridad multi-tenant)
+            if tenant_id is None:
+                return jsonify({
+                    'error': 'Tenant requerido',
+                    'message': 'No se pudo determinar el tenant. Este endpoint requiere un tenant válido.',
+                    'success': False
+                }), 400
             
             personas = PotreroService.get_personas_usuario(tenant_id_override=tenant_id)
             return jsonify({'data': personas, 'success': True}), 200

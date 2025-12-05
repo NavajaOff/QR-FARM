@@ -103,15 +103,16 @@ class QRService:
         os.makedirs(qr_dir, exist_ok=True)
 
         qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=10,
-            border=4,
+            version=None,  # Auto-ajustar versión según cantidad de datos
+            error_correction=qrcode.constants.ERROR_CORRECT_H,  # 30% corrección de errores (máxima tolerancia)
+            box_size=20,  # Tamaño más grande para mejor legibilidad y detección
+            border=8,  # Borde más grande para mejor detección
         )
 
         qr.add_data(texto)
         qr.make(fit=True)
 
+        # Generar imagen con mejor calidad y contraste
         img = qr.make_image(fill='black', back_color='white')
 
         filename = f"{codigo_qr}.png"
@@ -211,11 +212,19 @@ class QRService:
             conn.commit()
             return True
 
-        except Exception:
-            print(f"Error creando QR para ganado {id_ganado}")
+        except ValueError as ve:
+            print(f"Error de validación creando QR para ganado {id_ganado}: {ve}")
+            return False
+        except Exception as e:
+            print(f"Error creando QR para ganado {id_ganado}: {type(e).__name__}: {e}")
+            if 'conn' in locals() and conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
             return False
         finally:
-            if 'conn' in locals():
+            if 'conn' in locals() and conn:
                 conn.close()
 
     @staticmethod

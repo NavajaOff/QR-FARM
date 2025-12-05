@@ -74,10 +74,13 @@ def _validar_permiso(rol_nombre, permission):
     # Super admin NO tiene acceso automático a todo
     # Solo tiene acceso a permisos explícitamente definidos para super_admin
     # Mapear "admin" a "tenant_admin" para compatibilidad
+    rol_original = rol_nombre
     if rol_nombre == 'admin' or rol_nombre == 'administrador':
         rol_nombre = 'tenant_admin'
+        print(f"[PERMISSIONS] Rol mapeado: '{rol_original}' -> '{rol_nombre}'")
     
     roles_permitidos = PERMISOS.get(permission, [])
+    print(f"[PERMISSIONS] Permiso '{permission}' requiere roles: {roles_permitidos}, usuario tiene rol: '{rol_nombre}'")
     
     # Si el permiso no está definido, denegar acceso
     if not roles_permitidos:
@@ -109,7 +112,10 @@ def permission_required(permission: str):
                 return error_response, error_status
             
             rol_nombre = _obtener_rol_usuario(usuario)
+            print(f"[PERMISSIONS] Validando permiso '{permission}' para usuario id={getattr(usuario, 'id', None)} con rol='{rol_nombre}'")
+            
             if not rol_nombre:
+                print(f"[PERMISSIONS] ERROR: Usuario sin rol asignado")
                 return jsonify({
                     'status': 'error',
                     'code': 'no_role',
@@ -117,9 +123,24 @@ def permission_required(permission: str):
                 }), 403
             
             tiene_permiso, error_response = _validar_permiso(rol_nombre, permission)
+            print(f"[PERMISSIONS] Resultado validación: tiene_permiso={tiene_permiso}")
+            
             if not tiene_permiso:
                 # error_response es una tupla (jsonify_response, status_code) cuando no hay permiso
                 if error_response and isinstance(error_response, tuple):
+                    response_obj = error_response[0]
+                    status_code = error_response[1]
+                    # Manejar tanto objetos Response como diccionarios
+                    if hasattr(response_obj, 'get_json'):
+                        try:
+                            response_data = response_obj.get_json()
+                        except Exception:
+                            response_data = str(response_obj)
+                    elif isinstance(response_obj, dict):
+                        response_data = response_obj
+                    else:
+                        response_data = str(response_obj)
+                    print(f"[PERMISSIONS] DENEGADO: {status_code} - {response_data}")
                     return error_response[0], error_response[1]
                 return error_response
             

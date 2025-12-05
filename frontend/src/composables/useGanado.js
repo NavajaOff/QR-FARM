@@ -15,12 +15,26 @@ export function useGanado() {
       loading.value = true
       error.value = null
       const response = await ganadoAPI.getAll()
-      if (response.data?.status === 'success') {
-        ganado.value = response.data.data
+      
+      // Manejar diferentes formatos de respuesta
+      let ganadoData = []
+      if (response.data?.status === 'success' && Array.isArray(response.data?.data)) {
+        ganadoData = response.data.data
+      } else if (Array.isArray(response.data?.data)) {
+        ganadoData = response.data.data
       }
+      
+      ganado.value = ganadoData
     } catch (err) {
-      error.value = err.message
-      console.error('Error cargando ganado:', err)
+      const errorMessage = err.response?.data?.message || err.message || 'Error al cargar el ganado'
+      error.value = errorMessage
+      console.error('[useGanado] Error cargando ganado:', {
+        message: errorMessage,
+        error: err,
+        status: err.response?.status,
+        data: err.response?.data
+      })
+      ganado.value = []
     } finally {
       loading.value = false
     }

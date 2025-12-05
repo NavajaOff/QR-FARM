@@ -382,9 +382,32 @@ const startScanner = async (): Promise<void> => {
       appendError('El escáner no se inicializó correctamente.');
       return;
     }
-    const config = { fps: 10, qrbox: { width: 320, height: 320 } };
+    // Configuración optimizada para mejor detección de QR
+    const config = {
+      fps: 30,  // Mayor frecuencia de escaneo (30 FPS para mejor detección)
+      qrbox: function(viewfinderWidth: number, viewfinderHeight: number) {
+        // Usar 90% del viewport para área de escaneo más grande
+        const minEdgePercentage = 0.9;
+        const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
+        const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
+        return {
+          width: qrboxSize,
+          height: qrboxSize
+        };
+      },
+      aspectRatio: 1.0,  // QR es cuadrado
+      disableFlip: false,  // Permitir rotación para mejor detección
+      videoConstraints: {
+        facingMode: "environment",  // Preferir cámara trasera
+        width: { ideal: 1280 },  // Resolución más alta para mejor detección
+        height: { ideal: 720 }
+      },
+      experimentalFeatures: {
+        useBarCodeDetectorIfSupported: true  // Usar detector nativo del navegador si está disponible
+      }
+    };
     await instance.start(
-      { deviceId: { exact: state.selectedCameraId } },
+      state.selectedCameraId,
       config,
       handleScanSuccess,
       handleScanFailure

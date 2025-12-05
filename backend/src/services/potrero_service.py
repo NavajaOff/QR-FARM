@@ -9,6 +9,101 @@ class PotreroService:
     """Service class for handling Potrero business logic."""
     NO_DEFINIDO = 'NO_DEFINIDO'
     SQL_AND_TENANT_ID = " AND p.tenant_id = %s"
+    
+    @staticmethod
+    def _obtener_actividades_potrero(potrero_id: int, tenant_id: Optional[int] = None) -> Dict[str, Any]:
+        """Obtiene las actividades más recientes de un potrero (fecha_ultimo_uso, ultima_limpieza, proxima_limpieza)."""
+        actividades = {
+            'fecha_ultimo_uso': None,
+            'ultima_limpieza': None,
+            'proxima_limpieza': None
+        }
+        
+        try:
+            with db.get_cursor() as cursor:
+                # Obtener última fecha de uso
+                sql_uso = """
+                    SELECT fecha_evento
+                    FROM historial_potrero
+                    WHERE id_potrero = %s AND tipo_evento = 'uso'
+                """
+                params_uso = (potrero_id,)
+                if tenant_id is not None:
+                    sql_uso += " AND tenant_id = %s"
+                    params_uso = (potrero_id, tenant_id)
+                sql_uso += " ORDER BY fecha_evento DESC LIMIT 1"
+                
+                cursor.execute(sql_uso, params_uso)
+                uso_result = cursor.fetchone()
+                if uso_result:
+                    actividades['fecha_ultimo_uso'] = uso_result.get('fecha_evento')
+                
+                # Obtener última limpieza (pasada)
+                sql_limpieza = """
+                    SELECT fecha_evento
+                    FROM historial_potrero
+                    WHERE id_potrero = %s AND tipo_evento = 'limpieza'
+                    AND (observaciones IS NULL OR observaciones != 'Programada')
+                """
+                params_limpieza = (potrero_id,)
+                if tenant_id is not None:
+                    sql_limpieza += " AND tenant_id = %s"
+                    params_limpieza = (potrero_id, tenant_id)
+                sql_limpieza += " ORDER BY fecha_evento DESC LIMIT 1"
+                
+                cursor.execute(sql_limpieza, params_limpieza)
+                limpieza_result = cursor.fetchone()
+                if limpieza_result:
+                    actividades['ultima_limpieza'] = limpieza_result.get('fecha_evento')
+                
+                # Obtener próxima limpieza programada (futura)
+                sql_proxima = """
+                    SELECT fecha_evento
+                    FROM historial_potrero
+                    WHERE id_potrero = %s AND tipo_evento = 'limpieza'
+                    AND observaciones = 'Programada' AND fecha_evento > NOW()
+                """
+                params_proxima = (potrero_id,)
+                if tenant_id is not None:
+                    sql_proxima += " AND tenant_id = %s"
+                    params_proxima = (potrero_id, tenant_id)
+                sql_proxima += " ORDER BY fecha_evento ASC LIMIT 1"
+                
+                cursor.execute(sql_proxima, params_proxima)
+                proxima_result = cursor.fetchone()
+                if proxima_result:
+                    actividades['proxima_limpieza'] = proxima_result.get('fecha_evento')
+        except Exception as e:
+            print(f"Error obteniendo actividades del potrero {potrero_id}: {e}")
+        
+        return actividades
+    
+    @staticmethod
+    def _registrar_actividad_potrero(
+        potrero_id: int,
+        tipo_evento: str,
+        fecha_evento: datetime,
+        observaciones: Optional[str] = None,
+        tenant_id: Optional[int] = None
+    ) -> None:
+        """Registra un evento en el historial de potrero."""
+        try:
+            if tenant_id is None:
+                tenant_id = PotreroService._obtener_tenant_id()
+            
+            if tenant_id is None:
+                raise ValueError("Tenant requerido para registrar evento")
+            
+            with db.get_cursor() as cursor:
+                sql = """
+                    INSERT INTO historial_potrero (
+                        id_potrero, tipo_evento, fecha_evento, observaciones, tenant_id
+                    ) VALUES (%s, %s, %s, %s, %s)
+                """
+                cursor.execute(sql, (potrero_id, tipo_evento, fecha_evento, observaciones, tenant_id))
+        except Exception as e:
+            print(f"Error registrando evento del potrero {potrero_id}: {e}")
+            raise
 
     @staticmethod
     def _obtener_tenant_id() -> Optional[int]:
@@ -77,6 +172,11 @@ class PotreroService:
             # Procesar cada potrero
             for potrero in potreros:
                 PotreroService._procesar_potrero(potrero)
+                # Agregar actividades desde historial_potrero
+                actividades = PotreroService._obtener_actividades_potrero(potrero['id'], tenant_id)
+                potrero.update(actividades)
+                # Agregar información del responsable
+                PotreroService._agregar_responsable(potrero, tenant_id)
 
             return potreros
         except Exception as e:
@@ -136,6 +236,12 @@ class PotreroService:
                     result['tipo_pasto_nombre'] = 'NO_DEFINIDO'
             else:
                 result['tipo_pasto_nombre'] = 'NO_DEFINIDO'
+            
+            # Agregar actividades desde historial_potrero
+            actividades = PotreroService._obtener_actividades_potrero(potrero_id, tenant_id)
+            result.update(actividades)
+            # Agregar información del responsable
+            PotreroService._agregar_responsable(result, tenant_id)
 
             return result
 
@@ -157,10 +263,8 @@ class PotreroService:
 
     @staticmethod
     def _preparar_datos_insercion(data: Dict[str, Any]) -> tuple:
-        """Prepara los datos para la inserción del potrero."""
-        from datetime import datetime
+        """Prepara los datos para la inserción del potrero (sin campos de actividad)."""
         nombre = data.get('nombre') or PotreroService._generar_nombre_potrero()
-        fecha_ultimo_uso = datetime.now().date().isoformat()
 
         # Auto-calcular área si se proporciona hectáreas
         hectareas = data.get('hectareas')
@@ -173,17 +277,16 @@ class PotreroService:
             # Calcular hectáreas automáticamente si se proporciona área
             hectareas = float(area) / 10000
 
+        # Nota: fecha_ultimo_uso, ultima_limpieza y proxima_limpieza ahora se gestionan
+        # en la tabla historial_potrero, no en potrero
         values = (
             data.get('id_tipo_pasto'),
             nombre,
             data.get('capacidad'),
             hectareas,
             data.get('ocupacion', 0),
-            fecha_ultimo_uso,
             data.get('responsable_persona_id'),
-            data.get('proxima_limpieza'),
             area,
-            data.get('ultima_limpieza'),
             data.get('descripcion'),
             data.get('estado', 'disponible')
         )
@@ -204,10 +307,9 @@ class PotreroService:
             sql = """
                 INSERT INTO potrero (
                     id_tipo_pasto, nombre, capacidad, hectareas, ocupacion,
-                    fecha_ultimo_uso, responsable_persona_id, proxima_limpieza,
-                    area, ultima_limpieza, descripcion, estado, tenant_id
+                    responsable_persona_id, area, descripcion, estado, tenant_id
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
             """
             
@@ -260,7 +362,11 @@ class PotreroService:
 
             # Agregar información adicional
             PotreroService._agregar_tipo_pasto(result)
-            PotreroService._agregar_responsable(result)
+            PotreroService._agregar_responsable(result, tenant_id)
+            
+            # Agregar actividades desde historial_potrero
+            actividades = PotreroService._obtener_actividades_potrero(potrero_id, tenant_id)
+            result.update(actividades)
 
             return result
 
@@ -279,18 +385,36 @@ class PotreroService:
             potrero['tipo_pasto_nombre'] = 'NO_DEFINIDO'
 
     @staticmethod
-    def _agregar_responsable(potrero: Dict[str, Any]) -> None:
-        """Agrega el nombre del responsable al potrero."""
+    def _agregar_responsable(potrero: Dict[str, Any], tenant_id: Optional[int] = None) -> None:
+        """Agrega el nombre del responsable al potrero respetando tenant_id."""
         if potrero.get('responsable_persona_id'):
             try:
                 with db.get_cursor() as resp_cursor:
-                    resp_cursor.execute("""
-                        SELECT CONCAT(primer_nombre, ' ', primer_apellido) as nombre_completo
-                        FROM personas WHERE id = %s
-                    """, (potrero['responsable_persona_id'],))
+                    sql = """
+                        SELECT CONCAT(
+                            COALESCE(primer_nombre, ''), ' ',
+                            COALESCE(segundo_nombre, ''), ' ',
+                            COALESCE(primer_apellido, ''), ' ',
+                            COALESCE(segundo_apellido, '')
+                        ) as nombre_completo
+                        FROM personas
+                        WHERE id = %s
+                    """
+                    params = (potrero['responsable_persona_id'],)
+                    
+                    # Filtrar por tenant_id si está disponible
+                    if tenant_id is not None:
+                        sql += " AND tenant_id = %s"
+                        params = (potrero['responsable_persona_id'], tenant_id)
+                    
+                    resp_cursor.execute(sql, params)
                     resp_result = resp_cursor.fetchone()
-                    if resp_result:
-                        potrero['responsable_nombre'] = resp_result['nombre_completo']
+                    if resp_result and resp_result.get('nombre_completo'):
+                        nombre_completo = resp_result['nombre_completo'].strip()
+                        if nombre_completo:
+                            potrero['responsable_nombre'] = nombre_completo
+                        else:
+                            potrero['responsable_nombre'] = f"Persona {potrero['responsable_persona_id']}"
                     else:
                         potrero['responsable_nombre'] = f"Persona {potrero['responsable_persona_id']}"
             except Exception as e:
@@ -302,8 +426,55 @@ class PotreroService:
     @staticmethod
     def create(data):
         """Create new potrero."""
+        from datetime import datetime
+        
         values = PotreroService._preparar_datos_insercion(data)
         potrero_id = PotreroService._insertar_potrero_en_db(values)
+        
+        # Registrar actividades si se proporcionan
+        tenant_id = PotreroService._obtener_tenant_id()
+        if data.get('fecha_ultimo_uso'):
+            try:
+                fecha_uso = data.get('fecha_ultimo_uso')
+                if isinstance(fecha_uso, str):
+                    fecha_uso = datetime.fromisoformat(fecha_uso.replace('Z', '+00:00'))
+                PotreroService._registrar_actividad_potrero(
+                    potrero_id, 'uso', fecha_uso, None, tenant_id
+                )
+            except Exception as e:
+                print(f"Error registrando fecha_ultimo_uso: {e}")
+        
+        if data.get('ultima_limpieza'):
+            try:
+                fecha_limpieza = data.get('ultima_limpieza')
+                if isinstance(fecha_limpieza, str):
+                    fecha_limpieza = datetime.fromisoformat(fecha_limpieza.replace('Z', '+00:00'))
+                PotreroService._registrar_actividad_potrero(
+                    potrero_id, 'limpieza', fecha_limpieza, None, tenant_id
+                )
+            except Exception as e:
+                print(f"Error registrando ultima_limpieza: {e}")
+        
+        if data.get('proxima_limpieza'):
+            try:
+                fecha_proxima = data.get('proxima_limpieza')
+                if isinstance(fecha_proxima, str):
+                    fecha_proxima = datetime.fromisoformat(fecha_proxima.replace('Z', '+00:00'))
+                PotreroService._registrar_actividad_potrero(
+                    potrero_id, 'limpieza', fecha_proxima, 'Programada', tenant_id
+                )
+            except Exception as e:
+                print(f"Error registrando proxima_limpieza: {e}")
+        
+        # Registrar fecha_ultimo_uso automáticamente si no se proporcionó
+        if not data.get('fecha_ultimo_uso'):
+            try:
+                PotreroService._registrar_actividad_potrero(
+                    potrero_id, 'uso', datetime.now(), None, tenant_id
+                )
+            except Exception as e:
+                print(f"Error registrando fecha_ultimo_uso automática: {e}")
+        
         return PotreroService._obtener_potrero_completo(potrero_id)
 
     @staticmethod
@@ -315,6 +486,48 @@ class PotreroService:
             elif isinstance(value, str) and value and 'T' in value:
                 return value.split('T')[0]
         return value
+    
+    @staticmethod
+    def _actualizar_actividades_potrero(potrero_id: int, actividades_data: Dict[str, Any]) -> None:
+        """Actualiza las actividades de un potrero."""
+        from datetime import datetime
+        
+        tenant_id = PotreroService._obtener_tenant_id()
+        if tenant_id is None:
+            raise ValueError("Tenant requerido para actualizar actividades")
+        
+        if 'fecha_ultimo_uso' in actividades_data and actividades_data['fecha_ultimo_uso']:
+            try:
+                fecha_uso = actividades_data['fecha_ultimo_uso']
+                if isinstance(fecha_uso, str):
+                    fecha_uso = datetime.fromisoformat(fecha_uso.replace('Z', '+00:00'))
+                PotreroService._registrar_actividad_potrero(
+                    potrero_id, 'uso', fecha_uso, None, tenant_id
+                )
+            except Exception as e:
+                print(f"Error actualizando fecha_ultimo_uso: {e}")
+        
+        if 'ultima_limpieza' in actividades_data and actividades_data['ultima_limpieza']:
+            try:
+                fecha_limpieza = actividades_data['ultima_limpieza']
+                if isinstance(fecha_limpieza, str):
+                    fecha_limpieza = datetime.fromisoformat(fecha_limpieza.replace('Z', '+00:00'))
+                PotreroService._registrar_actividad_potrero(
+                    potrero_id, 'limpieza', fecha_limpieza, None, tenant_id
+                )
+            except Exception as e:
+                print(f"Error actualizando ultima_limpieza: {e}")
+        
+        if 'proxima_limpieza' in actividades_data and actividades_data['proxima_limpieza']:
+            try:
+                fecha_proxima = actividades_data['proxima_limpieza']
+                if isinstance(fecha_proxima, str):
+                    fecha_proxima = datetime.fromisoformat(fecha_proxima.replace('Z', '+00:00'))
+                PotreroService._registrar_actividad_potrero(
+                    potrero_id, 'limpieza', fecha_proxima, 'Programada', tenant_id
+                )
+            except Exception as e:
+                print(f"Error actualizando proxima_limpieza: {e}")
 
     @staticmethod
     def _procesar_campo_estado(value: Any) -> str:
@@ -329,34 +542,37 @@ class PotreroService:
         """Prepara los campos y valores para la actualización."""
         update_fields = []
         values = []
+        data_copy = data.copy()
 
         # Auto-calcular área/hectáreas si se proporciona uno pero no el otro
-        hectareas = data.get('hectareas')
-        area = data.get('area')
+        hectareas = data_copy.get('hectareas')
+        area = data_copy.get('area')
 
-        if 'hectareas' in data and 'area' not in data and hectareas is not None:
+        if 'hectareas' in data_copy and 'area' not in data_copy and hectareas is not None:
             # Calcular metros cuadrados automáticamente: 1 hectárea = 10,000 m²
-            data = data.copy()  # No modificar el original
-            data['area'] = float(hectareas) * 10000
-        elif 'area' in data and 'hectareas' not in data and area is not None:
+            data_copy['area'] = float(hectareas) * 10000
+        elif 'area' in data_copy and 'hectareas' not in data_copy and area is not None:
             # Calcular hectáreas automáticamente si se proporciona área
-            data = data.copy()  # No modificar el original
-            data['hectareas'] = float(area) / 10000
+            data_copy['hectareas'] = float(area) / 10000
 
-        for key, value in data.items():
+        # Separar campos de actividad de campos de potrero
+        actividades_data = {}
+        for key in ['proxima_limpieza', 'ultima_limpieza', 'fecha_ultimo_uso']:
+            if key in data_copy:
+                actividades_data[key] = data_copy.pop(key)
+        
+        for key, value in data_copy.items():
             if key in ['id']:
                 continue
 
             # Procesar campos especiales
-            if key in ['proxima_limpieza', 'ultima_limpieza', 'fecha_ultimo_uso']:
-                value = PotreroService._procesar_campo_fecha(key, value)
-            elif key == 'estado':
+            if key == 'estado':
                 value = PotreroService._procesar_campo_estado(value)
 
             update_fields.append(f"{key} = %s")
             values.append(value)
-
-        return update_fields, values
+        
+        return update_fields, values, actividades_data
 
     @staticmethod
     def _ejecutar_actualizacion(potrero_id: int, update_fields: list, values: list) -> Dict[str, Any]:
@@ -403,6 +619,11 @@ class PotreroService:
 
             # Agregar información adicional
             PotreroService._agregar_tipo_pasto_actualizado(result)
+            
+            # Agregar actividades desde historial_potrero
+            actividades = PotreroService._obtener_actividades_potrero(potrero_id, tenant_id)
+            result.update(actividades)
+            
             print(f"Potrero actualizado exitosamente: {result}")
             return result
 
@@ -433,7 +654,11 @@ class PotreroService:
         # Verificar que el potrero existe
         PotreroService.get_by_id(potrero_id, tenant_id_override)
 
-        update_fields, values = PotreroService._preparar_campos_actualizacion(data)
+        update_fields, values, actividades_data = PotreroService._preparar_campos_actualizacion(data)
+
+        # Actualizar actividades si existen
+        if actividades_data:
+            PotreroService._actualizar_actividades_potrero(potrero_id, actividades_data)
 
         if not update_fields:
             return PotreroService.get_by_id(potrero_id)
@@ -621,7 +846,10 @@ class PotreroService:
         """
         Get all personas with rol usuario, filtrado por tenant.
         
-        IMPORTANTE: tenant_id está en personas (p.tenant_id), NO en usuarios (u.tenant_id).
+        IMPORTANTE: 
+        - tenant_id está en personas (p.tenant_id), NO en usuarios (u.tenant_id).
+        - Excluye usuarios con rol 'super_admin' para evitar mostrar super admins de otros tenants.
+        - Si tenant_id es None, retorna lista vacía (no mostrar todos los usuarios sin filtro).
         
         Args:
             tenant_id_override: Si se proporciona, filtra por este tenant
@@ -629,20 +857,24 @@ class PotreroService:
         try:
             tenant_id = tenant_id_override if tenant_id_override is not None else PotreroService._obtener_tenant_id()
             
+            # CRÍTICO: Si no hay tenant_id, no mostrar ningún usuario (seguridad multi-tenant)
+            if tenant_id is None:
+                print("[POTRERO_SERVICE] ADVERTENCIA: tenant_id es None, retornando lista vacía por seguridad")
+                return []
+            
             with db.get_cursor() as cursor:
                 sql = """
                     SELECT p.id, p.primer_nombre, p.segundo_nombre, p.primer_apellido, p.segundo_apellido,
                            CONCAT(p.primer_nombre, ' ', p.primer_apellido) as nombre_completo
                     FROM personas p
                     JOIN usuarios u ON p.id = u.id_persona
+                    JOIN roles r ON u.id_rol = r.id
                     WHERE u.estado = 'activo'
+                      AND LOWER(TRIM(r.rol)) != 'super_admin'
+                      AND p.tenant_id = %s
                 """
-                params = ()
-                if tenant_id is not None:
-                    # IMPORTANTE: tenant_id está en personas (p.tenant_id), NO en usuarios (u.tenant_id)
-                    sql += PotreroService.SQL_AND_TENANT_ID
-                    params = (tenant_id,)
-                    print(f"[POTRERO_SERVICE] Filtrando personas con p.tenant_id: {tenant_id}")
+                params = (tenant_id,)
+                print(f"[POTRERO_SERVICE] Filtrando personas con p.tenant_id: {tenant_id} (excluyendo super_admin)")
                 
                 sql += " ORDER BY p.primer_apellido, p.primer_nombre"
                 

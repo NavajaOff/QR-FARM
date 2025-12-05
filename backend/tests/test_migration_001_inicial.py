@@ -46,7 +46,7 @@ class TestMigration001Inicial:
         create_table_calls = [call[0][0] for call in mock_op.create_table.call_args_list]
         expected_tables = [
             'roles', 'tipo_pasto', 'tipo_vacuna', 'personas',
-            'estado_ganado', 'revision', 'potrero', 'ganado',
+            'estado_ganado', 'potrero', 'ganado',
             'qr', 'usuarios', 'vacunacion'
         ]
         
@@ -75,6 +75,8 @@ class TestMigration001Inicial:
         
         # Verificar que se llamó drop_table para todas las tablas
         drop_table_calls = [call[0][0] for call in mock_op.drop_table.call_args_list]
+        # Nota: revision está incluida porque la migración 001_inicial la crea originalmente
+        # La migración 005_eliminar_revision_y_normalizar la eliminará en una migración posterior
         expected_tables = [
             'vacunacion', 'usuarios', 'qr', 'ganado',
             'potrero', 'revision', 'estado_ganado', 'personas',

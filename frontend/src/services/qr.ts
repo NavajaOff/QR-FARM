@@ -33,12 +33,12 @@ export interface GanadoVacuna {
   responsable: string | null;
 }
 
-export interface GanadoRevision {
+export interface GanadoHistorial {
   id: string | null;
   fecha: string | null;
   observaciones: string | null;
   resultado: string | null;
-  veterinario: string | null;
+  diagnostico: string | null;
 }
 
 export interface GanadoResource {
@@ -55,7 +55,7 @@ export interface GanadoResource {
   propietario: GanadoOwner;
   potrero: GanadoPotrero;
   vacunas: GanadoVacuna[];
-  historial: GanadoRevision[];
+  historial: GanadoHistorial[];
 }
 
 const sanitizeEndpoint = (endpoint: string): string => {
@@ -210,21 +210,36 @@ const parseVacunas = (value: unknown): GanadoVacuna[] => {
     .filter((vacuna): vacuna is GanadoVacuna => vacuna !== null);
 };
 
-const parseHistorial = (value: unknown): GanadoRevision[] => {
+const parseHistorial = (value: unknown): GanadoHistorial[] => {
   if (!Array.isArray(value)) return [];
   return value
     .map((item) => {
       if (!item || typeof item !== 'object') return null;
       const data = item as Record<string, unknown>;
+      
+      // Manejar fecha - si es string vacío, retornar null
+      let fechaValue: string | null = null;
+      if (data.fecha !== null && data.fecha !== undefined) {
+        if (typeof data.fecha === 'string' && data.fecha.trim() === '') {
+          fechaValue = null;
+        } else {
+          fechaValue = toIsoString(data.fecha);
+        }
+      }
+      
+      // Manejar resultado y diagnostico - diagnostico como fallback de resultado
+      const diagnosticoValue = toNullableString(data.diagnostico);
+      const resultadoValue = toNullableString(data.resultado) ?? diagnosticoValue;
+      
       return {
         id: toNullableString(data.id),
-        fecha: toIsoString(data.fecha),
+        fecha: fechaValue,
         observaciones: toNullableString(data.observaciones),
-        resultado: toNullableString(data.resultado) ?? toNullableString(data.diagnostico),
-        veterinario: toNullableString(data.veterinario)
+        resultado: resultadoValue,
+        diagnostico: diagnosticoValue
       };
     })
-    .filter((registro): registro is GanadoRevision => registro !== null);
+    .filter((historial): historial is GanadoHistorial => historial !== null);
 };
 
 const parseGanadoResponse = (input: unknown): GanadoResource => {

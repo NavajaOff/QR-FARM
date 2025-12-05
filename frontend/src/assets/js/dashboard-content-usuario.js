@@ -47,11 +47,41 @@ export default {
           vacunacionAPI.getAll()
         ]);
 
-        this.estadisticas.ganado = ganadoResponse.data?.data?.length || 0;
-        this.estadisticas.potreros = potreroResponse.data?.data?.length || 0;
-        this.estadisticas.vacunaciones = vacunacionResponse.data?.data?.length || 0;
+        // Ganado: formato {status: 'success', data: [...]}
+        let ganadoData = [];
+        if (ganadoResponse.data?.status === 'success' && Array.isArray(ganadoResponse.data?.data)) {
+          ganadoData = ganadoResponse.data.data;
+        } else if (Array.isArray(ganadoResponse.data?.data)) {
+          ganadoData = ganadoResponse.data.data;
+        }
+        this.estadisticas.ganado = ganadoData.length || 0;
+
+        // Potreros: formato {data: [...], success: True} o {status: 'success', data: [...]}
+        let potrerosData = [];
+        if (potreroResponse.data?.success && Array.isArray(potreroResponse.data?.data)) {
+          potrerosData = potreroResponse.data.data;
+        } else if (potreroResponse.data?.status === 'success' && Array.isArray(potreroResponse.data?.data)) {
+          potrerosData = potreroResponse.data.data;
+        } else if (Array.isArray(potreroResponse.data?.data)) {
+          potrerosData = potreroResponse.data.data;
+        }
+        this.estadisticas.potreros = potrerosData.length || 0;
+
+        // Vacunaciones: formato {status: 'success', data: [...]}
+        let vacunacionesData = [];
+        if (vacunacionResponse.data?.status === 'success' && Array.isArray(vacunacionResponse.data?.data)) {
+          vacunacionesData = vacunacionResponse.data.data;
+        } else if (Array.isArray(vacunacionResponse.data?.data)) {
+          vacunacionesData = vacunacionResponse.data.data;
+        }
+        this.estadisticas.vacunaciones = vacunacionesData.length || 0;
       } catch (error) {
-        console.error('Error cargando estadísticas:', error);
+        console.error('[DashboardContent] Error cargando estadísticas:', error);
+        console.error('[DashboardContent] Detalles del error:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        });
         // Mantener valores por defecto en caso de error
         this.estadisticas = {
           ganado: this.estadisticas.ganado || 0,

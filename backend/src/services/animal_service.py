@@ -18,48 +18,34 @@ SQL_WHERE_G_TENANT_ID = " WHERE g.tenant_id = %s"
 
 class GanadoService:
     @staticmethod
-    def _obtener_tenant_id() -> Optional[int]:
-        """Obtiene el tenant_id del contexto actual."""
+    def _obtener_tenant_id_desde_g() -> Optional[int]:
+        """Intenta obtener tenant_id desde el contexto Flask g."""
         try:
             from flask import g
-            print(f"[GANADO_SERVICE] _obtener_tenant_id() - Verificando contexto Flask g...")
-            print(f"[GANADO_SERVICE] g.tenant_id: {getattr(g, 'tenant_id', 'NO EXISTE')}")
-            print(f"[GANADO_SERVICE] g.current_user existe: {hasattr(g, 'current_user')}")
-            if hasattr(g, 'current_user') and g.current_user:
-                print(f"[GANADO_SERVICE] g.current_user.tenant_id: {getattr(g.current_user, 'tenant_id', 'NO EXISTE')}")
-            
-            # Primero intentar desde g.tenant_id directamente (más confiable)
             if hasattr(g, 'tenant_id') and g.tenant_id is not None:
-                print(f"[GANADO_SERVICE] Obteniendo tenant_id desde g.tenant_id: {g.tenant_id}")
                 return g.tenant_id
-            
-            # Intentar obtener tenant_id con require_tenant=True para usuarios normales
-            tenant_id = get_current_tenant_id(require_tenant=True)
-            if tenant_id is not None:
-                print(f"[GANADO_SERVICE] Obteniendo tenant_id desde get_current_tenant_id(): {tenant_id}")
-                return tenant_id
-            
-            # Si aún no hay, intentar desde g.current_user
             if hasattr(g, 'current_user') and g.current_user:
                 if hasattr(g.current_user, 'tenant_id') and g.current_user.tenant_id is not None:
-                    print(f"[GANADO_SERVICE] Obteniendo tenant_id desde g.current_user.tenant_id: {g.current_user.tenant_id}")
                     return g.current_user.tenant_id
-            
-            print(f"[GANADO_SERVICE] No se pudo obtener tenant_id de ninguna fuente")
-            return None
-        except Exception as e:
-            print(f"[GANADO_SERVICE] Error obteniendo tenant_id: {e}")
-            import traceback
-            traceback.print_exc()
-            # Intentar obtener desde g.tenant_id como fallback
-            try:
-                from flask import g
-                if hasattr(g, 'tenant_id') and g.tenant_id is not None:
-                    print(f"[GANADO_SERVICE] Fallback: Obteniendo tenant_id desde g.tenant_id: {g.tenant_id}")
-                    return g.tenant_id
-            except Exception as fallback_error:
-                print(f"[GANADO_SERVICE] Error en fallback: {fallback_error}")
-            return None
+        except Exception:
+            pass
+        return None
+
+    @staticmethod
+    def _obtener_tenant_id() -> Optional[int]:
+        """Obtiene el tenant_id del contexto actual."""
+        tenant_id = GanadoService._obtener_tenant_id_desde_g()
+        if tenant_id is not None:
+            return tenant_id
+        
+        try:
+            tenant_id = get_current_tenant_id(require_tenant=True)
+            if tenant_id is not None:
+                return tenant_id
+        except Exception:
+            pass
+        
+        return GanadoService._obtener_tenant_id_desde_g()
 
     @staticmethod
     def _agregar_filtro_tenant(sql: str, tenant_id: Optional[int], 
@@ -144,7 +130,7 @@ class GanadoService:
             return None
 
     @staticmethod
-    def _fetch_vacunas(connection, animal_id: int) -> List[Dict[str, Any]]:
+    def _fetch_vacunas(connection, animal_id: int, tenant_id: Optional[int] = None) -> List[Dict[str, Any]]:
         """Obtiene las vacunas asociadas a un animal."""
         query = """
             SELECT
@@ -159,16 +145,54 @@ class GanadoService:
             LEFT JOIN tipo_vacuna tv ON tv.id = v.id_tipo_vacuna
             LEFT JOIN personas resp ON resp.id = v.responsable
             WHERE v.id_animal = %s
-            ORDER BY v.fecha_aplicacion DESC, v.id DESC
         """
+        params = (animal_id,)
+        
+        # Filtrar por tenant_id si se proporciona (seguridad multi-tenant)
+        # Incluir vacunas que tengan el tenant_id correcto O que sean NULL pero el animal pertenezca al tenant
+        if tenant_id is not None:
+            query += """
+                AND (
+                    v.tenant_id = %s OR 
+                    (v.tenant_id IS NULL AND EXISTS (
+                        SELECT 1 FROM ganado g WHERE g.id = v.id_animal AND g.tenant_id = %s
+                    ))
+                )
+            """
+            params = (animal_id, tenant_id, tenant_id)
+        
+        query += " ORDER BY v.fecha_aplicacion DESC, v.id DESC"
 
         cursor = connection.cursor(dictionary=True)
         rows: List[Dict[str, Any]] = []
         try:
-            cursor.execute(query, (animal_id,))
+            cursor.execute(query, params)
             rows = cursor.fetchall()
-        except Exception:  # pylint: disable=broad-except
-            pass
+            print(f"[GANADO_SERVICE] _fetch_vacunas: Encontradas {len(rows)} vacunas para animal {animal_id} (tenant_id: {tenant_id})")
+        except Exception as exc:  # pylint: disable=broad-except
+            print(f"[GANADO_SERVICE] Error obteniendo vacunas para animal {animal_id}: {exc}")
+            # Si falla por falta de columna tenant_id, intentar sin filtro de tenant
+            try:
+                query_simple = """
+                    SELECT
+                        v.id,
+                        v.fecha_aplicacion,
+                        v.proxima_dosis,
+                        v.estado,
+                        v.responsable,
+                        tv.nombre_vacuna,
+                        CONCAT_WS(' ', resp.primer_nombre, resp.segundo_nombre, resp.primer_apellido, resp.segundo_apellido) AS responsable_nombre
+                    FROM vacunacion v
+                    LEFT JOIN tipo_vacuna tv ON tv.id = v.id_tipo_vacuna
+                    LEFT JOIN personas resp ON resp.id = v.responsable
+                    WHERE v.id_animal = %s
+                    ORDER BY v.fecha_aplicacion DESC, v.id DESC
+                """
+                cursor.execute(query_simple, (animal_id,))
+                rows = cursor.fetchall()
+                print(f"[GANADO_SERVICE] _fetch_vacunas (fallback): Encontradas {len(rows)} vacunas para animal {animal_id}")
+            except Exception as exc2:
+                print(f"[GANADO_SERVICE] Error en fallback de vacunas: {exc2}")
         finally:
             cursor.close()
 
@@ -177,15 +201,64 @@ class GanadoService:
             vacunas.append({
                 "id": row.get("id"),
                 "nombre": row.get("nombre_vacuna"),
+                "nombre_vacuna": row.get("nombre_vacuna"),  # Incluir ambos campos para compatibilidad
                 "fecha_aplicacion": GanadoService._to_iso_string(row.get("fecha_aplicacion")),
                 "proxima_dosis": GanadoService._to_iso_string(row.get("proxima_dosis")),
                 "estado": row.get("estado"),
                 "responsable": row.get("responsable_nombre") or row.get("responsable"),
             })
+        print(f"[GANADO_SERVICE] _fetch_vacunas: Retornando {len(vacunas)} vacunas procesadas")
         return vacunas
 
     @staticmethod
+    def _validar_y_obtener_tenant_id(tenant_id_override: Optional[int]) -> int:
+        """Valida y obtiene el tenant_id para crear ganado."""
+        tenant_id = tenant_id_override
+        if tenant_id is None:
+            tenant_id = GanadoService._obtener_tenant_id()
+        if tenant_id is None:
+            raise ValueError("Tenant requerido para crear ganado")
+        return tenant_id
+
+    @staticmethod
+    def _preparar_valores_insercion(ganado: Ganado, tenant_id: int) -> tuple:
+        """Prepara los valores para la inserción en la base de datos."""
+        fecha_nac = ganado.fecha_nacimiento
+        if fecha_nac and hasattr(fecha_nac, 'isoformat'):
+            fecha_nac = fecha_nac.isoformat()
+        elif not isinstance(fecha_nac, str):
+            fecha_nac = None
+
+        estado_id = GanadoService._obtener_estado_id_desde_db(ganado.estado)
+        if estado_id is None:
+            estado_id = GanadoService._mapear_estado_string_a_id(ganado.estado)
+        
+        sexo_value = ganado.sexo.value if hasattr(ganado.sexo, 'value') else str(ganado.sexo)
+        
+        return (
+            ganado.nombre, ganado.raza,
+            fecha_nac, sexo_value,
+            ganado.peso, estado_id,
+            ganado.id_potrero, ganado.id_persona, tenant_id
+        )
+
+    @staticmethod
+    def _insertar_ganado_en_db(cursor, ganado: Ganado, values: tuple) -> int:
+        """Inserta el ganado en la base de datos y retorna el ID generado."""
+        sql = """
+            INSERT INTO ganado (
+                nombre, raza, fecha_nacimiento,
+                sexo, peso, id_estado, id_potrero, id_persona, tenant_id
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s
+            )
+        """
+        cursor.execute(sql, values)
+        return cursor.lastrowid
+
+    @staticmethod
     def crear_ganado(ganado: Ganado, tenant_id_override: Optional[int] = None) -> Optional[Ganado]:
+        """Crea un nuevo ganado en la base de datos."""
         conn = None
         cursor = None
         try:
@@ -195,67 +268,19 @@ class GanadoService:
             if ganado.id_potrero:
                 PotreroService.verificar_capacidad_disponible(ganado.id_potrero)
 
-            # Usar tenant_id_override si se proporciona, sino intentar obtenerlo del contexto
-            print(f"[GANADO_SERVICE] tenant_id_override recibido: {tenant_id_override}")
-            tenant_id = tenant_id_override
-            if tenant_id is None:
-                print(f"[GANADO_SERVICE] tenant_id_override es None, intentando obtener del contexto...")
-                tenant_id = GanadoService._obtener_tenant_id()
-            if tenant_id is None:
-                raise ValueError("Tenant requerido para crear ganado")
-            print(f"[GANADO_SERVICE] tenant_id final a usar: {tenant_id}")
-
-            sql = """
-                INSERT INTO ganado (
-                    nombre, raza, fecha_nacimiento,
-                    sexo, peso, id_estado, id_potrero, id_persona, tenant_id
-                ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s
-                )
-            """
-
-            # Convertir fecha_nacimiento a string si es date object
-            fecha_nac = ganado.fecha_nacimiento
-            if fecha_nac and hasattr(fecha_nac, 'isoformat'):
-                fecha_nac = fecha_nac.isoformat()
-            elif isinstance(fecha_nac, str):
-                # Si ya es string, mantenerlo
-                pass
-            else:
-                fecha_nac = None
-
-            estado_id = GanadoService._obtener_estado_id_desde_db(ganado.estado)
-            if estado_id is None:
-                estado_id = GanadoService._mapear_estado_string_a_id(ganado.estado)
-            
-            # Validar que sexo sea un enum válido
-            sexo_value = ganado.sexo.value if hasattr(ganado.sexo, 'value') else str(ganado.sexo)
-            
-            values = (
-                ganado.nombre, ganado.raza,
-                fecha_nac, sexo_value,
-                ganado.peso, estado_id,
-                ganado.id_potrero, ganado.id_persona, tenant_id
-            )
-
-            print(f"[GANADO_SERVICE] Insertando ganado con valores: nombre={ganado.nombre}, raza={ganado.raza}, sexo={sexo_value}, estado_id={estado_id}, tenant_id={tenant_id}")
-            
-            cursor.execute(sql, values)
+            tenant_id = GanadoService._validar_y_obtener_tenant_id(tenant_id_override)
+            values = GanadoService._preparar_valores_insercion(ganado, tenant_id)
+            ganado.id = GanadoService._insertar_ganado_en_db(cursor, ganado, values)
             conn.commit()
 
-            ganado.id = cursor.lastrowid
             if ganado.id_potrero:
                 try:
                     PotreroService.sincronizar_ocupacion(ganado.id_potrero)
-                except Exception as sync_error:
-                    print(f"[GANADO_SERVICE] Error sincronizando ocupación (no crítico): {sync_error}")
+                except Exception:
                     pass
             return ganado
 
         except Exception as e:
-            print(f"[GANADO_SERVICE] Error creando ganado: {e}")
-            import traceback
-            traceback.print_exc()
             if conn:
                 try:
                     conn.rollback()
@@ -316,14 +341,12 @@ class GanadoService:
 
             result = cursor.fetchone()
             if result:
-                print(f"[GANADO_SERVICE] obtener_ganado - id={id}, id_estado={result.get('id_estado')}, estado_tipo={result.get('estado_tipo')}, estado={result.get('estado')}")
                 ganado = Ganado.from_dict(result)
-                print(f"[GANADO_SERVICE] obtener_ganado - Ganado creado: estado={ganado.estado}, id_estado={ganado.id_estado}")
                 return ganado
             return None
 
         except Exception as e:
-            print(f"Error al obtener ganado {id}: {e}")
+            print("Error al obtener ganado " + str(id) + ": " + str(e))
             return None
         finally:
             if 'conn' in locals() and conn is not None:
@@ -384,7 +407,7 @@ class GanadoService:
             return ganados
 
         except Exception as e:
-            print(f"Error al obtener animales: {e}")
+            print("Error al obtener animales: " + str(e))
             return []
         finally:
             if 'conn' in locals() and conn is not None:
@@ -450,7 +473,7 @@ class GanadoService:
         if not codigo_qr:
             return
         try:
-            qr_path = QR_STORAGE_DIR / f"{codigo_qr}.png"
+            qr_path = QR_STORAGE_DIR / (codigo_qr + ".png")
             if qr_path.exists():
                 qr_path.unlink()
         except OSError:
@@ -485,184 +508,113 @@ class GanadoService:
                 pass
 
     @staticmethod
+    def _validar_animal_existe(cursor, animal_id: int, tenant_id: Optional[int]) -> Optional[Dict[str, Any]]:
+        """Valida que el animal existe y pertenece al tenant."""
+        check_sql = "SELECT id, tenant_id, nombre, raza, fecha_nacimiento, sexo, peso, id_estado, id_potrero, id_persona FROM ganado WHERE id = %s"
+        cursor.execute(check_sql, (animal_id,))
+        check_result = cursor.fetchone()
+        if not check_result:
+            return None
+        if tenant_id is not None and check_result.get('tenant_id') != tenant_id:
+            return None
+        return check_result
+
+    @staticmethod
+    def _normalizar_fecha_para_comparacion(bd_fecha: Any) -> Optional[str]:
+        """Normaliza la fecha de la BD para comparación."""
+        if isinstance(bd_fecha, datetime):
+            return bd_fecha.strftime('%Y-%m-%d')
+        if isinstance(bd_fecha, date):
+            return bd_fecha.isoformat()
+        if bd_fecha:
+            return str(bd_fecha).split()[0]
+        return None
+
+    @staticmethod
+    def _normalizar_valor_entero(valor: Any) -> Optional[int]:
+        """Normaliza un valor a entero para comparación."""
+        if valor is not None:
+            return int(valor)
+        return None
+
+    @staticmethod
+    def _verificar_cambios(check_result: Dict[str, Any], ganado: Ganado, fecha_nac: Optional[str], estado_id: int) -> bool:
+        """Verifica si hay cambios entre los valores actuales y los nuevos."""
+        bd_fecha_str = GanadoService._normalizar_fecha_para_comparacion(check_result.get('fecha_nacimiento'))
+        bd_id_estado = GanadoService._normalizar_valor_entero(check_result.get('id_estado'))
+        bd_id_potrero = GanadoService._normalizar_valor_entero(check_result.get('id_potrero'))
+        bd_id_persona = GanadoService._normalizar_valor_entero(check_result.get('id_persona'))
+        nuevo_id_potrero = GanadoService._normalizar_valor_entero(ganado.id_potrero)
+        nuevo_id_persona = GanadoService._normalizar_valor_entero(ganado.id_persona)
+        
+        return not (
+            check_result.get('nombre') == ganado.nombre and
+            check_result.get('raza') == ganado.raza and
+            bd_fecha_str == fecha_nac and
+            check_result.get('sexo') == ganado.sexo.value and
+            float(check_result.get('peso') or 0) == float(ganado.peso or 0) and
+            bd_id_estado == estado_id and
+            bd_id_potrero == nuevo_id_potrero and
+            bd_id_persona == nuevo_id_persona
+        )
+
+    @staticmethod
+    def _ejecutar_update_ganado(cursor, conn, animal_id: int, ganado: Ganado, fecha_nac: Optional[str], estado_id: int, tenant_id: Optional[int]) -> bool:
+        """Ejecuta el UPDATE del ganado en la base de datos."""
+        sql = """
+            UPDATE ganado SET
+                nombre = %s,
+                raza = %s,
+                fecha_nacimiento = %s,
+                sexo = %s,
+                peso = %s,
+                id_estado = %s,
+                id_potrero = %s,
+                id_persona = %s
+            WHERE id = %s
+        """
+        values = [
+            ganado.nombre, ganado.raza,
+            fecha_nac, ganado.sexo.value,
+            ganado.peso, estado_id,
+            ganado.id_potrero, ganado.id_persona, animal_id
+        ]
+        
+        if tenant_id is not None:
+            sql += SQL_AND_TENANT_ID
+            values.append(tenant_id)
+        
+        cursor.execute(sql, tuple(values))
+        rowcount = cursor.rowcount
+        
+        if rowcount == 0:
+            return False
+        
+        conn.commit()
+        return True
+
+    @staticmethod
     def _actualizar_ganado_en_db(id: int, ganado: Ganado, tenant_id_override: Optional[int] = None) -> bool:
+        """Actualiza el ganado en la base de datos."""
         conn = get_connection()
         cursor = conn.cursor(dictionary=True)
         try:
             estado_id = GanadoService._obtener_estado_id_desde_db(ganado.estado)
             if estado_id is None:
                 estado_id = GanadoService._mapear_estado_string_a_id(ganado.estado)
-            print(f"[GANADO_SERVICE] Estado calculado: estado_string='{ganado.estado}', estado_id={estado_id}")
             fecha_nac = GanadoService._convertir_fecha_nacimiento(ganado.fecha_nacimiento)
             tenant_id = tenant_id_override if tenant_id_override is not None else GanadoService._obtener_tenant_id()
             
-            print(f"[GANADO_SERVICE] _actualizar_ganado_en_db - id={id}, estado_id={estado_id}, tenant_id={tenant_id}")
-            print(f"[GANADO_SERVICE] Datos ganado: nombre={ganado.nombre}, raza={ganado.raza}, sexo={ganado.sexo.value}, peso={ganado.peso}")
-            print(f"[GANADO_SERVICE] id_potrero={ganado.id_potrero}, id_persona={ganado.id_persona}, fecha_nac={fecha_nac}")
-            
-            # Verificar primero si el animal existe con ese tenant_id y obtener todos los valores actuales
-            check_sql = "SELECT id, tenant_id, nombre, raza, fecha_nacimiento, sexo, peso, id_estado, id_potrero, id_persona FROM ganado WHERE id = %s"
-            cursor.execute(check_sql, (id,))
-            check_result = cursor.fetchone()
+            check_result = GanadoService._validar_animal_existe(cursor, id, tenant_id)
             if not check_result:
-                print(f"[GANADO_SERVICE] ERROR: Animal con id={id} no existe en la BD")
                 return False
             
-            actual_tenant_id = check_result.get('tenant_id')
-            if actual_tenant_id != tenant_id:
-                print(f"[GANADO_SERVICE] ADVERTENCIA: tenant_id del animal ({actual_tenant_id}) no coincide con el del usuario ({tenant_id})")
-                return False
-            
-            # Comparar valores actuales con los nuevos
-            print(f"[GANADO_SERVICE] Comparación de valores:")
-            print(f"  nombre: BD='{check_result.get('nombre')}' vs nuevo='{ganado.nombre}'")
-            print(f"  raza: BD='{check_result.get('raza')}' vs nuevo='{ganado.raza}'")
-            print(f"  fecha_nacimiento: BD='{check_result.get('fecha_nacimiento')}' vs nuevo='{fecha_nac}'")
-            print(f"  sexo: BD='{check_result.get('sexo')}' vs nuevo='{ganado.sexo.value}'")
-            print(f"  peso: BD={check_result.get('peso')} vs nuevo={ganado.peso}")
-            print(f"  id_estado: BD={check_result.get('id_estado')} vs nuevo={estado_id}")
-            print(f"  id_potrero: BD={check_result.get('id_potrero')} vs nuevo={ganado.id_potrero}")
-            print(f"  id_persona: BD={check_result.get('id_persona')} vs nuevo={ganado.id_persona}")
-            
-            # Verificar si realmente hay cambios
-            bd_fecha = check_result.get('fecha_nacimiento')
-            if isinstance(bd_fecha, datetime):
-                bd_fecha_str = bd_fecha.strftime('%Y-%m-%d')
-            elif isinstance(bd_fecha, date):
-                bd_fecha_str = bd_fecha.isoformat()
-            else:
-                bd_fecha_str = str(bd_fecha).split()[0] if bd_fecha else None
-            
-            # Normalizar tipos para comparación
-            bd_id_estado = check_result.get('id_estado')
-            if bd_id_estado is not None:
-                bd_id_estado = int(bd_id_estado)
-            if estado_id is not None:
-                estado_id = int(estado_id)
-            
-            bd_id_potrero = check_result.get('id_potrero')
-            if bd_id_potrero is not None:
-                bd_id_potrero = int(bd_id_potrero)
-            nuevo_id_potrero = ganado.id_potrero
-            if nuevo_id_potrero is not None:
-                nuevo_id_potrero = int(nuevo_id_potrero)
-            
-            bd_id_persona = check_result.get('id_persona')
-            if bd_id_persona is not None:
-                bd_id_persona = int(bd_id_persona)
-            nuevo_id_persona = ganado.id_persona
-            if nuevo_id_persona is not None:
-                nuevo_id_persona = int(nuevo_id_persona)
-            
-            valores_iguales = (
-                check_result.get('nombre') == ganado.nombre and
-                check_result.get('raza') == ganado.raza and
-                bd_fecha_str == fecha_nac and
-                check_result.get('sexo') == ganado.sexo.value and
-                float(check_result.get('peso') or 0) == float(ganado.peso or 0) and
-                bd_id_estado == estado_id and
-                bd_id_potrero == nuevo_id_potrero and
-                bd_id_persona == nuevo_id_persona
-            )
-            
-            print(f"[GANADO_SERVICE] Comparación normalizada: bd_id_estado={bd_id_estado} (tipo: {type(bd_id_estado)}), estado_id={estado_id} (tipo: {type(estado_id)})")
-            print(f"[GANADO_SERVICE] ¿Valores iguales? {valores_iguales}")
-            
-            if valores_iguales:
-                print(f"[GANADO_SERVICE] Todos los valores son iguales, no hay cambios que hacer")
+            if not GanadoService._verificar_cambios(check_result, ganado, fecha_nac, estado_id):
                 conn.commit()
-                return True  # Retornar True porque no hay error, solo no hay cambios
+                return True
             
-            # Si la fecha en BD es DATETIME y estamos enviando DATE, MySQL puede no detectar el cambio
-            # Usar DATE() para normalizar la comparación, o convertir la fecha a DATETIME
-            bd_fecha = check_result.get('fecha_nacimiento')
-            fecha_para_update = fecha_nac
-            if bd_fecha and isinstance(bd_fecha, (datetime, date)):
-                # Si la BD tiene DATETIME, mantener el formato DATE para el UPDATE
-                # MySQL convertirá automáticamente
-                fecha_para_update = fecha_nac
-            elif bd_fecha and isinstance(bd_fecha, str) and ' ' in str(bd_fecha):
-                # Si la BD tiene formato DATETIME (con espacio), usar solo la fecha
-                fecha_para_update = fecha_nac
-            
-            sql = """
-                UPDATE ganado SET
-                    nombre = %s,
-                    raza = %s,
-                    fecha_nacimiento = %s,
-                    sexo = %s,
-                    peso = %s,
-                    id_estado = %s,
-                    id_potrero = %s,
-                    id_persona = %s
-                WHERE id = %s
-            """
-            values = [
-                ganado.nombre, ganado.raza,
-                fecha_para_update, ganado.sexo.value,
-                ganado.peso, estado_id,
-                ganado.id_potrero, ganado.id_persona, id
-            ]
-            
-            if tenant_id is not None:
-                sql += SQL_AND_TENANT_ID
-                values.append(tenant_id)
-            
-            print(f"[GANADO_SERVICE] SQL final: {sql}")
-            print(f"[GANADO_SERVICE] Values finales: {values}")
-            print(f"[GANADO_SERVICE] Verificando si el registro existe con estos criterios...")
-            
-            # Verificar que el WHERE encontrará el registro
-            verify_sql = "SELECT id FROM ganado WHERE id = %s"
-            verify_params = [id]
-            if tenant_id is not None:
-                verify_sql += SQL_AND_TENANT_ID
-                verify_params.append(tenant_id)
-            cursor.execute(verify_sql, tuple(verify_params))
-            verify_result = cursor.fetchone()
-            print(f"[GANADO_SERVICE] Verificación WHERE: ¿Registro encontrado? {verify_result is not None}")
-            if verify_result:
-                print(f"[GANADO_SERVICE] ID encontrado: {verify_result.get('id')}")
-            
-            cursor.execute(sql, tuple(values))
-            rowcount = cursor.rowcount
-            print(f"[GANADO_SERVICE] Filas afectadas por UPDATE: {rowcount}")
-            
-            if rowcount == 0:
-                print(f"[GANADO_SERVICE] ERROR: UPDATE no afectó filas aunque hay cambios detectados")
-                print(f"[GANADO_SERVICE] Esto puede indicar:")
-                print(f"  1. El WHERE no encontró el registro (id={id}, tenant_id={tenant_id})")
-                print(f"  2. Problema con tipos de datos o formato de valores")
-                print(f"  3. Los valores en BD son exactamente iguales a los nuevos")
-                
-                # Verificar nuevamente los valores después del UPDATE fallido
-                cursor.execute(check_sql, (id,))
-                after_check = cursor.fetchone()
-                if after_check:
-                    print(f"[GANADO_SERVICE] Valores en BD después del UPDATE fallido:")
-                    print(f"  id_estado: {after_check.get('id_estado')}")
-                    print(f"  nombre: {after_check.get('nombre')}")
-                    print(f"  raza: {after_check.get('raza')}")
-                
-                return False
-            
-            conn.commit()
-            print(f"[GANADO_SERVICE] UPDATE exitoso - {rowcount} fila(s) afectada(s)")
-            
-            # Verificar que el UPDATE realmente cambió los valores
-            cursor.execute(check_sql, (id,))
-            after_update = cursor.fetchone()
-            if after_update:
-                print(f"[GANADO_SERVICE] Valores en BD después del UPDATE:")
-                print(f"  id_estado: {after_update.get('id_estado')} (esperado: {estado_id})")
-                print(f"  nombre: {after_update.get('nombre')}")
-                print(f"  raza: {after_update.get('raza')}")
-            
-            return True
+            return GanadoService._ejecutar_update_ganado(cursor, conn, id, ganado, fecha_nac, estado_id, tenant_id)
         except Exception as e:
-            print(f"[GANADO_SERVICE] Error en _actualizar_ganado_en_db: {type(e).__name__}: {str(e)}")
-            import traceback
-            traceback.print_exc()
             return False
         finally:
             conn.close()
@@ -679,32 +631,19 @@ class GanadoService:
         """
         try:
             # Verificar que el ganado existe y pertenece al tenant
-            print(f"[GANADO_SERVICE] actualizar_ganado iniciado - id={id}, tenant_id_override={tenant_id_override}")
             ganado_existente = GanadoService.obtener_ganado(id, tenant_id_override)
             if not ganado_existente:
-                print(f"[GANADO_SERVICE] Error: Ganado {id} no encontrado")
                 return False
             
-            print(f"[GANADO_SERVICE] Ganado encontrado: {ganado_existente.nombre if ganado_existente else None}")
             potrero_anterior_id = GanadoService._obtener_potrero_anterior(id)
-            print(f"[GANADO_SERVICE] Potrero anterior: {potrero_anterior_id}")
             nuevo_potrero_id = ganado.id_potrero
-            print(f"[GANADO_SERVICE] Nuevo potrero: {nuevo_potrero_id}")
             
             GanadoService._verificar_cambio_potrero(nuevo_potrero_id, potrero_anterior_id)
-            print(f"[GANADO_SERVICE] Verificación de cambio de potrero completada")
-            
             actualizado = GanadoService._actualizar_ganado_en_db(id, ganado, tenant_id_override)
-            print(f"[GANADO_SERVICE] Resultado de _actualizar_ganado_en_db: {actualizado}")
-            
             GanadoService._sincronizar_potreros_despues_actualizacion(actualizado, nuevo_potrero_id, potrero_anterior_id)
-            print(f"[GANADO_SERVICE] Sincronización de potreros completada")
             
             return actualizado
         except Exception as e:
-            print(f"[GANADO_SERVICE] Error en actualizar_ganado para id={id}: {type(e).__name__}: {str(e)}")
-            import traceback
-            traceback.print_exc()
             return False
 
     @staticmethod
@@ -1032,7 +971,6 @@ class GanadoService:
             "historial": [],
             "id_potrero": GanadoService._to_nullable_int(row.get("id_potrero")),
             "id_persona": GanadoService._to_nullable_int(row.get("id_persona")),
-            "id_revision": GanadoService._to_nullable_int(row.get("id_revision")),
         }
 
     @staticmethod
@@ -1061,7 +999,6 @@ class GanadoService:
                 g.peso,
                 g.id_potrero,
                 g.id_persona,
-                g.id_revision,
                 g.id_estado,
                 g.tenant_id,
                 q.codigo_qr,
@@ -1069,9 +1006,17 @@ class GanadoService:
                 NULL AS estado_salud,
                 p.nombre AS potrero_nombre,
                 p.capacidad AS potrero_capacidad,
-                p.ultima_limpieza AS potrero_ultima_limpieza,
-                p.fecha_ultimo_uso AS potrero_fecha_ultimo_uso,
-                p.proxima_limpieza AS potrero_proxima_limpieza,
+                (SELECT fecha_evento FROM historial_potrero 
+                 WHERE id_potrero = p.id AND tipo_evento = 'limpieza' 
+                 AND (observaciones IS NULL OR observaciones != 'Programada')
+                 ORDER BY fecha_evento DESC LIMIT 1) AS potrero_ultima_limpieza,
+                (SELECT fecha_evento FROM historial_potrero 
+                 WHERE id_potrero = p.id AND tipo_evento = 'uso' 
+                 ORDER BY fecha_evento DESC LIMIT 1) AS potrero_fecha_ultimo_uso,
+                (SELECT fecha_evento FROM historial_potrero 
+                 WHERE id_potrero = p.id AND tipo_evento = 'limpieza' 
+                 AND observaciones = 'Programada' AND fecha_evento > NOW()
+                 ORDER BY fecha_evento ASC LIMIT 1) AS potrero_proxima_limpieza,
                 p.estado AS potrero_estado,
                 tp.tipo_pasto AS potrero_tipo_pasto,
                 per.telefono AS propietario_telefono,
@@ -1118,9 +1063,12 @@ class GanadoService:
 
             vacunas: List[Dict[str, Any]] = []
             if animal_id is not None:
-                vacunas = GanadoService._fetch_vacunas(connection, animal_id)
+                vacunas = GanadoService._fetch_vacunas(connection, animal_id, tenant_id)
+                print(f"[GANADO_SERVICE] obtener_ganado_detallado: Animal {animal_id} tiene {len(vacunas)} vacunas")
 
-            return GanadoService._construir_detalle_ganado(row, animal_id, propietario, potrero, vacunas)
+            resultado = GanadoService._construir_detalle_ganado(row, animal_id, propietario, potrero, vacunas)
+            print(f"[GANADO_SERVICE] obtener_ganado_detallado: Resultado incluye {len(resultado.get('vacunas', []))} vacunas en el dict")
+            return resultado
         except Exception:  # pylint: disable=broad-except
             return None
         finally:

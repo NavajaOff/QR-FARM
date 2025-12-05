@@ -191,14 +191,13 @@ describe('UserLayout.vue', () => {
         const parent = link.element.closest('.user-sidebar')
         return parent !== null
       })
-      // Admin tiene 7 links (con Reportes)
-      expect(sidebarLinks.length).toBe(7)
+      // Admin tiene 6 links (sin Reportes, solo admins del tenant pueden ver reportes)
+      expect(sidebarLinks.length).toBe(6)
 
       const expectedRoutes = [
         { to: '/user/inicio', text: 'Inicio' },
         { to: '/user/ganado', text: 'Mi Ganado' },
         { to: '/user/potreros', text: 'Potreros' },
-        { to: '/user/reportes', text: 'Reportes' },
         { to: '/user/registro-vacunacion', text: 'Vacunación' },
         { to: '/user/scan-qr', text: 'Escanear QR' },
         { to: '/user/perfil', text: 'Perfil' }
@@ -393,11 +392,9 @@ describe('UserLayout.vue', () => {
         const parent = link.element.closest('.user-sidebar')
         return parent !== null
       })
-      // Para admin, Reportes está en la posición 3 (después de Potreros)
+      // Reportes ya no está disponible para usuarios (solo para admins del tenant en admin layout)
       const reportesLink = sidebarLinks.find(link => link.props('to') === '/user/reportes')
-      expect(reportesLink).toBeDefined()
-      expect(reportesLink.props('to')).toBe('/user/reportes')
-      expect(reportesLink.text()).toContain('Reportes')
+      expect(reportesLink).toBeUndefined()
     })
 
     it('should NOT show Reportes link for usuario', async () => {
@@ -538,7 +535,6 @@ describe('UserLayout.vue', () => {
         'fa-home',
         'fa-cow',
         'fa-map-marked-alt',
-        'fa-chart-line', // Reportes
         'fa-syringe',
         'fa-qrcode',
         'fa-user-edit'

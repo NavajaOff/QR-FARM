@@ -98,9 +98,32 @@ export const registroVacunacionBase = {
           userAPI.getAll()
         ]);
 
-        this.vacunaciones = vacunacionesRes.data?.data || [];
-        this.animales = animalesRes.data?.data || [];
-        this.personas = personasRes.data?.data || [];
+        // Vacunaciones: formato {status: 'success', data: [...]}
+        let vacunacionesData = [];
+        if (vacunacionesRes.data?.status === 'success' && Array.isArray(vacunacionesRes.data?.data)) {
+          vacunacionesData = vacunacionesRes.data.data;
+        } else if (Array.isArray(vacunacionesRes.data?.data)) {
+          vacunacionesData = vacunacionesRes.data.data;
+        }
+        this.vacunaciones = vacunacionesData;
+
+        // Ganado: formato {status: 'success', data: [...]}
+        let animalesData = [];
+        if (animalesRes.data?.status === 'success' && Array.isArray(animalesRes.data?.data)) {
+          animalesData = animalesRes.data.data;
+        } else if (Array.isArray(animalesRes.data?.data)) {
+          animalesData = animalesRes.data.data;
+        }
+        this.animales = animalesData;
+
+        // Personas/Usuarios: formato {status: 'success', data: [...]}
+        let personasData = [];
+        if (personasRes.data?.status === 'success' && Array.isArray(personasRes.data?.data)) {
+          personasData = personasRes.data.data;
+        } else if (Array.isArray(personasRes.data?.data)) {
+          personasData = personasRes.data.data;
+        }
+        this.personas = personasData;
 
         await this.obtenerTiposVacuna();
       } catch (error) {

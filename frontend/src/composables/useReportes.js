@@ -12,8 +12,14 @@ export function useReportes() {
       error.value = null
       await obtenerResumenConRenovacion()
     } catch (err) {
-      error.value = err.message || 'Error al consultar reportes'
-      console.error('[useReportes] Error cargando resumen:', err)
+      const errorMessage = err.message || 'Error al consultar reportes'
+      error.value = errorMessage
+      console.error('[useReportes] Error cargando resumen:', {
+        message: errorMessage,
+        error: err,
+        status: err?.response?.status,
+        data: err?.response?.data
+      })
     } finally {
       loading.value = false
     }
@@ -30,6 +36,7 @@ export function useReportes() {
       throw response
     } catch (err) {
       const status = err?.response?.status ?? err?.status
+      const errorData = err?.response?.data
 
       if (status === 401) {
         await renovarToken()
@@ -41,7 +48,20 @@ export function useReportes() {
         throw new Error(response.data?.message || 'No autorizado')
       }
 
-      throw err
+      if (status === 403) {
+        const message = errorData?.message || errorData?.data?.message || 'No tiene permisos para acceder a los reportes'
+        throw new Error(message)
+      }
+
+      if (status >= 500) {
+        throw new Error(errorData?.message || 'Error del servidor al generar el reporte')
+      }
+
+      if (errorData?.message) {
+        throw new Error(errorData.message)
+      }
+
+      throw new Error(err.message || 'Error al consultar reportes')
     }
   }
 

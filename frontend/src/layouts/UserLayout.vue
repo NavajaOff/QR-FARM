@@ -39,9 +39,6 @@
         <router-link class="nav-link" to="/user/potreros">
           <i class="fas fa-map-marked-alt me-2"></i>Potreros
         </router-link>
-        <router-link v-if="canViewReports" class="nav-link" to="/user/reportes">
-          <i class="fas fa-chart-line me-2"></i>Reportes
-        </router-link>
         <router-link class="nav-link" to="/user/registro-vacunacion">
           <i class="fas fa-syringe me-2"></i>Vacunación
         </router-link>

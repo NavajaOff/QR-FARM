@@ -237,35 +237,6 @@ def create_animal():
     try:
         from src.controllers.animal_controller import GanadoController
         return GanadoController.crear_ganado()
-
-        if animal_creado:
-            # Crear QR para el ganado
-            from src.services.qr_service import QRService
-            qr_creado = QRService.crear_qr_ganado(
-                id_ganado=animal_creado.id,
-                id_persona_encargado=data.get('id_persona_encargado'),
-                id_persona_dueno=data.get('id_persona_dueno')
-            )
-
-            if not qr_creado:
-                print(f"Warning: No se pudo crear QR para el ganado {animal_creado.id}")
-
-            # Emitir actualización en tiempo real para nuevo animal
-            emit_update('animal_created', {
-                'data': animal_creado.to_dict()
-            })
-            return jsonify({
-                'data': animal_creado.to_dict(),
-                'message': 'Animal creado correctamente',
-                'success': True
-            }), 201
-        else:
-            return jsonify({
-                'error': 'Error al crear animal',
-                'message': 'No se pudo crear el animal',
-                'success': False
-            }), 500
-
     except Exception as e:
         print(f"Error creando animal: {e}")
         return jsonify({

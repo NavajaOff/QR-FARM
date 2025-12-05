@@ -159,15 +159,14 @@ def _collect_dataset() -> Dict[str, Any]:
             cursor,
             (
                 "SELECT id, id_tipo_pasto, nombre, capacidad, hectareas, ocupacion, "
-                "fecha_ultimo_uso, responsable_persona_id, proxima_limpieza, area, "
-                "ultima_limpieza, descripcion, estado "
+                "responsable_persona_id, area, descripcion, estado "
                 "FROM potrero ORDER BY id"
             ),
         )
         dataset["ganado"] = _fetch_table(
             cursor,
             (
-                "SELECT id, id_potrero, id_persona, id_revision, nombre, peso, raza, "
+                "SELECT id, id_potrero, id_persona, nombre, peso, raza, "
                 "fecha_nacimiento, id_estado, sexo "
                 "FROM ganado ORDER BY id"
             ),
@@ -332,21 +331,17 @@ def _import_potreros(cursor, rows: List[Dict[str, Any]]) -> None:
             """
             INSERT INTO potrero (
                 id, id_tipo_pasto, nombre, capacidad, hectareas, ocupacion,
-                fecha_ultimo_uso, responsable_persona_id, proxima_limpieza,
-                area, ultima_limpieza, descripcion, estado
+                responsable_persona_id, area, descripcion, estado
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 id_tipo_pasto = VALUES(id_tipo_pasto),
                 nombre = VALUES(nombre),
                 capacidad = VALUES(capacidad),
                 hectareas = VALUES(hectareas),
                 ocupacion = VALUES(ocupacion),
-                fecha_ultimo_uso = VALUES(fecha_ultimo_uso),
                 responsable_persona_id = VALUES(responsable_persona_id),
-                proxima_limpieza = VALUES(proxima_limpieza),
                 area = VALUES(area),
-                ultima_limpieza = VALUES(ultima_limpieza),
                 descripcion = VALUES(descripcion),
                 estado = VALUES(estado)
             """,
@@ -357,11 +352,8 @@ def _import_potreros(cursor, rows: List[Dict[str, Any]]) -> None:
                 row.get("capacidad"),
                 row.get("hectareas"),
                 row.get("ocupacion"),
-                _parse_datetime(row.get("fecha_ultimo_uso")),
                 row.get("responsable_persona_id"),
-                _parse_datetime(row.get("proxima_limpieza")),
                 row.get("area"),
-                _parse_datetime(row.get("ultima_limpieza")),
                 row.get("descripcion"),
                 row.get("estado"),
             ),
@@ -374,14 +366,13 @@ def _import_ganado(cursor, rows: List[Dict[str, Any]]) -> None:
             cursor,
             """
             INSERT INTO ganado (
-                id, id_potrero, id_persona, id_revision, nombre, peso, raza,
+                id, id_potrero, id_persona, nombre, peso, raza,
                 fecha_nacimiento, id_estado, sexo
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 id_potrero = VALUES(id_potrero),
                 id_persona = VALUES(id_persona),
-                id_revision = VALUES(id_revision),
                 nombre = VALUES(nombre),
                 peso = VALUES(peso),
                 raza = VALUES(raza),
@@ -393,7 +384,6 @@ def _import_ganado(cursor, rows: List[Dict[str, Any]]) -> None:
                 row.get("id"),
                 row.get("id_potrero"),
                 row.get("id_persona"),
-                row.get("id_revision"),
                 row.get("nombre"),
                 row.get("peso"),
                 row.get("raza"),

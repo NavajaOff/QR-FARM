@@ -155,7 +155,7 @@ describe('useGanado', () => {
 
       await cargarGanado()
 
-      expect(ganado.value).toBeUndefined()
+      expect(ganado.value).toEqual([])
       expect(loading.value).toBe(false)
     })
 
@@ -184,7 +184,7 @@ describe('useGanado', () => {
 
       await cargarGanado()
 
-      expect(error.value).toBeUndefined()
+      expect(error.value).toBe('Error al cargar el ganado')
     })
   })
 

@@ -189,35 +189,6 @@
       <p v-else class="ganado-empty">No hay vacunas registradas aún.</p>
     </section>
 
-    <section
-      v-else
-      :id="'ganado-panel-historial'"
-      class="ganado-panel"
-      role="tabpanel"
-    >
-      <div v-if="ganado.historial.length > 0" class="ganado-list">
-        <div v-for="evento in ganado.historial" :key="evento.id ?? evento.fecha ?? Math.random()" class="ganado-list__item">
-          <div class="ganado-list__header">
-            <h4 class="ganado-list__title">
-              <i class="fas fa-notes-medical"></i>
-              <span>{{ formatDate(evento.fecha) }}</span>
-            </h4>
-            <div class="ganado-list__badges">
-              <span v-if="evento.veterinario" class="ganado-chip ganado-chip--muted">
-                {{ evento.veterinario }}
-              </span>
-            </div>
-          </div>
-          <p class="ganado-list__text">
-            <strong>Observaciones:</strong> {{ formatOrDefault(evento.observaciones) }}
-          </p>
-          <p class="ganado-list__text">
-            <strong>Resultado:</strong> {{ formatOrDefault(evento.resultado) }}
-          </p>
-        </div>
-      </div>
-      <p v-else class="ganado-empty">No hay revisiones registradas para este ganado.</p>
-    </section>
 
     <footer class="ganado-card__footer">
       <button type="button" class="ganado-action ganado-action--primary" @click="emit('reanudar')">
@@ -225,15 +196,6 @@
         Volver a escanear
       </button>
       <div class="ganado-card__actions">
-        <button
-          v-if="role === 'admin'"
-          type="button"
-          class="ganado-action"
-          @click="emit('accion', 'ver-historial')"
-        >
-          <i class="fas fa-history"></i>
-          Ver historial completo
-        </button>
         <button
           v-if="role === 'admin'"
           type="button"
@@ -252,7 +214,7 @@
 import { computed, ref } from 'vue';
 import type { GanadoResource } from '../services/qr';
 
-type TabId = 'general' | 'potrero' | 'vacunas' | 'historial';
+type TabId = 'general' | 'potrero' | 'vacunas';
 
 const props = defineProps<{
   ganado: GanadoResource;
@@ -270,8 +232,7 @@ const emit = defineEmits<{
 const tabs = [
   { id: 'general', label: 'Información general', icon: 'fas fa-info-circle' },
   { id: 'potrero', label: 'Potrero', icon: 'fas fa-seedling' },
-  { id: 'vacunas', label: 'Vacunas', icon: 'fas fa-syringe' },
-  { id: 'historial', label: 'Historial', icon: 'fas fa-clipboard-list' }
+  { id: 'vacunas', label: 'Vacunas', icon: 'fas fa-syringe' }
 ] as const;
 
 const activeSection = ref<TabId>('general');

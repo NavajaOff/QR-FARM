@@ -95,7 +95,7 @@ class TestMigration004MultiTenant:
         
         migration_004._asignar_tenant_id_relaciones(mock_op)
         
-        assert mock_op.execute.call_count == 6
+        assert mock_op.execute.call_count == 5
 
     def test_asignar_tenant_defecto_restantes(self):
         """Test que _asignar_tenant_defecto_restantes ejecuta las queries."""
@@ -103,7 +103,7 @@ class TestMigration004MultiTenant:
         
         migration_004._asignar_tenant_defecto_restantes(mock_op)
         
-        assert mock_op.execute.call_count == 5
+        assert mock_op.execute.call_count == 4
 
     def test_hacer_tenant_id_not_null(self):
         """Test que _hacer_tenant_id_not_null hace tenant_id NOT NULL."""
@@ -185,7 +185,7 @@ class TestMigration004MultiTenant:
         
         mock_op.get_bind.return_value = mock_connection
         mock_inspector.get_table_names.return_value = [
-            'usuarios', 'personas', 'ganado', 'potrero', 'vacunacion', 'qr', 'revision', 'roles'
+            'usuarios', 'personas', 'ganado', 'potrero', 'vacunacion', 'qr', 'roles'
         ]
         mock_inspector.get_columns = Mock(side_effect=lambda table: [
             {'name': 'id'}, {'name': 'tenant_id', 'nullable': True} if 'tenant_id' not in str(table) else {'name': 'id'}
@@ -227,7 +227,7 @@ class TestMigration004MultiTenant:
         # Verificar que se eliminaron las columnas
         drop_column_calls = [call[0][0] for call in mock_op.drop_column.call_args_list]
         expected_tables = [
-            'revision', 'qr', 'vacunacion', 'potrero', 'ganado', 'personas', 'usuarios'
+            'qr', 'vacunacion', 'potrero', 'ganado', 'personas', 'usuarios'
         ]
         
         for table_name in expected_tables:

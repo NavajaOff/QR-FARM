@@ -332,9 +332,52 @@ export const verPerfilAnimal = async (id) => {
     const data = response.data;
     if (data.success) {
       const animalActualizado = data.data;
+      
+      // Debug: verificar qué datos de vacunas recibimos
+      console.log('[PERFIL_ANIMAL] Datos recibidos:', {
+        id: animalActualizado.id,
+        nombre: animalActualizado.nombre,
+        vacunas: animalActualizado.vacunas,
+        vacunas_tipo: typeof animalActualizado.vacunas,
+        vacunas_length: animalActualizado.vacunas?.length
+      });
 
       const encargado = obtenerNombrePersonaDesdeEntidad(animalActualizado, 'Sin encargado');
       const potreroNombre = obtenerNombrePotreroDesdeEntidad(animalActualizado, 'Sin dato');
+      
+      // Formatear información de vacunas
+      let vacunasInfo = 'Sin vacunas registradas';
+      if (animalActualizado.vacunas && Array.isArray(animalActualizado.vacunas) && animalActualizado.vacunas.length > 0) {
+        console.log('[PERFIL_ANIMAL] Procesando vacunas:', animalActualizado.vacunas);
+        const vacunasCount = animalActualizado.vacunas.length;
+        const ultimaVacuna = animalActualizado.vacunas[0]; // La más reciente (ordenadas por fecha DESC)
+        const nombreVacuna = ultimaVacuna.nombre_vacuna || ultimaVacuna.nombre || 'Vacuna';
+        const fechaAplicacion = ultimaVacuna.fecha_aplicacion ? formatDate(ultimaVacuna.fecha_aplicacion) : null;
+        const estadoVacuna = ultimaVacuna.estado || 'pendiente';
+        const proximaDosis = ultimaVacuna.proxima_dosis ? formatDate(ultimaVacuna.proxima_dosis) : null;
+        
+        // Contar vacunas pendientes
+        const vacunasPendientes = animalActualizado.vacunas.filter(v => 
+          v.estado === 'pendiente' || !v.fecha_aplicacion
+        ).length;
+        
+        let infoDetalle = '';
+        if (fechaAplicacion) {
+          infoDetalle = `Última: ${nombreVacuna} aplicada el ${fechaAplicacion}`;
+        } else {
+          infoDetalle = `Pendiente: ${nombreVacuna}`;
+        }
+        
+        if (proximaDosis) {
+          infoDetalle += `. Próxima dosis: ${proximaDosis}`;
+        }
+        
+        if (vacunasPendientes > 0) {
+          vacunasInfo = `${vacunasCount} vacuna(s) registrada(s) (${vacunasPendientes} pendiente(s)). ${infoDetalle}`;
+        } else {
+          vacunasInfo = `${vacunasCount} vacuna(s) registrada(s). ${infoDetalle}`;
+        }
+      }
 
       Swal.fire({
         title: `Perfil de ${animalActualizado.nombre}`,
@@ -348,7 +391,7 @@ export const verPerfilAnimal = async (id) => {
             <p><strong>Peso actual:</strong> ${animalActualizado.peso || 'Sin dato'} kg</p>
             <p><strong>Estado:</strong> ${animalActualizado.estado_tipo || animalActualizado.estado || 'Sin dato'}</p>
             <p><strong>Potrero actual:</strong> ${potreroNombre}</p>
-            <p><strong>Historial médico:</strong> Sin incidencias</p>
+            <p><strong>Vacunas:</strong> ${vacunasInfo}</p>
             ${animalActualizado.codigo_qr ? `<div class="mt-3"><img src="${API_BASE}/animales/qr/${animalActualizado.codigo_qr}.png" alt="Código QR" class="img-fluid" style="max-width: 300px;"></div>` : ''}
           </div>
         `,
@@ -370,6 +413,39 @@ export const verPerfilAnimal = async (id) => {
     // Mostrar perfil con datos locales si falla la petición
     const encargadoLocal = obtenerNombrePersonaDesdeEntidad(animal, 'Sin encargado');
     const potreroLocal = obtenerNombrePotreroDesdeEntidad(animal, 'Sin dato');
+    
+    // Formatear información de vacunas (datos locales)
+    let vacunasInfoLocal = 'Sin vacunas registradas';
+    if (animal.vacunas && Array.isArray(animal.vacunas) && animal.vacunas.length > 0) {
+      const vacunasCount = animal.vacunas.length;
+      const ultimaVacuna = animal.vacunas[0];
+      const nombreVacuna = ultimaVacuna.nombre_vacuna || ultimaVacuna.nombre || 'Vacuna';
+      const fechaAplicacion = ultimaVacuna.fecha_aplicacion ? formatDate(ultimaVacuna.fecha_aplicacion) : null;
+      const estadoVacuna = ultimaVacuna.estado || 'pendiente';
+      const proximaDosis = ultimaVacuna.proxima_dosis ? formatDate(ultimaVacuna.proxima_dosis) : null;
+      
+      // Contar vacunas pendientes
+      const vacunasPendientes = animal.vacunas.filter(v => 
+        v.estado === 'pendiente' || !v.fecha_aplicacion
+      ).length;
+      
+      let infoDetalle = '';
+      if (fechaAplicacion) {
+        infoDetalle = `Última: ${nombreVacuna} aplicada el ${fechaAplicacion}`;
+      } else {
+        infoDetalle = `Pendiente: ${nombreVacuna}`;
+      }
+      
+      if (proximaDosis) {
+        infoDetalle += `. Próxima dosis: ${proximaDosis}`;
+      }
+      
+      if (vacunasPendientes > 0) {
+        vacunasInfoLocal = `${vacunasCount} vacuna(s) registrada(s) (${vacunasPendientes} pendiente(s)). ${infoDetalle}`;
+      } else {
+        vacunasInfoLocal = `${vacunasCount} vacuna(s) registrada(s). ${infoDetalle}`;
+      }
+    }
 
     Swal.fire({
       title: `Perfil de ${animal.nombre}`,
@@ -383,7 +459,7 @@ export const verPerfilAnimal = async (id) => {
           <p><strong>Peso actual:</strong> ${animal.peso || 'Sin dato'} kg</p>
           <p><strong>Estado:</strong> ${animal.estado || 'Sin dato'}</p>
           <p><strong>Potrero actual:</strong> ${potreroLocal}</p>
-          <p><strong>Historial médico:</strong> Sin incidencias</p>
+          <p><strong>Vacunas:</strong> ${vacunasInfoLocal}</p>
           ${animal.codigo_qr ? `<div class="mt-3"><img src="${API_BASE}/animales/qr/${animal.codigo_qr}.png" alt="Código QR" class="img-fluid" style="max-width: 300px;"></div>` : ''}
         </div>
       `,

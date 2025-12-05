@@ -133,9 +133,12 @@ class TestBuildDatabaseUrl:
             assert url == 'mysql+mysqlconnector://root:test_password@localhost:3306/gestion_ganadera'
 
     def test_build_database_url_missing_password(self, monkeypatch):
-        """Test _build_database_url raises ValueError when DB_PASSWORD is missing."""
+        """Test _build_database_url allows empty password when DB_PASSWORD is missing (Docker compatibility)."""
         prepare_environment(monkeypatch)
         monkeypatch.delenv('DB_PASSWORD', raising=False)
+        # Use default values from _build_database_url
+        monkeypatch.setenv('DB_USER', 'root')
+        monkeypatch.setenv('DB_NAME', 'gestion_ganadera')
 
         env_path = Path(__file__).parent.parent / 'src' / 'database' / 'migrations' / 'env.py'
         spec = importlib.util.spec_from_file_location("migration_env_no_password", env_path)
@@ -164,20 +167,15 @@ class TestBuildDatabaseUrl:
             mock_config_instance.config_ini_section = 'alembic'
             mock_config_instance.set_main_option = Mock()
             
-            try:
-                spec.loader.exec_module(env_module)
-            except ValueError:
-                # Expected during module load
-                pass
+            spec.loader.exec_module(env_module)
 
-            with pytest.raises(ValueError) as exc_info:
-                env_module._build_database_url()
-
-            assert "DB_PASSWORD environment variable must be set" in str(exc_info.value)
+            # Should not raise ValueError, empty password is allowed for Docker compatibility
+            url = env_module._build_database_url()
+            assert url == 'mysql+mysqlconnector://root:@localhost:3306/gestion_ganadera'
 
     def test_build_database_url_empty_password(self, monkeypatch):
-        """Test _build_database_url raises ValueError when DB_PASSWORD is empty."""
-        prepare_environment(monkeypatch, {'DB_PASSWORD': ''})
+        """Test _build_database_url allows empty password (Docker compatibility)."""
+        prepare_environment(monkeypatch, {'DB_PASSWORD': '', 'DB_USER': 'root', 'DB_NAME': 'gestion_ganadera'})
 
         env_path = Path(__file__).parent.parent / 'src' / 'database' / 'migrations' / 'env.py'
         spec = importlib.util.spec_from_file_location("migration_env_empty_password", env_path)
@@ -206,16 +204,11 @@ class TestBuildDatabaseUrl:
             mock_config_instance.config_ini_section = 'alembic'
             mock_config_instance.set_main_option = Mock()
             
-            try:
-                spec.loader.exec_module(env_module)
-            except ValueError:
-                # Expected during module load
-                pass
+            spec.loader.exec_module(env_module)
 
-            with pytest.raises(ValueError) as exc_info:
-                env_module._build_database_url()
-
-            assert "DB_PASSWORD environment variable must be set" in str(exc_info.value)
+            # Should not raise ValueError, empty password is allowed for Docker compatibility
+            url = env_module._build_database_url()
+            assert url == 'mysql+mysqlconnector://root:@localhost:3306/gestion_ganadera'
 
 
 class TestDotenvLoading:

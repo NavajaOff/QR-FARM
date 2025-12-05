@@ -297,7 +297,7 @@ def _query_user_by_email(email):
             u.id as usuario_id,
             u.contrasena,
             u.estado,
-            u.tenant_id,
+            p.tenant_id,
             p.email,
             r.rol AS rol
         FROM usuarios u

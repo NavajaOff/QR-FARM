@@ -44,7 +44,7 @@
             <div class="row g-3">
               <div class="col-md-4 col-lg-3">
                 <router-link class="btn btn-success w-100" to="/user/ganado">
-                  <i class="fas fa-plus-circle me-2"></i>Agregar Ganado
+                  <i class="fas fa-list me-2"></i>Ver Ganado
                 </router-link>
               </div>
               <div class="col-md-4 col-lg-3">
@@ -58,8 +58,8 @@
                 </router-link>
               </div>
               <div class="col-md-4 col-lg-3">
-                <router-link class="btn btn-outline-primary w-100" to="/user/reportes">
-                  <i class="fas fa-chart-line me-2"></i>Ver Reportes
+                <router-link class="btn btn-outline-primary w-100" to="/user/registro-vacunacion">
+                  <i class="fas fa-syringe me-2"></i>Vacunación
                 </router-link>
               </div>
             </div>
