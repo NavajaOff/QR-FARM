@@ -353,7 +353,6 @@ export const verPerfilAnimal = async (id) => {
         const ultimaVacuna = animalActualizado.vacunas[0]; // La más reciente (ordenadas por fecha DESC)
         const nombreVacuna = ultimaVacuna.nombre_vacuna || ultimaVacuna.nombre || 'Vacuna';
         const fechaAplicacion = ultimaVacuna.fecha_aplicacion ? formatDate(ultimaVacuna.fecha_aplicacion) : null;
-        const estadoVacuna = ultimaVacuna.estado || 'pendiente';
         const proximaDosis = ultimaVacuna.proxima_dosis ? formatDate(ultimaVacuna.proxima_dosis) : null;
         
         // Contar vacunas pendientes

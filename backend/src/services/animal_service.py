@@ -614,7 +614,7 @@ class GanadoService:
                 return True
             
             return GanadoService._ejecutar_update_ganado(cursor, conn, id, ganado, fecha_nac, estado_id, tenant_id)
-        except Exception as e:
+        except Exception:
             return False
         finally:
             conn.close()
@@ -643,7 +643,7 @@ class GanadoService:
             GanadoService._sincronizar_potreros_despues_actualizacion(actualizado, nuevo_potrero_id, potrero_anterior_id)
             
             return actualizado
-        except Exception as e:
+        except Exception:
             return False
 
     @staticmethod

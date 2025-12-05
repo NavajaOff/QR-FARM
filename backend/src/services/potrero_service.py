@@ -9,6 +9,8 @@ class PotreroService:
     """Service class for handling Potrero business logic."""
     NO_DEFINIDO = 'NO_DEFINIDO'
     SQL_AND_TENANT_ID = " AND p.tenant_id = %s"
+    SQL_AND_TENANT_ID_GENERIC = " AND tenant_id = %s"
+    TIMEZONE_UTC_SUFFIX = '+00:00'
     
     @staticmethod
     def _obtener_actividades_potrero(potrero_id: int, tenant_id: Optional[int] = None) -> Dict[str, Any]:
@@ -29,7 +31,7 @@ class PotreroService:
                 """
                 params_uso = (potrero_id,)
                 if tenant_id is not None:
-                    sql_uso += " AND tenant_id = %s"
+                    sql_uso += PotreroService.SQL_AND_TENANT_ID_GENERIC
                     params_uso = (potrero_id, tenant_id)
                 sql_uso += " ORDER BY fecha_evento DESC LIMIT 1"
                 
@@ -47,7 +49,7 @@ class PotreroService:
                 """
                 params_limpieza = (potrero_id,)
                 if tenant_id is not None:
-                    sql_limpieza += " AND tenant_id = %s"
+                    sql_limpieza += PotreroService.SQL_AND_TENANT_ID_GENERIC
                     params_limpieza = (potrero_id, tenant_id)
                 sql_limpieza += " ORDER BY fecha_evento DESC LIMIT 1"
                 
@@ -65,7 +67,7 @@ class PotreroService:
                 """
                 params_proxima = (potrero_id,)
                 if tenant_id is not None:
-                    sql_proxima += " AND tenant_id = %s"
+                    sql_proxima += PotreroService.SQL_AND_TENANT_ID_GENERIC
                     params_proxima = (potrero_id, tenant_id)
                 sql_proxima += " ORDER BY fecha_evento ASC LIMIT 1"
                 
@@ -404,7 +406,7 @@ class PotreroService:
                     
                     # Filtrar por tenant_id si está disponible
                     if tenant_id is not None:
-                        sql += " AND tenant_id = %s"
+                        sql += PotreroService.SQL_AND_TENANT_ID_GENERIC
                         params = (potrero['responsable_persona_id'], tenant_id)
                     
                     resp_cursor.execute(sql, params)
@@ -437,7 +439,7 @@ class PotreroService:
             try:
                 fecha_uso = data.get('fecha_ultimo_uso')
                 if isinstance(fecha_uso, str):
-                    fecha_uso = datetime.fromisoformat(fecha_uso.replace('Z', '+00:00'))
+                    fecha_uso = datetime.fromisoformat(fecha_uso.replace('Z', PotreroService.TIMEZONE_UTC_SUFFIX))
                 PotreroService._registrar_actividad_potrero(
                     potrero_id, 'uso', fecha_uso, None, tenant_id
                 )
@@ -448,7 +450,7 @@ class PotreroService:
             try:
                 fecha_limpieza = data.get('ultima_limpieza')
                 if isinstance(fecha_limpieza, str):
-                    fecha_limpieza = datetime.fromisoformat(fecha_limpieza.replace('Z', '+00:00'))
+                    fecha_limpieza = datetime.fromisoformat(fecha_limpieza.replace('Z', PotreroService.TIMEZONE_UTC_SUFFIX))
                 PotreroService._registrar_actividad_potrero(
                     potrero_id, 'limpieza', fecha_limpieza, None, tenant_id
                 )
@@ -459,7 +461,7 @@ class PotreroService:
             try:
                 fecha_proxima = data.get('proxima_limpieza')
                 if isinstance(fecha_proxima, str):
-                    fecha_proxima = datetime.fromisoformat(fecha_proxima.replace('Z', '+00:00'))
+                    fecha_proxima = datetime.fromisoformat(fecha_proxima.replace('Z', PotreroService.TIMEZONE_UTC_SUFFIX))
                 PotreroService._registrar_actividad_potrero(
                     potrero_id, 'limpieza', fecha_proxima, 'Programada', tenant_id
                 )
@@ -500,7 +502,7 @@ class PotreroService:
             try:
                 fecha_uso = actividades_data['fecha_ultimo_uso']
                 if isinstance(fecha_uso, str):
-                    fecha_uso = datetime.fromisoformat(fecha_uso.replace('Z', '+00:00'))
+                    fecha_uso = datetime.fromisoformat(fecha_uso.replace('Z', PotreroService.TIMEZONE_UTC_SUFFIX))
                 PotreroService._registrar_actividad_potrero(
                     potrero_id, 'uso', fecha_uso, None, tenant_id
                 )
@@ -511,7 +513,7 @@ class PotreroService:
             try:
                 fecha_limpieza = actividades_data['ultima_limpieza']
                 if isinstance(fecha_limpieza, str):
-                    fecha_limpieza = datetime.fromisoformat(fecha_limpieza.replace('Z', '+00:00'))
+                    fecha_limpieza = datetime.fromisoformat(fecha_limpieza.replace('Z', PotreroService.TIMEZONE_UTC_SUFFIX))
                 PotreroService._registrar_actividad_potrero(
                     potrero_id, 'limpieza', fecha_limpieza, None, tenant_id
                 )
@@ -522,7 +524,7 @@ class PotreroService:
             try:
                 fecha_proxima = actividades_data['proxima_limpieza']
                 if isinstance(fecha_proxima, str):
-                    fecha_proxima = datetime.fromisoformat(fecha_proxima.replace('Z', '+00:00'))
+                    fecha_proxima = datetime.fromisoformat(fecha_proxima.replace('Z', PotreroService.TIMEZONE_UTC_SUFFIX))
                 PotreroService._registrar_actividad_potrero(
                     potrero_id, 'limpieza', fecha_proxima, 'Programada', tenant_id
                 )
@@ -591,7 +593,7 @@ class PotreroService:
             """
             params = tuple(values)
             if tenant_id is not None:
-                sql += " AND tenant_id = %s"
+                sql += PotreroService.SQL_AND_TENANT_ID_GENERIC
                 params = tuple(list(values) + [tenant_id])
             
             cursor.execute(sql, params)
@@ -687,7 +689,7 @@ class PotreroService:
             params = (potrero_id,)
             
             if tenant_id is not None:
-                sql += " AND tenant_id = %s"
+                sql += PotreroService.SQL_AND_TENANT_ID_GENERIC
                 params = (potrero_id, tenant_id)
             
             cursor.execute(sql, params)

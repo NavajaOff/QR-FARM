@@ -395,7 +395,7 @@ const startScanner = async (): Promise<void> => {
           height: qrboxSize
         };
       },
-      aspectRatio: 1.0,  // QR es cuadrado
+      aspectRatio: 1,  // QR es cuadrado
       disableFlip: false,  // Permitir rotación para mejor detección
       videoConstraints: {
         facingMode: "environment",  // Preferir cámara trasera

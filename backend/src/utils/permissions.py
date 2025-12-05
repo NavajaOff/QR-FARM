@@ -115,7 +115,7 @@ def permission_required(permission: str):
             print(f"[PERMISSIONS] Validando permiso '{permission}' para usuario id={getattr(usuario, 'id', None)} con rol='{rol_nombre}'")
             
             if not rol_nombre:
-                print(f"[PERMISSIONS] ERROR: Usuario sin rol asignado")
+                print("[PERMISSIONS] ERROR: Usuario sin rol asignado")
                 return jsonify({
                     'status': 'error',
                     'code': 'no_role',

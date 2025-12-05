@@ -220,9 +220,7 @@ const parseHistorial = (value: unknown): GanadoHistorial[] => {
       // Manejar fecha - si es string vacío, retornar null
       let fechaValue: string | null = null;
       if (data.fecha !== null && data.fecha !== undefined) {
-        if (typeof data.fecha === 'string' && data.fecha.trim() === '') {
-          fechaValue = null;
-        } else {
+        if (typeof data.fecha === 'string' && data.fecha.trim() !== '') {
           fechaValue = toIsoString(data.fecha);
         }
       }

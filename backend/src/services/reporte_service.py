@@ -417,7 +417,7 @@ class ReporteService:
                     "potreros": ReporteService._empty_trend(),
                     "vacunaciones": ReporteService._empty_trend(),
                 },
-                "error": str(exc),
+                "error_detail": str(exc),
             }
         finally:
             ReporteService._safe_close(conn, cursor)

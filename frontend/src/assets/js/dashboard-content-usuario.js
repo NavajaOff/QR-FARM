@@ -47,33 +47,32 @@ export default {
           vacunacionAPI.getAll()
         ]);
 
+        // Helper function to extract data from API response
+        const extractDataFromResponse = (response, checkSuccess = false) => {
+          if (!response?.data) return [];
+          const data = response.data;
+          if (checkSuccess && data.success && Array.isArray(data.data)) {
+            return data.data;
+          }
+          if (data.status === 'success' && Array.isArray(data.data)) {
+            return data.data;
+          }
+          if (Array.isArray(data.data)) {
+            return data.data;
+          }
+          return [];
+        };
+
         // Ganado: formato {status: 'success', data: [...]}
-        let ganadoData = [];
-        if (ganadoResponse.data?.status === 'success' && Array.isArray(ganadoResponse.data?.data)) {
-          ganadoData = ganadoResponse.data.data;
-        } else if (Array.isArray(ganadoResponse.data?.data)) {
-          ganadoData = ganadoResponse.data.data;
-        }
+        const ganadoData = extractDataFromResponse(ganadoResponse);
         this.estadisticas.ganado = ganadoData.length || 0;
 
         // Potreros: formato {data: [...], success: True} o {status: 'success', data: [...]}
-        let potrerosData = [];
-        if (potreroResponse.data?.success && Array.isArray(potreroResponse.data?.data)) {
-          potrerosData = potreroResponse.data.data;
-        } else if (potreroResponse.data?.status === 'success' && Array.isArray(potreroResponse.data?.data)) {
-          potrerosData = potreroResponse.data.data;
-        } else if (Array.isArray(potreroResponse.data?.data)) {
-          potrerosData = potreroResponse.data.data;
-        }
+        const potrerosData = extractDataFromResponse(potreroResponse, true);
         this.estadisticas.potreros = potrerosData.length || 0;
 
         // Vacunaciones: formato {status: 'success', data: [...]}
-        let vacunacionesData = [];
-        if (vacunacionResponse.data?.status === 'success' && Array.isArray(vacunacionResponse.data?.data)) {
-          vacunacionesData = vacunacionResponse.data.data;
-        } else if (Array.isArray(vacunacionResponse.data?.data)) {
-          vacunacionesData = vacunacionResponse.data.data;
-        }
+        const vacunacionesData = extractDataFromResponse(vacunacionResponse);
         this.estadisticas.vacunaciones = vacunacionesData.length || 0;
       } catch (error) {
         console.error('[DashboardContent] Error cargando estadísticas:', error);

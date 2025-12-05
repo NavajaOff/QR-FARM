@@ -89,14 +89,19 @@ export default {
       this.loading = true;
       try {
         const response = await vacunacionAPI.getAll();
-        // Manejar diferentes formatos de respuesta
-        let vacunacionesData = [];
-        if (response.data?.status === 'success' && Array.isArray(response.data?.data)) {
-          vacunacionesData = response.data.data;
-        } else if (Array.isArray(response.data?.data)) {
-          vacunacionesData = response.data.data;
-        }
-        this.vacunaciones = vacunacionesData;
+        // Helper function to extract data from API response
+        const extractDataFromResponse = (response) => {
+          if (!response?.data) return [];
+          const data = response.data;
+          if (data.status === 'success' && Array.isArray(data.data)) {
+            return data.data;
+          }
+          if (Array.isArray(data.data)) {
+            return data.data;
+          }
+          return [];
+        };
+        this.vacunaciones = extractDataFromResponse(response);
       } catch (error) {
         console.error('[RegistroVacunacionBase] Error cargando vacunaciones:', error);
         console.error('[RegistroVacunacionBase] Detalles:', {

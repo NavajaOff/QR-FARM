@@ -16,15 +16,20 @@ export function useGanado() {
       error.value = null
       const response = await ganadoAPI.getAll()
       
-      // Manejar diferentes formatos de respuesta
-      let ganadoData = []
-      if (response.data?.status === 'success' && Array.isArray(response.data?.data)) {
-        ganadoData = response.data.data
-      } else if (Array.isArray(response.data?.data)) {
-        ganadoData = response.data.data
-      }
+      // Helper function to extract data from API response
+      const extractDataFromResponse = (response) => {
+        if (!response?.data) return [];
+        const data = response.data;
+        if (data.status === 'success' && Array.isArray(data.data)) {
+          return data.data;
+        }
+        if (Array.isArray(data.data)) {
+          return data.data;
+        }
+        return [];
+      };
       
-      ganado.value = ganadoData
+      ganado.value = extractDataFromResponse(response)
     } catch (err) {
       const errorMessage = err.response?.data?.message || err.message || 'Error al cargar el ganado'
       error.value = errorMessage

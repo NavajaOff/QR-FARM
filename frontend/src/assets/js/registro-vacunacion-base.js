@@ -98,32 +98,27 @@ export const registroVacunacionBase = {
           userAPI.getAll()
         ]);
 
+        // Helper function to extract data from API response
+        const extractDataFromResponse = (response) => {
+          if (!response?.data) return [];
+          const data = response.data;
+          if (data.status === 'success' && Array.isArray(data.data)) {
+            return data.data;
+          }
+          if (Array.isArray(data.data)) {
+            return data.data;
+          }
+          return [];
+        };
+
         // Vacunaciones: formato {status: 'success', data: [...]}
-        let vacunacionesData = [];
-        if (vacunacionesRes.data?.status === 'success' && Array.isArray(vacunacionesRes.data?.data)) {
-          vacunacionesData = vacunacionesRes.data.data;
-        } else if (Array.isArray(vacunacionesRes.data?.data)) {
-          vacunacionesData = vacunacionesRes.data.data;
-        }
-        this.vacunaciones = vacunacionesData;
+        this.vacunaciones = extractDataFromResponse(vacunacionesRes);
 
         // Ganado: formato {status: 'success', data: [...]}
-        let animalesData = [];
-        if (animalesRes.data?.status === 'success' && Array.isArray(animalesRes.data?.data)) {
-          animalesData = animalesRes.data.data;
-        } else if (Array.isArray(animalesRes.data?.data)) {
-          animalesData = animalesRes.data.data;
-        }
-        this.animales = animalesData;
+        this.animales = extractDataFromResponse(animalesRes);
 
         // Personas/Usuarios: formato {status: 'success', data: [...]}
-        let personasData = [];
-        if (personasRes.data?.status === 'success' && Array.isArray(personasRes.data?.data)) {
-          personasData = personasRes.data.data;
-        } else if (Array.isArray(personasRes.data?.data)) {
-          personasData = personasRes.data.data;
-        }
-        this.personas = personasData;
+        this.personas = extractDataFromResponse(personasRes);
 
         await this.obtenerTiposVacuna();
       } catch (error) {
