@@ -159,7 +159,7 @@ def _collect_dataset() -> Dict[str, Any]:
             cursor,
             (
                 "SELECT id, id_tipo_pasto, nombre, capacidad, hectareas, ocupacion, "
-                "responsable_persona_id, area, descripcion, estado "
+                "responsable_persona_id, descripcion, estado "
                 "FROM potrero ORDER BY id"
             ),
         )
@@ -331,9 +331,9 @@ def _import_potreros(cursor, rows: List[Dict[str, Any]]) -> None:
             """
             INSERT INTO potrero (
                 id, id_tipo_pasto, nombre, capacidad, hectareas, ocupacion,
-                responsable_persona_id, area, descripcion, estado
+                responsable_persona_id, descripcion, estado
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE
                 id_tipo_pasto = VALUES(id_tipo_pasto),
                 nombre = VALUES(nombre),
@@ -341,7 +341,6 @@ def _import_potreros(cursor, rows: List[Dict[str, Any]]) -> None:
                 hectareas = VALUES(hectareas),
                 ocupacion = VALUES(ocupacion),
                 responsable_persona_id = VALUES(responsable_persona_id),
-                area = VALUES(area),
                 descripcion = VALUES(descripcion),
                 estado = VALUES(estado)
             """,
@@ -353,7 +352,6 @@ def _import_potreros(cursor, rows: List[Dict[str, Any]]) -> None:
                 row.get("hectareas"),
                 row.get("ocupacion"),
                 row.get("responsable_persona_id"),
-                row.get("area"),
                 row.get("descripcion"),
                 row.get("estado"),
             ),

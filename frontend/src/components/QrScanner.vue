@@ -691,9 +691,13 @@ const buildFetchErrorMessage = (error: unknown): string => {
 };
 
 const handleScanSuccess = async (decodedText: string, decodedResult: Html5QrcodeResult): Promise<void> => {
-  console.debug('QR detectado:', decodedResult);
+  console.log('[QR-SCANNER] QR detectado:', {
+    decodedText,
+    result: decodedResult
+  });
   await pauseScanner();
   const payload = normalizePayload(decodedText);
+  console.log('[QR-SCANNER] Payload normalizado:', payload);
   state.lastPayload = payload;
   emit('qr-detected', payload);
   pushTelemetry(`QR leído: ${payload.raw}`);
@@ -701,7 +705,11 @@ const handleScanSuccess = async (decodedText: string, decodedResult: Html5Qrcode
 };
 
 const handleScanFailure = (error: string): void => {
-  console.debug('Intento fallido de lectura:', error);
+  // No loguear errores de escaneo continuo para evitar spam en consola
+  // Solo loguear si es un error crítico
+  if (error && !error.includes('NotFoundException')) {
+    console.debug('[QR-SCANNER] Intento fallido de lectura:', error);
+  }
 };
 
 const handleCameraChange = async (event: Event): Promise<void> => {

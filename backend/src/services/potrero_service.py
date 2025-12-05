@@ -281,6 +281,7 @@ class PotreroService:
 
         # Nota: fecha_ultimo_uso, ultima_limpieza y proxima_limpieza ahora se gestionan
         # en la tabla historial_potrero, no en potrero
+        # Nota: 'area' no se persiste en BD (eliminada según dump SQL), solo se calcula para el modelo
         values = (
             data.get('id_tipo_pasto'),
             nombre,
@@ -288,7 +289,6 @@ class PotreroService:
             hectareas,
             data.get('ocupacion', 0),
             data.get('responsable_persona_id'),
-            area,
             data.get('descripcion'),
             data.get('estado', 'disponible')
         )
@@ -309,12 +309,13 @@ class PotreroService:
             sql = """
                 INSERT INTO potrero (
                     id_tipo_pasto, nombre, capacidad, hectareas, ocupacion,
-                    responsable_persona_id, area, descripcion, estado, tenant_id
+                    responsable_persona_id, descripcion, estado, tenant_id
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
             """
             
+            # Agregar tenant_id a los values
             values_list = list(values)
             values_list.append(tenant_id)
             values = tuple(values_list)
@@ -546,16 +547,16 @@ class PotreroService:
         values = []
         data_copy = data.copy()
 
-        # Auto-calcular área/hectáreas si se proporciona uno pero no el otro
+        # Auto-calcular hectáreas si se proporciona área (solo para el modelo, no se persiste)
         hectareas = data_copy.get('hectareas')
         area = data_copy.get('area')
 
-        if 'hectareas' in data_copy and 'area' not in data_copy and hectareas is not None:
-            # Calcular metros cuadrados automáticamente: 1 hectárea = 10,000 m²
-            data_copy['area'] = float(hectareas) * 10000
-        elif 'area' in data_copy and 'hectareas' not in data_copy and area is not None:
-            # Calcular hectáreas automáticamente si se proporciona área
+        if 'area' in data_copy and 'hectareas' not in data_copy and area is not None:
+            # Calcular hectáreas automáticamente si se proporciona área (solo para cálculo)
             data_copy['hectareas'] = float(area) / 10000
+        
+        # Remover 'area' de data_copy ya que no se persiste en BD (según dump SQL)
+        data_copy.pop('area', None)
 
         # Separar campos de actividad de campos de potrero
         actividades_data = {}
@@ -564,7 +565,7 @@ class PotreroService:
                 actividades_data[key] = data_copy.pop(key)
         
         for key, value in data_copy.items():
-            if key in ['id']:
+            if key in ['id', 'area']:  # Excluir 'area' de actualización
                 continue
 
             # Procesar campos especiales
