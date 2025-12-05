@@ -103,38 +103,49 @@ const mockApiDelete = apiInstance?.delete || vi.fn()
 // Mock fetch
 globalThis.fetch = vi.fn()
 
-// Mock sweetalert2
+// Mock document methods - must be available globally
+const mockGetElementByIdGlobal = vi.fn()
+globalThis.document = {
+  getElementById: mockGetElementByIdGlobal
+}
+
+// Mock sweetalert2 - create mock functions that can be overridden in tests
+const mockSwalFire = vi.fn()
+const mockSwalShowValidationMessage = vi.fn()
+
 vi.mock('sweetalert2', () => ({
   default: {
-    fire: vi.fn((...args) => {
-      // If called with three arguments (title, text, icon) - error/success messages
-      // These calls don't return a value that affects flow, just show a message
-      if (args.length === 3 && typeof args[0] === 'string') {
-        return Promise.resolve({ isConfirmed: false, isDismissed: false })
-      }
-      // If called with an object (modal configuration)
-      if (args.length === 1 && typeof args[0] === 'object') {
-        return Promise.resolve({ isConfirmed: true, value: {} })
-      }
-      // Default
-      return Promise.resolve({ isConfirmed: true, value: {} })
-    }),
-    showValidationMessage: vi.fn()
+    get fire() {
+      return mockSwalFire
+    },
+    get showValidationMessage() {
+      return mockSwalShowValidationMessage
+    }
   }
 }))
 
+// Set default implementation
+mockSwalFire.mockImplementation((...args) => {
+  // If called with three arguments (title, text, icon) - error/success messages
+  if (args.length === 3 && typeof args[0] === 'string') {
+    return Promise.resolve({ isConfirmed: false, isDismissed: false })
+  }
+  // If called with an object (modal configuration)
+  if (args.length === 1 && typeof args[0] === 'object') {
+    return Promise.resolve({ isConfirmed: true, value: {} })
+  }
+  // Default
+  return Promise.resolve({ isConfirmed: true, value: {} })
+})
+
 // Also set globalThis.Swal for compatibility
 globalThis.Swal = {
-  fire: vi.fn((...args) => {
-    if (args.length === 3 && typeof args[0] === 'string') {
-      return Promise.resolve({ isConfirmed: false, isDismissed: false })
-    }
-    if (args.length === 1 && typeof args[0] === 'object') {
-      return Promise.resolve({ isConfirmed: true, value: {} })
-    }
-    return Promise.resolve({ isConfirmed: true, value: {} })
-  }),
-  showValidationMessage: vi.fn()
+  get fire() {
+    return mockSwalFire
+  },
+  get showValidationMessage() {
+    return mockSwalShowValidationMessage
+  }
 }
 
 // Mock socket.io-client
@@ -178,7 +189,14 @@ describe('gestionar_animales.js', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     console.error = vi.fn()
-    console.log = vi.fn()
+    // Allow console.log to show debug messages
+    console.log = vi.fn((...args) => {
+      // Show TEST DEBUG messages
+      if (args[0] && typeof args[0] === 'string' && args[0].includes('[TEST DEBUG]')) {
+        // eslint-disable-next-line no-console
+        console.info(...args)
+      }
+    })
 
     // Reset API mocks
     mockApiGet.mockReset()
@@ -186,20 +204,19 @@ describe('gestionar_animales.js', () => {
     mockApiPut.mockReset()
     mockApiDelete.mockReset()
 
-    // Reset Swal.fire mock to handle both object and three-argument calls
-    globalThis.Swal.fire = vi.fn((...args) => {
-      // If called with three arguments (title, text, icon)
+    // Reset Swal.fire mock - but allow tests to override it
+    mockSwalFire.mockReset()
+    mockSwalShowValidationMessage.mockReset()
+    // Set default implementation
+    mockSwalFire.mockImplementation((...args) => {
       if (args.length === 3 && typeof args[0] === 'string') {
-        return Promise.resolve({ isConfirmed: false })
+        return Promise.resolve({ isConfirmed: false, isDismissed: false })
       }
-      // If called with an object (modal configuration)
       if (args.length === 1 && typeof args[0] === 'object') {
         return Promise.resolve({ isConfirmed: true, value: {} })
       }
-      // Default
       return Promise.resolve({ isConfirmed: true, value: {} })
     })
-    globalThis.Swal.showValidationMessage = vi.fn()
 
     // Reset reactive values
     currentIndex.value = 0
@@ -501,7 +518,7 @@ describe('gestionar_animales.js', () => {
       await verPerfilAnimal(999)
 
       expect(globalThis.fetch).not.toHaveBeenCalled()
-      expect(globalThis.Swal.fire).not.toHaveBeenCalled()
+      expect(mockSwalFire).not.toHaveBeenCalled()
     })
   })
 
@@ -514,7 +531,7 @@ describe('gestionar_animales.js', () => {
     })
 
     it('should add new animal successfully', async () => {
-      globalThis.Swal.fire.mockImplementation(() => Promise.resolve({
+      mockSwalFire.mockImplementation(() => Promise.resolve({
         isConfirmed: true,
         value: {
           nombre: 'Nuevo Animal',
@@ -549,6 +566,9 @@ describe('gestionar_animales.js', () => {
       personasUsuario.value = [{ id: 1, primer_nombre: 'Juan', primer_apellido: 'Perez' }]
       const mockPotreros = { value: [{ id: 1, nombre: 'Potrero 1' }] }
       vi.doMock('./gestionar-potreros.js', () => ({ potreros: mockPotreros }))
+      
+      // Reset document mock
+      mockGetElementByIdGlobal.mockReset()
     })
 
     it('should edit animal successfully', async () => {
@@ -564,10 +584,54 @@ describe('gestionar_animales.js', () => {
       }
       animales.value = [mockAnimal]
 
-      globalThis.Swal.fire.mockImplementation(() => Promise.resolve({
-        isConfirmed: true,
-        value: { nombre: 'Updated Animal', peso: 500 }
-      }))
+      // Mock form elements - must be set before Swal.fire is called
+      const formElements = {
+        'edit_nombre': { value: 'Updated Animal' },
+        'edit_peso': { value: '500' },
+        'edit_raza': { value: 'Holstein' },
+        'edit_estado': { value: 'saludable' },
+        'edit_sexo': { value: 'hembra' },
+        'edit_id_potrero': { value: '1' },
+        'edit_id_persona': { value: '1' }
+      }
+      mockGetElementByIdGlobal.mockImplementation((id) => {
+        return formElements[id] || { value: '' }
+      })
+
+      // Mock Swal.fire to execute preConfirm
+      mockSwalFire.mockImplementation((config) => {
+        console.log('[TEST DEBUG] Swal.fire called with config:', config)
+        if (config.preConfirm) {
+          try {
+            console.log('[TEST DEBUG] Executing preConfirm...')
+            console.log('[TEST DEBUG] document available:', typeof document !== 'undefined')
+            console.log('[TEST DEBUG] document.getElementById available:', typeof document?.getElementById === 'function')
+            const preConfirmResult = config.preConfirm()
+            console.log('[TEST DEBUG] preConfirm result:', preConfirmResult)
+            // If preConfirm returns undefined (validation failed), return isConfirmed: false
+            if (preConfirmResult === undefined) {
+              console.log('[TEST DEBUG] preConfirm returned undefined, returning isConfirmed: false')
+              return Promise.resolve({
+                isConfirmed: false,
+                value: undefined
+              })
+            }
+            console.log('[TEST DEBUG] preConfirm succeeded, returning isConfirmed: true with value:', preConfirmResult)
+            return Promise.resolve({
+              isConfirmed: true,
+              value: preConfirmResult
+            })
+          } catch (error) {
+            console.error('[TEST DEBUG] Error in preConfirm:', error)
+            return Promise.resolve({
+              isConfirmed: false,
+              value: undefined
+            })
+          }
+        }
+        console.log('[TEST DEBUG] No preConfirm, returning default')
+        return Promise.resolve({ isConfirmed: true, value: {} })
+      })
 
       const mockApiPut = (await import('../../services/api.js')).default.put
       mockApiPut.mockResolvedValue({ 
@@ -579,10 +643,22 @@ describe('gestionar_animales.js', () => {
       })
 
       const { editarAnimal } = await import('./gestionar_animales.js')
+      console.log('[TEST DEBUG] Calling editarAnimal(1)...')
+      console.log('[TEST DEBUG] Animales disponibles:', animales.value)
+      console.log('[TEST DEBUG] estadosGanado disponibles:', estadosGanado.value)
+      console.log('[TEST DEBUG] personasUsuario disponibles:', personasUsuario.value)
       await editarAnimal(1)
+      console.log('[TEST DEBUG] editarAnimal completed')
+      console.log('[TEST DEBUG] mockApiPut call count:', mockApiPut.mock.calls.length)
+      console.log('[TEST DEBUG] mockApiPut calls:', mockApiPut.mock.calls)
+      console.log('[TEST DEBUG] Swal.fire call count:', mockSwalFire.mock.calls.length)
+      console.log('[TEST DEBUG] Swal.fire calls:', mockSwalFire.mock.calls)
+      if (mockSwalFire.mock.calls.length > 0) {
+        console.log('[TEST DEBUG] First Swal.fire call:', mockSwalFire.mock.calls[0])
+      }
 
       expect(mockApiPut).toHaveBeenCalled()
-      expect(globalThis.Swal.fire).toHaveBeenCalled()
+      expect(mockSwalFire).toHaveBeenCalled()
     })
 
     it('should update animal estado correctly', async () => {
@@ -599,10 +675,54 @@ describe('gestionar_animales.js', () => {
       }
       animales.value = [mockAnimal]
 
-      globalThis.Swal.fire.mockImplementation(() => Promise.resolve({
-        isConfirmed: true,
-        value: { estado: 'saludable' }  // Changing estado to 'saludable'
-      }))
+      // Mock form elements with estado changed to 'saludable'
+      const formElements = {
+        'edit_nombre': { value: 'Test Animal' },
+        'edit_peso': { value: '450' },
+        'edit_raza': { value: 'Holstein' },
+        'edit_estado': { value: 'saludable' },  // Changed estado
+        'edit_sexo': { value: 'hembra' },
+        'edit_id_potrero': { value: '1' },
+        'edit_id_persona': { value: '1' }
+      }
+      mockGetElementByIdGlobal.mockImplementation((id) => {
+        return formElements[id] || { value: '' }
+      })
+
+      // Mock Swal.fire to execute preConfirm
+      mockSwalFire.mockImplementation((config) => {
+        console.log('[TEST DEBUG] Swal.fire called with config (estado test):', config)
+        if (config.preConfirm) {
+          try {
+            console.log('[TEST DEBUG] Executing preConfirm (estado test)...')
+            console.log('[TEST DEBUG] document available:', typeof document !== 'undefined')
+            console.log('[TEST DEBUG] document.getElementById available:', typeof document?.getElementById === 'function')
+            const preConfirmResult = config.preConfirm()
+            console.log('[TEST DEBUG] preConfirm result (estado test):', preConfirmResult)
+            // If preConfirm returns undefined (validation failed), return isConfirmed: false
+            if (preConfirmResult === undefined) {
+              console.log('[TEST DEBUG] preConfirm returned undefined, returning isConfirmed: false')
+              return Promise.resolve({
+                isConfirmed: false,
+                value: undefined
+              })
+            }
+            console.log('[TEST DEBUG] preConfirm succeeded, returning isConfirmed: true with value:', preConfirmResult)
+            return Promise.resolve({
+              isConfirmed: true,
+              value: preConfirmResult
+            })
+          } catch (error) {
+            console.error('[TEST DEBUG] Error in preConfirm (estado test):', error)
+            return Promise.resolve({
+              isConfirmed: false,
+              value: undefined
+            })
+          }
+        }
+        console.log('[TEST DEBUG] No preConfirm, returning default')
+        return Promise.resolve({ isConfirmed: true, value: {} })
+      })
 
       const mockApiPut = (await import('../../services/api.js')).default.put
       mockApiPut.mockResolvedValue({ 
@@ -614,7 +734,15 @@ describe('gestionar_animales.js', () => {
       })
 
       const { editarAnimal } = await import('./gestionar_animales.js')
+      console.log('[TEST DEBUG] Calling editarAnimal(1) for estado test...')
       await editarAnimal(1)
+      console.log('[TEST DEBUG] editarAnimal completed')
+      console.log('[TEST DEBUG] mockApiPut call count:', mockApiPut.mock.calls.length)
+      console.log('[TEST DEBUG] mockApiPut calls:', mockApiPut.mock.calls)
+      if (mockApiPut.mock.calls.length > 0) {
+        console.log('[TEST DEBUG] First call args:', mockApiPut.mock.calls[0])
+        console.log('[TEST DEBUG] Second arg (data):', mockApiPut.mock.calls[0][1])
+      }
 
       // Verify that the API was called with the new estado
       expect(mockApiPut).toHaveBeenCalledWith(
@@ -631,7 +759,7 @@ describe('gestionar_animales.js', () => {
       const { editarAnimal } = await import('./gestionar_animales.js')
       await editarAnimal(999)
 
-      expect(globalThis.Swal.fire).not.toHaveBeenCalled()
+      expect(mockSwalFire).not.toHaveBeenCalled()
     })
   })
 
@@ -709,7 +837,7 @@ describe('gestionar_animales.js', () => {
       mockApiGet.mockRejectedValue(networkError)
 
       // Mock Swal to resolve immediately to avoid timeout
-      globalThis.Swal.fire = vi.fn().mockResolvedValue({ isConfirmed: false })
+      mockSwalFire.mockResolvedValue({ isConfirmed: false })
 
       const { darBajaAnimal } = await import('./gestionar_animales.js')
       
@@ -730,7 +858,7 @@ describe('gestionar_animales.js', () => {
       mockApiGet.mockRejectedValue(new Error('Network error'))
 
       // Mock Swal to resolve immediately
-      globalThis.Swal.fire = vi.fn().mockResolvedValue({ isConfirmed: false })
+      mockSwalFire.mockResolvedValue({ isConfirmed: false })
 
       const { reactivarAnimal } = await import('./gestionar_animales.js')
       
@@ -750,7 +878,7 @@ describe('gestionar_animales.js', () => {
       const networkError = new Error('Network error')
       mockApiGet.mockRejectedValue(networkError)
 
-      globalThis.Swal.fire = vi.fn().mockResolvedValue({ isConfirmed: false })
+      mockSwalFire.mockResolvedValue({ isConfirmed: false })
 
       const { eliminarAnimal } = await import('./gestionar_animales.js')
       
@@ -943,7 +1071,7 @@ describe('gestionar_animales.js', () => {
   describe('editarAnimal Integration Tests', () => {
     it('should call editarAnimal and show modal', async () => {
       // Reset mocks
-      globalThis.Swal.fire.mockClear()
+      mockSwalFire.mockClear()
       
       const axios = (await import('axios')).default
       // Mock axios.get for asegurarDatosFormulario (it calls cargarEstadosGanado and cargarPersonasUsuario)
@@ -993,7 +1121,7 @@ describe('gestionar_animales.js', () => {
       const { editarAnimal } = await import('./gestionar_animales.js')
       await editarAnimal(999)
       
-      expect(globalThis.Swal.fire).not.toHaveBeenCalled()
+      expect(mockSwalFire).not.toHaveBeenCalled()
     })
   })
 
@@ -1174,7 +1302,7 @@ describe('gestionar_animales.js', () => {
       // Ensure Swal.fire mock captures all calls
       const Swal = (await import('sweetalert2')).default
       Swal.fire.mockClear()
-      globalThis.Swal.fire.mockClear()
+      mockSwalFire.mockClear()
       
       const module = await import('./gestionar_animales.js')
       await module.editarAnimal(1)
@@ -1370,7 +1498,7 @@ describe('gestionar_animales.js', () => {
       // Ensure Swal.fire mock captures all calls
       const Swal = (await import('sweetalert2')).default
       Swal.fire.mockClear()
-      globalThis.Swal.fire.mockClear()
+      mockSwalFire.mockClear()
       
       const module = await import('./gestionar_animales.js')
       await module.agregarNuevoAnimal()
@@ -1404,7 +1532,7 @@ describe('gestionar_animales.js', () => {
       estadosGanado.value = [{ estado: 'saludable' }]
       personasUsuario.value = [{ id: 1, primer_nombre: 'Test', primer_apellido: 'User' }]
       
-      globalThis.Swal.fire.mockResolvedValue({ isConfirmed: false })
+      mockSwalFire.mockResolvedValue({ isConfirmed: false })
       
       const module = await import('./gestionar_animales.js')
       await module.agregarNuevoAnimal()
@@ -1421,7 +1549,7 @@ describe('gestionar_animales.js', () => {
       const { potreros } = await import('./gestionar-potreros.js')
       potreros.value = [{ id: 1, nombre: 'Potrero 1' }]
       
-      globalThis.Swal.showValidationMessage = vi.fn()
+      mockSwalShowValidationMessage.mockClear()
       
       document.getElementById = vi.fn((id) => {
         const mocks = {
@@ -1588,7 +1716,7 @@ describe('gestionar_animales.js', () => {
       const axios = (await import('axios')).default
       axios.get.mockResolvedValue({ data: { success: true, data: [{ estado: 'vendido' }] } })
       
-      globalThis.Swal.fire.mockResolvedValue({ isConfirmed: false })
+      mockSwalFire.mockResolvedValue({ isConfirmed: false })
       
       const module = await import('./gestionar_animales.js')
       const result = await module.darBajaAnimal(1)
@@ -1609,7 +1737,7 @@ describe('gestionar_animales.js', () => {
         return mocks[id] || null
       })
       
-      globalThis.Swal.fire.mockResolvedValue({
+      mockSwalFire.mockResolvedValue({
         isConfirmed: true,
         value: { valid: false }
       })
@@ -1707,7 +1835,7 @@ describe('gestionar_animales.js', () => {
     it('should handle user cancellation', async () => {
       mockApiGet.mockResolvedValue({ data: { success: true, data: [{ estado: 'saludable' }] } })
       
-      globalThis.Swal.fire.mockResolvedValue({ isConfirmed: false })
+      mockSwalFire.mockResolvedValue({ isConfirmed: false })
       
       const module = await import('./gestionar_animales.js')
       const result = await module.reactivarAnimal(1)
@@ -1971,7 +2099,7 @@ describe('gestionar_animales.js', () => {
       const module = await import('./gestionar_animales.js')
       await module.verPerfilAnimal(999)
       
-      expect(globalThis.Swal.fire).not.toHaveBeenCalled()
+      expect(mockSwalFire).not.toHaveBeenCalled()
     })
 
     it('should handle fetch error with local data', async () => {
@@ -1989,7 +2117,7 @@ describe('gestionar_animales.js', () => {
       console.error = vi.fn()
       const Swal = (await import('sweetalert2')).default
       Swal.fire.mockClear()
-      globalThis.Swal.fire.mockClear()
+      mockSwalFire.mockClear()
       
       const module = await import('./gestionar_animales.js')
       await module.verPerfilAnimal(1)
@@ -2035,7 +2163,7 @@ describe('gestionar_animales.js', () => {
       console.error = vi.fn()
       const Swal = (await import('sweetalert2')).default
       Swal.fire.mockClear()
-      globalThis.Swal.fire.mockClear()
+      mockSwalFire.mockClear()
       
       const module = await import('./gestionar_animales.js')
       await module.verPerfilAnimal(1)

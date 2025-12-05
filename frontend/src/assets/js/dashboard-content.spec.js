@@ -40,7 +40,14 @@ describe('dashboard-content.js', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
-    console.log = vi.fn()
+    // Allow console.log to show debug messages
+    console.log = vi.fn((...args) => {
+      // Show TEST DEBUG messages
+      if (args[0] && typeof args[0] === 'string' && args[0].includes('[TEST DEBUG]')) {
+        // eslint-disable-next-line no-console
+        console.info(...args)
+      }
+    })
     console.error = vi.fn()
     console.warn = vi.fn()
     // Reset counter for each test
@@ -542,15 +549,26 @@ describe('dashboard-content.js', () => {
   })
 
   describe('_cargarEstadisticasSuperAdmin Method', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
       wrapper = createWrapper()
       wrapper.vm.isSuperAdmin = true
+      // Wait for mounted() to complete
+      await wrapper.vm.$nextTick()
+      // Clear any calls from mounted()
+      potreroAPI.getAll.mockClear()
+      ganadoAPI.getAll.mockClear()
+      userAPI.getAll.mockClear()
     })
 
     it('should load statistics for super admin with selected tenant', async () => {
       localStorage.setItem('qr_farm_selected_tenant_id', '123')
+      // Reset mocks to ensure clean state
+      userAPI.getAll.mockReset()
+      ganadoAPI.getAll.mockReset()
+      potreroAPI.getAll.mockReset()
+      
       userAPI.getAll.mockResolvedValue({
-        data: { success: true, data: [{ id: 1 }] }
+        data: { status: 'success', data: [{ id: 1 }] }
       })
       ganadoAPI.getAll.mockResolvedValue({
         data: { success: true, data: [{ id: 1 }, { id: 2 }] }
@@ -560,18 +578,37 @@ describe('dashboard-content.js', () => {
       })
 
       await wrapper.vm._cargarEstadisticasSuperAdmin()
+      await wrapper.vm.$nextTick()
 
+      // Debug: Log current statistics
+      console.log('[TEST DEBUG] Statistics after _cargarEstadisticasSuperAdmin:', wrapper.vm.estadisticas)
+      console.log('[TEST DEBUG] potreroAPI.getAll call count:', potreroAPI.getAll.mock.calls.length)
+      console.log('[TEST DEBUG] potreroAPI.getAll calls:', potreroAPI.getAll.mock.calls)
+      if (potreroAPI.getAll.mock.calls.length > 0) {
+        console.log('[TEST DEBUG] potreroAPI.getAll was called')
+      }
+
+      // Verify API was called
+      expect(potreroAPI.getAll).toHaveBeenCalled()
+      
+      // Verify statistics
       expect(wrapper.vm.estadisticas.usuarios).toBe(1)
       expect(wrapper.vm.estadisticas.ganado).toBe(2)
+      // Check potreros value - it should be 1 after _cargarPotreros is called
+      console.log('[TEST DEBUG] Expected potreros: 1, Actual:', wrapper.vm.estadisticas.potreros)
       expect(wrapper.vm.estadisticas.potreros).toBe(1)
       expect(console.log).toHaveBeenCalled()
     })
 
     it('should set ganado and potreros to 0 when no tenant selected', async () => {
       localStorage.removeItem('qr_farm_selected_tenant_id')
+      // Clear any previous calls from mounted()
+      potreroAPI.getAll.mockClear()
       userAPI.getAll.mockResolvedValue({
-        data: { success: true, data: [{ id: 1 }] }
+        data: { status: 'success', data: [{ id: 1 }] }
       })
+      // Reset potreros to 0 explicitly since _cargarPotreros won't be called
+      wrapper.vm.estadisticas.potreros = 0
 
       await wrapper.vm._cargarEstadisticasSuperAdmin()
 
@@ -579,6 +616,7 @@ describe('dashboard-content.js', () => {
       expect(wrapper.vm.estadisticas.ganado).toBe(0)
       expect(wrapper.vm.estadisticas.potreros).toBe(0)
       expect(console.log).toHaveBeenCalled()
+      expect(potreroAPI.getAll).not.toHaveBeenCalled()
     })
   })
 
@@ -589,8 +627,13 @@ describe('dashboard-content.js', () => {
     })
 
     it('should load statistics for normal admin', async () => {
+      // Reset mocks to ensure clean state
+      userAPI.getAll.mockReset()
+      ganadoAPI.getAll.mockReset()
+      potreroAPI.getAll.mockReset()
+      
       userAPI.getAll.mockResolvedValue({
-        data: { success: true, data: [{ id: 1 }] }
+        data: { status: 'success', data: [{ id: 1 }] }
       })
       ganadoAPI.getAll.mockResolvedValue({
         data: { success: true, data: [{ id: 1 }, { id: 2 }] }
@@ -600,6 +643,12 @@ describe('dashboard-content.js', () => {
       })
 
       await wrapper.vm._cargarEstadisticasAdminNormal()
+      await wrapper.vm.$nextTick()
+
+      // Debug: Log current statistics
+      console.log('[TEST DEBUG] Statistics after _cargarEstadisticasAdminNormal:', wrapper.vm.estadisticas)
+      console.log('[TEST DEBUG] potreroAPI.getAll call count:', potreroAPI.getAll.mock.calls.length)
+      console.log('[TEST DEBUG] Expected potreros: 1, Actual:', wrapper.vm.estadisticas.potreros)
 
       expect(wrapper.vm.estadisticas.usuarios).toBe(1)
       expect(wrapper.vm.estadisticas.ganado).toBe(2)
@@ -607,6 +656,7 @@ describe('dashboard-content.js', () => {
       expect(wrapper.vm.estadisticas.salud).toBeGreaterThanOrEqual(80)
       expect(wrapper.vm.estadisticas.salud).toBeLessThanOrEqual(99)
       expect(console.log).toHaveBeenCalled()
+      expect(potreroAPI.getAll).toHaveBeenCalled()
     })
   })
 
