@@ -58,7 +58,7 @@ describe('EscanearQRAdmin', () => {
         }
       })
       const qrScanner = wrapper.findComponent(QrScanner)
-      expect(qrScanner.props('resourceEndpoint')).toBe('/ganado/{id}')
+      expect(qrScanner.props('resourceEndpoint')).toBe('/animales/qr/{id}')
     })
   })
 

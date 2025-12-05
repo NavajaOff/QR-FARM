@@ -330,6 +330,11 @@ export const fetchQrResource = async (params: QrResourceRequest): Promise<Ganado
         throw createError('La consulta fue cancelada.', 'QrRequestCancelledError');
       }
 
+      // Si el error es de parseGanadoResponse (QrInvalidResponseError), relanzarlo directamente
+      if (error instanceof Error && error.name === 'QrInvalidResponseError') {
+        throw error;
+      }
+
       // Si es 404, intentar con el endpoint de ID (solo si el candidato es numérico)
       if (isAxiosError(error) && error.response?.status === 404) {
         console.log('[QR-SERVICE] No encontrado por código QR, intentando por ID:', candidate);
@@ -344,6 +349,10 @@ export const fetchQrResource = async (params: QrResourceRequest): Promise<Ganado
           } catch (idError) {
             if (axios.isCancel(idError)) {
               throw createError('La consulta fue cancelada.', 'QrRequestCancelledError');
+            }
+            // Si el error es de parseGanadoResponse (QrInvalidResponseError), relanzarlo directamente
+            if (idError instanceof Error && idError.name === 'QrInvalidResponseError') {
+              throw idError;
             }
             if (isAxiosError(idError) && idError.response?.status === 404) {
               console.log('[QR-SERVICE] No encontrado por ID tampoco');

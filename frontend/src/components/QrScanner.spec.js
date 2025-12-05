@@ -729,7 +729,7 @@ describe('QrScanner.vue', () => {
       
       wrapper.vm.handleScanFailure('Scan failed')
       
-      expect(console.debug).toHaveBeenCalledWith('Intento fallido de lectura:', 'Scan failed')
+      expect(console.debug).toHaveBeenCalledWith('[QR-SCANNER] Intento fallido de lectura:', 'Scan failed')
     })
 
     it('should handle window undefined error', async () => {
