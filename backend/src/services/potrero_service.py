@@ -427,7 +427,8 @@ class PotreroService:
 
     @staticmethod
     def _registrar_actividad_si_existe(potrero_id: int, data: Dict[str, Any], campo: str, 
-                                       tipo_evento: str, observaciones: str, tenant_id: int) -> None:
+                                       tipo_evento: str, observaciones: Optional[str], 
+                                       tenant_id: Optional[int]) -> None:
         """Registra una actividad del potrero si existe en los datos."""
         if not data.get(campo):
             return
@@ -443,18 +444,22 @@ class PotreroService:
             print(f"Error registrando {campo}: {e}")
 
     @staticmethod
-    def _registrar_actividades_potrero_create(potrero_id: int, data: Dict[str, Any], tenant_id: int) -> None:
+    def _registrar_actividades_potrero_create(potrero_id: int, data: Dict[str, Any], 
+                                               tenant_id: Optional[int]) -> None:
         """Registra todas las actividades del potrero al crearlo."""
         from datetime import datetime
         
+        observaciones_none: Optional[str] = None
+        observaciones_programada: Optional[str] = 'Programada'
+        
         PotreroService._registrar_actividad_si_existe(
-            potrero_id, data, 'fecha_ultimo_uso', 'uso', None, tenant_id
+            potrero_id, data, 'fecha_ultimo_uso', 'uso', observaciones_none, tenant_id
         )
         PotreroService._registrar_actividad_si_existe(
-            potrero_id, data, 'ultima_limpieza', 'limpieza', None, tenant_id
+            potrero_id, data, 'ultima_limpieza', 'limpieza', observaciones_none, tenant_id
         )
         PotreroService._registrar_actividad_si_existe(
-            potrero_id, data, 'proxima_limpieza', 'limpieza', 'Programada', tenant_id
+            potrero_id, data, 'proxima_limpieza', 'limpieza', observaciones_programada, tenant_id
         )
         
         # Registrar fecha_ultimo_uso automáticamente si no se proporcionó
@@ -489,8 +494,8 @@ class PotreroService:
     
     @staticmethod
     def _procesar_actividad_actualizacion(potrero_id: int, actividades_data: Dict[str, Any], 
-                                          campo: str, tipo_evento: str, observaciones: str, 
-                                          tenant_id: int) -> None:
+                                          campo: str, tipo_evento: str, observaciones: Optional[str], 
+                                          tenant_id: Optional[int]) -> None:
         """Procesa una actividad específica durante la actualización."""
         if campo not in actividades_data or not actividades_data[campo]:
             return
@@ -508,18 +513,22 @@ class PotreroService:
     @staticmethod
     def _actualizar_actividades_potrero(potrero_id: int, actividades_data: Dict[str, Any]) -> None:
         """Actualiza las actividades de un potrero."""
-        tenant_id = PotreroService._obtener_tenant_id()
-        if tenant_id is None:
+        tenant_id_raw = PotreroService._obtener_tenant_id()
+        if tenant_id_raw is None:
             raise ValueError("Tenant requerido para actualizar actividades")
         
+        tenant_id: Optional[int] = tenant_id_raw
+        observaciones_none: Optional[str] = None
+        observaciones_programada: Optional[str] = 'Programada'
+        
         PotreroService._procesar_actividad_actualizacion(
-            potrero_id, actividades_data, 'fecha_ultimo_uso', 'uso', None, tenant_id
+            potrero_id, actividades_data, 'fecha_ultimo_uso', 'uso', observaciones_none, tenant_id
         )
         PotreroService._procesar_actividad_actualizacion(
-            potrero_id, actividades_data, 'ultima_limpieza', 'limpieza', None, tenant_id
+            potrero_id, actividades_data, 'ultima_limpieza', 'limpieza', observaciones_none, tenant_id
         )
         PotreroService._procesar_actividad_actualizacion(
-            potrero_id, actividades_data, 'proxima_limpieza', 'limpieza', 'Programada', tenant_id
+            potrero_id, actividades_data, 'proxima_limpieza', 'limpieza', observaciones_programada, tenant_id
         )
 
     @staticmethod
