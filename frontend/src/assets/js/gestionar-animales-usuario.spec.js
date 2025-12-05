@@ -1,4 +1,6 @@
 import { beforeEach, vi, describe, it, expect } from 'vitest'
+import { mount } from '@vue/test-utils'
+import { defineComponent } from 'vue'
 import { useGestionarAnimalesUsuario } from './gestionar-animales-usuario.js'
 import { useGanado } from '../../composables/useGanado.js'
 import authService from '../../services/authService.js'
@@ -58,108 +60,149 @@ describe('useGestionarAnimalesUsuario', () => {
     expect(result.filtroEstado.value).toBe('')
   })
 
-  it('should call cargarGanado on mount when authenticated', () => {
+  it('should call cargarGanado on mount when authenticated', async () => {
     authService.isAuthenticated.mockReturnValue(true)
     authService.isUser.mockReturnValue(true)
 
-    const result = useGestionarAnimalesUsuario()
+    const TestComponent = defineComponent({
+      setup() {
+        return useGestionarAnimalesUsuario()
+      },
+      template: '<div>Test</div>'
+    })
+
+    mount(TestComponent)
     
-    // onMounted hook is only called when component mounts, not when composable is called directly
-    // We verify the composable structure and that cargarGanado exists
-    expect(result).toBeDefined()
-    expect(result.cargarGanado).toBeDefined()
-    expect(typeof result.cargarGanado).toBe('function')
-    // Note: mockCargarGanado won't be called in this test context
+    // Wait for onMounted to execute
+    await new Promise(resolve => setTimeout(resolve, 0))
+    
+    expect(mockCargarGanado).toHaveBeenCalled()
   })
 
-  it('should redirect to login when not authenticated', () => {
+  it('should redirect to login when not authenticated', async () => {
     authService.isAuthenticated.mockReturnValue(false)
+    authService.isUser.mockReturnValue(true)
     
     // Mock location object properly
+    const mockLocation = { href: '' }
     Object.defineProperty(globalThis, 'location', {
-      value: { href: '' },
-      writable: true
+      value: mockLocation,
+      writable: true,
+      configurable: true
     })
 
-    const result = useGestionarAnimalesUsuario()
+    const TestComponent = defineComponent({
+      setup() {
+        return useGestionarAnimalesUsuario()
+      },
+      template: '<div>Test</div>'
+    })
 
-    // onMounted hook doesn't execute when composable is called directly in test
-    // We verify the composable structure instead
-    expect(result).toBeDefined()
+    mount(TestComponent)
+    
+    // Wait for onMounted to execute
+    await new Promise(resolve => setTimeout(resolve, 0))
+    
+    expect(mockLocation.href).toBe('/login')
     expect(mockCargarGanado).not.toHaveBeenCalled()
   })
 
-  it('should redirect to login when not user', () => {
+  it('should redirect to login when not user', async () => {
     authService.isAuthenticated.mockReturnValue(true)
     authService.isUser.mockReturnValue(false)
 
+    const mockLocation = { href: '' }
     Object.defineProperty(globalThis, 'location', {
-      value: { href: '' },
-      writable: true
+      value: mockLocation,
+      writable: true,
+      configurable: true
     })
 
-    const result = useGestionarAnimalesUsuario()
+    const TestComponent = defineComponent({
+      setup() {
+        return useGestionarAnimalesUsuario()
+      },
+      template: '<div>Test</div>'
+    })
 
-    // onMounted hook only executes when component mounts, not when composable is called
-    // We verify the composable structure instead
-    expect(result).toBeDefined()
+    mount(TestComponent)
+    
+    // Wait for onMounted to execute
+    await new Promise(resolve => setTimeout(resolve, 0))
+    
+    expect(mockLocation.href).toBe('/login')
     expect(mockCargarGanado).not.toHaveBeenCalled()
-    // Note: location.href is set in onMounted, which doesn't execute in test context
   })
 
-  it('should redirect to login and not load data when not authenticated in onMounted', () => {
+  it('should redirect to login and not load data when not authenticated in onMounted', async () => {
     authService.isAuthenticated.mockReturnValue(false)
     authService.isUser.mockReturnValue(true)
 
+    const mockLocation = { href: '' }
     Object.defineProperty(globalThis, 'location', {
-      value: { href: '' },
-      writable: true
+      value: mockLocation,
+      writable: true,
+      configurable: true
     })
 
-    // Simulate onMounted execution (lines 80-84)
-    if (!authService.isAuthenticated() || !authService.isUser()) {
-      globalThis.location.href = '/login'
-      // return would prevent cargarGanado from being called
-    } else {
-      mockCargarGanado()
-    }
+    const TestComponent = defineComponent({
+      setup() {
+        return useGestionarAnimalesUsuario()
+      },
+      template: '<div>Test</div>'
+    })
 
-    expect(globalThis.location.href).toBe('/login')
+    mount(TestComponent)
+    
+    // Wait for onMounted to execute
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(mockLocation.href).toBe('/login')
     expect(mockCargarGanado).not.toHaveBeenCalled()
   })
 
-  it('should redirect to login and not load data when not user in onMounted', () => {
+  it('should redirect to login and not load data when not user in onMounted', async () => {
     authService.isAuthenticated.mockReturnValue(true)
     authService.isUser.mockReturnValue(false)
 
+    const mockLocation = { href: '' }
     Object.defineProperty(globalThis, 'location', {
-      value: { href: '' },
-      writable: true
+      value: mockLocation,
+      writable: true,
+      configurable: true
     })
 
-    // Simulate onMounted execution (lines 80-84)
-    if (!authService.isAuthenticated() || !authService.isUser()) {
-      globalThis.location.href = '/login'
-      // return would prevent cargarGanado from being called
-    } else {
-      mockCargarGanado()
-    }
+    const TestComponent = defineComponent({
+      setup() {
+        return useGestionarAnimalesUsuario()
+      },
+      template: '<div>Test</div>'
+    })
 
-    expect(globalThis.location.href).toBe('/login')
+    mount(TestComponent)
+    
+    // Wait for onMounted to execute
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(mockLocation.href).toBe('/login')
     expect(mockCargarGanado).not.toHaveBeenCalled()
   })
 
-  it('should load data when authenticated and user in onMounted', () => {
+  it('should load data when authenticated and user in onMounted', async () => {
     authService.isAuthenticated.mockReturnValue(true)
     authService.isUser.mockReturnValue(true)
 
-    // Simulate onMounted execution (lines 80-84)
-    if (!authService.isAuthenticated() || !authService.isUser()) {
-      globalThis.location.href = '/login'
-      // return would prevent cargarGanado from being called
-    } else {
-      mockCargarGanado()
-    }
+    const TestComponent = defineComponent({
+      setup() {
+        return useGestionarAnimalesUsuario()
+      },
+      template: '<div>Test</div>'
+    })
+
+    mount(TestComponent)
+    
+    // Wait for onMounted to execute
+    await new Promise(resolve => setTimeout(resolve, 0))
 
     expect(mockCargarGanado).toHaveBeenCalled()
   })
