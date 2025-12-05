@@ -263,3 +263,114 @@ class TestPotreroService:
 
             with pytest.raises(ValueError):
                 PotreroService.verificar_capacidad_disponible(1, 5)
+
+    @patch('src.services.potrero_service.db')
+    @patch('src.services.potrero_service.PotreroService._obtener_tenant_id')
+    def test_registrar_actividad_potrero_success(self, mock_tenant, mock_db):
+        """Test _registrar_actividad_potrero exitoso."""
+        from datetime import datetime
+        mock_tenant.return_value = 1
+        mock_cursor = Mock()
+        mock_db.get_cursor.return_value.__enter__.return_value = mock_cursor
+        
+        PotreroService._registrar_actividad_potrero(
+            1, 'uso', datetime(2024, 1, 1), 'Test', 1
+        )
+        
+        assert mock_cursor.execute.called
+
+    @patch('src.services.potrero_service.PotreroService._obtener_tenant_id')
+    def test_registrar_actividad_potrero_no_tenant(self, mock_tenant):
+        """Test _registrar_actividad_potrero sin tenant."""
+        from datetime import datetime
+        mock_tenant.return_value = None
+        
+        with pytest.raises(ValueError, match="Tenant requerido"):
+            PotreroService._registrar_actividad_potrero(
+                1, 'uso', datetime(2024, 1, 1), 'Test', None
+            )
+
+    @patch('src.services.potrero_service.PotreroService._registrar_actividad_potrero')
+    @patch('src.services.potrero_service.PotreroService._obtener_tenant_id')
+    def test_registrar_actividad_si_existe_with_data(self, mock_tenant, mock_registrar):
+        """Test _registrar_actividad_si_existe con datos."""
+        from datetime import datetime
+        mock_tenant.return_value = 1
+        
+        data = {'fecha_ultimo_uso': '2024-01-01T10:00:00Z'}
+        PotreroService._registrar_actividad_si_existe(
+            1, data, 'fecha_ultimo_uso', 'uso', None, 1
+        )
+        
+        assert mock_registrar.called
+
+    @patch('src.services.potrero_service.PotreroService._registrar_actividad_potrero')
+    def test_registrar_actividad_si_existe_no_data(self, mock_registrar):
+        """Test _registrar_actividad_si_existe sin datos."""
+        data = {}
+        PotreroService._registrar_actividad_si_existe(
+            1, data, 'fecha_ultimo_uso', 'uso', None, 1
+        )
+        
+        assert not mock_registrar.called
+
+    @patch('src.services.potrero_service.PotreroService._registrar_actividad_potrero')
+    @patch('src.services.potrero_service.PotreroService._obtener_tenant_id')
+    def test_registrar_actividades_potrero_create(self, mock_tenant, mock_registrar):
+        """Test _registrar_actividades_potrero_create."""
+        from datetime import datetime
+        mock_tenant.return_value = 1
+        
+        data = {
+            'fecha_ultimo_uso': '2024-01-01T10:00:00Z',
+            'ultima_limpieza': '2024-01-02T10:00:00Z',
+            'proxima_limpieza': '2024-01-03T10:00:00Z'
+        }
+        PotreroService._registrar_actividades_potrero_create(1, data, 1)
+        
+        assert mock_registrar.call_count == 3
+
+    @patch('src.services.potrero_service.PotreroService._registrar_actividad_potrero')
+    @patch('src.services.potrero_service.PotreroService._obtener_tenant_id')
+    def test_registrar_actividades_potrero_create_auto_fecha(self, mock_tenant, mock_registrar):
+        """Test _registrar_actividades_potrero_create con fecha automática."""
+        from datetime import datetime
+        mock_tenant.return_value = 1
+        
+        data = {}  # Sin fecha_ultimo_uso
+        PotreroService._registrar_actividades_potrero_create(1, data, 1)
+        
+        # Debe registrar fecha_ultimo_uso automáticamente
+        assert mock_registrar.called
+
+    @patch('src.services.potrero_service.PotreroService._registrar_actividad_potrero')
+    @patch('src.services.potrero_service.PotreroService._obtener_tenant_id')
+    def test_procesar_actividad_actualizacion(self, mock_tenant, mock_registrar):
+        """Test _procesar_actividad_actualizacion."""
+        from datetime import datetime
+        mock_tenant.return_value = 1
+        
+        actividades_data = {'fecha_ultimo_uso': '2024-01-01T10:00:00Z'}
+        PotreroService._procesar_actividad_actualizacion(
+            1, actividades_data, 'fecha_ultimo_uso', 'uso', None, 1
+        )
+        
+        assert mock_registrar.called
+
+    @patch('src.services.potrero_service.PotreroService._registrar_actividad_potrero')
+    def test_procesar_actividad_actualizacion_no_data(self, mock_registrar):
+        """Test _procesar_actividad_actualizacion sin datos."""
+        actividades_data = {}
+        PotreroService._procesar_actividad_actualizacion(
+            1, actividades_data, 'fecha_ultimo_uso', 'uso', None, 1
+        )
+        
+        assert not mock_registrar.called
+
+    @patch('src.services.potrero_service.PotreroService._obtener_tenant_id')
+    def test_actualizar_actividades_potrero_no_tenant(self, mock_tenant):
+        """Test _actualizar_actividades_potrero sin tenant."""
+        mock_tenant.return_value = None
+        
+        with pytest.raises(ValueError, match="Tenant requerido"):
+            PotreroService._actualizar_actividades_potrero(1, {})
