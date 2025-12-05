@@ -278,7 +278,15 @@ const parseGanadoResponse = (input: unknown): GanadoResource => {
 };
 
 export const fetchQrResource = async (params: QrResourceRequest): Promise<GanadoResource> => {
-  const candidates = [params.resourceId, ...(params.alternatives ?? [])]
+  console.log('[QR-SERVICE] fetchQrResource llamado con:', {
+    endpoint: params.endpoint,
+    resourceId: params.resourceId,
+    alternatives: params.alternatives
+  });
+  
+  // Priorizar códigos QR sobre IDs numéricos
+  // Primero los alternativos (códigos), luego el resourceId
+  const allCandidates = [...(params.alternatives ?? []), params.resourceId]
     .map((candidate) => {
       if (typeof candidate === 'number') {
         return String(candidate);
@@ -291,7 +299,7 @@ export const fetchQrResource = async (params: QrResourceRequest): Promise<Ganado
     .filter((value): value is string => value.length > 0);
 
   const seen = new Set<string>();
-  const queue = candidates.filter(candidate => {
+  const queue = allCandidates.filter(candidate => {
     const normalized = candidate.trim();
     if (seen.has(normalized)) return false;
     seen.add(normalized);
@@ -304,22 +312,63 @@ export const fetchQrResource = async (params: QrResourceRequest): Promise<Ganado
 
   let lastNotFoundError: Error | null = null;
 
+  // Usar el endpoint tal como está configurado (ya debería ser /animales/qr/{id})
+  const qrEndpoint = params.endpoint;
+  // Endpoint para buscar por ID numérico directamente (sin /qr/)
+  const idEndpoint = params.endpoint.replace('/qr/{id}', '/{id}').replace('/qr/', '/');
+
   for (const candidate of queue) {
-    const url = buildUrl(params.endpoint, candidate);
+    // Primero intentar buscar por código QR
+    const qrUrl = buildUrl(qrEndpoint, candidate);
+    console.log('[QR-SERVICE] Intentando buscar por código QR:', qrUrl, 'candidate:', candidate, 'endpoint:', qrEndpoint);
     try {
-      const response = await api.get(url, { signal: params.signal });
+      const response = await api.get(qrUrl, { signal: params.signal });
+      console.log('[QR-SERVICE] Respuesta exitosa por código QR:', response.data);
       return parseGanadoResponse(response.data);
     } catch (error) {
       if (axios.isCancel(error)) {
         throw createError('La consulta fue cancelada.', 'QrRequestCancelledError');
       }
 
-      if (isAxiosError(error) && error.response?.status === 404) {
-        lastNotFoundError = mapAxiosError(error);
-        continue;
+      // Si el error es de parseGanadoResponse (QrInvalidResponseError), relanzarlo directamente
+      if (error instanceof Error && error.name === 'QrInvalidResponseError') {
+        throw error;
       }
 
-      throw mapAxiosError(error);
+      // Si es 404, intentar con el endpoint de ID (solo si el candidato es numérico)
+      if (isAxiosError(error) && error.response?.status === 404) {
+        console.log('[QR-SERVICE] No encontrado por código QR, intentando por ID:', candidate);
+        // Si el candidato es numérico, intentar también con el endpoint de ID
+        if (/^\d+$/.test(candidate)) {
+          try {
+            const idUrl = buildUrl(idEndpoint, candidate);
+            console.log('[QR-SERVICE] Intentando buscar por ID:', idUrl);
+            const response = await api.get(idUrl, { signal: params.signal });
+            console.log('[QR-SERVICE] Respuesta exitosa por ID:', response.data);
+            return parseGanadoResponse(response.data);
+          } catch (idError) {
+            if (axios.isCancel(idError)) {
+              throw createError('La consulta fue cancelada.', 'QrRequestCancelledError');
+            }
+            // Si el error es de parseGanadoResponse (QrInvalidResponseError), relanzarlo directamente
+            if (idError instanceof Error && idError.name === 'QrInvalidResponseError') {
+              throw idError;
+            }
+            if (isAxiosError(idError) && idError.response?.status === 404) {
+              console.log('[QR-SERVICE] No encontrado por ID tampoco');
+              lastNotFoundError = mapAxiosError(idError);
+              continue;
+            }
+            throw mapAxiosError(idError);
+          }
+        } else {
+          lastNotFoundError = mapAxiosError(error);
+          continue;
+        }
+      } else {
+        console.error('[QR-SERVICE] Error al buscar por código QR:', error);
+        throw mapAxiosError(error);
+      }
     }
   }
 

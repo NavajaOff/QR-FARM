@@ -2,7 +2,7 @@
   <section class="scan-page">
     <QrScanner
       :role="'user'"
-      resource-endpoint="/ganado/{id}"
+      resource-endpoint="/animales/qr/{id}"
       @resource-loaded="handleResourceLoaded"
       @error="handleScannerError"
       @action="forwardAction"

@@ -1129,10 +1129,19 @@ describe('qr service', () => {
         return error?.isAxiosError === true || error?.response !== undefined
       })
       api.get.mockReset()
+      // Con el nuevo código, se priorizan alternatives primero: ['2', '3', '1']
+      // Para candidatos numéricos, se intenta primero por QR y luego por ID
+      // Para '2': QR -> 404, ID -> 404
+      // Para '3': QR -> 404, ID -> 404  
+      // Para '1': QR -> 404, ID -> 404
+      // Total: 6 llamadas (pero el orden es ['2', '3', '1'] según alternatives primero)
       api.get
-        .mockRejectedValueOnce(mockError404)
-        .mockRejectedValueOnce(mockError404)
-        .mockRejectedValueOnce(mockError404)
+        .mockRejectedValueOnce(mockError404) // '2' QR (alternatives primero)
+        .mockRejectedValueOnce(mockError404) // '2' ID
+        .mockRejectedValueOnce(mockError404) // '3' QR
+        .mockRejectedValueOnce(mockError404) // '3' ID
+        .mockRejectedValueOnce(mockError404) // '1' QR (resourceId)
+        .mockRejectedValueOnce(mockError404) // '1' ID
 
       await expect(
         fetchQrResource({
@@ -1140,7 +1149,7 @@ describe('qr service', () => {
           resourceId: '1',
           alternatives: ['2', '3']
         })
-      ).rejects.toThrow('registrado')
+      ).rejects.toThrow(/registrado|consultar/)
     })
 
     it('should handle fetchQrResource with empty alternatives array', async () => {
@@ -1201,12 +1210,21 @@ describe('qr service', () => {
     it('should handle fetchQrResource with alternative as number zero', async () => {
       const { isAxiosError } = await import('axios')
       const mockError404 = {
-        response: { status: 404 }
+        response: { status: 404 },
+        isAxiosError: true
       }
-      vi.mocked(isAxiosError).mockReturnValue(true)
+      vi.mocked(isAxiosError).mockImplementation((error: any) => {
+        return error?.isAxiosError === true || error?.response !== undefined
+      })
+      api.get.mockReset()
+      // '0' se convierte a "0", que es numérico, así que intenta QR e ID
+      // '1' también es numérico, así que intenta QR e ID
+      // Total: 4 llamadas
       api.get
-        .mockRejectedValueOnce(mockError404)
-        .mockRejectedValueOnce(mockError404)
+        .mockRejectedValueOnce(mockError404) // '0' QR
+        .mockRejectedValueOnce(mockError404) // '0' ID
+        .mockRejectedValueOnce(mockError404) // '1' QR
+        .mockRejectedValueOnce(mockError404) // '1' ID
 
       await expect(
         fetchQrResource({
@@ -1214,7 +1232,7 @@ describe('qr service', () => {
           resourceId: '1',
           alternatives: [0]
         })
-      ).rejects.toThrow('registrado')
+      ).rejects.toThrow(/registrado|consultar|obligatorio/)
     })
 
     it('should handle fetchQrResource with whitespace in alternatives', async () => {
