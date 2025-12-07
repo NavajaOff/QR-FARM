@@ -14,21 +14,21 @@ class EstadoPotrero(str, Enum):
 class PotreroData:
     """Container for Potrero initialization data."""
     id: Optional[int] = None
+    tenant_id: Optional[int] = None
     id_tipo_pasto: Optional[int] = None
+    responsable_persona_id: Optional[int] = None
+    id_estado_potrero: Optional[int] = None
     nombre: Optional[str] = None
     capacidad: Optional[int] = None
+    ocupacion: int = 0
     hectareas: Optional[float] = None
     area: Optional[Decimal] = None
     descripcion: Optional[str] = None
-    responsable_persona_id: Optional[int] = None
-    propietario_persona_id: Optional[int] = None
     # Nota: fecha_ultimo_uso, ultima_limpieza y proxima_limpieza ahora se obtienen
-    # desde la tabla historial_potrero. Se mantienen aquí para compatibilidad.
+    # desde la tabla historial_potreros. Se mantienen aquí para compatibilidad.
     fecha_ultimo_uso: Optional[datetime] = None
     ultima_limpieza: Optional[datetime] = None
     proxima_limpieza: Optional[datetime] = None
-    ocupacion: int = 0
-    tenant_id: Optional[int] = None
 
 
 class Potrero:
@@ -36,39 +36,37 @@ class Potrero:
 
     def __init__(
         self,
-        datos: PotreroData,
-        estado: EstadoPotrero = EstadoPotrero.DISPONIBLE
+        datos: PotreroData
     ):
         """Initialize Potrero model with grouped data.
 
         Refactor: Constructor simplificado usando PotreroData.
         """
         self.id = datos.id
-        self.id_tipo_pasto = datos.id_tipo_pasto
-        self.nombre = datos.nombre
-        self.estado = estado if isinstance(estado, EstadoPotrero) else EstadoPotrero(estado)
-        self.capacidad = datos.capacidad
-        self.hectareas = datos.hectareas
-        self.ocupacion = datos.ocupacion
-        self.fecha_ultimo_uso = datos.fecha_ultimo_uso
-        self.responsable_persona_id = datos.responsable_persona_id
-        self.proxima_limpieza = datos.proxima_limpieza
-        self.area = datos.area
-        self.ultima_limpieza = datos.ultima_limpieza
-        self.descripcion = datos.descripcion
-        self.propietario_persona_id = datos.propietario_persona_id
         self.tenant_id = datos.tenant_id
+        self.id_tipo_pasto = datos.id_tipo_pasto
+        self.responsable_persona_id = datos.responsable_persona_id
+        self.id_estado_potrero = datos.id_estado_potrero
+        self.nombre = datos.nombre
+        self.capacidad = datos.capacidad
+        self.ocupacion = datos.ocupacion
+        self.hectareas = datos.hectareas
+        self.area = datos.area
+        self.descripcion = datos.descripcion
+        # Fechas se obtienen desde historial_potreros
+        self.fecha_ultimo_uso = datos.fecha_ultimo_uso
+        self.ultima_limpieza = datos.ultima_limpieza
+        self.proxima_limpieza = datos.proxima_limpieza
 
     @classmethod
     def from_params(
         cls,
         *,
-        estado: EstadoPotrero = EstadoPotrero.DISPONIBLE,
         **kwargs
     ) -> 'Potrero':
-        """Backward compatible constructor with explicit parameters."""
+        """Constructor with explicit parameters."""
         datos = PotreroData(**kwargs)
-        return cls(datos=datos, estado=estado)
+        return cls(datos=datos)
 
     @staticmethod
     def from_db_row(row: Dict[str, Any]) -> 'Potrero':
@@ -76,43 +74,39 @@ class Potrero:
         area_value = row.get('area')
         datos = PotreroData(
             id=row.get('id'),
+            tenant_id=row.get('tenant_id'),
             id_tipo_pasto=row.get('id_tipo_pasto'),
+            responsable_persona_id=row.get('responsable_persona_id'),
+            id_estado_potrero=row.get('id_estado_potrero'),
             nombre=row.get('nombre'),
             capacidad=row.get('capacidad'),
-            hectareas=row.get('hectareas'),
             ocupacion=row.get('ocupacion', 0),
-            fecha_ultimo_uso=row.get('fecha_ultimo_uso'),
-            responsable_persona_id=row.get('responsable_persona_id'),
-            proxima_limpieza=row.get('proxima_limpieza'),
+            hectareas=row.get('hectareas'),
             area=Decimal(str(area_value)) if area_value is not None else None,
-            ultima_limpieza=row.get('ultima_limpieza'),
             descripcion=row.get('descripcion'),
-            propietario_persona_id=row.get('propietario_persona_id'),
-            tenant_id=row.get('tenant_id')
+            fecha_ultimo_uso=row.get('fecha_ultimo_uso'),
+            ultima_limpieza=row.get('ultima_limpieza'),
+            proxima_limpieza=row.get('proxima_limpieza')
         )
-        return Potrero(
-            datos=datos,
-            estado=EstadoPotrero(row.get('estado', 'disponible'))
-        )
+        return Potrero(datos=datos)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert model to dictionary."""
         return {
             'id': self.id,
+            'tenant_id': self.tenant_id,
             'id_tipo_pasto': self.id_tipo_pasto,
-            'nombre': self.nombre,
-            'estado': self.estado.value,
-            'capacidad': self.capacidad,
-            'hectareas': self.hectareas,
-            'ocupacion': self.ocupacion,
-            'fecha_ultimo_uso': self.fecha_ultimo_uso.isoformat() if self.fecha_ultimo_uso else None,
             'responsable_persona_id': self.responsable_persona_id,
-            'proxima_limpieza': self.proxima_limpieza.isoformat() if self.proxima_limpieza else None,
+            'id_estado_potrero': self.id_estado_potrero,
+            'nombre': self.nombre,
+            'capacidad': self.capacidad,
+            'ocupacion': self.ocupacion,
+            'hectareas': self.hectareas,
             'area': float(self.area) if self.area else None,
-            'ultima_limpieza': self.ultima_limpieza.isoformat() if self.ultima_limpieza else None,
             'descripcion': self.descripcion,
-            'propietario_persona_id': self.propietario_persona_id,
-            'tenant_id': self.tenant_id
+            'fecha_ultimo_uso': self.fecha_ultimo_uso.isoformat() if self.fecha_ultimo_uso else None,
+            'ultima_limpieza': self.ultima_limpieza.isoformat() if self.ultima_limpieza else None,
+            'proxima_limpieza': self.proxima_limpieza.isoformat() if self.proxima_limpieza else None
         }
 
     @staticmethod
@@ -121,21 +115,18 @@ class Potrero:
         area_value = data.get('area')
         datos = PotreroData(
             id=data.get('id'),
-            nombre=data.get('nombre'),
+            tenant_id=data.get('tenant_id'),
             id_tipo_pasto=data.get('id_tipo_pasto'),
-            capacidad=data.get('capacidad'),
-            hectareas=data.get('hectareas'),
-            ocupacion=data.get('ocupacion', 0),
-            fecha_ultimo_uso=data.get('fecha_ultimo_uso'),
             responsable_persona_id=data.get('responsable_persona_id'),
-            proxima_limpieza=data.get('proxima_limpieza'),
+            id_estado_potrero=data.get('id_estado_potrero'),
+            nombre=data.get('nombre'),
+            capacidad=data.get('capacidad'),
+            ocupacion=data.get('ocupacion', 0),
+            hectareas=data.get('hectareas'),
             area=Decimal(str(area_value)) if area_value is not None else None,
-            ultima_limpieza=data.get('ultima_limpieza'),
             descripcion=data.get('descripcion'),
-            propietario_persona_id=data.get('propietario_persona_id'),
-            tenant_id=data.get('tenant_id')
+            fecha_ultimo_uso=data.get('fecha_ultimo_uso'),
+            ultima_limpieza=data.get('ultima_limpieza'),
+            proxima_limpieza=data.get('proxima_limpieza')
         )
-        return Potrero(
-            datos=datos,
-            estado=EstadoPotrero(data.get('estado', 'disponible'))
-        )
+        return Potrero(datos=datos)

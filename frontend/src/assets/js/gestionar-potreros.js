@@ -36,7 +36,7 @@ const mapPotreroFromApi = (potrero) => {
   const mapped = {
     id: potrero.id,
     nombre: potrero.nombre,
-    estado: potrero.estado,
+    estado: potrero.estado || potrero.estado_nombre, // Usar estado o estado_nombre
     capacidad: potrero.capacidad,
     ocupacion: potrero.ocupacion,
     hectareas: potrero.hectareas,
@@ -46,7 +46,10 @@ const mapPotreroFromApi = (potrero) => {
     proximaLimpieza: null,
     responsable: obtenerResponsableNombre(potrero.responsable_persona_id),
     descripcion: potrero.descripcion || '',
-    pasto: 'No definido'
+    pasto: 'No definido',
+    id_tipo_pasto: potrero.id_tipo_pasto,
+    responsable_persona_id: potrero.responsable_persona_id,
+    id_estado_potrero: potrero.id_estado_potrero
   };
 
   if (potrero.fecha_ultimo_uso) {
@@ -249,9 +252,14 @@ export const crearPotrero = () => {
       const area = document.getElementById('area').value;
       const descripcion = document.getElementById('descripcion').value;
 
+      // Obtener tenant_id seleccionado para super_admin
+      const selectedTenantId = localStorage.getItem('qr_farm_selected_tenant_id');
+      const tenant_id = selectedTenantId ? Number.parseInt(selectedTenantId, 10) : null;
+
       return {
         nombre: null, // El backend generará el nombre automáticamente
-        estado: 'disponible', // Estado por defecto al crear
+        tenant_id: tenant_id, // Incluir tenant_id para super_admin
+        id_estado_potrero: 1, // Estado por defecto al crear (disponible = 1)
         capacidad: capacidad ? Number.parseInt(capacidad, 10) : null,
         hectareas: hectareas ? Number.parseFloat(hectareas) : null,
         id_tipo_pasto: id_tipo_pasto ? Number.parseInt(id_tipo_pasto, 10) : null,
@@ -325,7 +333,7 @@ const obtenerDatosFormularioEdicion = () => {
   const descripcion = document.getElementById('edit_descripcion').value;
 
   const data = {
-    estado,
+    id_estado_potrero: estado ? getEstadoIdFromNombre(estado) : null,
     capacidad: capacidad ? Number.parseInt(capacidad, 10) : null,
     hectareas: hectareas ? Number.parseFloat(hectareas) : null,
     id_tipo_pasto: id_tipo_pasto ? Number.parseInt(id_tipo_pasto, 10) : null,

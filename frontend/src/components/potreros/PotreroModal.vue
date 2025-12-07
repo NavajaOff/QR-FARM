@@ -15,9 +15,9 @@
               </div>
               <div v-if="isEditing" class="col-md-6 mb-3">
                 <label class="form-label" for="potrero-estado">Estado</label>
-                <select id="potrero-estado" class="form-select" v-model="form.estado">
-                  <option v-for="estado in estadosPotrero" :key="estado.id" :value="estado.estado || estado.nombre_estado || estado.nombre">
-                    {{ estado.estado || estado.nombre_estado || estado.nombre }}
+                <select id="potrero-estado" class="form-select" v-model="form.id_estado_potrero">
+                  <option v-for="estado in estadosPotrero" :key="estado.id" :value="estado.id">
+                    {{ estado.nombre_estado || estado.estado || estado.nombre }}
                   </option>
                 </select>
               </div>
@@ -124,7 +124,7 @@ export default {
     return {
       form: {
         nombre: '',
-        estado: 'disponible',
+        id_estado_potrero: 1,
         capacidad: null,
         hectareas: null,
         id_tipo_pasto: null,
@@ -156,7 +156,7 @@ export default {
     resetForm() {
       this.form = {
         nombre: '',
-        estado: 'disponible',
+        id_estado_potrero: 1,
         capacidad: null,
         hectareas: null,
         id_tipo_pasto: null,
