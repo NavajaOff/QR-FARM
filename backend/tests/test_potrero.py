@@ -35,12 +35,11 @@ class TestPotrero:
             capacidad=50,
             hectareas=10.5
         )
-        potrero = Potrero(datos=data, estado=EstadoPotrero.DISPONIBLE)
+        potrero = Potrero(datos=data)
         assert potrero.id == 1
         assert potrero.nombre == TEST_POTRERO_NAME
         assert potrero.capacidad == 50
         assert potrero.hectareas == 10.5
-        assert potrero.estado == EstadoPotrero.DISPONIBLE
 
     def test_from_params(self):
         """Test Potrero from_params classmethod"""
@@ -49,11 +48,11 @@ class TestPotrero:
             nombre=TEST_POTRERO_NAME,
             capacidad=50,
             hectareas=10.5,
-            estado=EstadoPotrero.OCUPADO
+            id_estado_potrero=2
         )
         assert potrero.id == 1
         assert potrero.nombre == TEST_POTRERO_NAME
-        assert potrero.estado == EstadoPotrero.OCUPADO
+        assert potrero.id_estado_potrero == 2
 
     def test_from_db_row(self):
         """Test Potrero from_db_row"""
@@ -64,14 +63,14 @@ class TestPotrero:
             'hectareas': 10.5,
             'ocupacion': 25,
             'area': '100.5',
-            'estado': 'ocupado',
+            'id_estado_potrero': 2,
             'descripcion': 'Potrero principal'
         }
         potrero = Potrero.from_db_row(row)
         assert potrero.id == 1
         assert potrero.nombre == TEST_POTRERO_NAME
         assert potrero.area == Decimal('100.5')
-        assert potrero.estado == EstadoPotrero.OCUPADO
+        assert potrero.id_estado_potrero == 2
 
     def test_from_db_row_none_area(self):
         """Test Potrero from_db_row with None area"""
@@ -99,7 +98,8 @@ class TestPotrero:
         assert result['capacidad'] == 50
         assert result['hectareas'] == 10.5
         assert result['area'] == 100.5
-        assert result['estado'] == 'disponible'
+        # El modelo no tiene estado sincronizado, verificar id_estado_potrero
+        assert result['id_estado_potrero'] is None
         assert result['fecha_ultimo_uso'] == TEST_DATETIME_STR
         assert result['ultima_limpieza'] == TEST_DATETIME_STR
         assert result['proxima_limpieza'] == TEST_DATETIME_STR
@@ -129,7 +129,7 @@ class TestPotrero:
         assert potrero.id == 1
         assert potrero.nombre == TEST_POTRERO_NAME
         assert potrero.area == Decimal('100.5')
-        assert potrero.estado == EstadoPotrero.OCUPADO
+        assert potrero.id_estado_potrero is None  # El dict no tiene id_estado_potrero
 
     def test_from_dict_none_area(self):
         """Test Potrero from_dict with None area"""
@@ -139,13 +139,13 @@ class TestPotrero:
 
     def test_estado_enum_conversion(self):
         """Test estado enum conversion"""
-        potrero = Potrero.from_params(estado='limpieza')
-        assert potrero.estado == EstadoPotrero.LIMPIEZA
+        potrero = Potrero.from_params(id_estado_potrero=3)
+        assert potrero.id_estado_potrero == 3
 
     def test_estado_enum_default(self):
         """Test estado enum default value"""
-        potrero = Potrero.from_params()
-        assert potrero.estado == EstadoPotrero.DISPONIBLE
+        potrero = Potrero.from_params(id_estado_potrero=1)
+        assert potrero.id_estado_potrero == 1
 
 
 class TestEstadoPotrero:

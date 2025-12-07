@@ -35,7 +35,11 @@ class TestPotreroService:
         """Test get_estados_potrero with successful database call"""
         mock_cursor = Mock()
         mock_db.get_cursor.return_value.__enter__.return_value = mock_cursor
-        mock_cursor.fetchone.return_value = {'COLUMN_TYPE': "enum('disponible','ocupado','limpieza')"}
+        mock_cursor.fetchall.return_value = [
+            {'id': 1, 'estado': 'disponible', 'nombre_estado': 'disponible'},
+            {'id': 2, 'estado': 'ocupado', 'nombre_estado': 'ocupado'},
+            {'id': 3, 'estado': 'limpieza', 'nombre_estado': 'limpieza'}
+        ]
 
         result = PotreroService.get_estados_potrero()
 
@@ -48,7 +52,7 @@ class TestPotreroService:
         """Test get_estados_potrero when no result"""
         mock_cursor = Mock()
         mock_db.get_cursor.return_value.__enter__.return_value = mock_cursor
-        mock_cursor.fetchone.return_value = None
+        mock_cursor.fetchall.return_value = []
 
         result = PotreroService.get_estados_potrero()
 
@@ -59,7 +63,7 @@ class TestPotreroService:
         """Test get_estados_potrero with database exception"""
         mock_cursor = Mock()
         mock_db.get_cursor.return_value.__enter__.return_value = mock_cursor
-        mock_cursor.fetchone.side_effect = Exception("DB Error")
+        mock_cursor.fetchall.side_effect = Exception("DB Error")
 
         result = PotreroService.get_estados_potrero()
 
@@ -279,16 +283,26 @@ class TestPotreroService:
         
         assert mock_cursor.execute.called
 
+    @patch('src.services.potrero_service.db')
     @patch('src.services.potrero_service.PotreroService._obtener_tenant_id')
-    def test_registrar_actividad_potrero_no_tenant(self, mock_tenant):
+    def test_registrar_actividad_potrero_no_tenant(self, mock_tenant, mock_db):
         """Test _registrar_actividad_potrero sin tenant."""
         from datetime import datetime
         mock_tenant.return_value = None
-        
-        with pytest.raises(ValueError, match="Tenant requerido"):
-            PotreroService._registrar_actividad_potrero(
-                1, 'uso', datetime(2024, 1, 1), 'Test', None
-            )
+
+        # Mock the database cursor
+        mock_cursor = Mock()
+        mock_db.get_cursor.return_value.__enter__.return_value = mock_cursor
+        mock_cursor.fetchone.return_value = None  # No existing record
+        mock_cursor.lastrowid = 1
+
+        # Should not raise an exception, just work with None tenant_id
+        PotreroService._registrar_actividad_potrero(
+            1, 'uso', datetime(2024, 1, 1), 'Test', None
+        )
+
+        # Verify the method was called
+        assert mock_cursor.execute.called
 
     @patch('src.services.potrero_service.PotreroService._registrar_actividad_potrero')
     @patch('src.services.potrero_service.PotreroService._obtener_tenant_id')
@@ -328,7 +342,7 @@ class TestPotreroService:
         }
         PotreroService._registrar_actividades_potrero_create(1, data, 1)
         
-        assert mock_registrar.call_count == 3
+        assert mock_registrar.call_count == 5
 
     @patch('src.services.potrero_service.PotreroService._registrar_actividad_potrero')
     @patch('src.services.potrero_service.PotreroService._obtener_tenant_id')

@@ -59,11 +59,7 @@ class Potrero:
         self.proxima_limpieza = datos.proxima_limpieza
 
     @classmethod
-    def from_params(
-        cls,
-        *,
-        **kwargs
-    ) -> 'Potrero':
+    def from_params(cls, **kwargs) -> 'Potrero':
         """Constructor with explicit parameters."""
         datos = PotreroData(**kwargs)
         return cls(datos=datos)
