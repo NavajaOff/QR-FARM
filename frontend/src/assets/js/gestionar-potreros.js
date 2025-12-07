@@ -159,9 +159,7 @@ export const cargarPotreros = async () => {
     // Validar si la respuesta contiene un array dentro de data.data
     if (data.success && data.data && Array.isArray(data.data)) {
       console.log('Procesando array de potreros desde data.data');
-      console.log('Datos crudos del backend:', data.data);
       potreros.value = data.data.map(mapPotreroFromApi);
-      console.log('Datos después del mapeo:', potreros.value);
       console.log('Potreros cargados exitosamente:', potreros.value.length, 'potreros');
     } else {
       // Si no hay datos, mostrar lista vacía (modo sin BD)
@@ -326,6 +324,16 @@ const construirOpcionesResponsable = (potrero) => {
     responsableOptions += `<option value="${persona.id}" ${selected}>${nombreCompleto}</option>`;
   }
   return responsableOptions;
+};
+
+const getEstadoIdFromNombre = (estadoNombre) => {
+  if (!estadoNombre) return 1; // Default a Disponible si no hay estado
+  const estadoMap = {
+    'Disponible': 1,
+    'Ocupado': 2,
+    'En limpieza': 3
+  };
+  return estadoMap[estadoNombre] || 1; // Default a Disponible
 };
 
 const obtenerDatosFormularioEdicion = () => {
