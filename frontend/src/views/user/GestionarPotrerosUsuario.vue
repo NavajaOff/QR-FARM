@@ -91,10 +91,10 @@
                     <strong>Tipo de pasto:</strong> {{ capitalizar(potrero.tipo_pasto_nombre || potrero.tipo_pasto || 'No definido') }}
                   </li>
                   <li class="mb-2">
-                    <strong>Próxima limpieza:</strong> {{ formatearFecha(potrero.proxima_limpieza || potrero.proximaLimpieza) }}
+                    <strong>Próxima limpieza:</strong> {{ formatearFecha(potrero.proximaLimpieza) }}
                   </li>
                   <li class="mb-2">
-                    <strong>Última limpieza:</strong> {{ formatearFecha(potrero.ultima_limpieza || potrero.ultimaLimpieza) }}
+                    <strong>Última limpieza:</strong> {{ formatearFecha(potrero.ultimaLimpieza) }}
                   </li>
                 </ul>
                 <p v-if="potrero.descripcion" class="text-muted small">{{ potrero.descripcion }}</p>

@@ -4,6 +4,7 @@ from mysql.connector import Error
 from src.database.db import db, get_connection
 from datetime import datetime, timedelta
 from src.utils.tenant import get_current_tenant_id
+from dateutil.parser import parse
 
 class PotreroService:
     """Service class for handling Potrero business logic."""
@@ -23,19 +24,18 @@ class PotreroService:
 
         try:
             with db.get_cursor() as cursor:
-                sql = """
-                    SELECT fecha_ultimo_uso, fecha_ultima_limpieza, fecha_proxima_limpieza
+                # La tabla historial_potreros tiene las fechas directamente en columnas
+                cursor.execute("""
+                    SELECT fecha_ultima_limpieza, fecha_proxima_limpieza, fecha_ultimo_uso
                     FROM historial_potreros
                     WHERE id_potrero = %s
-                """
-                params = (potrero_id,)
-
-                cursor.execute(sql, params)
+                    ORDER BY id DESC LIMIT 1
+                """, (potrero_id,))
                 result = cursor.fetchone()
                 if result:
-                    actividades['fecha_ultimo_uso'] = result.get('fecha_ultimo_uso')
-                    actividades['ultima_limpieza'] = result.get('fecha_ultima_limpieza')
-                    actividades['proxima_limpieza'] = result.get('fecha_proxima_limpieza')
+                    actividades['fecha_ultimo_uso'] = result['fecha_ultimo_uso']
+                    actividades['ultima_limpieza'] = result['fecha_ultima_limpieza']
+                    actividades['proxima_limpieza'] = result['fecha_proxima_limpieza']
         except Exception as e:
             print(f"Error obteniendo actividades del potrero {potrero_id}: {e}")
 
@@ -162,7 +162,7 @@ class PotreroService:
             # Procesar cada potrero
             for potrero in potreros:
                 PotreroService._procesar_potrero(potrero)
-                # Agregar actividades desde historial_potrero
+                # Agregar actividades desde historial_potreros
                 actividades = PotreroService._obtener_actividades_potrero(potrero['id'], tenant_id)
                 potrero.update(actividades)
                 # Agregar información del responsable
@@ -460,9 +460,18 @@ class PotreroService:
         except Exception as e:
             print(f"Error registrando fecha_ultimo_uso automática: {e}")
 
-        # Registrar proxima_limpieza automáticamente (6 meses desde ahora)
+        # Registrar proxima_limpieza automáticamente (3 meses desde ultima_limpieza si existe, sino desde fecha de creación)
         try:
-            fecha_proxima_limpieza = datetime.now() + timedelta(days=180)
+            # Si se proporcionó ultima_limpieza, calcular proxima_limpieza basada en esa fecha
+            if data.get('ultima_limpieza'):
+                fecha_ultima_limpieza = data['ultima_limpieza']
+                if isinstance(fecha_ultima_limpieza, str):
+                    fecha_ultima_limpieza = parse(fecha_ultima_limpieza)
+                fecha_proxima_limpieza = fecha_ultima_limpieza + timedelta(days=90)
+            else:
+                # Fallback: 3 meses desde ahora
+                fecha_proxima_limpieza = datetime.now() + timedelta(days=90)
+
             PotreroService._registrar_actividad_potrero(
                 potrero_id, 'limpieza', fecha_proxima_limpieza, observaciones_programada, tenant_id
             )

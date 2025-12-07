@@ -159,7 +159,9 @@ export const cargarPotreros = async () => {
     // Validar si la respuesta contiene un array dentro de data.data
     if (data.success && data.data && Array.isArray(data.data)) {
       console.log('Procesando array de potreros desde data.data');
+      console.log('Datos crudos del backend:', data.data);
       potreros.value = data.data.map(mapPotreroFromApi);
+      console.log('Datos después del mapeo:', potreros.value);
       console.log('Potreros cargados exitosamente:', potreros.value.length, 'potreros');
     } else {
       // Si no hay datos, mostrar lista vacía (modo sin BD)
@@ -178,14 +180,19 @@ export const cargarPotreros = async () => {
 // Utility functions
 export const formatDate = (dateString) => {
   if (!dateString) return '';
-  const date = new Date(dateString);
-  // Ajustar por zona horaria de Colombia (UTC-5)
-  date.setHours(date.getHours() + 5);
-  return date.toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
+  try {
+    const date = new Date(dateString);
+    // Ajustar por zona horaria de Colombia (UTC-5)
+    date.setHours(date.getHours() + 5);
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  } catch (error) {
+    console.error('Error formateando fecha:', error);
+    return '';
+  }
 };
 
 export const estadoClass = (estado) => {

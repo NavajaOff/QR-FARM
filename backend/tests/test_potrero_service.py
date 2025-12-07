@@ -359,6 +359,37 @@ class TestPotreroService:
 
     @patch('src.services.potrero_service.PotreroService._registrar_actividad_potrero')
     @patch('src.services.potrero_service.PotreroService._obtener_tenant_id')
+    def test_registrar_actividades_potrero_create_con_ultima_limpieza(self, mock_tenant, mock_registrar):
+        """Test _registrar_actividades_potrero_create calcula proxima_limpieza basada en ultima_limpieza."""
+        from datetime import datetime
+        mock_tenant.return_value = 1
+
+        # Fecha de última limpieza: 01/12/2025
+        ultima_limpieza = '2025-12-01T10:00:00Z'
+        data = {
+            'ultima_limpieza': ultima_limpieza
+        }
+
+        PotreroService._registrar_actividades_potrero_create(1, data, 1)
+
+        # Verificar que se llamó a _registrar_actividad_potrero con la fecha correcta
+        # La próxima limpieza debería ser 90 días después de 2025-12-01 = 2026-03-01
+        expected_proxima_fecha = datetime(2026, 3, 1, 10, 0, 0)  # 90 días después
+
+        # Verificar que una de las llamadas fue para proxima_limpieza con la fecha correcta
+        proxima_calls = [call for call in mock_registrar.call_args_list
+                        if len(call[0]) >= 3 and call[0][1] == 'limpieza' and call[0][3] == 'Programada']
+
+        assert len(proxima_calls) == 1
+        # La fecha debería ser 90 días después de 2025-12-01 = 2026-03-01
+        actual_date = proxima_calls[0][0][2]
+        # Verificar que la fecha sea 2026-03-01 (sin importar la hora exacta)
+        assert actual_date.year == 2026
+        assert actual_date.month == 3
+        assert actual_date.day == 1
+
+    @patch('src.services.potrero_service.PotreroService._registrar_actividad_potrero')
+    @patch('src.services.potrero_service.PotreroService._obtener_tenant_id')
     def test_procesar_actividad_actualizacion(self, mock_tenant, mock_registrar):
         """Test _procesar_actividad_actualizacion."""
         from datetime import datetime
