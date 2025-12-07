@@ -234,7 +234,7 @@ export const crearPotrero = () => {
             ${responsableOptions}
           </select>
         </div>
-        <div class="mb-3"><label class="form-label">Próxima limpieza:</label><input type="date" id="proxima_limpieza" class="form-control"></div>
+        <div class="mb-3"><label class="form-label">Última limpieza:</label><input type="date" id="ultima_limpieza" class="form-control"></div>
         <div class="mb-3"><label class="form-label">Área (m²):</label><input type="number" id="area" class="form-control" placeholder="Ej: 2500" step="0.01" min="0"></div>
         <div class="mb-3"><label class="form-label">Descripción:</label><textarea id="descripcion" class="form-control" rows="2" placeholder="Descripción opcional del potrero"></textarea></div>
       </form>
@@ -248,7 +248,7 @@ export const crearPotrero = () => {
       const hectareas = document.getElementById('hectareas').value;
       const id_tipo_pasto = document.getElementById('id_tipo_pasto').value;
       const responsable_persona_id = document.getElementById('responsable_persona_id').value;
-      const proxima_limpieza = document.getElementById('proxima_limpieza').value;
+      const ultima_limpieza = document.getElementById('ultima_limpieza').value;
       const area = document.getElementById('area').value;
       const descripcion = document.getElementById('descripcion').value;
 
@@ -264,7 +264,7 @@ export const crearPotrero = () => {
         hectareas: hectareas ? Number.parseFloat(hectareas) : null,
         id_tipo_pasto: id_tipo_pasto ? Number.parseInt(id_tipo_pasto, 10) : null,
         responsable_persona_id: responsable_persona_id ? Number.parseInt(responsable_persona_id, 10) : null,
-        proxima_limpieza,
+        ultima_limpieza,
         area: area ? Number.parseFloat(area) : null,
         descripcion
       };

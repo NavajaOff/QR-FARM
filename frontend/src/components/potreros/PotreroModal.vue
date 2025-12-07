@@ -52,7 +52,7 @@
                 </select>
               </div>
             </div>
-            <div class="row">
+            <div class="row" v-if="isEditing">
               <div class="col-md-6 mb-3">
                 <label class="form-label" for="potrero-fecha-ultimo-uso">Fecha último uso</label>
                 <input type="date" id="potrero-fecha-ultimo-uso" class="form-control" v-model="form.fecha_ultimo_uso">

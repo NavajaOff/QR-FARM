@@ -2,7 +2,7 @@
 from typing import List, Optional, Dict, Any
 from mysql.connector import Error
 from src.database.db import db, get_connection
-from datetime import datetime
+from datetime import datetime, timedelta
 from src.utils.tenant import get_current_tenant_id
 
 class PotreroService:
@@ -24,7 +24,7 @@ class PotreroService:
         try:
             with db.get_cursor() as cursor:
                 sql = """
-                    SELECT fecha_ultimo_uso, ultima_limpieza, proxima_limpieza
+                    SELECT fecha_ultimo_uso, fecha_ultima_limpieza, fecha_proxima_limpieza
                     FROM historial_potreros
                     WHERE id_potrero = %s
                 """
@@ -34,8 +34,8 @@ class PotreroService:
                 result = cursor.fetchone()
                 if result:
                     actividades['fecha_ultimo_uso'] = result.get('fecha_ultimo_uso')
-                    actividades['ultima_limpieza'] = result.get('ultima_limpieza')
-                    actividades['proxima_limpieza'] = result.get('proxima_limpieza')
+                    actividades['ultima_limpieza'] = result.get('fecha_ultima_limpieza')
+                    actividades['proxima_limpieza'] = result.get('fecha_proxima_limpieza')
         except Exception as e:
             print(f"Error obteniendo actividades del potrero {potrero_id}: {e}")
 
@@ -71,13 +71,13 @@ class PotreroService:
                     if observaciones == 'Programada':
                         cursor.execute("""
                             UPDATE historial_potreros
-                            SET proxima_limpieza = %s
+                            SET fecha_proxima_limpieza = %s
                             WHERE id_potrero = %s
                         """, (fecha_evento, potrero_id))
                     else:
                         cursor.execute("""
                             UPDATE historial_potreros
-                            SET ultima_limpieza = %s
+                            SET fecha_ultima_limpieza = %s
                             WHERE id_potrero = %s
                         """, (fecha_evento, potrero_id))
         except Exception as e:
@@ -452,14 +452,22 @@ class PotreroService:
             potrero_id, data, 'proxima_limpieza', 'limpieza', observaciones_programada, tenant_id
         )
         
-        # Registrar fecha_ultimo_uso automáticamente si no se proporcionó
-        if not data.get('fecha_ultimo_uso'):
-            try:
-                PotreroService._registrar_actividad_potrero(
-                    potrero_id, 'uso', datetime.now(), None, tenant_id
-                )
-            except Exception as e:
-                print(f"Error registrando fecha_ultimo_uso automática: {e}")
+        # Registrar fecha_ultimo_uso automáticamente (siempre, fecha de creación del potrero)
+        try:
+            PotreroService._registrar_actividad_potrero(
+                potrero_id, 'uso', datetime.now(), observaciones_none, tenant_id
+            )
+        except Exception as e:
+            print(f"Error registrando fecha_ultimo_uso automática: {e}")
+
+        # Registrar proxima_limpieza automáticamente (6 meses desde ahora)
+        try:
+            fecha_proxima_limpieza = datetime.now() + timedelta(days=180)
+            PotreroService._registrar_actividad_potrero(
+                potrero_id, 'limpieza', fecha_proxima_limpieza, observaciones_programada, tenant_id
+            )
+        except Exception as e:
+            print(f"Error registrando proxima_limpieza automática: {e}")
 
     @staticmethod
     def create(data):
