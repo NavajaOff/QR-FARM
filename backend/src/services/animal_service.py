@@ -999,6 +999,21 @@ class GanadoService:
 
         tenant_id = tenant_id_override if tenant_id_override is not None else GanadoService._obtener_tenant_id()
         
+        # Intentar extraer ID numérico del identifier si es posible
+        numeric_id = None
+        if isinstance(identifier, int):
+            numeric_id = identifier
+        elif isinstance(identifier, str):
+            # Intentar extraer número del código QR (ej: "QR_1_Lola" -> 1)
+            import re
+            match = re.search(r'(\d+)', identifier)
+            if match:
+                try:
+                    numeric_id = int(match.group(1))
+                except (ValueError, TypeError):
+                    pass
+        
+        # Intentar primero con historial_potreros si existe, si no usar solo potrero
         main_query = """
             SELECT
                 g.id,
@@ -1016,17 +1031,9 @@ class GanadoService:
                 NULL AS estado_salud,
                 p.nombre AS potrero_nombre,
                 p.capacidad AS potrero_capacidad,
-                (SELECT fecha_evento FROM historial_potrero 
-                 WHERE id_potrero = p.id AND tipo_evento = 'limpieza' 
-                 AND (observaciones IS NULL OR observaciones != 'Programada')
-                 ORDER BY fecha_evento DESC LIMIT 1) AS potrero_ultima_limpieza,
-                (SELECT fecha_evento FROM historial_potrero 
-                 WHERE id_potrero = p.id AND tipo_evento = 'uso' 
-                 ORDER BY fecha_evento DESC LIMIT 1) AS potrero_fecha_ultimo_uso,
-                (SELECT fecha_evento FROM historial_potrero 
-                 WHERE id_potrero = p.id AND tipo_evento = 'limpieza' 
-                 AND observaciones = 'Programada' AND fecha_evento > NOW()
-                 ORDER BY fecha_evento ASC LIMIT 1) AS potrero_proxima_limpieza,
+                hp.fecha_ultima_limpieza AS potrero_ultima_limpieza,
+                hp.fecha_ultimo_uso AS potrero_fecha_ultimo_uso,
+                hp.fecha_proxima_limpieza AS potrero_proxima_limpieza,
                 p.estado AS potrero_estado,
                 tp.tipo_pasto AS potrero_tipo_pasto,
                 per.telefono AS propietario_telefono,
@@ -1039,15 +1046,24 @@ class GanadoService:
             LEFT JOIN tipo_pasto tp ON tp.id = p.id_tipo_pasto
             LEFT JOIN personas per ON per.id = g.id_persona
             LEFT JOIN roles ON roles.id = per.id_rol
+            LEFT JOIN historial_potreros hp ON hp.id_potrero = p.id
             WHERE (g.id = %s OR q.codigo_qr = %s)
         """
         
-        params = (identifier, identifier)
+        # Si tenemos un ID numérico, usarlo directamente; si no, usar el identifier original
+        # Esto permite buscar por ID incluso si el código QR no está registrado en la tabla qr
+        search_id = numeric_id if numeric_id is not None else identifier
+        params = (search_id, identifier)
         if tenant_id is not None:
             main_query += SQL_AND_G_TENANT_ID
-            params = (identifier, identifier, tenant_id)
+            params = (search_id, identifier, tenant_id)
+        
+        print(f"[GANADO_SERVICE] Búsqueda: identifier={identifier}, numeric_id={numeric_id}, search_id={search_id}")
         
         main_query += " LIMIT 1"
+
+        print(f"[GANADO_SERVICE] obtener_ganado_detallado: Buscando con identifier={identifier}, tenant_id={tenant_id}")
+        print(f"[GANADO_SERVICE] Parámetros de consulta: {params}")
 
         try:
             cursor = connection.cursor(dictionary=True)
@@ -1055,8 +1071,78 @@ class GanadoService:
                 cursor.execute(main_query, params)
                 row = cursor.fetchone()
                 
-                if not row or not GanadoService._validar_tenant_ganado(row, tenant_id):
+                print(f"[GANADO_SERVICE] Resultado de consulta: {'encontrado' if row else 'NO encontrado'}")
+                if row:
+                    print(f"[GANADO_SERVICE] Datos encontrados: id={row.get('id')}, nombre={row.get('nombre')}, tenant_id={row.get('tenant_id')}")
+                
+                if not row:
+                    print(f"[GANADO_SERVICE] No se encontró ganado con identifier={identifier} (sin tenant_id)")
                     return None
+                
+                if not GanadoService._validar_tenant_ganado(row, tenant_id):
+                    print(f"[GANADO_SERVICE] Ganado encontrado pero no pertenece al tenant {tenant_id} (tenant_id del ganado: {row.get('tenant_id')})")
+                    return None
+            except Exception as query_error:
+                error_msg = str(query_error)
+                print(f"[GANADO_SERVICE] Error ejecutando consulta principal: {error_msg}")
+                # Si falla por tabla historial_potreros o columnas, intentar sin ellas
+                if 'historial_potreros' in error_msg.lower() or 'doesn\'t exist' in error_msg.lower() or 'unknown column' in error_msg.lower():
+                    try:
+                        print(f"[GANADO_SERVICE] Intentando consulta sin historial_potreros...")
+                        simple_query = """
+                            SELECT
+                                g.id,
+                                g.nombre,
+                                g.raza,
+                                g.fecha_nacimiento,
+                                g.sexo,
+                                g.peso,
+                                g.id_potrero,
+                                g.id_persona,
+                                g.id_estado,
+                                g.tenant_id,
+                                q.codigo_qr,
+                                eg.tipo_estado AS estado_principal,
+                                NULL AS estado_salud,
+                                p.nombre AS potrero_nombre,
+                                p.capacidad AS potrero_capacidad,
+                                NULL AS potrero_ultima_limpieza,
+                                NULL AS potrero_fecha_ultimo_uso,
+                                NULL AS potrero_proxima_limpieza,
+                                p.estado AS potrero_estado,
+                                tp.tipo_pasto AS potrero_tipo_pasto,
+                                per.telefono AS propietario_telefono,
+                                CONCAT_WS(' ', per.primer_nombre, per.segundo_nombre, per.primer_apellido, per.segundo_apellido) AS propietario_nombre,
+                                roles.rol AS propietario_rol
+                            FROM ganado g
+                            LEFT JOIN qr q ON q.id_ganado = g.id
+                            LEFT JOIN estado_ganado eg ON eg.id = g.id_estado
+                            LEFT JOIN potrero p ON p.id = g.id_potrero
+                            LEFT JOIN tipo_pasto tp ON tp.id = p.id_tipo_pasto
+                            LEFT JOIN personas per ON per.id = g.id_persona
+                            LEFT JOIN roles ON roles.id = per.id_rol
+                            WHERE (g.id = %s OR q.codigo_qr = %s)
+                        """
+                        if tenant_id is not None:
+                            simple_query += SQL_AND_G_TENANT_ID
+                            simple_params = (identifier, identifier, tenant_id)
+                        else:
+                            simple_params = (identifier, identifier)
+                        simple_query += " LIMIT 1"
+                        cursor.execute(simple_query, simple_params)
+                        row = cursor.fetchone()
+                        if not row or not GanadoService._validar_tenant_ganado(row, tenant_id):
+                            print(f"[GANADO_SERVICE] No se encontró ganado con identifier={identifier} en consulta simplificada")
+                            return None
+                        print(f"[GANADO_SERVICE] Consulta simplificada exitosa")
+                    except Exception as fallback_error:
+                        print(f"[GANADO_SERVICE] Error en consulta simplificada: {fallback_error}")
+                        import traceback
+                        traceback.print_exc()
+                        return None
+                else:
+                    # Si es otro tipo de error, re-lanzarlo
+                    raise
             finally:
                 cursor.close()
 
@@ -1078,8 +1164,13 @@ class GanadoService:
 
             resultado = GanadoService._construir_detalle_ganado(row, animal_id, propietario, potrero, vacunas)
             print(f"[GANADO_SERVICE] obtener_ganado_detallado: Resultado incluye {len(resultado.get('vacunas', []))} vacunas en el dict")
+            print(f"[GANADO_SERVICE] obtener_ganado_detallado: Datos del potrero: {resultado.get('potrero', {})}")
+            print(f"[GANADO_SERVICE] obtener_ganado_detallado: Datos del propietario: {resultado.get('propietario', {})}")
             return resultado
-        except Exception:  # pylint: disable=broad-except
+        except Exception as e:  # pylint: disable=broad-except
+            print(f"[GANADO_SERVICE] Error en obtener_ganado_detallado: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
             return None
         finally:
             try:

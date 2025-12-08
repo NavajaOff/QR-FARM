@@ -54,6 +54,15 @@ class QRService:
             payload["ct"] = contacto  # contacto (abreviado)
         if datos_extra.get('estado'):
             payload["e"] = datos_extra.get('estado')  # estado (abreviado)
+        # Incluir datos adicionales para mostrar más información cuando la sincronización falla
+        if datos_extra.get('peso'):
+            payload["peso"] = datos_extra.get('peso')
+        if datos_extra.get('sexo'):
+            payload["sexo"] = datos_extra.get('sexo')
+        if datos_extra.get('fecha_nacimiento'):
+            payload["fecha_nacimiento"] = datos_extra.get('fecha_nacimiento')
+        if datos_extra.get('raza'):
+            payload["raza"] = datos_extra.get('raza')
         
         # Incluir tenant_id solo si es necesario para multi-tenant
         if tenant_id:
@@ -163,6 +172,8 @@ class QRService:
             'peso': detalles_ganado.get('peso'),
             'sexo': detalles_ganado.get('sexo'),
             'fecha_nacimiento': detalles_ganado.get('fecha_nacimiento'),
+            'raza': detalles_ganado.get('raza'),
+            'edad': detalles_ganado.get('edad'),
         }
 
     @staticmethod

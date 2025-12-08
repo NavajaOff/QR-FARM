@@ -502,22 +502,29 @@ class GanadoController:
                 except (ValueError, TypeError):
                     pass
             
-            ganado = GanadoService.buscar_por_codigo_qr(codigo_qr, tenant_id_override=tenant_id)
+            # Usar obtener_ganado_detallado directamente con el código QR para obtener todos los datos
+            detalle = GanadoService.obtener_ganado_detallado(codigo_qr, tenant_id_override=tenant_id)
 
-            if ganado:
-                detalle = GanadoService.obtener_ganado_detallado(ganado.id, tenant_id_override=tenant_id) if ganado.id else None
+            if detalle:
+                print(f"[ANIMAL_CONTROLLER] buscar_por_codigo_qr({codigo_qr}): Ganado encontrado con {len(detalle.get('vacunas', []))} vacunas")
                 return jsonify({
                     'status': 'success',
-                    'data': detalle if detalle else ganado.to_dict()
+                    'success': True,
+                    'data': detalle
                 }), 200
             else:
                 return jsonify({
                     'status': 'error',
+                    'success': False,
                     'message': GANADO_NO_ENCONTRADO
                 }), 404
 
         except Exception as e:
+            print(f"[ERROR] Controller - Error buscando ganado por QR {codigo_qr}: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return jsonify({
                 'status': 'error',
+                'success': False,
                 'message': str(e)
             }), 500
