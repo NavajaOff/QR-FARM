@@ -193,6 +193,14 @@ async function login() {
     loading.value = false;
   }
 }
+
+// Expose reactive refs for testing
+defineExpose({
+  email,
+  password,
+  error,
+  loading
+});
 </script>
 
 <style scoped>
