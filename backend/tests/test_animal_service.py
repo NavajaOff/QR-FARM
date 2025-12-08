@@ -158,6 +158,56 @@ class TestGanadoService:
         mock_cursor.execute.assert_called_once_with("SELECT id, tipo_estado FROM estado_ganado WHERE id BETWEEN 1 AND 3 ORDER BY tipo_estado")
 
 
+    @patch('src.services.animal_service.get_connection')
+    @patch.object(GanadoService, '_fetch_vacunas')
+    def test_obtener_ganado_detallado_con_vacunas(self, mock_fetch_vacunas, mock_get_connection):
+        """Test obtener_ganado_detallado construye el detalle completo y llama a _fetch_vacunas."""
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_get_connection.return_value = mock_conn
+        mock_conn.cursor.return_value = mock_cursor
+
+        row = {
+            'id': 10,
+            'nombre': 'Test Animal',
+            'raza': 'Holstein',
+            'fecha_nacimiento': '2022-02-02',
+            'sexo': 'hembra',
+            'peso': 420.5,
+            'estado_principal': 'saludable',
+            'estado_salud': 'saludable',
+            'codigo_qr': 'QR123',
+            'propietario_nombre': 'John Doe',
+            'propietario_telefono': '3001234567',
+            'propietario_rol': 'administrador',
+            'id_potrero': 5,
+            'potrero_nombre': 'Potrero de prueba',
+            'potrero_tipo_pasto': 'Brachiaria',
+            'potrero_ultima_limpieza': '2024-01-01',
+            'potrero_fecha_ultimo_uso': '2024-04-01',
+            'potrero_proxima_limpieza': '2024-05-01',
+            'potrero_estado': 'activo',
+            'potrero_capacidad': 50,
+            'tenant_id': 1
+        }
+
+        mock_cursor.fetchone.return_value = row
+        expected_vacunas = [
+            {'id': 1, 'nombre': 'Vacuna de prueba', 'estado': 'aplicada'}
+        ]
+        mock_fetch_vacunas.return_value = expected_vacunas
+
+        result = GanadoService.obtener_ganado_detallado('QR123', tenant_id_override=1)
+
+        assert result is not None
+        assert result['id'] == 10
+        assert result['propietario']['nombre'] == 'John Doe'
+        assert result['potrero']['nombre'] == 'Potrero de prueba'
+        assert result['vacunas'] == expected_vacunas
+        mock_fetch_vacunas.assert_called_once_with(mock_conn, 10, 1)
+        assert mock_cursor.close.call_count == 1
+        assert mock_conn.close.call_count == 1
+
 class TestGanadoModel:
     def test_ganado_init_with_id_estado(self):
         """Test Ganado model initialization with id_estado"""
