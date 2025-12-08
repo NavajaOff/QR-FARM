@@ -69,12 +69,14 @@
                   <li class="mb-2"><strong>Sexo:</strong> {{ capitalizar(animal.sexo) }}</li>
                 </ul>
                 <div v-if="animal.codigo_qr" class="text-center">
+                  <p class="small text-muted mb-2">Código QR</p>
                   <img
                     :src="`${apiBaseUrl}/animales/qr/${animal.codigo_qr}.png`"
                     alt="Código QR"
-                    class="img-fluid rounded"
-                    style="max-width: 160px;"
+                    class="img-fluid rounded border"
+                    style="min-width: 300px; max-width: 400px; width: 100%;"
                   />
+                  <p class="small text-muted mt-2">Apunta la cámara hacia el QR para escanear</p>
                 </div>
               </div>
               <div class="card-footer bg-light">

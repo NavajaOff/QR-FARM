@@ -413,9 +413,21 @@ export const fetchQrResource = async (params: QrResourceRequest): Promise<Ganado
 };
 
 export interface EmbeddedQrPayload {
+  // Campos abreviados (optimizados para reducir tamaño del QR)
+  s?: string;  // schema
+  t?: string;  // type
+  id?: string | number;
+  c?: string;  // codigo
+  n?: string;  // nombre
+  e?: string;  // estado
+  p?: string;  // propietario (nombre)
+  ct?: string;  // contacto
+  u?: string;  // url
+  tid?: number;  // tenant_id
+  
+  // Campos legacy (compatibilidad hacia atrás)
   schema?: string;
   type?: string;
-  id?: string | number;
   codigo?: string;
   nombre?: string;
   estado?: string;
@@ -448,21 +460,28 @@ export const transformEmbeddedPayload = (payload: EmbeddedQrPayload): GanadoReso
     throw createError('El QR embebido no incluye un identificador válido.', 'QrEmbeddedWithoutIdError');
   }
 
+  // Soporte para campos abreviados (optimizados) y legacy (compatibilidad)
+  const nombre = toNullableString(payload.n) ?? toNullableString(payload.nombre);
+  const codigo = toNullableString(payload.c) ?? toNullableString(payload.codigo);
+  const estado = toNullableString(payload.e) ?? toNullableString(payload.estado) ?? toNullableString(payload.estado_salud);
+  const propietarioNombre = toNullableString(payload.p) ?? toNullableString(payload.propietario?.nombre);
+  const contacto = toNullableString(payload.ct) ?? toNullableString(payload.propietario?.contacto);
   const potreroData = payload.potrero ?? null;
+  
   return {
     id: identifier,
-    nombre: toNullableString(payload.nombre),
+    nombre: nombre,
     raza: null,
     fecha_nacimiento: toIsoString(payload.fecha_nacimiento),
     edad: null,
     sexo: toNullableString(payload.sexo),
-    estado: toNullableString(payload.estado) ?? toNullableString(payload.estado_salud),
+    estado: estado,
     estado_salud: toNullableString(payload.estado_salud),
     peso: toNullableNumber(payload.peso),
-    codigo_qr: toNullableString(payload.codigo),
+    codigo_qr: codigo,
     propietario: {
-      nombre: toNullableString(payload.propietario?.nombre),
-      telefono: toNullableString(payload.propietario?.contacto),
+      nombre: propietarioNombre,
+      telefono: contacto,
       rol: toNullableString(payload.propietario?.rol)
     },
     potrero: potreroData

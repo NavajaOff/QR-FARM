@@ -247,8 +247,9 @@ let telemetrySequence = 0;
 const isEmbeddedGanadoPayload = (value: unknown): value is EmbeddedGanadoPayload => {
   if (!value || typeof value !== 'object') return false;
   const payload = value as Record<string, unknown>;
-  const schema = typeof payload.schema === 'string' ? payload.schema : '';
-  const tipo = typeof payload.type === 'string' ? payload.type : '';
+  // Soporte para campos abreviados (optimizados) y legacy (compatibilidad)
+  const schema = typeof payload.s === 'string' ? payload.s : (typeof payload.schema === 'string' ? payload.schema : '');
+  const tipo = typeof payload.t === 'string' ? payload.t : (typeof payload.type === 'string' ? payload.type : '');
   const identifier = payload.id;
   const hasId = typeof identifier === 'string' || typeof identifier === 'number';
   return schema.startsWith('qr-farm') && tipo === 'ganado' && hasId;
@@ -383,11 +384,14 @@ const startScanner = async (): Promise<void> => {
       return;
     }
     // Configuración optimizada para mejor detección de QR
+    // FPS reducido a 10-15 para mejor rendimiento y menor consumo
+    // qrbox reducido a 70% para mejor precisión y menor ruido
     const config = {
-      fps: 30,  // Mayor frecuencia de escaneo (30 FPS para mejor detección)
+      fps: 12,  // FPS óptimo: balance entre detección y rendimiento
       qrbox: function(viewfinderWidth: number, viewfinderHeight: number) {
-        // Usar 90% del viewport para área de escaneo más grande
-        const minEdgePercentage = 0.9;
+        // Usar 70% del viewport para área de escaneo óptima
+        // Área más pequeña = mejor precisión y menor procesamiento
+        const minEdgePercentage = 0.7;
         const minEdgeSize = Math.min(viewfinderWidth, viewfinderHeight);
         const qrboxSize = Math.floor(minEdgeSize * minEdgePercentage);
         return {
@@ -477,6 +481,8 @@ const collectAlternativeIdentifiers = (payload: NormalizedResourcePayload): stri
   const metadata = payload.metadata ?? {};
   if (metadata && typeof metadata === 'object') {
     const metaRecord = metadata as Record<string, unknown>;
+    // Soporte para campos abreviados (optimizados) y legacy (compatibilidad)
+    register(metaRecord.c);
     register(metaRecord.codigo);
     register(metaRecord.code);
     register(metaRecord.codigo_qr);
@@ -485,6 +491,8 @@ const collectAlternativeIdentifiers = (payload: NormalizedResourcePayload): stri
 
   if (payload.embeddedResource) {
     const embedded = payload.embeddedResource;
+    // Soporte para campos abreviados (optimizados) y legacy (compatibilidad)
+    register(embedded.c);
     register(embedded.codigo);
     register(embedded.code);
     register(embedded.codigo_qr);
@@ -601,7 +609,8 @@ const getResourceType = (obj: any): string | null => {
 };
 
 const extractCandidateIdFromObject = (value: Record<string, unknown>): string | null => {
-  const candidates = ['id', 'resourceId', 'codigo', 'code'];
+  // Soporte para campos abreviados (optimizados) y legacy (compatibilidad)
+  const candidates = ['id', 'resourceId', 'c', 'codigo', 'code'];
   for (const key of candidates) {
     const candidateValue = value[key];
     if (typeof candidateValue === 'string' && candidateValue.trim().length > 0) {
