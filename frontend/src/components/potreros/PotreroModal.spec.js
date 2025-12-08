@@ -11,7 +11,7 @@ describe('PotreroModal', () => {
       { id: 2, nombre: 'Cebada' }
     ],
     estadosPotrero: [
-      { id: 1, estado: 'disponible' },
+      { id: 1, nombre_estado: 'disponible' },
       { id: 2, nombre_estado: 'ocupado' }
     ],
     personasUsuario: [
@@ -64,7 +64,7 @@ describe('PotreroModal', () => {
   })
 
   it('should render all form fields', () => {
-    const wrapper = mount(PotreroModal, { props: mockProps })
+    const wrapper = mount(PotreroModal, { props: { ...mockProps, isEditing: true } })
 
     // Check all input fields exist
     expect(wrapper.find('#potrero-capacidad').exists()).toBe(true)
@@ -131,7 +131,7 @@ describe('PotreroModal', () => {
   })
 
   it('should bind date inputs', async () => {
-    const wrapper = mount(PotreroModal, { props: mockProps })
+    const wrapper = mount(PotreroModal, { props: { ...mockProps, isEditing: true } })
 
     const fechaUltimoUso = wrapper.find('#potrero-fecha-ultimo-uso')
     await fechaUltimoUso.setValue('2024-01-15')
@@ -158,7 +158,7 @@ describe('PotreroModal', () => {
     const wrapper = mount(PotreroModal, { props: mockProps })
 
     expect(wrapper.vm.form.nombre).toBe('')
-    expect(wrapper.vm.form.estado).toBe('disponible')
+    expect(wrapper.vm.form.id_estado_potrero).toBe(1)
     expect(wrapper.vm.form.capacidad).toBeNull()
     expect(wrapper.vm.form.hectareas).toBeNull()
     expect(wrapper.vm.form.id_tipo_pasto).toBeNull()
@@ -173,7 +173,7 @@ describe('PotreroModal', () => {
   it('should populate form when editing and potrero prop changes', async () => {
     const potreroData = {
       nombre: 'Potrero Editado',
-      estado: 'ocupado',
+      id_estado_potrero: 2,
       capacidad: 100,
       hectareas: 50.5,
       id_tipo_pasto: 1,
@@ -192,7 +192,7 @@ describe('PotreroModal', () => {
     await nextTick()
 
     expect(wrapper.vm.form.nombre).toBe('Potrero Editado')
-    expect(wrapper.vm.form.estado).toBe('ocupado')
+    expect(wrapper.vm.form.id_estado_potrero).toBe(2)
     expect(wrapper.vm.form.capacidad).toBe(100)
     expect(wrapper.vm.form.hectareas).toBe(50.5)
     expect(wrapper.vm.form.id_tipo_pasto).toBe(1)
@@ -217,7 +217,7 @@ describe('PotreroModal', () => {
     expect(wrapper.emitted('submit')).toBeTruthy()
     expect(wrapper.emitted('submit')[0][0]).toEqual({
       nombre: 'Test Potrero',
-      estado: 'disponible',
+      id_estado_potrero: 1,
       capacidad: 75,
       hectareas: null,
       id_tipo_pasto: null,
@@ -296,7 +296,7 @@ describe('PotreroModal', () => {
     wrapper.vm.resetForm()
 
     expect(wrapper.vm.form.nombre).toBe('')
-    expect(wrapper.vm.form.estado).toBe('disponible')
+    expect(wrapper.vm.form.id_estado_potrero).toBe(1)
     expect(wrapper.vm.form.capacidad).toBeNull()
     expect(wrapper.vm.form.descripcion).toBe('')
   })

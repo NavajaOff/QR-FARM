@@ -354,7 +354,11 @@ const formatearInfoVacunas = (vacunas) => {
 
 const construirHtmlPerfil = (animal, encargado, potreroNombre, vacunasInfo) => {
   const qrImage = animal.codigo_qr 
-    ? `<div class="mt-3"><img src="${API_BASE}/animales/qr/${animal.codigo_qr}.png" alt="Código QR" class="img-fluid" style="max-width: 300px;"></div>`
+    ? `<div class="mt-3 text-center">
+        <p class="small text-muted mb-2">Código QR</p>
+        <img src="${API_BASE}/animales/qr/${animal.codigo_qr}.png" alt="Código QR" class="img-fluid border rounded" style="min-width: 300px; max-width: 400px; width: 100%;">
+        <p class="small text-muted mt-2">Apunta la cámara hacia el QR para escanear</p>
+      </div>`
     : '';
   
   return `

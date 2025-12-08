@@ -48,15 +48,14 @@ class TestQRService:
                 contacto='123456789'
             )
 
-            assert payload['schema'] == 'qr-farm.v1'
-            assert payload['type'] == 'ganado'
+            assert payload['s'] == 'qr-farm.v1'  # schema (abreviado)
+            assert payload['t'] == 'ganado'  # type (abreviado)
             assert payload['id'] == 1
-            assert payload['codigo'] == 'QR_1_Test'
-            assert payload['nombre'] == 'Test Animal'
-            assert payload['propietario']['nombre'] == 'John Doe'
-            assert payload['propietario']['contacto'] == '123456789'
-            assert 'generado_en' in payload
-            assert 'resumen' in payload
+            assert payload['c'] == 'QR_1_Test'  # codigo (abreviado)
+            assert payload['n'] == 'Test Animal'  # nombre (abreviado)
+            assert payload['p'] == 'John Doe'  # propietario (abreviado)
+            assert payload['ct'] == '123456789'  # contacto (abreviado)
+            assert payload['u'] == 'https://example.com/ganado/1'  # url (abreviado)
 
     def test_build_offline_payload_with_extra_data(self):
         """Test _build_offline_payload con datos extra."""
@@ -78,12 +77,15 @@ class TestQRService:
                 datos_extra=datos_extra
             )
 
-            assert payload['estado'] == 'activo'
-            assert payload['estado_salud'] == 'saludable'
-            assert payload['peso'] == 500.5
-            assert payload['sexo'] == 'macho'
-            assert payload['fecha_nacimiento'] == '2020-01-01'
-            assert payload['potrero'] == {'nombre': 'Potrero 1'}
+            # Verificar campos básicos
+            assert payload['s'] == 'qr-farm.v1'
+            assert payload['t'] == 'ganado'
+            assert payload['id'] == 1
+            assert payload['n'] == 'Test Animal'
+            assert payload['p'] == 'John Doe'
+            assert payload['ct'] == '123456789'
+            # Verificar que el estado se incluye en el payload
+            assert payload['e'] == 'activo'  # estado (abreviado)
 
     def test_build_offline_payload_with_url_in_extra(self):
         """Test _build_offline_payload con URL en datos extra."""
@@ -98,7 +100,8 @@ class TestQRService:
                 datos_extra=datos_extra
             )
 
-            assert payload['url'] == 'https://custom.com/animal/1'
+            # La URL personalizada debe usarse en lugar de la URL por defecto
+            assert payload['u'] == 'https://custom.com/animal/1'  # url (abreviado)
 
     @patch('src.services.qr_service.qrcode')
     @patch('src.services.qr_service.os.makedirs')

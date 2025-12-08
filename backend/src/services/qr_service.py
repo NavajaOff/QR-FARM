@@ -36,42 +36,28 @@ class QRService:
         base_url = QRService._build_base_url()
         online_url = datos_extra.get('url') or f"{base_url}/ganado/{id_ganado}"
 
+        # Payload optimizado: solo datos esenciales para reducir tamaño del QR
+        # El resto de información se obtiene desde la API cuando hay conexión
         payload: Dict[str, Any] = {
-            "schema": "qr-farm.v1",
-            "type": "ganado",
+            "s": "qr-farm.v1",  # schema (abreviado)
+            "t": "ganado",  # type (abreviado)
             "id": id_ganado,
-            "codigo": codigo_qr,
-            "nombre": nombre_ganado,
-            "estado": datos_extra.get('estado'),
-            "estado_salud": datos_extra.get('estado_salud'),
-            "propietario": {
-                "nombre": nombre_propietario or None,
-                "contacto": contacto or None
-            },
-            "potrero": datos_extra.get('potrero'),
-            "url": online_url,
-            "generado_en": datetime.now(timezone.utc).isoformat()
+            "c": codigo_qr,  # codigo (abreviado)
+            "n": nombre_ganado,  # nombre (abreviado)
+            "u": online_url  # url (abreviado)
         }
         
+        # Solo incluir datos críticos para modo offline
+        if nombre_propietario:
+            payload["p"] = nombre_propietario  # propietario (abreviado)
+        if contacto:
+            payload["ct"] = contacto  # contacto (abreviado)
+        if datos_extra.get('estado'):
+            payload["e"] = datos_extra.get('estado')  # estado (abreviado)
+        
+        # Incluir tenant_id solo si es necesario para multi-tenant
         if tenant_id:
-            payload["tenant_id"] = tenant_id
-
-        if datos_extra.get('peso') is not None:
-            payload["peso"] = datos_extra.get('peso')
-        if datos_extra.get('sexo'):
-            payload["sexo"] = datos_extra.get('sexo')
-        if datos_extra.get('fecha_nacimiento'):
-            payload["fecha_nacimiento"] = datos_extra.get('fecha_nacimiento')
-
-        resumen_parts = [
-            f"Ganado: {nombre_ganado}",
-            f"Propietario: {nombre_propietario}" if nombre_propietario else None,
-            f"Estado: {datos_extra.get('estado')}" if datos_extra.get('estado') else None,
-            f"Contacto: {contacto}" if contacto else None,
-            f"Potrero: {datos_extra.get('potrero', {}).get('nombre')}" if isinstance(datos_extra.get('potrero'), dict) and datos_extra.get('potrero', {}).get('nombre') else None,
-            f"URL: {online_url}"
-        ]
-        payload["resumen"] = " | ".join(part for part in resumen_parts if part)
+            payload["tid"] = tenant_id  # tenant_id (abreviado)
 
         return payload
 
@@ -117,7 +103,9 @@ class QRService:
 
         filename = f"{codigo_qr}.png"
         filepath = os.path.join(qr_dir, filename)
-        img.save(filepath)
+        # Guardar sin compresión para máxima calidad y legibilidad
+        # optimize=False evita compresión adicional, mejorando la detección
+        img.save(filepath, 'PNG', optimize=False, compress_level=0)
 
         return codigo_qr
 
