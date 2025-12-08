@@ -984,37 +984,24 @@ class GanadoService:
         }
 
     @staticmethod
-    def obtener_ganado_detallado(identifier: int | str, tenant_id_override: Optional[int] = None) -> Optional[Dict[str, Any]]:
-        """
-        Obtener ganado detallado por ID o código QR.
-        
-        Args:
-            identifier: ID del ganado o código QR
-            tenant_id_override: Si se proporciona, valida que el ganado pertenezca a este tenant
-        """
-        connection = get_connection()
-        if connection is None:
-            print("No se pudo obtener conexión a la base de datos.")
-            return None
-
-        tenant_id = tenant_id_override if tenant_id_override is not None else GanadoService._obtener_tenant_id()
-        
-        # Intentar extraer ID numérico del identifier si es posible
-        numeric_id = None
+    def _extraer_id_numerico(identifier: int | str) -> Optional[int]:
+        """Extrae ID numérico del identifier si es posible."""
         if isinstance(identifier, int):
-            numeric_id = identifier
-        elif isinstance(identifier, str):
-            # Intentar extraer número del código QR (ej: "QR_1_Lola" -> 1)
+            return identifier
+        if isinstance(identifier, str):
             import re
             match = re.search(r'(\d+)', identifier)
             if match:
                 try:
-                    numeric_id = int(match.group(1))
+                    return int(match.group(1))
                 except (ValueError, TypeError):
                     pass
-        
-        # Intentar primero con historial_potreros si existe, si no usar solo potrero
-        main_query = """
+        return None
+
+    @staticmethod
+    def _construir_query_principal(search_id: Any, identifier: Any, tenant_id: Optional[int]) -> tuple:
+        """Construye la query principal y parámetros."""
+        query = """
             SELECT
                 g.id,
                 g.nombre,
@@ -1049,126 +1036,161 @@ class GanadoService:
             LEFT JOIN historial_potreros hp ON hp.id_potrero = p.id
             WHERE (g.id = %s OR q.codigo_qr = %s)
         """
-        
-        # Si tenemos un ID numérico, usarlo directamente; si no, usar el identifier original
-        # Esto permite buscar por ID incluso si el código QR no está registrado en la tabla qr
-        search_id = numeric_id if numeric_id is not None else identifier
+
         params = (search_id, identifier)
         if tenant_id is not None:
-            main_query += SQL_AND_G_TENANT_ID
+            query += SQL_AND_G_TENANT_ID
             params = (search_id, identifier, tenant_id)
-        
-        print(f"[GANADO_SERVICE] Búsqueda: identifier={identifier}, numeric_id={numeric_id}, search_id={search_id}")
-        
-        main_query += " LIMIT 1"
 
-        print(f"[GANADO_SERVICE] obtener_ganado_detallado: Buscando con identifier={identifier}, tenant_id={tenant_id}")
-        print(f"[GANADO_SERVICE] Parámetros de consulta: {params}")
+        return query + " LIMIT 1", params
+
+    @staticmethod
+    def _construir_query_fallback(identifier: Any, tenant_id: Optional[int]) -> tuple:
+        """Construye la query de fallback sin historial_potreros."""
+        query = """
+            SELECT
+                g.id,
+                g.nombre,
+                g.raza,
+                g.fecha_nacimiento,
+                g.sexo,
+                g.peso,
+                g.id_potrero,
+                g.id_persona,
+                g.id_estado,
+                g.tenant_id,
+                q.codigo_qr,
+                eg.tipo_estado AS estado_principal,
+                NULL AS estado_salud,
+                p.nombre AS potrero_nombre,
+                p.capacidad AS potrero_capacidad,
+                NULL AS potrero_ultima_limpieza,
+                NULL AS potrero_fecha_ultimo_uso,
+                NULL AS potrero_proxima_limpieza,
+                p.estado AS potrero_estado,
+                tp.tipo_pasto AS potrero_tipo_pasto,
+                per.telefono AS propietario_telefono,
+                CONCAT_WS(' ', per.primer_nombre, per.segundo_nombre, per.primer_apellido, per.segundo_apellido) AS propietario_nombre,
+                roles.rol AS propietario_rol
+            FROM ganado g
+            LEFT JOIN qr q ON q.id_ganado = g.id
+            LEFT JOIN estado_ganado eg ON eg.id = g.id_estado
+            LEFT JOIN potrero p ON p.id = g.id_potrero
+            LEFT JOIN tipo_pasto tp ON tp.id = p.id_tipo_pasto
+            LEFT JOIN personas per ON per.id = g.id_persona
+            LEFT JOIN roles ON roles.id = per.id_rol
+            WHERE (g.id = %s OR q.codigo_qr = %s)
+        """
+
+        if tenant_id is not None:
+            query += SQL_AND_G_TENANT_ID
+            params = (identifier, identifier, tenant_id)
+        else:
+            params = (identifier, identifier)
+
+        return query + " LIMIT 1", params
+
+    @staticmethod
+    def _ejecutar_consulta_principal(cursor, query: str, params: tuple, identifier: Any, tenant_id: Optional[int]) -> Optional[Dict[str, Any]]:
+        """Ejecuta la consulta principal y maneja errores."""
+        try:
+            cursor.execute(query, params)
+            row = cursor.fetchone()
+
+            if not row:
+                print("[GANADO_SERVICE] No se encontró ganado con identifier={} (sin tenant_id)".format(identifier))
+                return None
+
+            if not GanadoService._validar_tenant_ganado(row, tenant_id):
+                print("[GANADO_SERVICE] Ganado encontrado pero no pertenece al tenant {} (tenant_id del ganado: {})".format(
+                    tenant_id, row.get('tenant_id')))
+                return None
+
+            return row
+        except Exception as query_error:
+            error_msg = str(query_error)
+            print("[GANADO_SERVICE] Error ejecutando consulta principal: {}".format(error_msg))
+
+            # Si falla por tabla historial_potreros, intentar fallback
+            if any(keyword in error_msg.lower() for keyword in ['historial_potreros', "doesn't exist", 'unknown column']):
+                return GanadoService._ejecutar_consulta_fallback(cursor, identifier, tenant_id)
+            raise
+
+    @staticmethod
+    def _ejecutar_consulta_fallback(cursor, identifier: Any, tenant_id: Optional[int]) -> Optional[Dict[str, Any]]:
+        """Ejecuta la consulta de fallback."""
+        try:
+            print("[GANADO_SERVICE] Intentando consulta sin historial_potreros...")
+            query, params = GanadoService._construir_query_fallback(identifier, tenant_id)
+            cursor.execute(query, params)
+            row = cursor.fetchone()
+
+            if not row or not GanadoService._validar_tenant_ganado(row, tenant_id):
+                print("[GANADO_SERVICE] No se encontró ganado con identifier={} en consulta simplificada".format(identifier))
+                return None
+
+            print("[GANADO_SERVICE] Consulta simplificada exitosa")
+            return row
+        except Exception as fallback_error:
+            print("[GANADO_SERVICE] Error en consulta simplificada: {}".format(fallback_error))
+            import traceback
+            traceback.print_exc()
+            return None
+
+    @staticmethod
+    def obtener_ganado_detallado(identifier: int | str, tenant_id_override: Optional[int] = None) -> Optional[Dict[str, Any]]:
+        """
+        Obtener ganado detallado por ID o código QR.
+
+        Args:
+            identifier: ID del ganado o código QR
+            tenant_id_override: Si se proporciona, valida que el ganado pertenezca a este tenant
+        """
+        connection = get_connection()
+        if connection is None:
+            print("No se pudo obtener conexión a la base de datos.")
+            return None
+
+        tenant_id = tenant_id_override if tenant_id_override is not None else GanadoService._obtener_tenant_id()
+        numeric_id = GanadoService._extraer_id_numerico(identifier)
+        search_id = numeric_id if numeric_id is not None else identifier
+
+        print("[GANADO_SERVICE] Búsqueda: identifier={}, numeric_id={}, search_id={}".format(identifier, numeric_id, search_id))
+
+        query, params = GanadoService._construir_query_principal(search_id, identifier, tenant_id)
+        print("[GANADO_SERVICE] obtener_ganado_detallado: Buscando con identifier={}, tenant_id={}".format(identifier, tenant_id))
+        print("[GANADO_SERVICE] Parámetros de consulta: {}".format(params))
 
         try:
             cursor = connection.cursor(dictionary=True)
             try:
-                cursor.execute(main_query, params)
-                row = cursor.fetchone()
-                
-                print(f"[GANADO_SERVICE] Resultado de consulta: {'encontrado' if row else 'NO encontrado'}")
-                if row:
-                    print(f"[GANADO_SERVICE] Datos encontrados: id={row.get('id')}, nombre={row.get('nombre')}, tenant_id={row.get('tenant_id')}")
-                
+                row = GanadoService._ejecutar_consulta_principal(cursor, query, params, identifier, tenant_id)
                 if not row:
-                    print(f"[GANADO_SERVICE] No se encontró ganado con identifier={identifier} (sin tenant_id)")
                     return None
-                
-                if not GanadoService._validar_tenant_ganado(row, tenant_id):
-                    print(f"[GANADO_SERVICE] Ganado encontrado pero no pertenece al tenant {tenant_id} (tenant_id del ganado: {row.get('tenant_id')})")
-                    return None
-            except Exception as query_error:
-                error_msg = str(query_error)
-                print(f"[GANADO_SERVICE] Error ejecutando consulta principal: {error_msg}")
-                # Si falla por tabla historial_potreros o columnas, intentar sin ellas
-                if 'historial_potreros' in error_msg.lower() or 'doesn\'t exist' in error_msg.lower() or 'unknown column' in error_msg.lower():
-                    try:
-                        print(f"[GANADO_SERVICE] Intentando consulta sin historial_potreros...")
-                        simple_query = """
-                            SELECT
-                                g.id,
-                                g.nombre,
-                                g.raza,
-                                g.fecha_nacimiento,
-                                g.sexo,
-                                g.peso,
-                                g.id_potrero,
-                                g.id_persona,
-                                g.id_estado,
-                                g.tenant_id,
-                                q.codigo_qr,
-                                eg.tipo_estado AS estado_principal,
-                                NULL AS estado_salud,
-                                p.nombre AS potrero_nombre,
-                                p.capacidad AS potrero_capacidad,
-                                NULL AS potrero_ultima_limpieza,
-                                NULL AS potrero_fecha_ultimo_uso,
-                                NULL AS potrero_proxima_limpieza,
-                                p.estado AS potrero_estado,
-                                tp.tipo_pasto AS potrero_tipo_pasto,
-                                per.telefono AS propietario_telefono,
-                                CONCAT_WS(' ', per.primer_nombre, per.segundo_nombre, per.primer_apellido, per.segundo_apellido) AS propietario_nombre,
-                                roles.rol AS propietario_rol
-                            FROM ganado g
-                            LEFT JOIN qr q ON q.id_ganado = g.id
-                            LEFT JOIN estado_ganado eg ON eg.id = g.id_estado
-                            LEFT JOIN potrero p ON p.id = g.id_potrero
-                            LEFT JOIN tipo_pasto tp ON tp.id = p.id_tipo_pasto
-                            LEFT JOIN personas per ON per.id = g.id_persona
-                            LEFT JOIN roles ON roles.id = per.id_rol
-                            WHERE (g.id = %s OR q.codigo_qr = %s)
-                        """
-                        if tenant_id is not None:
-                            simple_query += SQL_AND_G_TENANT_ID
-                            simple_params = (identifier, identifier, tenant_id)
-                        else:
-                            simple_params = (identifier, identifier)
-                        simple_query += " LIMIT 1"
-                        cursor.execute(simple_query, simple_params)
-                        row = cursor.fetchone()
-                        if not row or not GanadoService._validar_tenant_ganado(row, tenant_id):
-                            print(f"[GANADO_SERVICE] No se encontró ganado con identifier={identifier} en consulta simplificada")
-                            return None
-                        print(f"[GANADO_SERVICE] Consulta simplificada exitosa")
-                    except Exception as fallback_error:
-                        print(f"[GANADO_SERVICE] Error en consulta simplificada: {fallback_error}")
-                        import traceback
-                        traceback.print_exc()
-                        return None
-                else:
-                    # Si es otro tipo de error, re-lanzarlo
-                    raise
+
+                print("[GANADO_SERVICE] Resultado de consulta: encontrado")
+                print("[GANADO_SERVICE] Datos encontrados: id={}, nombre={}, tenant_id={}".format(
+                    row.get('id'), row.get('nombre'), row.get('tenant_id')))
+
             finally:
                 cursor.close()
 
-            animal_id_value = row.get("id")
-            animal_id: Optional[int] = None
-            if animal_id_value is not None:
-                try:
-                    animal_id = int(animal_id_value)
-                except (TypeError, ValueError):
-                    animal_id = None
-
+            animal_id = GanadoService._to_nullable_int(row.get("id"))
             propietario = GanadoService._procesar_propietario(row)
             potrero = GanadoService._procesar_potrero(row)
 
-            vacunas: List[Dict[str, Any]] = []
+            vacunas = []
             if animal_id is not None:
                 vacunas = GanadoService._fetch_vacunas(connection, animal_id, tenant_id)
-                print(f"[GANADO_SERVICE] obtener_ganado_detallado: Animal {animal_id} tiene {len(vacunas)} vacunas")
+                print("[GANADO_SERVICE] obtener_ganado_detallado: Animal {} tiene {} vacunas".format(animal_id, len(vacunas)))
 
             resultado = GanadoService._construir_detalle_ganado(row, animal_id, propietario, potrero, vacunas)
-            print(f"[GANADO_SERVICE] obtener_ganado_detallado: Resultado incluye {len(resultado.get('vacunas', []))} vacunas en el dict")
-            print(f"[GANADO_SERVICE] obtener_ganado_detallado: Datos del potrero: {resultado.get('potrero', {})}")
-            print(f"[GANADO_SERVICE] obtener_ganado_detallado: Datos del propietario: {resultado.get('propietario', {})}")
+            print("[GANADO_SERVICE] obtener_ganado_detallado: Resultado incluye {} vacunas en el dict".format(len(resultado.get('vacunas', []))))
+            print("[GANADO_SERVICE] obtener_ganado_detallado: Datos del potrero: {}".format(resultado.get('potrero', {})))
+            print("[GANADO_SERVICE] obtener_ganado_detallado: Datos del propietario: {}".format(resultado.get('propietario', {})))
             return resultado
-        except Exception as e:  # pylint: disable=broad-except
-            print(f"[GANADO_SERVICE] Error en obtener_ganado_detallado: {type(e).__name__}: {e}")
+        except Exception as e:
+            print("[GANADO_SERVICE] Error en obtener_ganado_detallado: {}: {}".format(type(e).__name__, e))
             import traceback
             traceback.print_exc()
             return None

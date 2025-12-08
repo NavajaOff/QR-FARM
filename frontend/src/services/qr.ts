@@ -279,19 +279,25 @@ const parseGanadoResponse = (input: unknown): GanadoResource => {
 
 const prepareCandidateQueue = (alternatives: string[] | undefined, resourceId: string): string[] => {
   const allCandidates = [...(alternatives ?? []), resourceId]
-    .map((candidate) => {
-      if (typeof candidate === 'number') {
-        return String(candidate);
-      }
-      if (typeof candidate === 'string') {
-        return candidate.trim();
-      }
-      return '';
-    })
+    .map(normalizeCandidate)
     .filter((value): value is string => value.length > 0);
 
+  return removeDuplicates(allCandidates);
+};
+
+const normalizeCandidate = (candidate: unknown): string => {
+  if (typeof candidate === 'number') {
+    return String(candidate);
+  }
+  if (typeof candidate === 'string') {
+    return candidate.trim();
+  }
+  return '';
+};
+
+const removeDuplicates = (candidates: string[]): string[] => {
   const seen = new Set<string>();
-  return allCandidates.filter(candidate => {
+  return candidates.filter(candidate => {
     const normalized = candidate.trim();
     if (seen.has(normalized)) return false;
     seen.add(normalized);
@@ -339,48 +345,60 @@ interface ProcessCandidateResult {
   error?: Error;
 }
 
-const processCandidate = async (
+const processNumericCandidate = async (
   candidate: string,
   qrEndpoint: string,
   idEndpoint: string,
   signal?: AbortSignal
 ): Promise<ProcessCandidateResult> => {
-  const isNumeric = /^\d+$/.test(candidate);
-  
-  // Si es numérico, intentar primero por ID directo (más rápido y confiable)
-  if (isNumeric) {
-    console.log('[QR-SERVICE] Candidato numérico detectado, intentando primero por ID:', candidate);
-    const idUrl = buildUrl(idEndpoint, candidate);
-    try {
-      const resource = await tryFetchById(idUrl, candidate, signal);
-      return { success: true, resource };
-    } catch (idError) {
-      handleCancelError(idError);
-      handleParseError(idError);
+  console.log('[QR-SERVICE] Candidato numérico detectado, intentando primero por ID:', candidate);
+  const idUrl = buildUrl(idEndpoint, candidate);
 
-      if (isAxiosError(idError) && idError.response?.status === 404) {
-        console.log('[QR-SERVICE] No encontrado por ID, intentando por código QR:', candidate);
-        // Si falla por ID, intentar por código QR como fallback
-        const qrUrl = buildUrl(qrEndpoint, candidate);
-        try {
-          const resource = await tryFetchByQrCode(qrUrl, candidate, signal);
-          return { success: true, resource };
-        } catch (qrError) {
-          handleCancelError(qrError);
-          handleParseError(qrError);
-          if (isAxiosError(qrError) && qrError.response?.status === 404) {
-            console.log('[QR-SERVICE] No encontrado por código QR tampoco');
-            return { success: false, error: mapAxiosError(idError) };
-          }
-          throw mapAxiosError(qrError);
-        }
-      }
-      throw mapAxiosError(idError);
+  try {
+    const resource = await tryFetchById(idUrl, candidate, signal);
+    return { success: true, resource };
+  } catch (idError) {
+    handleCancelError(idError);
+    handleParseError(idError);
+
+    if (isAxiosError(idError) && idError.response?.status === 404) {
+      return await tryQrFallback(candidate, qrEndpoint, idError, signal);
     }
+    throw mapAxiosError(idError);
   }
-  
-  // Si no es numérico, intentar primero por código QR
+};
+
+const tryQrFallback = async (
+  candidate: string,
+  qrEndpoint: string,
+  originalError: unknown,
+  signal?: AbortSignal
+): Promise<ProcessCandidateResult> => {
+  console.log('[QR-SERVICE] No encontrado por ID, intentando por código QR:', candidate);
   const qrUrl = buildUrl(qrEndpoint, candidate);
+
+  try {
+    const resource = await tryFetchByQrCode(qrUrl, candidate, signal);
+    return { success: true, resource };
+  } catch (qrError) {
+    handleCancelError(qrError);
+    handleParseError(qrError);
+
+    if (isAxiosError(qrError) && qrError.response?.status === 404) {
+      console.log('[QR-SERVICE] No encontrado por código QR tampoco');
+      return { success: false, error: mapAxiosError(originalError) };
+    }
+    throw mapAxiosError(qrError);
+  }
+};
+
+const processNonNumericCandidate = async (
+  candidate: string,
+  qrEndpoint: string,
+  signal?: AbortSignal
+): Promise<ProcessCandidateResult> => {
+  const qrUrl = buildUrl(qrEndpoint, candidate);
+
   try {
     const resource = await tryFetchByQrCode(qrUrl, candidate, signal);
     return { success: true, resource };
@@ -396,52 +414,47 @@ const processCandidate = async (
   }
 };
 
-export const fetchQrResource = async (params: QrResourceRequest): Promise<GanadoResource> => {
-  console.log('[QR-SERVICE] fetchQrResource llamado con:', {
-    endpoint: params.endpoint,
-    resourceId: params.resourceId,
-    alternatives: params.alternatives
-  });
-  
-  // Priorizar IDs numéricos sobre códigos QR alfanuméricos
-  const allCandidates = [...(params.alternatives ?? []), params.resourceId];
-  const numericIds = allCandidates.filter(c => /^\d+$/.test(String(c)));
-  const nonNumericIds = allCandidates.filter(c => !/^\d+$/.test(String(c)));
-  
-  // Ordenar: primero IDs numéricos, luego códigos QR
-  const queue = [...numericIds, ...nonNumericIds]
-    .map((candidate) => {
-      if (typeof candidate === 'number') {
-        return String(candidate);
-      }
-      if (typeof candidate === 'string') {
-        return candidate.trim();
-      }
-      return '';
-    })
-    .filter((value): value is string => value.length > 0);
-  
-  // Eliminar duplicados manteniendo el orden
-  const seen = new Set<string>();
-  const uniqueQueue = queue.filter(candidate => {
-    const normalized = candidate.trim();
-    if (seen.has(normalized)) return false;
-    seen.add(normalized);
-    return true;
-  });
+const processCandidate = async (
+  candidate: string,
+  qrEndpoint: string,
+  idEndpoint: string,
+  signal?: AbortSignal
+): Promise<ProcessCandidateResult> => {
+  const isNumeric = /^\d+$/.test(candidate);
 
-  if (uniqueQueue.length === 0) {
-    throw createError('El identificador del código QR es obligatorio.', 'QrResourceIdError');
+  if (isNumeric) {
+    return processNumericCandidate(candidate, qrEndpoint, idEndpoint, signal);
   }
 
-  console.log('[QR-SERVICE] Cola de búsqueda (priorizando IDs numéricos):', uniqueQueue);
+  return processNonNumericCandidate(candidate, qrEndpoint, signal);
+};
 
-  const qrEndpoint = params.endpoint;
-  const idEndpoint = params.endpoint.replace('/qr/{id}', '/{id}').replace('/qr/', '/');
+const prioritizeCandidates = (alternatives: string[] | undefined, resourceId: string): string[] => {
+  const allCandidates = [...(alternatives ?? []), resourceId];
+  const numericIds = allCandidates.filter(c => /^\d+$/.test(String(c)));
+  const nonNumericIds = allCandidates.filter(c => !/^\d+$/.test(String(c)));
+
+  // Ordenar: primero IDs numéricos, luego códigos QR
+  const queue = [...numericIds, ...nonNumericIds];
+  return prepareCandidateQueue(queue, resourceId);
+};
+
+const buildEndpoints = (endpoint: string): { qrEndpoint: string; idEndpoint: string } => {
+  const qrEndpoint = endpoint;
+  const idEndpoint = endpoint.replace('/qr/{id}', '/{id}').replace('/qr/', '/');
+  return { qrEndpoint, idEndpoint };
+};
+
+const tryCandidatesSequentially = async (
+  candidates: string[],
+  qrEndpoint: string,
+  idEndpoint: string,
+  signal?: AbortSignal
+): Promise<GanadoResource> => {
   let lastNotFoundError: Error | null = null;
 
-  for (const candidate of uniqueQueue) {
-    const result = await processCandidate(candidate, qrEndpoint, idEndpoint, params.signal);
+  for (const candidate of candidates) {
+    const result = await processCandidate(candidate, qrEndpoint, idEndpoint, signal);
     if (result.success && result.resource) {
       console.log('[QR-SERVICE] Recurso encontrado con candidato:', candidate);
       return result.resource;
@@ -456,6 +469,26 @@ export const fetchQrResource = async (params: QrResourceRequest): Promise<Ganado
   }
 
   throw createError('No se pudo consultar el recurso asociado.', 'QrUnknownError');
+};
+
+export const fetchQrResource = async (params: QrResourceRequest): Promise<GanadoResource> => {
+  console.log('[QR-SERVICE] fetchQrResource llamado con:', {
+    endpoint: params.endpoint,
+    resourceId: params.resourceId,
+    alternatives: params.alternatives
+  });
+
+  const candidates = prioritizeCandidates(params.alternatives, params.resourceId);
+
+  if (candidates.length === 0) {
+    throw createError('El identificador del código QR es obligatorio.', 'QrResourceIdError');
+  }
+
+  console.log('[QR-SERVICE] Cola de búsqueda (priorizando IDs numéricos):', candidates);
+
+  const { qrEndpoint, idEndpoint } = buildEndpoints(params.endpoint);
+
+  return tryCandidatesSequentially(candidates, qrEndpoint, idEndpoint, params.signal);
 };
 
 export interface EmbeddedQrPayload {

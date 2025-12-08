@@ -248,8 +248,20 @@ const isEmbeddedGanadoPayload = (value: unknown): value is EmbeddedGanadoPayload
   if (!value || typeof value !== 'object') return false;
   const payload = value as Record<string, unknown>;
   // Soporte para campos abreviados (optimizados) y legacy (compatibilidad)
-  const schema = typeof payload.s === 'string' ? payload.s : (typeof payload.schema === 'string' ? payload.schema : '');
-  const tipo = typeof payload.t === 'string' ? payload.t : (typeof payload.type === 'string' ? payload.type : '');
+  let schema = '';
+  if (typeof payload.s === 'string') {
+    schema = payload.s;
+  } else if (typeof payload.schema === 'string') {
+    schema = payload.schema;
+  }
+
+  let tipo = '';
+  if (typeof payload.t === 'string') {
+    tipo = payload.t;
+  } else if (typeof payload.type === 'string') {
+    tipo = payload.type;
+  }
+
   const identifier = payload.id;
   const hasId = typeof identifier === 'string' || typeof identifier === 'number';
   return schema.startsWith('qr-farm') && tipo === 'ganado' && hasId;

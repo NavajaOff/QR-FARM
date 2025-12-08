@@ -19,6 +19,9 @@ down_revision: str = 'dfd51ca3cf7f'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
+# Constants
+TENANT_ID_FK = 'tenants.id'
+
 
 def _crear_tabla_estado_potrero(inspector: sa.Inspector) -> None:
     """Crea la tabla estado_potrero si no existe."""
@@ -39,126 +42,110 @@ def _crear_tabla_estado_potrero(inspector: sa.Inspector) -> None:
         """)
 
 
+def _crear_tabla_historial_potreros_base() -> None:
+    """Crea la tabla historial_potreros con la estructura base."""
+    op.create_table(
+        'historial_potreros',
+        sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
+        sa.Column('id_potrero', sa.Integer, sa.ForeignKey('potrero.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('fecha_ultima_limpieza', sa.DateTime, nullable=True),
+        sa.Column('fecha_proxima_limpieza', sa.DateTime, nullable=True),
+        sa.Column('fecha_ultimo_uso', sa.DateTime, nullable=True),
+        sa.Column('observaciones', sa.Text, nullable=True)
+    )
+
+
+def _migrar_datos_historial_potrero() -> None:
+    """Migra datos desde historial_potrero a historial_potreros."""
+    op.execute("""
+        INSERT INTO historial_potreros (id_potrero, fecha_ultimo_uso, fecha_ultima_limpieza, fecha_proxima_limpieza, observaciones)
+        SELECT
+            id_potrero,
+            MAX(CASE WHEN tipo_evento = 'uso' THEN fecha_evento END) as fecha_ultimo_uso,
+            MAX(CASE WHEN tipo_evento = 'limpieza' AND (observaciones IS NULL OR observaciones != 'Programada') THEN fecha_evento END) as fecha_ultima_limpieza,
+            MAX(CASE WHEN tipo_evento = 'limpieza' AND observaciones = 'Programada' THEN fecha_evento END) as fecha_proxima_limpieza,
+            MAX(CASE WHEN tipo_evento = 'limpieza' AND observaciones = 'Programada' THEN observaciones END) as observaciones
+        FROM historial_potrero
+        GROUP BY id_potrero
+    """)
+
+
+def _actualizar_historial_potreros_existente() -> None:
+    """Actualiza registros existentes en historial_potreros con datos de historial_potrero."""
+    op.execute("""
+        UPDATE historial_potreros hp
+        INNER JOIN (
+            SELECT
+                id_potrero,
+                MAX(CASE WHEN tipo_evento = 'uso' THEN fecha_evento END) as fecha_ultimo_uso,
+                MAX(CASE WHEN tipo_evento = 'limpieza' AND (observaciones IS NULL OR observaciones != 'Programada') THEN fecha_evento END) as fecha_ultima_limpieza,
+                MAX(CASE WHEN tipo_evento = 'limpieza' AND observaciones = 'Programada' THEN fecha_evento END) as fecha_proxima_limpieza,
+                MAX(CASE WHEN tipo_evento = 'limpieza' AND observaciones = 'Programada' THEN observaciones END) as observaciones
+            FROM historial_potrero
+            GROUP BY id_potrero
+        ) hp_old ON hp.id_potrero = hp_old.id_potrero
+        SET
+            hp.fecha_ultimo_uso = COALESCE(hp_old.fecha_ultimo_uso, hp.fecha_ultimo_uso),
+            hp.fecha_ultima_limpieza = COALESCE(hp_old.fecha_ultima_limpieza, hp.fecha_ultima_limpieza),
+            hp.fecha_proxima_limpieza = COALESCE(hp_old.fecha_proxima_limpieza, hp.fecha_proxima_limpieza),
+            hp.observaciones = COALESCE(hp_old.observaciones, hp.observaciones)
+    """)
+
+
+def _eliminar_tabla_historial_potrero(inspector: sa.Inspector) -> None:
+    """Elimina índices y tabla historial_potrero."""
+    try:
+        indexes = inspector.get_indexes('historial_potrero')
+        for idx in indexes:
+            if idx['name'] not in ['PRIMARY']:
+                try:
+                    op.drop_index(idx['name'], 'historial_potrero')
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    op.drop_table('historial_potrero')
+
+
+def _verificar_columnas_historial_potreros(inspector: sa.Inspector) -> None:
+    """Verifica que historial_potreros tenga todas las columnas requeridas."""
+    columns = [col['name'] for col in inspector.get_columns('historial_potreros')]
+    required_columns = {
+        'fecha_ultima_limpieza': sa.DateTime,
+        'fecha_proxima_limpieza': sa.DateTime,
+        'fecha_ultimo_uso': sa.DateTime,
+        'observaciones': sa.Text
+    }
+
+    for col_name, col_type in required_columns.items():
+        if col_name not in columns:
+            op.add_column('historial_potreros', sa.Column(col_name, col_type, nullable=True))
+
+
 def _crear_tabla_historial_potreros(inspector: sa.Inspector) -> None:
     """Crea o actualiza la tabla historial_potreros según el ERD y elimina historial_potrero."""
     tables = inspector.get_table_names()
-    
-    # Caso 1: Existe historial_potrero (singular) pero no historial_potreros (plural)
+
     if 'historial_potrero' in tables and 'historial_potreros' not in tables:
-        # Crear tabla historial_potreros usando Alembic
-        op.create_table(
-            'historial_potreros',
-            sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
-            sa.Column('id_potrero', sa.Integer, sa.ForeignKey('potrero.id', ondelete='CASCADE'), nullable=False),
-            sa.Column('fecha_ultima_limpieza', sa.DateTime, nullable=True),
-            sa.Column('fecha_proxima_limpieza', sa.DateTime, nullable=True),
-            sa.Column('fecha_ultimo_uso', sa.DateTime, nullable=True),
-            sa.Column('observaciones', sa.Text, nullable=True)
-        )
-        
-        # Migrar datos desde historial_potrero agrupando por id_potrero
-        op.execute("""
-            INSERT INTO historial_potreros (id_potrero, fecha_ultimo_uso, fecha_ultima_limpieza, fecha_proxima_limpieza, observaciones)
-            SELECT 
-                id_potrero,
-                MAX(CASE WHEN tipo_evento = 'uso' THEN fecha_evento END) as fecha_ultimo_uso,
-                MAX(CASE WHEN tipo_evento = 'limpieza' AND (observaciones IS NULL OR observaciones != 'Programada') THEN fecha_evento END) as fecha_ultima_limpieza,
-                MAX(CASE WHEN tipo_evento = 'limpieza' AND observaciones = 'Programada' THEN fecha_evento END) as fecha_proxima_limpieza,
-                MAX(CASE WHEN tipo_evento = 'limpieza' AND observaciones = 'Programada' THEN observaciones END) as observaciones
-            FROM historial_potrero
-            GROUP BY id_potrero
-        """)
-        
-        # Eliminar índices de historial_potrero antes de eliminar la tabla
-        try:
-            indexes = inspector.get_indexes('historial_potrero')
-            for idx in indexes:
-                if idx['name'] not in ['PRIMARY']:
-                    try:
-                        op.drop_index(idx['name'], 'historial_potrero')
-                    except Exception:
-                        pass
-        except Exception:
-            pass
-        
-        # Eliminar la tabla historial_potrero
-        op.drop_table('historial_potrero')
-    
-    # Caso 2: Existen ambas tablas (migración parcial previa) - consolidar y eliminar historial_potrero
+        # Caso 1: Solo existe historial_potrero
+        _crear_tabla_historial_potreros_base()
+        _migrar_datos_historial_potrero()
+        _eliminar_tabla_historial_potrero(inspector)
+
     elif 'historial_potrero' in tables and 'historial_potreros' in tables:
-        # Para cada potrero, actualizar o insertar el registro en historial_potreros
-        op.execute("""
-            INSERT INTO historial_potreros (id_potrero, fecha_ultimo_uso, fecha_ultima_limpieza, fecha_proxima_limpieza, observaciones)
-            SELECT 
-                id_potrero,
-                MAX(CASE WHEN tipo_evento = 'uso' THEN fecha_evento END) as fecha_ultimo_uso,
-                MAX(CASE WHEN tipo_evento = 'limpieza' AND (observaciones IS NULL OR observaciones != 'Programada') THEN fecha_evento END) as fecha_ultima_limpieza,
-                MAX(CASE WHEN tipo_evento = 'limpieza' AND observaciones = 'Programada' THEN fecha_evento END) as fecha_proxima_limpieza,
-                MAX(CASE WHEN tipo_evento = 'limpieza' AND observaciones = 'Programada' THEN observaciones END) as observaciones
-            FROM historial_potrero
-            GROUP BY id_potrero
-        """)
-        
-        # Actualizar registros existentes en historial_potreros con los datos más recientes
-        op.execute("""
-            UPDATE historial_potreros hp
-            INNER JOIN (
-                SELECT 
-                    id_potrero,
-                    MAX(CASE WHEN tipo_evento = 'uso' THEN fecha_evento END) as fecha_ultimo_uso,
-                    MAX(CASE WHEN tipo_evento = 'limpieza' AND (observaciones IS NULL OR observaciones != 'Programada') THEN fecha_evento END) as fecha_ultima_limpieza,
-                    MAX(CASE WHEN tipo_evento = 'limpieza' AND observaciones = 'Programada' THEN fecha_evento END) as fecha_proxima_limpieza,
-                    MAX(CASE WHEN tipo_evento = 'limpieza' AND observaciones = 'Programada' THEN observaciones END) as observaciones
-                FROM historial_potrero
-                GROUP BY id_potrero
-            ) hp_old ON hp.id_potrero = hp_old.id_potrero
-            SET 
-                hp.fecha_ultimo_uso = COALESCE(hp_old.fecha_ultimo_uso, hp.fecha_ultimo_uso),
-                hp.fecha_ultima_limpieza = COALESCE(hp_old.fecha_ultima_limpieza, hp.fecha_ultima_limpieza),
-                hp.fecha_proxima_limpieza = COALESCE(hp_old.fecha_proxima_limpieza, hp.fecha_proxima_limpieza),
-                hp.observaciones = COALESCE(hp_old.observaciones, hp.observaciones)
-        """)
-        
-        # Eliminar índices de historial_potrero antes de eliminar la tabla
-        try:
-            indexes = inspector.get_indexes('historial_potrero')
-            for idx in indexes:
-                if idx['name'] not in ['PRIMARY']:
-                    try:
-                        op.drop_index(idx['name'], 'historial_potrero')
-                    except Exception:
-                        pass
-        except Exception:
-            pass
-        
-        # Eliminar la tabla historial_potrero
-        op.drop_table('historial_potrero')
-    
-    # Caso 3: No existe ninguna de las dos, crear historial_potreros
+        # Caso 2: Existen ambas tablas
+        _migrar_datos_historial_potrero()
+        _actualizar_historial_potreros_existente()
+        _eliminar_tabla_historial_potrero(inspector)
+
     elif 'historial_potreros' not in tables:
-        op.create_table(
-            'historial_potreros',
-            sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
-            sa.Column('id_potrero', sa.Integer, sa.ForeignKey('potrero.id', ondelete='CASCADE'), nullable=False),
-            sa.Column('fecha_ultima_limpieza', sa.DateTime, nullable=True),
-            sa.Column('fecha_proxima_limpieza', sa.DateTime, nullable=True),
-            sa.Column('fecha_ultimo_uso', sa.DateTime, nullable=True),
-            sa.Column('observaciones', sa.Text, nullable=True)
-        )
-    
-    # Caso 4: Ya existe historial_potreros, verificar que tenga todos los campos
+        # Caso 3: No existe historial_potreros
+        _crear_tabla_historial_potreros_base()
+
     else:
-        columns = [col['name'] for col in inspector.get_columns('historial_potreros')]
-        required_columns = {
-            'fecha_ultima_limpieza': sa.DateTime,
-            'fecha_proxima_limpieza': sa.DateTime,
-            'fecha_ultimo_uso': sa.DateTime,
-            'observaciones': sa.Text
-        }
-        
-        for col_name, col_type in required_columns.items():
-            if col_name not in columns:
-                op.add_column('historial_potreros', sa.Column(col_name, col_type, nullable=True))
+        # Caso 4: Ya existe historial_potreros
+        _verificar_columnas_historial_potreros(inspector)
 
 
 def _actualizar_tabla_roles(inspector: sa.Inspector) -> None:
@@ -185,8 +172,8 @@ def _actualizar_tabla_personas(inspector: sa.Inspector) -> None:
     
     # Agregar tenant_id si no existe
     if 'tenant_id' not in columns:
-        op.add_column('personas', sa.Column('tenant_id', sa.Integer, 
-                                           sa.ForeignKey('tenants.id', ondelete='SET NULL'), 
+        op.add_column('personas', sa.Column('tenant_id', sa.Integer,
+                                           sa.ForeignKey(TENANT_ID_FK, ondelete='SET NULL'),
                                            nullable=True))
     
     # Asegurar constraints UNIQUE en email y telefono
@@ -242,8 +229,8 @@ def _actualizar_tabla_potrero(inspector: sa.Inspector) -> None:
     
     # Asegurar que tenant_id existe y tiene FK
     if 'tenant_id' not in columns:
-        op.add_column('potrero', sa.Column('tenant_id', sa.Integer, 
-                                          sa.ForeignKey('tenants.id', ondelete='CASCADE'), 
+        op.add_column('potrero', sa.Column('tenant_id', sa.Integer,
+                                          sa.ForeignKey(TENANT_ID_FK, ondelete='CASCADE'),
                                           nullable=True))
 
 
@@ -256,8 +243,8 @@ def _actualizar_tabla_ganado(inspector: sa.Inspector) -> None:
     
     # Asegurar que tenant_id existe
     if 'tenant_id' not in columns:
-        op.add_column('ganado', sa.Column('tenant_id', sa.Integer, 
-                                         sa.ForeignKey('tenants.id', ondelete='CASCADE'), 
+        op.add_column('ganado', sa.Column('tenant_id', sa.Integer,
+                                         sa.ForeignKey(TENANT_ID_FK, ondelete='CASCADE'),
                                          nullable=True))
 
 
@@ -292,8 +279,8 @@ def _actualizar_tabla_vacunacion(inspector: sa.Inspector) -> None:
     
     # Asegurar que tenant_id existe
     if 'tenant_id' not in columns:
-        op.add_column('vacunacion', sa.Column('tenant_id', sa.Integer, 
-                                              sa.ForeignKey('tenants.id', ondelete='CASCADE'), 
+        op.add_column('vacunacion', sa.Column('tenant_id', sa.Integer,
+                                              sa.ForeignKey(TENANT_ID_FK, ondelete='CASCADE'),
                                               nullable=True))
 
 
@@ -306,8 +293,8 @@ def _actualizar_tabla_qr(inspector: sa.Inspector) -> None:
     
     # Asegurar que tenant_id existe
     if 'tenant_id' not in columns:
-        op.add_column('qr', sa.Column('tenant_id', sa.Integer, 
-                                      sa.ForeignKey('tenants.id', ondelete='CASCADE'), 
+        op.add_column('qr', sa.Column('tenant_id', sa.Integer,
+                                      sa.ForeignKey(TENANT_ID_FK, ondelete='CASCADE'),
                                       nullable=True))
 
 
@@ -320,8 +307,8 @@ def _actualizar_tabla_usuarios(inspector: sa.Inspector) -> None:
     
     # Asegurar que tenant_id existe
     if 'tenant_id' not in columns:
-        op.add_column('usuarios', sa.Column('tenant_id', sa.Integer, 
-                                            sa.ForeignKey('tenants.id', ondelete='SET NULL'), 
+        op.add_column('usuarios', sa.Column('tenant_id', sa.Integer,
+                                            sa.ForeignKey(TENANT_ID_FK, ondelete='SET NULL'),
                                             nullable=True))
 
 
