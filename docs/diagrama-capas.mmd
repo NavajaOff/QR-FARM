@@ -1,0 +1,248 @@
+flowchart TB
+    subgraph Frontend["🎨 CAPA DE PRESENTACIÓN - FRONTEND (Vue 3 + Vite)"]
+        direction TB
+        
+        subgraph ViewsFrontend["📄 Views (Vistas de Página)"]
+            direction LR
+            ViewsAdmin["Admin Views<br/>━━━━━━━━━━<br/>• DashboardAdmin.vue<br/>• GestionarUsuarios.vue<br/>• GestionarAnimalesAdmin.vue<br/>• GestionarPotrerosAdmin.vue<br/>• RegistroVacunacionAdmin.vue<br/>• EscanearQRAdmin.vue<br/>• ReportesAdmin.vue<br/>• GestionarTenants.vue<br/>• PerfilAdmin.vue<br/>• DashboardContent.vue"]
+            ViewsUser["User Views<br/>━━━━━━━━━━<br/>• DashboardUsuario.vue<br/>• GestionarAnimalesUsuario.vue<br/>• GestionarPotrerosUsuario.vue<br/>• RegistroVacunacionUsuario.vue<br/>• EscanearQRUsuario.vue<br/>• ReportesUsuario.vue<br/>• PerfilUsuario.vue"]
+            ViewsPublic["Public Views<br/>━━━━━━━━━━<br/>• Home.vue<br/>• Login.vue<br/>• CrearCuenta.vue<br/>• Contacto.vue"]
+        end
+        
+        subgraph ComponentsFrontend["🧩 Components (Componentes Reutilizables)"]
+            direction TB
+            ComponentsCore["Core Components<br/>━━━━━━━━━━<br/>• QrScanner.vue<br/>• GanadoDetailCard.vue<br/>• Header.vue<br/>• HeaderDashboard.vue<br/>• Footer.vue<br/>• RegistroVacunacionBase.vue<br/>• TenantSelector.vue"]
+            ComponentsPotrero["Potrero Components<br/>━━━━━━━━━━<br/>• PotreroCard.vue<br/>• PotreroModal.vue"]
+        end
+        
+        subgraph ComposablesFrontend["⚡ Composables (Lógica Reactiva)"]
+            direction LR
+            ComposablesData["Data Composables<br/>━━━━━━━━━━<br/>• useGanado.js<br/>• usePotreros.js<br/>• useUsuarios.js<br/>• useReportes.js<br/>• useTenants.js<br/>• useFetchData.js"]
+            ComposablesTenant["Tenant Composables<br/>━━━━━━━━━━<br/>• useTenantSelection.js<br/>• useTenantSelector.js"]
+        end
+        
+        subgraph ServicesFrontend["🔌 Services (Cliente API)"]
+            direction TB
+            ApiService["API Service<br/>━━━━━━━━━━<br/>• api.js (Axios)<br/>  - Interceptores JWT<br/>  - Manejo de errores<br/>  - Configuración base"]
+            AuthService["Auth Service<br/>━━━━━━━━━━<br/>• authService.js<br/>  - Login/Logout<br/>  - Gestión de tokens<br/>  - Verificación de sesión"]
+            QrServiceFrontend["QR Service<br/>━━━━━━━━━━<br/>• qr.ts<br/>  - Procesamiento QR<br/>  - Validación de payload<br/>  - Modo offline"]
+        end
+        
+        RouterFrontend["🧭 Router<br/>━━━━━━━━━━<br/>• index.js (Rutas principales)<br/>• auth.js (Guards de autenticación)<br/>  - Verificación de roles<br/>  - Redirecciones"]
+        
+        SocketClientFrontend["📡 Socket Client<br/>━━━━━━━━━━<br/>• socket.js<br/>  - Conexión WebSocket<br/>  - Listeners de eventos<br/>  - Reconexión automática"]
+        
+        AssetsFrontend["🎨 Assets<br/>━━━━━━━━━━<br/>• CSS (20 archivos)<br/>• JS (40 archivos)<br/>• Images (4 archivos)"]
+        
+        LayoutsFrontend["📐 Layouts<br/>━━━━━━━━━━<br/>• AdminLayout.vue<br/>• UserLayout.vue"]
+    end
+    
+    subgraph API["🌐 CAPA DE API / RUTAS (Flask Blueprints)"]
+        direction TB
+        
+        RoutesAPI["Routes (Blueprints)<br/>━━━━━━━━━━<br/>• animal_routes.py<br/>  - GET /api/ganado<br/>  - POST /api/ganado<br/>  - PUT /api/ganado/:id<br/>  - DELETE /api/ganado/:id<br/>• potrero_routes.py<br/>  - GET /api/potreros<br/>  - POST /api/potreros<br/>  - PUT /api/potreros/:id<br/>  - DELETE /api/potreros/:id<br/>• usuario_routes.py<br/>  - POST /api/usuarios/login<br/>  - GET /api/usuarios<br/>  - POST /api/usuarios<br/>  - PUT /api/usuarios/:id<br/>  - DELETE /api/usuarios/:id<br/>• vacunacion_routes.py<br/>  - GET /api/vacunaciones<br/>  - POST /api/vacunaciones<br/>  - PUT /api/vacunaciones/:id<br/>  - DELETE /api/vacunaciones/:id<br/>• reporte_routes.py<br/>  - GET /api/reportes/...<br/>• tenant_routes.py<br/>  - GET /api/tenants<br/>  - POST /api/tenants<br/>  - PUT /api/tenants/:id"]
+        
+        MiddlewareAPI["🔒 Middleware<br/>━━━━━━━━━━<br/>• token_required (JWT)<br/>  - Validación de token<br/>  - Verificación de expiración<br/>  - Usuario activo<br/>• tenant_required<br/>  - Aislamiento multi-tenant<br/>  - Contexto de tenant<br/>• permission_required<br/>  - Verificación de roles<br/>  - Autorización granular"]
+    end
+    
+    subgraph Controllers["🎮 CAPA DE CONTROLADORES (Orquestación HTTP)"]
+        direction LR
+        
+        AnimalController["AnimalController<br/>━━━━━━━━━━<br/>• get_all_animals()<br/>• get_animal_by_id()<br/>• create_animal()<br/>• update_animal()<br/>• delete_animal()<br/>• get_qr_code()"]
+        
+        PotreroController["PotreroController<br/>━━━━━━━━━━<br/>• get_all_potreros()<br/>• get_potrero_by_id()<br/>• create_potrero()<br/>• update_potrero()<br/>• delete_potrero()"]
+        
+        UsuarioController["UsuarioController<br/>━━━━━━━━━━<br/>• login()<br/>• get_all_usuarios()<br/>• get_usuario_by_id()<br/>• create_usuario()<br/>• update_usuario()<br/>• delete_usuario()<br/>• toggle_activo()"]
+        
+        VacunacionController["VacunacionController<br/>━━━━━━━━━━<br/>• get_all_vacunaciones()<br/>• get_vacunacion_by_id()<br/>• create_vacunacion()<br/>• update_vacunacion()<br/>• delete_vacunacion()"]
+        
+        ReporteController["ReporteController<br/>━━━━━━━━━━<br/>• get_reporte_ganado()<br/>• get_reporte_vacunaciones()<br/>• get_reporte_potreros()<br/>• get_reporte_estadisticas()"]
+        
+        TenantController["TenantController<br/>━━━━━━━━━━<br/>• get_all_tenants()<br/>• get_tenant_by_id()<br/>• create_tenant()<br/>• update_tenant()<br/>• delete_tenant()"]
+    end
+    
+    subgraph Services["⚙️ CAPA DE SERVICIOS (Lógica de Negocio)"]
+        direction TB
+        
+        AnimalService["GanadoService<br/>━━━━━━━━━━<br/>• Validación de datos<br/>• Reglas de negocio<br/>• Transformación de modelos<br/>• Generación de QR<br/>• Filtrado por tenant"]
+        
+        PotreroService["PotreroService<br/>━━━━━━━━━━<br/>• Validación de potreros<br/>• Gestión de historial<br/>• Cálculo de capacidad<br/>• Validación de estados"]
+        
+        UsuarioService["UsuarioService<br/>━━━━━━━━━━<br/>• Autenticación<br/>• Hash de contraseñas<br/>• Validación de roles<br/>• Gestión de permisos<br/>• Bloqueo de super_admin"]
+        
+        VacunacionService["VacunacionService<br/>━━━━━━━━━━<br/>• Validación de vacunas<br/>• Cálculo de próximas dosis<br/>• Alertas de vencimiento<br/>• Historial de vacunaciones"]
+        
+        ReporteService["ReporteService<br/>━━━━━━━━━━<br/>• Agregación de datos<br/>• Cálculos estadísticos<br/>• Filtrado y agrupación<br/>• Generación de reportes"]
+        
+        TenantService["TenantService<br/>━━━━━━━━━━<br/>• Gestión de tenants<br/>• Validación de slugs<br/>• Aislamiento de datos<br/>• Inicialización de tenant"]
+        
+        QrService["QrService<br/>━━━━━━━━━━<br/>• Generación de códigos QR<br/>• Embedding de datos JSON<br/>• Actualización de QR<br/>• Validación de payload<br/>• Modo offline"]
+    end
+    
+    subgraph Models["📦 CAPA DE MODELOS (Entidades de Dominio)"]
+        direction LR
+        
+        AnimalModel["Animal Model<br/>━━━━━━━━━━<br/>• Ganado class<br/>• EstadoGanado enum<br/>• SexoGanado enum<br/>• Métodos de transformación<br/>• Validaciones de estado"]
+        
+        PotreroModel["Potrero Model<br/>━━━━━━━━━━<br/>• Potrero class<br/>• Estados de potrero<br/>• Métodos de cálculo<br/>• Validaciones"]
+        
+        UsuarioModel["Usuario Model<br/>━━━━━━━━━━<br/>• Usuario class<br/>• Roles enum<br/>• Métodos de autenticación<br/>• Validaciones"]
+        
+        VacunacionModel["Vacunacion Model<br/>━━━━━━━━━━<br/>• Vacunacion class<br/>• Tipos de vacuna<br/>• Cálculo de fechas<br/>• Validaciones"]
+        
+        TenantModel["Tenant Model<br/>━━━━━━━━━━<br/>• Tenant class<br/>• Slug generation<br/>• Validaciones<br/>• Métodos de aislamiento"]
+        
+        HistorialModel["HistorialPotrero Model<br/>━━━━━━━━━━<br/>• HistorialPotrero class<br/>• Tracking de cambios<br/>• Auditoría"]
+    end
+    
+    subgraph Database["💾 CAPA DE BASE DE DATOS (MySQL)"]
+        direction TB
+        
+        DBConnection["Database Connection<br/>━━━━━━━━━━<br/>• db.py<br/>• get_connection()<br/>• Conexión pool<br/>• Manejo de transacciones<br/>• ConexiónBaseDatos class"]
+        
+        Migrations["Migrations (Alembic)<br/>━━━━━━━━━━<br/>• 001_inicial.py<br/>• 002_agregar_campos_baja_ganado.py<br/>• 003_refactorizar_estados_baja.py<br/>• 004_multi_tenant.py<br/>• 005_eliminar_revision_y_normalizar.py<br/>• Versiones adicionales"]
+        
+        Seeders["Seeders<br/>━━━━━━━━━━<br/>• secure_seed.py<br/>• Export/Import cifrado<br/>• Datos iniciales<br/>• Idempotencia"]
+        
+        Tables["Tablas MySQL<br/>━━━━━━━━━━<br/>• roles<br/>• personas<br/>• usuarios<br/>• potrero<br/>• ganado<br/>• vacunacion<br/>• tenants<br/>• historial_potrero<br/>• alembic_version"]
+    end
+    
+    subgraph Infrastructure["🔧 CAPA DE INFRAESTRUCTURA"]
+        direction TB
+        
+        AuthUtils["Auth Utils<br/>━━━━━━━━━━<br/>• auth.py<br/>  - token_required decorator<br/>  - JWT generation<br/>  - Token validation<br/>• permissions.py<br/>  - Role checking<br/>  - Permission validation"]
+        
+        TenantUtils["Tenant Utils<br/>━━━━━━━━━━<br/>• tenant.py<br/>  - get_current_tenant_id()<br/>  - _es_super_admin_usuario()<br/>  - Tenant context<br/>• init_super_admin.py<br/>  - Inicialización automática<br/>  - Validación de super_admin"]
+        
+        ConfigUtils["Config<br/>━━━━━━━━━━<br/>• config.py<br/>  - Configuración de app<br/>• .env<br/>  - Variables de entorno<br/>  - Secrets<br/>  - DB credentials"]
+        
+        CLIUtils["CLI Commands<br/>━━━━━━━━━━<br/>• secure_seed.py<br/>  - seed:secure_export<br/>  - seed:secure_import<br/>  - team:generate_key<br/>• Flask CLI<br/>  - generate-secret-key"]
+        
+        UtilsOther["Otros Utils<br/>━━━━━━━━━━<br/>• slug.py<br/>  - Generación de slugs<br/>  - Validación"]
+    end
+    
+    subgraph WebSockets["📡 CAPA DE WEBSOCKETS (Real-time)"]
+        direction TB
+        
+        SocketIOServer["SocketIO Server<br/>━━━━━━━━━━<br/>• Flask-SocketIO<br/>• Configuración CORS<br/>• Event handlers<br/>• Room management"]
+        
+        SocketEvents["Events Emitidos<br/>━━━━━━━━━━<br/>• animal_created<br/>• animal_updated<br/>• animal_deleted<br/>• potrero_created<br/>• potrero_updated<br/>• usuario_updated<br/>• usuario_deleted<br/>• vacunacion_created<br/>• tenant_updated"]
+    end
+    
+    subgraph External["🌍 SERVICIOS EXTERNOS"]
+        direction LR
+        
+        MySQLDB["MySQL 8.0<br/>━━━━━━━━━━<br/>• Base de datos principal<br/>• Puerto 3306<br/>• Volumen persistente"]
+        
+        FileSystem["File System<br/>━━━━━━━━━━<br/>• QR codes storage<br/>• backend/qr/<br/>• Imágenes generadas"]
+    end
+    
+    %% Dependencias Frontend
+    ViewsFrontend --> LayoutsFrontend
+    ViewsAdmin --> ComponentsFrontend
+    ViewsUser --> ComponentsFrontend
+    ViewsPublic --> ComponentsCore
+    ComponentsFrontend --> ComposablesFrontend
+    ComponentsPotrero --> ComposablesData
+    ComposablesFrontend --> ServicesFrontend
+    ComposablesData --> ApiService
+    RouterFrontend --> AuthService
+    ViewsFrontend --> RouterFrontend
+    ServicesFrontend --> SocketClientFrontend
+    AssetsFrontend --> ViewsFrontend
+    
+    %% Dependencias Frontend -> API
+    ApiService --> RoutesAPI
+    SocketClientFrontend --> SocketIOServer
+    AuthService --> RoutesAPI
+    
+    %% Dependencias API -> Controllers
+    RoutesAPI --> MiddlewareAPI
+    RoutesAPI --> AnimalController
+    RoutesAPI --> PotreroController
+    RoutesAPI --> UsuarioController
+    RoutesAPI --> VacunacionController
+    RoutesAPI --> ReporteController
+    RoutesAPI --> TenantController
+    MiddlewareAPI --> AuthUtils
+    MiddlewareAPI --> TenantUtils
+    
+    %% Dependencias Controllers -> Services
+    AnimalController --> AnimalService
+    AnimalController --> QrService
+    PotreroController --> PotreroService
+    UsuarioController --> UsuarioService
+    VacunacionController --> VacunacionService
+    ReporteController --> ReporteService
+    TenantController --> TenantService
+    
+    %% Dependencias Services -> Models
+    AnimalService --> AnimalModel
+    PotreroService --> PotreroModel
+    PotreroService --> HistorialModel
+    UsuarioService --> UsuarioModel
+    VacunacionService --> VacunacionModel
+    VacunacionService --> AnimalModel
+    TenantService --> TenantModel
+    QrService --> AnimalModel
+    
+    %% Dependencias Models -> Database
+    AnimalModel --> DBConnection
+    PotreroModel --> DBConnection
+    UsuarioModel --> DBConnection
+    VacunacionModel --> DBConnection
+    TenantModel --> DBConnection
+    HistorialModel --> DBConnection
+    
+    %% Dependencias Database -> External
+    DBConnection --> MySQLDB
+    DBConnection --> ConfigUtils
+    Migrations --> DBConnection
+    Seeders --> DBConnection
+    Seeders --> CLIUtils
+    
+    %% Dependencias Services -> Infrastructure
+    AnimalService --> AuthUtils
+    AnimalService --> TenantUtils
+    PotreroService --> TenantUtils
+    UsuarioService --> AuthUtils
+    UsuarioService --> TenantUtils
+    ReporteService --> TenantUtils
+    TenantService --> TenantUtils
+    QrService --> FileSystem
+    
+    %% Dependencias Controllers -> WebSockets
+    AnimalController --> SocketIOServer
+    PotreroController --> SocketIOServer
+    UsuarioController --> SocketIOServer
+    VacunacionController --> SocketIOServer
+    TenantController --> SocketIOServer
+    SocketIOServer --> SocketEvents
+    SocketEvents --> SocketClientFrontend
+    
+    %% Dependencias Infrastructure
+    AuthUtils --> ConfigUtils
+    TenantUtils --> ConfigUtils
+    CLIUtils --> ConfigUtils
+    
+    %% Estilos
+    classDef frontend fill:#e1f5ff,stroke:#01579b,stroke-width:3px,color:#000
+    classDef api fill:#fff3e0,stroke:#e65100,stroke-width:3px,color:#000
+    classDef controllers fill:#f3e5f5,stroke:#4a148c,stroke-width:3px,color:#000
+    classDef services fill:#e8f5e9,stroke:#1b5e20,stroke-width:3px,color:#000
+    classDef models fill:#fce4ec,stroke:#880e4f,stroke-width:3px,color:#000
+    classDef database fill:#fff9c4,stroke:#f57f17,stroke-width:3px,color:#000
+    classDef infrastructure fill:#e0f2f1,stroke:#004d40,stroke-width:3px,color:#000
+    classDef websockets fill:#f1f8e9,stroke:#33691e,stroke-width:3px,color:#000
+    classDef external fill:#fafafa,stroke:#424242,stroke-width:2px,color:#000
+    
+    class ViewsFrontend,ViewsAdmin,ViewsUser,ViewsPublic,ComponentsFrontend,ComponentsCore,ComponentsPotrero,ComposablesFrontend,ComposablesData,ComposablesTenant,ServicesFrontend,ApiService,AuthService,QrServiceFrontend,RouterFrontend,SocketClientFrontend,AssetsFrontend,LayoutsFrontend frontend
+    class RoutesAPI,MiddlewareAPI api
+    class AnimalController,PotreroController,UsuarioController,VacunacionController,ReporteController,TenantController controllers
+    class AnimalService,PotreroService,UsuarioService,VacunacionService,ReporteService,TenantService,QrService services
+    class AnimalModel,PotreroModel,UsuarioModel,VacunacionModel,TenantModel,HistorialModel models
+    class DBConnection,Migrations,Seeders,Tables database
+    class AuthUtils,TenantUtils,ConfigUtils,CLIUtils,UtilsOther infrastructure
+    class SocketIOServer,SocketEvents websockets
+    class MySQLDB,FileSystem external
+
