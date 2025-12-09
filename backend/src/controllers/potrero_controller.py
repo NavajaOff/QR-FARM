@@ -1,11 +1,12 @@
 """Controller for Potrero endpoints."""
 from typing import Tuple, Any
+from datetime import datetime, date
 from flask import jsonify, request
-from src.database.db import DatabaseError
-from src.services.potrero_service import PotreroService
-from src.utils.auth import token_required
-from src.utils.tenant import tenant_required
-from src.utils.permissions import permission_required
+from ..database.db import DatabaseError
+from ..services.potrero_service import PotreroService
+from ..utils.auth import token_required
+from ..utils.tenant import tenant_required
+from ..utils.permissions import permission_required
 
 class PotreroController:
     """Controller handling Potrero HTTP requests."""
@@ -15,7 +16,67 @@ class PotreroController:
     ERROR_BASE_DATOS = 'Error de base de datos'
     POTRERO_NO_ENCONTRADO = 'Potrero no encontrado'
     DATOS_INVALIDOS = 'Datos inválidos'
+    FECHA_LIMPIEZA_FUTURA = 'La fecha de última limpieza no puede ser posterior al día actual'
+    CAMPOS_OBLIGATORIOS = [
+        'capacidad',
+        'hectareas',
+        'id_tipo_pasto',
+        'responsable_persona_id',
+        'ultima_limpieza',
+        'area'
+    ]
+    CAMPOS_LABELS = {
+        'capacidad': 'Capacidad',
+        'hectareas': 'Hectáreas',
+        'id_tipo_pasto': 'Tipo de pasto',
+        'responsable_persona_id': 'Responsable',
+        'ultima_limpieza': 'Última limpieza',
+        'area': 'Área'
+    }
     WEBSOCKET_NO_DISPONIBLE = 'WebSocket no disponible, omitiendo emisión'
+
+    @staticmethod
+    def _validar_fecha_ultima_limpieza(data: dict) -> None:
+        fecha_raw = data.get('ultima_limpieza')
+        if not fecha_raw:
+            return
+
+        try:
+            if isinstance(fecha_raw, (datetime, date)) and not isinstance(fecha_raw, datetime):
+                fecha_obj = fecha_raw
+            else:
+                fecha_obj = datetime.fromisoformat(str(fecha_raw).replace('Z', ''))
+                fecha_obj = fecha_obj.date()
+        except (ValueError, TypeError) as exc:
+            raise ValueError('La fecha de última limpieza tiene un formato inválido') from exc
+
+        if fecha_obj > date.today():
+            raise ValueError(PotreroController.FECHA_LIMPIEZA_FUTURA)
+
+    @staticmethod
+    def _validar_campos_obligatorios(data: dict, require_all: bool = False) -> None:
+        campos_a_validar = []
+        if require_all:
+            campos_a_validar = PotreroController.CAMPOS_OBLIGATORIOS
+        else:
+            campos_a_validar = [campo for campo in PotreroController.CAMPOS_OBLIGATORIOS if campo in data]
+
+        campos_invalidos = []
+        for campo in campos_a_validar:
+            valor = data.get(campo)
+
+            if valor is None:
+                campos_invalidos.append(campo)
+                continue
+
+            if isinstance(valor, str) and valor.strip() == '':
+                campos_invalidos.append(campo)
+                continue
+
+        if campos_invalidos:
+            etiquetas = [PotreroController.CAMPOS_LABELS.get(c, c) for c in campos_invalidos]
+            campos_texto = ', '.join(etiquetas)
+            raise ValueError(f'Los siguientes campos obligatorios no pueden estar vacíos: {campos_texto}')
 
     @staticmethod
     @token_required
@@ -100,6 +161,8 @@ class PotreroController:
             print(f"Datos recibidos en controller: {data}")
 
             # El nombre puede ser null, el servicio lo generará automáticamente
+            PotreroController._validar_fecha_ultima_limpieza(data)
+            PotreroController._validar_campos_obligatorios(data, require_all=True)
 
             potrero = PotreroService.create(data)
             print(f"Potrero creado exitosamente: {potrero}")
@@ -155,6 +218,24 @@ class PotreroController:
                     'success': False
                 }), 400
             
+            try:
+                PotreroController._validar_fecha_ultima_limpieza(data)
+            except ValueError as e:
+                return jsonify({
+                    'error': PotreroController.DATOS_INVALIDOS,
+                    'message': str(e),
+                    'success': False
+                }), 400
+
+            try:
+                PotreroController._validar_campos_obligatorios(data, require_all=False)
+            except ValueError as e:
+                return jsonify({
+                    'error': PotreroController.DATOS_INVALIDOS,
+                    'message': str(e),
+                    'success': False
+                }), 400
+
             # Obtener tenant_id desde query params si existe (para super admin)
             tenant_id = None
             tenant_id_param = request.args.get('tenant_id')

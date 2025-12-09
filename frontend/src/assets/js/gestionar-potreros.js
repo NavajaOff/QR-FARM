@@ -200,6 +200,14 @@ export const estadoClass = (estado) => {
   return 'bg-secondary';
 };
 
+const obtenerFechaActualParaInput = () => {
+  const hoy = new Date();
+  const year = hoy.getFullYear();
+  const month = String(hoy.getMonth() + 1).padStart(2, '0');
+  const day = String(hoy.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // CRUD operations
 export const crearPotrero = () => {
   // Construir opciones de estado
@@ -221,6 +229,8 @@ export const crearPotrero = () => {
     responsableOptions += `<option value="${persona.id}">${nombreCompleto}</option>`;
   }
 
+  const maxFechaUltimaLimpieza = obtenerFechaActualParaInput();
+
   Swal.fire({
     title: '<i class="fas fa-plus"></i> Crear Nuevo Potrero',
     html: `
@@ -239,7 +249,7 @@ export const crearPotrero = () => {
             ${responsableOptions}
           </select>
         </div>
-        <div class="mb-3"><label class="form-label">Última limpieza:</label><input type="date" id="ultima_limpieza" class="form-control"></div>
+        <div class="mb-3"><label class="form-label">Última limpieza:</label><input type="date" id="ultima_limpieza" class="form-control" max="${maxFechaUltimaLimpieza}"></div>
         <div class="mb-3"><label class="form-label">Área (m²):</label><input type="number" id="area" class="form-control" placeholder="Ej: 2500" step="0.01" min="0"></div>
         <div class="mb-3"><label class="form-label">Descripción:</label><textarea id="descripcion" class="form-control" rows="2" placeholder="Descripción opcional del potrero"></textarea></div>
       </form>
@@ -394,6 +404,8 @@ export const editarPotrero = async (id) => {
   const pastoOptions = construirOpcionesTipoPasto(potrero);
   const responsableOptions = construirOpcionesResponsable(potrero);
 
+  const maxFechaUltimaLimpieza = obtenerFechaActualParaInput();
+
   Swal.fire({
     title: `<i class="fas fa-edit"></i> Editar Potrero: ${potrero.nombre}`,
     html: `
@@ -421,7 +433,7 @@ export const editarPotrero = async (id) => {
         </div>
         <div class="mb-3"><label class="form-label">Próxima limpieza:</label><input type="date" id="edit_proxima_limpieza" class="form-control" value="${potrero.proximaLimpieza ? potrero.proximaLimpieza.split('/').reverse().join('-') : ''}"></div>
         <div class="mb-3"><label class="form-label">Área (m²):</label><input type="number" id="edit_area" class="form-control" value="${potrero.area || ''}" step="0.01" min="0"></div>
-        <div class="mb-3"><label class="form-label">Última limpieza:</label><input type="date" id="edit_ultima_limpieza" class="form-control" value="${potrero.ultimaLimpieza ? potrero.ultimaLimpieza.split('/').reverse().join('-') : ''}"></div>
+        <div class="mb-3"><label class="form-label">Última limpieza:</label><input type="date" id="edit_ultima_limpieza" class="form-control" max="${maxFechaUltimaLimpieza}" value="${potrero.ultimaLimpieza ? potrero.ultimaLimpieza.split('/').reverse().join('-') : ''}"></div>
         <div class="mb-3"><label class="form-label">Descripción:</label><textarea id="edit_descripcion" class="form-control" rows="2">${potrero.descripcion || ''}</textarea></div>
       </form>
     `,

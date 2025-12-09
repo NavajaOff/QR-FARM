@@ -576,10 +576,17 @@ function construirUpdateData() {
   return limpiarCampos(data);
 }
 
-function limpiarCampos(data) {
-  const cleaned = Object.fromEntries(
-    Object.entries(data).filter(([_, value]) => value !== null && value !== undefined && value !== '')
-  );
+function limpiarCampos(data, allowNullFields = []) {
+  const cleaned = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value === null || value === undefined || value === '') {
+      if (value === null && allowNullFields.includes(key)) {
+        cleaned[key] = null;
+      }
+      continue;
+    }
+    cleaned[key] = value;
+  }
   console.log('[DEBUG] limpiarCampos - data original:', data);
   console.log('[DEBUG] limpiarCampos - data limpiada:', cleaned);
   return cleaned;
@@ -727,7 +734,7 @@ export const agregarNuevoAnimal = async () => {
         id_persona: id_persona ? Number.parseInt(id_persona, 10) : null
       };
 
-      return limpiarCampos(data);
+  return limpiarCampos(data, ['id_potrero']);
     }
   }).then(async result => {
     if (!result.isConfirmed) return;
