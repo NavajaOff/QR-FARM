@@ -124,6 +124,36 @@ class PotreroService:
             potrero['tipo_pasto_nombre'] = 'NO_DEFINIDO'
 
     @staticmethod
+    def _determinar_estado_por_ocupacion(capacidad: Optional[int], ocupacion: int) -> str:
+        if capacidad and capacidad > 0 and ocupacion >= capacidad:
+            return 'ocupado'
+        return 'disponible'
+
+    @staticmethod
+    def _actualizar_estado_por_ocupacion(potrero_id: int, capacidad: Optional[int], ocupacion: int, tenant_id: Optional[int] = None) -> None:
+        nuevo_estado_nombre = PotreroService._determinar_estado_por_ocupacion(capacidad, ocupacion)
+        nuevo_estado_id = PotreroService._obtener_id_estado_desde_nombre(nuevo_estado_nombre)
+
+        with db.get_cursor() as cursor:
+            sql = "SELECT id_estado_potrero FROM potrero WHERE id = %s"
+            params = (potrero_id,)
+            if tenant_id is not None:
+                sql += PotreroService.SQL_AND_TENANT_ID_GENERIC
+                params = (potrero_id, tenant_id)
+            cursor.execute(sql, params)
+            resultado = cursor.fetchone()
+            if resultado and resultado.get('id_estado_potrero') == nuevo_estado_id:
+                return nuevo_estado_nombre
+
+            update_sql = "UPDATE potrero SET id_estado_potrero = %s WHERE id = %s"
+            update_params = (nuevo_estado_id, potrero_id)
+            if tenant_id is not None:
+                update_sql += PotreroService.SQL_AND_TENANT_ID_GENERIC
+                update_params = (nuevo_estado_id, potrero_id, tenant_id)
+            cursor.execute(update_sql, update_params)
+        return nuevo_estado_nombre
+
+    @staticmethod
     def get_all(tenant_id_override: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         Get all potreros.
@@ -631,8 +661,8 @@ class PotreroService:
         print(f"Actualizando potrero {potrero_id} con campos: {update_fields}")
         print(f"Valores: {values[:-1]}")  # No mostrar el ID al final
 
+        tenant_id = PotreroService._obtener_tenant_id()
         with db.get_cursor() as cursor:
-            tenant_id = PotreroService._obtener_tenant_id()
             sql = f"""
                 UPDATE potrero
                 SET {', '.join(update_fields)}
@@ -650,8 +680,10 @@ class PotreroService:
             # Obtener el registro actualizado
             sql = """
                 SELECT p.*,
+                       ep.nombre_estado as estado_nombre,
                        CONCAT(per.primer_nombre, ' ', COALESCE(per.segundo_nombre, ''), ' ', per.primer_apellido, ' ', COALESCE(per.segundo_apellido, '')) as responsable
                 FROM potrero p
+                LEFT JOIN estado_potrero ep ON p.id_estado_potrero = ep.id
                 LEFT JOIN personas per ON p.responsable_persona_id = per.id
                 WHERE p.id = %s
             """
@@ -661,20 +693,21 @@ class PotreroService:
                 params = (potrero_id, tenant_id)
             
             cursor.execute(sql, params)
-
             result = cursor.fetchone()
             if not result:
                 raise ValueError(f"Potrero with id {potrero_id} not found after update")
 
-            # Agregar información adicional
-            PotreroService._agregar_tipo_pasto_actualizado(result)
-            
-            # Agregar actividades desde historial_potrero
-            actividades = PotreroService._obtener_actividades_potrero(potrero_id, tenant_id)
-            result.update(actividades)
-            
-            print(f"Potrero actualizado exitosamente: {result}")
-            return result
+        PotreroService._agregar_tipo_pasto_actualizado(result)
+        actividades = PotreroService._obtener_actividades_potrero(potrero_id, tenant_id)
+        result.update(actividades)
+        ocupacion_real = PotreroService._obtener_ocupacion_real(potrero_id)
+        nuevo_estado_nombre = PotreroService._actualizar_estado_por_ocupacion(
+            potrero_id, result.get('capacidad'), ocupacion_real, tenant_id
+        )
+        result['ocupacion'] = ocupacion_real
+        result['estado_nombre'] = nuevo_estado_nombre
+        print(f"Potrero actualizado exitosamente: {result}")
+        return result
 
     @staticmethod
     def _agregar_tipo_pasto_actualizado(potrero: Dict[str, Any]) -> None:
@@ -860,16 +893,23 @@ class PotreroService:
         potrero = PotreroService.get_by_id(potrero_id)
         capacidad = potrero.get('capacidad')
         ocupacion_real = PotreroService._obtener_ocupacion_real(potrero_id)
+        nombre = potrero.get('nombre') or f"Potrero {potrero_id}"
 
         ocupacion_registrada = potrero.get('ocupacion')
         if ocupacion_registrada is None or ocupacion_registrada != ocupacion_real:
             PotreroService._actualizar_ocupacion_en_db(potrero_id, ocupacion_real)
 
+        if potrero.get('estado_nombre', '').lower() == 'ocupado':
+            raise ValueError(f"El potrero {nombre} está marcado como ocupado y no admite más animales.")
         if capacidad and capacidad > 0 and (ocupacion_real + cantidad) > capacidad:
             nombre = potrero.get('nombre') or f"Potrero {potrero_id}"
             raise ValueError(
                 f"El potrero {nombre} ha alcanzado su capacidad máxima ({capacidad})."
             )
+
+        nueva_ocupacion = ocupacion_real + cantidad
+        tenant_id = potrero.get('tenant_id') or PotreroService._obtener_tenant_id()
+        PotreroService._actualizar_estado_por_ocupacion(potrero_id, capacidad, nueva_ocupacion, tenant_id)
 
         return potrero
 

@@ -750,7 +750,11 @@ export const agregarNuevoAnimal = async () => {
           <label class="form-label">Potrero actual:</label>
           <select id="id_potrero" class="form-control">
             <option value="">Seleccionar potrero</option>
-            ${potreros.value.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('')}
+            ${potreros.value.map(p => {
+              const ocupado = (p.estado || p.estado_nombre || '').toLowerCase() === 'ocupado';
+              const estadoText = ocupado ? ' (ocupado)' : '';
+              return `<option value="${p.id}" ${ocupado ? 'disabled' : ''}>${p.nombre}${estadoText}</option>`;
+            }).join('')}
           </select>
         </div>
         <div class="mb-3">

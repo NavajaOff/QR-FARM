@@ -33,10 +33,11 @@ const obtenerResponsableNombre = (personaId) => {
 };
 
 const mapPotreroFromApi = (potrero) => {
+  const estadoLabel = potrero.estado_nombre || potrero.estado || 'Sin estado';
   const mapped = {
     id: potrero.id,
     nombre: capitalizarPalabras(potrero.nombre || ''),
-    estado: potrero.estado || potrero.estado_nombre, // Usar estado o estado_nombre
+    estado: capitalizarPalabras(estadoLabel),
     capacidad: potrero.capacidad,
     ocupacion: potrero.ocupacion,
     hectareas: potrero.hectareas,
