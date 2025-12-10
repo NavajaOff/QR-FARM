@@ -266,13 +266,20 @@ class ReporteService:
             cursor.execute(potreros_query)
         potreros_total = cursor.fetchone() or {"total": 0}
 
-        potreros_breakdown_query = "SELECT COALESCE(estado, 'sin_estado') AS estado, COUNT(*) AS cantidad FROM potrero"
+        potreros_breakdown_query = """
+            SELECT
+                COALESCE(ep.nombre_estado, 'sin_estado') AS estado,
+                COUNT(*) AS cantidad
+            FROM potrero p
+            LEFT JOIN estado_potrero ep ON p.id_estado_potrero = ep.id
+        """
+        group_clause = " GROUP BY COALESCE(ep.nombre_estado, 'sin_estado') ORDER BY cantidad DESC"
         if tenant_id is not None:
-            potreros_breakdown_query += ReporteService.SQL_WHERE_TENANT_ID
-            potreros_breakdown_query += ReporteService.SQL_GROUP_BY_ESTADO
+            potreros_breakdown_query += " WHERE p.tenant_id = %s"
+            potreros_breakdown_query += group_clause
             cursor.execute(potreros_breakdown_query, (tenant_id,))
         else:
-            potreros_breakdown_query += ReporteService.SQL_GROUP_BY_ESTADO
+            potreros_breakdown_query += group_clause
             cursor.execute(potreros_breakdown_query)
         potreros_breakdown = cursor.fetchall()
         return potreros_total, potreros_breakdown

@@ -663,8 +663,7 @@ class GanadoService:
             'muerte': 5,
             'venta': 6,
             'robo': 7,
-            'otra': 8,
-            'dado_de_baja': 4
+            'otra': 8
         }
         return mapeo_causas.get(causa_baja.lower(), 8)  # Por defecto 'otra'
     

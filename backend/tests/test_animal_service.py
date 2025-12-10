@@ -128,15 +128,14 @@ class TestGanadoService:
         mock_conn.cursor.return_value = mock_cursor
 
         mock_cursor.fetchall.return_value = [
-            {'id': 4, 'tipo_estado': 'dado_de_baja'},
             {'id': 5, 'tipo_estado': 'muerte'},
             {'id': 6, 'tipo_estado': 'venta'}
         ]
 
         result = GanadoService.obtener_estados_ganado(solo_bajas=True)
 
-        assert len(result) == 3
-        assert result[0]['estado'] == 'dado_de_baja'
+        assert len(result) == 2
+        assert result[0]['estado'] == 'muerte'
         mock_cursor.execute.assert_called_once_with("SELECT id, tipo_estado FROM estado_ganado WHERE id BETWEEN 4 AND 8 ORDER BY tipo_estado")
 
     @patch('src.services.animal_service.get_connection')
@@ -835,7 +834,7 @@ class TestGanadoModel:
         assert GanadoService._obtener_id_estado_por_causa('venta') == 6
         assert GanadoService._obtener_id_estado_por_causa('robo') == 7
         assert GanadoService._obtener_id_estado_por_causa('otra') == 8
-        assert GanadoService._obtener_id_estado_por_causa('dado_de_baja') == 4
+        assert GanadoService._obtener_id_estado_por_causa('dado_de_baja') == 8
 
     def test_obtener_id_estado_por_causa_default(self):
         """Test _obtener_id_estado_por_causa returns default for unknown"""

@@ -24,7 +24,6 @@ def upgrade():
             sa.column('tipo_estado', sa.String)
         ),
         [
-            {'id': 4, 'tipo_estado': 'dado_de_baja'},
             {'id': 5, 'tipo_estado': 'muerte'},
             {'id': 6, 'tipo_estado': 'venta'},
             {'id': 7, 'tipo_estado': 'robo'},
@@ -41,7 +40,7 @@ def upgrade():
             WHEN causa_baja = 'venta' THEN 6
             WHEN causa_baja = 'robo' THEN 7
             WHEN causa_baja = 'otra' THEN 8
-            ELSE 4
+            ELSE 8
         END
         WHERE estado_baja = 'dado_de_baja'
     """)
@@ -71,9 +70,9 @@ def downgrade():
                 WHEN id_estado = 8 THEN 'otra'
                 ELSE 'otra'
             END
-        WHERE id_estado IN (4, 5, 6, 7, 8)
+        WHERE id_estado IN (5, 6, 7, 8)
     """)
     
     # Eliminar estados de baja de estado_ganado
-    op.execute("DELETE FROM estado_ganado WHERE id IN (4, 5, 6, 7, 8)")
+    op.execute("DELETE FROM estado_ganado WHERE id IN (5, 6, 7, 8)")
 

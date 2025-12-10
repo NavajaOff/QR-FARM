@@ -55,8 +55,8 @@ class TestAnimalRoutes:
     def test_get_estados_ganado_solo_bajas(self, mock_service):
         """Test get_estados_ganado with solo_bajas=true"""
         mock_service.obtener_estados_ganado.return_value = [
-            {'id': 4, 'estado': 'dado_de_baja', 'nombre_estado': 'dado_de_baja'},
-            {'id': 5, 'estado': 'muerte', 'nombre_estado': 'muerte'}
+            {'id': 5, 'estado': 'muerte', 'nombre_estado': 'muerte'},
+            {'id': 6, 'estado': 'venta', 'nombre_estado': 'venta'}
         ]
 
         response = self.client.get('/api/animales/estados-ganado?solo_bajas=true')

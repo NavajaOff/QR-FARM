@@ -158,7 +158,7 @@ def upgrade():
         [
             {'id':1,'tipo_pasto':'Brachiaria humidicola'},
             {'id':2,'tipo_pasto':'Brachiaria decumbens'},
-            {'id':3,'tipo_pasto':'Pasto mombazaa'}
+            {'id':3,'tipo_pasto':'Pasto mombaza'}
         ]
     )
 
