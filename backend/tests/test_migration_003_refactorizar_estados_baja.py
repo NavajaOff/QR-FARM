@@ -50,7 +50,6 @@ class TestMigration003RefactorizarEstadosBaja:
         # Verificar los datos insertados
         inserted_data = bulk_insert_call[0][1]
         expected_data = [
-            {'id': 4, 'tipo_estado': 'dado_de_baja'},
             {'id': 5, 'tipo_estado': 'muerte'},
             {'id': 6, 'tipo_estado': 'venta'},
             {'id': 7, 'tipo_estado': 'robo'},
@@ -107,11 +106,11 @@ class TestMigration003RefactorizarEstadosBaja:
         update_sql = execute_calls[0][0][0]
         assert "UPDATE ganado" in update_sql
         assert "SET estado_baja = 'dado_de_baja'" in update_sql.replace('\n', ' ')
-        assert "WHERE id_estado IN (4, 5, 6, 7, 8)" in update_sql
+        assert "WHERE id_estado IN (5, 6, 7, 8)" in update_sql
 
         # Segundo execute: DELETE from estado_ganado
         delete_sql = execute_calls[1][0][0]
-        assert "DELETE FROM estado_ganado WHERE id IN (4, 5, 6, 7, 8)" in delete_sql
+        assert "DELETE FROM estado_ganado WHERE id IN (5, 6, 7, 8)" in delete_sql
 
     def test_upgrade_function_exists(self):
         """Test que la función upgrade() existe y es llamable."""

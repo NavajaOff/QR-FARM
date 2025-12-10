@@ -79,7 +79,7 @@ class TestMigration006ImplementarEsquemaERDCompleto:
 
         # Verificar que se creó la tabla
         mock_op.create_table.assert_called_once()
-        args, kwargs = mock_op.create_table.call_args
+        args, _ = mock_op.create_table.call_args
         assert args[0] == 'estado_potrero'
 
         # Verificar que se insertaron datos por defecto
@@ -127,7 +127,7 @@ class TestMigration006ImplementarEsquemaERDCompleto:
 
         # Verificar que se creó la nueva tabla
         mock_op.create_table.assert_called_once()
-        args, kwargs = mock_op.create_table.call_args
+        args, _ = mock_op.create_table.call_args
         assert args[0] == 'historial_potreros'
 
     @patch('sqlalchemy.inspect')
@@ -150,7 +150,7 @@ class TestMigration006ImplementarEsquemaERDCompleto:
 
         # Verificar que se agregó tenant_id
         mock_op.add_column.assert_called_once()
-        args, kwargs = mock_op.add_column.call_args
+        args, _ = mock_op.add_column.call_args
         assert args[0] == 'personas'
         assert args[1].name == 'tenant_id'
         # Verificar que usa la constante
@@ -177,6 +177,56 @@ class TestMigration006ImplementarEsquemaERDCompleto:
         assert mock_op.add_column.call_count >= 4  # id_estado_potrero, area, fecha_creacion, fecha_actualizacion, tenant_id
 
     @patch('sqlalchemy.inspect')
+    def test_actualizar_tabla_potrero_drops_estado_column(self, mock_inspect):
+        """Test que se elimina la columna antigua `estado` en potrero."""
+        mock_inspector = MagicMock()
+        mock_inspector.get_table_names.return_value = ['potrero']
+        mock_inspector.get_columns.return_value = [{'name': 'id'}, {'name': 'estado'}]
+        mock_inspect.return_value = mock_inspector
+
+        mock_op = MagicMock()
+        original_op = migration_006.op
+        migration_006.op = mock_op
+
+        try:
+            migration_006._actualizar_tabla_potrero(mock_inspector)
+        finally:
+            migration_006.op = original_op
+
+        mock_op.drop_column.assert_any_call('potrero', 'estado')
+
+    @patch('sqlalchemy.inspect')
+    def test_actualizar_tabla_potrero_asegura_not_null(self, mock_inspect):
+        """Test que se alteran columnas para hacerlas NOT NULL."""
+        mock_inspector = MagicMock()
+        mock_inspector.get_table_names.return_value = ['potrero']
+        mock_inspector.get_columns.return_value = [
+            {'name': 'id', 'nullable': False},
+            {'name': 'tenant_id', 'nullable': True},
+            {'name': 'id_tipo_pasto', 'nullable': True},
+            {'name': 'responsable_persona_id', 'nullable': True},
+            {'name': 'id_estado_potrero', 'nullable': True},
+            {'name': 'nombre', 'nullable': True},
+            {'name': 'capacidad', 'nullable': True},
+            {'name': 'ocupacion', 'nullable': True},
+            {'name': 'hectareas', 'nullable': True},
+            {'name': 'fecha_creacion', 'nullable': True},
+            {'name': 'fecha_actualizacion', 'nullable': True},
+        ]
+        mock_inspect.return_value = mock_inspector
+
+        mock_op = MagicMock()
+        original_op = migration_006.op
+        migration_006.op = mock_op
+
+        try:
+            migration_006._actualizar_tabla_potrero(mock_inspector)
+        finally:
+            migration_006.op = original_op
+
+        assert mock_op.alter_column.call_count >= 9
+
+    @patch('sqlalchemy.inspect')
     def test_actualizar_tabla_ganado(self, mock_inspect):
         """Test que _actualizar_tabla_ganado funciona correctamente."""
         mock_inspector = MagicMock()
@@ -195,7 +245,7 @@ class TestMigration006ImplementarEsquemaERDCompleto:
 
         # Verificar que se agregó tenant_id
         mock_op.add_column.assert_called_once()
-        args, kwargs = mock_op.add_column.call_args
+        args, _ = mock_op.add_column.call_args
         assert args[0] == 'ganado'
         assert args[1].name == 'tenant_id'
         assert migration_006.TENANT_ID_FK in str(args[1].foreign_keys)
@@ -221,11 +271,11 @@ class TestMigration006ImplementarEsquemaERDCompleto:
             migration_006.op = original_op
 
         # Verificar que se eliminaron campos obsoletos
-        drop_calls = [call for call in mock_op.drop_column.call_args_list]
+        drop_calls = list(mock_op.drop_column.call_args_list)
         assert len(drop_calls) >= 3  # nombre_animal, fecha_inicio, fecha_fin
 
         # Verificar que se agregó tenant_id
-        add_calls = [call for call in mock_op.add_column.call_args_list]
+        add_calls = list(mock_op.add_column.call_args_list)
         tenant_calls = [call for call in add_calls if call[0][1].name == 'tenant_id']
         assert len(tenant_calls) == 1
         assert migration_006.TENANT_ID_FK in str(tenant_calls[0][0][1].foreign_keys)
@@ -249,7 +299,7 @@ class TestMigration006ImplementarEsquemaERDCompleto:
 
         # Verificar que se agregó tenant_id
         mock_op.add_column.assert_called_once()
-        args, kwargs = mock_op.add_column.call_args
+        args, _ = mock_op.add_column.call_args
         assert args[0] == 'qr'
         assert args[1].name == 'tenant_id'
         assert migration_006.TENANT_ID_FK in str(args[1].foreign_keys)
@@ -273,7 +323,7 @@ class TestMigration006ImplementarEsquemaERDCompleto:
 
         # Verificar que se agregó tenant_id
         mock_op.add_column.assert_called_once()
-        args, kwargs = mock_op.add_column.call_args
+        args, _ = mock_op.add_column.call_args
         assert args[0] == 'usuarios'
         assert args[1].name == 'tenant_id'
         assert migration_006.TENANT_ID_FK in str(args[1].foreign_keys)
@@ -297,7 +347,7 @@ class TestMigration006ImplementarEsquemaERDCompleto:
 
         # Verificar que se creó el índice
         mock_op.create_index.assert_called_once()
-        args, kwargs = mock_op.create_index.call_args
+        args, _ = mock_op.create_index.call_args
         assert args[0] == 'idx_historial_potreros_potrero'
         assert args[1] == 'historial_potreros'
         assert args[2] == ['id_potrero']

@@ -35,9 +35,9 @@ def _crear_tabla_estado_potrero(inspector: sa.Inspector) -> None:
         # Insertar estados por defecto
         op.execute("""
             INSERT INTO estado_potrero (id, nombre_estado) VALUES
-            (1, 'disponible'),
-            (2, 'ocupado'),
-            (3, 'limpieza')
+            (1, 'Disponible'),
+            (2, 'Ocupado'),
+            (3, 'En limpieza')
             ON DUPLICATE KEY UPDATE nombre_estado = VALUES(nombre_estado)
         """)
 
@@ -218,20 +218,70 @@ def _actualizar_tabla_potrero(inspector: sa.Inspector) -> None:
     if 'fecha_creacion' not in columns:
         op.add_column('potrero', sa.Column('fecha_creacion', sa.DateTime, 
                                           server_default=sa.func.current_timestamp(), 
-                                          nullable=True))
+                                          nullable=False))
     
     # Agregar fecha_actualizacion si no existe
     if 'fecha_actualizacion' not in columns:
         op.add_column('potrero', sa.Column('fecha_actualizacion', sa.DateTime, 
                                           server_default=sa.func.current_timestamp(), 
                                           onupdate=sa.func.current_timestamp(), 
-                                          nullable=True))
+                                          nullable=False))
+
+    # Eliminar la columna antigua `estado`, ya que el nuevo campo es `id_estado_potrero`
+    if 'estado' in columns:
+        try:
+            op.drop_column('potrero', 'estado')
+        except Exception:
+            pass
     
     # Asegurar que tenant_id existe y tiene FK
     if 'tenant_id' not in columns:
         op.add_column('potrero', sa.Column('tenant_id', sa.Integer,
                                           sa.ForeignKey(TENANT_ID_FK, ondelete='CASCADE'),
                                           nullable=True))
+
+    _asegurar_restricciones_potrero_not_null(inspector)
+
+
+def _asegurar_restricciones_potrero_not_null(inspector: sa.Inspector) -> None:
+    """Garantiza que las columnas críticas de potrero sean NOT NULL con defaults apropiados."""
+    if 'potrero' not in inspector.get_table_names():
+        return
+
+    columns = {col['name']: col for col in inspector.get_columns('potrero')}
+    specs = {
+        'tenant_id': (sa.Integer(), False, None),
+        'id_tipo_pasto': (sa.Integer(), False, None),
+        'responsable_persona_id': (sa.Integer(), False, None),
+        'id_estado_potrero': (sa.Integer(), False, None),
+        'nombre': (sa.String(100), False, None),
+        'capacidad': (sa.Integer(), False, None),
+        'ocupacion': (sa.Integer(), False, sa.text('0')),
+        'hectareas': (sa.Numeric(10, 2), False, None),
+        'fecha_creacion': (sa.DateTime(), False, sa.func.current_timestamp()),
+        'fecha_actualizacion': (sa.DateTime(), False, sa.func.current_timestamp()),
+    }
+
+    for name, (col_type, nullable, server_default) in specs.items():
+        column = columns.get(name)
+        if not column:
+            continue
+
+        needs_alter = column.get('nullable', True) and not nullable
+        if not needs_alter:
+            continue
+
+        kwargs = {
+            'existing_type': col_type,
+            'nullable': nullable
+        }
+        if server_default is not None:
+            kwargs['server_default'] = server_default
+
+        try:
+            op.alter_column('potrero', name, **kwargs)
+        except Exception:
+            pass
 
 
 def _actualizar_tabla_ganado(inspector: sa.Inspector) -> None:

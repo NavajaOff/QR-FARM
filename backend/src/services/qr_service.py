@@ -15,12 +15,10 @@ class QRService:
     """Servicio para manejar códigos QR de ganado."""
 
     @staticmethod
-    def _build_base_url() -> str:
+    def _build_base_url() -> Optional[str]:
         """Obtener URL base para redirigir a la ficha en línea."""
         base_url = os.getenv('QR_FARM_WEB_URL') or os.getenv('QR_FARM_FRONTEND_URL')
-        if not base_url:
-            return "https://github.com/NavajaOff/QR-FARM/tree/develop"
-        return base_url.rstrip('/')
+        return base_url.rstrip('/') if base_url else None
 
     @staticmethod
     def _build_offline_payload(
@@ -34,7 +32,9 @@ class QRService:
     ) -> Dict[str, Any]:
         datos_extra = datos_extra or {}
         base_url = QRService._build_base_url()
-        online_url = datos_extra.get('url') or f"{base_url}/ganado/{id_ganado}"
+        online_url = datos_extra.get('url')
+        if not online_url and base_url:
+            online_url = f"{base_url}/ganado/{id_ganado}"
 
         # Payload optimizado: solo datos esenciales para reducir tamaño del QR
         # El resto de información se obtiene desde la API cuando hay conexión
@@ -44,8 +44,9 @@ class QRService:
             "id": id_ganado,
             "c": codigo_qr,  # codigo (abreviado)
             "n": nombre_ganado,  # nombre (abreviado)
-            "u": online_url  # url (abreviado)
         }
+        if online_url:
+            payload["u"] = online_url
         
         # Solo incluir datos críticos para modo offline
         if nombre_propietario:
