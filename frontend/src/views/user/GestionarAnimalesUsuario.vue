@@ -64,7 +64,7 @@
                 </div>
                 <ul class="list-unstyled mb-3">
                   <li class="mb-2"><strong>Raza:</strong> {{ animal.raza || 'Sin información' }}</li>
-                  <li class="mb-2"><strong>Edad:</strong> {{ animal.edad ?? 'Sin información' }}</li>
+                  <li class="mb-2"><strong>Edad:</strong> {{ animal.edadTexto ?? 'Sin información' }}</li>
                   <li class="mb-2"><strong>Peso:</strong> {{ animal.peso ?? 'Sin información' }}</li>
                   <li class="mb-2"><strong>Sexo:</strong> {{ capitalizar(animal.sexo) }}</li>
                 </ul>

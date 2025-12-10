@@ -14,14 +14,14 @@ export const error = ref(null);
 
 const buildPersonaNombre = (persona) => {
   if (!persona) return '';
-  if (persona.nombre_completo) return persona.nombre_completo;
+  if (persona.nombre_completo) return capitalizarPalabras(persona.nombre_completo);
   const partes = [
     persona.primer_nombre,
     persona.segundo_nombre,
     persona.primer_apellido,
     persona.segundo_apellido
   ].filter(Boolean);
-  return partes.join(' ').trim();
+  return capitalizarPalabras(partes.join(' ').trim());
 };
 
 const obtenerResponsableNombre = (personaId) => {
@@ -29,14 +29,15 @@ const obtenerResponsableNombre = (personaId) => {
   const persona = personasUsuario.value.find(p => p.id == personaId);
   const etiqueta = buildPersonaNombre(persona);
   if (etiqueta) return etiqueta;
-  return `Persona ${personaId}`;
+  return capitalizarPalabras(`Persona ${personaId}`);
 };
 
 const mapPotreroFromApi = (potrero) => {
+  const estadoLabel = potrero.estado_nombre || potrero.estado || 'Sin estado';
   const mapped = {
     id: potrero.id,
-    nombre: potrero.nombre,
-    estado: potrero.estado || potrero.estado_nombre, // Usar estado o estado_nombre
+    nombre: capitalizarPalabras(potrero.nombre || ''),
+    estado: capitalizarPalabras(estadoLabel),
     capacidad: potrero.capacidad,
     ocupacion: potrero.ocupacion,
     hectareas: potrero.hectareas,
@@ -73,6 +74,7 @@ const mapPotreroFromApi = (potrero) => {
 
 import { getApiBaseUrl, getBackendUrl } from '../../utils/config.js';
 import api from '../../services/api.js';
+import { capitalizarPalabras } from '../../utils/text.js';
 
 // API configuration
 const API_BASE = getApiBaseUrl();
@@ -200,6 +202,14 @@ export const estadoClass = (estado) => {
   return 'bg-secondary';
 };
 
+const obtenerFechaActualParaInput = () => {
+  const hoy = new Date();
+  const year = hoy.getFullYear();
+  const month = String(hoy.getMonth() + 1).padStart(2, '0');
+  const day = String(hoy.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // CRUD operations
 export const crearPotrero = () => {
   // Construir opciones de estado
@@ -217,9 +227,11 @@ export const crearPotrero = () => {
   // Construir opciones de responsable
   let responsableOptions = '<option value="">Seleccionar responsable</option>';
   for (const persona of personasUsuario.value) {
-    const nombreCompleto = `${persona.primer_nombre} ${persona.primer_apellido}`.trim();
+    const nombreCompleto = capitalizarPalabras(`${persona.primer_nombre} ${persona.primer_apellido}`.trim());
     responsableOptions += `<option value="${persona.id}">${nombreCompleto}</option>`;
   }
+
+  const maxFechaUltimaLimpieza = obtenerFechaActualParaInput();
 
   Swal.fire({
     title: '<i class="fas fa-plus"></i> Crear Nuevo Potrero',
@@ -239,7 +251,7 @@ export const crearPotrero = () => {
             ${responsableOptions}
           </select>
         </div>
-        <div class="mb-3"><label class="form-label">Última limpieza:</label><input type="date" id="ultima_limpieza" class="form-control"></div>
+        <div class="mb-3"><label class="form-label">Última limpieza:</label><input type="date" id="ultima_limpieza" class="form-control" max="${maxFechaUltimaLimpieza}"></div>
         <div class="mb-3"><label class="form-label">Área (m²):</label><input type="number" id="area" class="form-control" placeholder="Ej: 2500" step="0.01" min="0"></div>
         <div class="mb-3"><label class="form-label">Descripción:</label><textarea id="descripcion" class="form-control" rows="2" placeholder="Descripción opcional del potrero"></textarea></div>
       </form>
@@ -319,7 +331,7 @@ const construirOpcionesTipoPasto = (potrero) => {
 const construirOpcionesResponsable = (potrero) => {
   let responsableOptions = '<option value="">Seleccionar responsable</option>';
   for (const persona of personasUsuario.value) {
-    const nombreCompleto = persona.nombre_completo || `${persona.primer_nombre} ${persona.primer_apellido}`.trim();
+    const nombreCompleto = capitalizarPalabras(persona.nombre_completo || `${persona.primer_nombre} ${persona.primer_apellido}`.trim());
     const selected = persona.id === potrero.responsable_persona_id || nombreCompleto === potrero.responsable ? 'selected' : '';
     responsableOptions += `<option value="${persona.id}" ${selected}>${nombreCompleto}</option>`;
   }
@@ -394,6 +406,8 @@ export const editarPotrero = async (id) => {
   const pastoOptions = construirOpcionesTipoPasto(potrero);
   const responsableOptions = construirOpcionesResponsable(potrero);
 
+  const maxFechaUltimaLimpieza = obtenerFechaActualParaInput();
+
   Swal.fire({
     title: `<i class="fas fa-edit"></i> Editar Potrero: ${potrero.nombre}`,
     html: `
@@ -421,7 +435,7 @@ export const editarPotrero = async (id) => {
         </div>
         <div class="mb-3"><label class="form-label">Próxima limpieza:</label><input type="date" id="edit_proxima_limpieza" class="form-control" value="${potrero.proximaLimpieza ? potrero.proximaLimpieza.split('/').reverse().join('-') : ''}"></div>
         <div class="mb-3"><label class="form-label">Área (m²):</label><input type="number" id="edit_area" class="form-control" value="${potrero.area || ''}" step="0.01" min="0"></div>
-        <div class="mb-3"><label class="form-label">Última limpieza:</label><input type="date" id="edit_ultima_limpieza" class="form-control" value="${potrero.ultimaLimpieza ? potrero.ultimaLimpieza.split('/').reverse().join('-') : ''}"></div>
+        <div class="mb-3"><label class="form-label">Última limpieza:</label><input type="date" id="edit_ultima_limpieza" class="form-control" max="${maxFechaUltimaLimpieza}" value="${potrero.ultimaLimpieza ? potrero.ultimaLimpieza.split('/').reverse().join('-') : ''}"></div>
         <div class="mb-3"><label class="form-label">Descripción:</label><textarea id="edit_descripcion" class="form-control" rows="2">${potrero.descripcion || ''}</textarea></div>
       </form>
     `,

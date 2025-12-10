@@ -1,10 +1,35 @@
 import Swal from 'sweetalert2';
 import { vacunacionAPI, ganadoAPI, userAPI } from '../../services/api.js';
+import { capitalizarPalabras } from '../../utils/text.js';
 
 const defaultConfig = {
   registroValidacionMsg: 'Por favor complete todos los campos requeridos',
   eliminarLogPrefix: 'Frontend'
 };
+
+const construirNombrePersona = (persona = {}) => {
+  if (persona?.nombre_completo) {
+    return capitalizarPalabras(persona.nombre_completo);
+  }
+  if (persona.nombre) {
+    return capitalizarPalabras(persona.nombre);
+  }
+  if (persona.persona_nombre) {
+    return capitalizarPalabras(persona.persona_nombre);
+  }
+  const partes = [
+    persona.primer_nombre,
+    persona.segundo_nombre,
+    persona.primer_apellido,
+    persona.segundo_apellido
+  ].filter(Boolean);
+  if (partes.length) {
+    return capitalizarPalabras(partes.join(' '));
+  }
+  return 'Sin nombre';
+};
+
+const normalizarNombreAnimal = (animal = {}) => capitalizarPalabras(animal.nombre || '');
 
 const buildDefaultEditForm = (vacunacion) => `
   <div class="row g-3">
@@ -115,10 +140,16 @@ export const registroVacunacionBase = {
         this.vacunaciones = extractDataFromResponse(vacunacionesRes);
 
         // Ganado: formato {status: 'success', data: [...]}
-        this.animales = extractDataFromResponse(animalesRes);
+        this.animales = extractDataFromResponse(animalesRes).map(animal => ({
+          ...animal,
+          nombre: normalizarNombreAnimal(animal)
+        }));
 
         // Personas/Usuarios: formato {status: 'success', data: [...]}
-        this.personas = extractDataFromResponse(personasRes);
+        this.personas = extractDataFromResponse(personasRes).map(persona => ({
+          ...persona,
+          nombre: construirNombrePersona(persona)
+        }));
 
         await this.obtenerTiposVacuna();
       } catch (error) {

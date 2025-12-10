@@ -60,7 +60,7 @@ export function useGestionarAnimalesUsuario() {
         <p><strong>ID:</strong> ${animal.id}</p>
         <p><strong>Nombre:</strong> ${animal.nombre || 'Sin información'}</p>
         <p><strong>Raza:</strong> ${animal.raza || 'Sin información'}</p>
-        <p><strong>Edad:</strong> ${animal.edad ?? 'Sin información'}</p>
+        <p><strong>Edad:</strong> ${animal.edadTexto ?? 'Sin información'}</p>
         <p><strong>Peso:</strong> ${animal.peso ?? 'Sin información'}</p>
         <p><strong>Estado:</strong> ${capitalizar(animal.estado)}</p>
       </div>

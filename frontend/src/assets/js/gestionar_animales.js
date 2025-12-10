@@ -3,6 +3,8 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 import io from 'socket.io-client';
 import api from '../../services/api.js';
+import { capitalizarPalabras } from '../../utils/text.js';
+import { potreros, cargarDatosIniciales as cargarDatosInicialesPotreros, cargarPotreros } from './gestionar-potreros.js';
 
 // Variables reactivas
 export const currentIndex = ref(0);
@@ -25,7 +27,7 @@ const buildPersonaNombre = (persona) => {
     persona.segundo_apellido
   ].filter(Boolean);
   const nombreCompuesto = partes.join(' ').trim();
-  return nombreCompuesto || null;
+  return capitalizarPalabras(nombreCompuesto) || null;
 };
 
 const obtenerNombrePersonaPorId = (personaId, fallback = 'Sin asignar') => {
@@ -33,13 +35,23 @@ const obtenerNombrePersonaPorId = (personaId, fallback = 'Sin asignar') => {
   const persona = personasUsuario.value.find(p => p.id == personaId);
   const nombre = buildPersonaNombre(persona);
   if (nombre) return nombre;
-  return `Persona ${personaId}`;
+  return capitalizarPalabras(`Persona ${personaId}`);
 };
 
 const obtenerNombrePersonaDesdeEntidad = (entidad, fallback = 'Sin asignar') => {
   if (!entidad) return fallback;
   if (entidad.persona_nombre) return entidad.persona_nombre;
-  if (entidad.propietario) return entidad.propietario;
+  if (entidad.propietario) {
+    if (typeof entidad.propietario === 'string') {
+      return capitalizarPalabras(entidad.propietario);
+    }
+    if (entidad.propietario.nombre) {
+      return capitalizarPalabras(entidad.propietario.nombre);
+    }
+    if (entidad.propietario.persona_nombre) {
+      return capitalizarPalabras(entidad.propietario.persona_nombre);
+    }
+  }
   return obtenerNombrePersonaPorId(entidad.id_persona, fallback);
 };
 
@@ -60,8 +72,6 @@ const obtenerNombrePotreroDesdeEntidad = (entidad, fallback = 'Sin asignar') => 
 // Control de cancelación con Axios
 let cancelTokenSource = null;
 
-// Importar potreros para el select
-import { potreros, cargarDatosIniciales as cargarDatosInicialesPotreros, cargarPotreros } from './gestionar-potreros.js';
 import { getApiBaseUrl, getBackendUrl } from '../../utils/config.js';
 
 // API configuration
@@ -263,7 +273,8 @@ export const cargarAnimales = async (incluirBajas = false) => {
           estado: estadoFinal,
           potreroActual: obtenerNombrePotreroDesdeEntidad(animal),
           propietario: obtenerNombrePersonaDesdeEntidad(animal),
-          edad: animal.fecha_nacimiento ? calcularEdad(animal.fecha_nacimiento) : 'No definida',
+          edad: animal.fecha_nacimiento ? calcularEdad(animal.fecha_nacimiento) : null,
+          edadTexto: animal.fecha_nacimiento ? obtenerEdadTexto(animal.fecha_nacimiento) : 'Sin información',
           codigo_qr: animal.codigo_qr
         };
       });
@@ -296,6 +307,38 @@ export const calcularEdad = (fechaNacimiento) => {
   return edad;
 };
 
+const calcularDetalleEdad = (fechaNacimiento) => {
+  if (!fechaNacimiento) return null;
+  const nacimiento = new Date(fechaNacimiento);
+  if (Number.isNaN(nacimiento.getTime())) return null;
+  const hoy = new Date();
+  let years = hoy.getFullYear() - nacimiento.getFullYear();
+  let months = hoy.getMonth() - nacimiento.getMonth();
+  if (hoy.getDate() < nacimiento.getDate()) {
+    months--;
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+  if (years < 0) {
+    years = 0;
+  }
+  return { years, months };
+};
+
+const obtenerEdadTexto = (fechaNacimiento) => {
+  const detalle = calcularDetalleEdad(fechaNacimiento);
+  if (!detalle) return 'Sin información';
+  if (detalle.years >= 1) {
+    return detalle.years === 1 ? '1 año' : `${detalle.years} años`;
+  }
+  if (detalle.months >= 1) {
+    return detalle.months === 1 ? '1 mes' : `${detalle.months} meses`;
+  }
+  return 'Menos de un mes';
+};
+
 export const formatDate = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);
@@ -305,6 +348,24 @@ export const formatDate = (dateString) => {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
+  });
+};
+
+const obtenerFechaHoyParaInput = () => {
+  const hoy = new Date();
+  const anio = hoy.getFullYear();
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoy.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}`;
+};
+
+const CAMPOS_REQUERIDOS_AGREGAR_ANIMAL = ['nombre', 'raza', 'fecha_nacimiento', 'estado', 'sexo', 'id_potrero'];
+
+const estanCamposRequeridosAgregarAnimalCompletos = () => {
+  return CAMPOS_REQUERIDOS_AGREGAR_ANIMAL.every((id) => {
+    const elemento = document.getElementById(id);
+    if (!elemento) return false;
+    return String(elemento.value || '').trim().length > 0;
   });
 };
 
@@ -478,7 +539,7 @@ function construirOpcionesPropietario(animal) {
   return [
     `<option value="">Seleccionar propietario</option>`,
     ...personasUsuario.value.map(p => {
-      const nombre = `${p.primer_nombre} ${p.primer_apellido}`.trim();
+      const nombre = capitalizarPalabras(`${p.primer_nombre} ${p.primer_apellido}`.trim());
       return `<option value="${p.id}" ${p.id === animal.id_persona ? 'selected' : ''}>${nombre}</option>`;
     })
   ].join('');
@@ -576,10 +637,17 @@ function construirUpdateData() {
   return limpiarCampos(data);
 }
 
-function limpiarCampos(data) {
-  const cleaned = Object.fromEntries(
-    Object.entries(data).filter(([_, value]) => value !== null && value !== undefined && value !== '')
-  );
+function limpiarCampos(data, allowNullFields = []) {
+  const cleaned = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value === null || value === undefined || value === '') {
+      if (value === null && allowNullFields.includes(key)) {
+        cleaned[key] = null;
+      }
+      continue;
+    }
+    cleaned[key] = value;
+  }
   console.log('[DEBUG] limpiarCampos - data original:', data);
   console.log('[DEBUG] limpiarCampos - data limpiada:', cleaned);
   return cleaned;
@@ -653,6 +721,8 @@ export const agregarNuevoAnimal = async () => {
     return; // datos no listos
   }
 
+  const fechaMaximaNacimiento = obtenerFechaHoyParaInput();
+
   Swal.fire({
     title: 'Agregar Animal',
     html: `
@@ -660,7 +730,7 @@ export const agregarNuevoAnimal = async () => {
         <div class="mb-3"><label class="form-label">Nombre:</label><input type="text" id="nombre" class="form-control" placeholder="Ej: Holstein-001" required></div>
         <div class="mb-3"><label class="form-label">Peso (kg):</label><input type="number" id="peso" class="form-control" placeholder="Ej: 450" min="0" step="0.1"></div>
         <div class="mb-3"><label class="form-label">Raza:</label><input type="text" id="raza" class="form-control" placeholder="Ej: Holstein" required></div>
-        <div class="mb-3"><label class="form-label">Fecha de nacimiento:</label><input type="date" id="fecha_nacimiento" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Fecha de nacimiento:</label><input type="date" id="fecha_nacimiento" class="form-control" required max="${fechaMaximaNacimiento}"></div>
         <div class="mb-3">
           <label class="form-label">Estado:</label>
           <select id="estado" class="form-control" required>
@@ -680,17 +750,21 @@ export const agregarNuevoAnimal = async () => {
           <label class="form-label">Potrero actual:</label>
           <select id="id_potrero" class="form-control">
             <option value="">Seleccionar potrero</option>
-            ${potreros.value.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('')}
+            ${potreros.value.map(p => {
+              const ocupado = (p.estado || p.estado_nombre || '').toLowerCase() === 'ocupado';
+              const estadoText = ocupado ? ' (ocupado)' : '';
+              return `<option value="${p.id}" ${ocupado ? 'disabled' : ''}>${p.nombre}${estadoText}</option>`;
+            }).join('')}
           </select>
         </div>
         <div class="mb-3">
           <label class="form-label">Propietario:</label>
           <select id="id_persona" class="form-control">
             <option value="">Seleccionar propietario</option>
-            ${personasUsuario.value.map(p => {
-              const nombre = `${p.primer_nombre} ${p.primer_apellido}`.trim();
-              return `<option value="${p.id}">${nombre}</option>`;
-            }).join('')}
+          ${personasUsuario.value.map(p => {
+            const nombre = capitalizarPalabras(`${p.primer_nombre} ${p.primer_apellido}`.trim());
+            return `<option value="${p.id}">${nombre}</option>`;
+          }).join('')}
           </select>
         </div>
       </form>
@@ -699,7 +773,32 @@ export const agregarNuevoAnimal = async () => {
     showCancelButton: true,
     confirmButtonText: 'Agregar',
     confirmButtonColor: '#00d563',
+    didOpen: () => {
+      const confirmButton = Swal.getConfirmButton();
+      const actualizarEstadoBoton = () => {
+        if (confirmButton) {
+          confirmButton.disabled = !estanCamposRequeridosAgregarAnimalCompletos();
+        }
+      };
+
+      actualizarEstadoBoton();
+      const popup = Swal.getPopup();
+      if (!popup) return;
+
+      CAMPOS_REQUERIDOS_AGREGAR_ANIMAL.forEach((id) => {
+        const campo = popup.querySelector(`#${id}`);
+        if (!campo) return;
+        ['input', 'change'].forEach((evento) => {
+          campo.addEventListener(evento, actualizarEstadoBoton);
+        });
+      });
+    },
     preConfirm: () => {
+      if (!estanCamposRequeridosAgregarAnimalCompletos()) {
+        Swal.showValidationMessage('Complete todos los campos requeridos');
+        return Promise.reject('VALIDATION_ERROR');
+      }
+
       const nombre = document.getElementById('nombre').value;
       const raza = document.getElementById('raza').value;
       const fecha_nacimiento = document.getElementById('fecha_nacimiento').value;
@@ -709,11 +808,10 @@ export const agregarNuevoAnimal = async () => {
       const id_persona = document.getElementById('id_persona').value;
       const peso = document.getElementById('peso').value;
 
-      if (!nombre || !raza || !fecha_nacimiento || !estado || !sexo) {
-        Swal.showValidationMessage('Complete todos los campos requeridos');
-        throw new Error('VALIDATION_ERROR');
+      if (!id_potrero) {
+        Swal.showValidationMessage('Seleccione primero un potrero válido');
+        return Promise.reject('POTRERO_REQUIRED');
       }
-
       validarCapacidadPotrero(id_potrero);
 
       const data = {
@@ -727,7 +825,7 @@ export const agregarNuevoAnimal = async () => {
         id_persona: id_persona ? Number.parseInt(id_persona, 10) : null
       };
 
-      return limpiarCampos(data);
+      return limpiarCampos(data, ['id_potrero']);
     }
   }).then(async result => {
     if (!result.isConfirmed) return;
