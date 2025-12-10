@@ -39,7 +39,17 @@ const obtenerNombrePersonaPorId = (personaId, fallback = 'Sin asignar') => {
 const obtenerNombrePersonaDesdeEntidad = (entidad, fallback = 'Sin asignar') => {
   if (!entidad) return fallback;
   if (entidad.persona_nombre) return entidad.persona_nombre;
-  if (entidad.propietario) return entidad.propietario;
+  if (entidad.propietario) {
+    if (typeof entidad.propietario === 'string') {
+      return entidad.propietario;
+    }
+    if (entidad.propietario.nombre) {
+      return entidad.propietario.nombre;
+    }
+    if (entidad.propietario.persona_nombre) {
+      return entidad.propietario.persona_nombre;
+    }
+  }
   return obtenerNombrePersonaPorId(entidad.id_persona, fallback);
 };
 
@@ -305,6 +315,24 @@ export const formatDate = (dateString) => {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
+  });
+};
+
+const obtenerFechaHoyParaInput = () => {
+  const hoy = new Date();
+  const anio = hoy.getFullYear();
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoy.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}`;
+};
+
+const CAMPOS_REQUERIDOS_AGREGAR_ANIMAL = ['nombre', 'raza', 'fecha_nacimiento', 'estado', 'sexo'];
+
+const estanCamposRequeridosAgregarAnimalCompletos = () => {
+  return CAMPOS_REQUERIDOS_AGREGAR_ANIMAL.every((id) => {
+    const elemento = document.getElementById(id);
+    if (!elemento) return false;
+    return String(elemento.value || '').trim().length > 0;
   });
 };
 
@@ -660,6 +688,8 @@ export const agregarNuevoAnimal = async () => {
     return; // datos no listos
   }
 
+  const fechaMaximaNacimiento = obtenerFechaHoyParaInput();
+
   Swal.fire({
     title: 'Agregar Animal',
     html: `
@@ -667,7 +697,7 @@ export const agregarNuevoAnimal = async () => {
         <div class="mb-3"><label class="form-label">Nombre:</label><input type="text" id="nombre" class="form-control" placeholder="Ej: Holstein-001" required></div>
         <div class="mb-3"><label class="form-label">Peso (kg):</label><input type="number" id="peso" class="form-control" placeholder="Ej: 450" min="0" step="0.1"></div>
         <div class="mb-3"><label class="form-label">Raza:</label><input type="text" id="raza" class="form-control" placeholder="Ej: Holstein" required></div>
-        <div class="mb-3"><label class="form-label">Fecha de nacimiento:</label><input type="date" id="fecha_nacimiento" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Fecha de nacimiento:</label><input type="date" id="fecha_nacimiento" class="form-control" required max="${fechaMaximaNacimiento}"></div>
         <div class="mb-3">
           <label class="form-label">Estado:</label>
           <select id="estado" class="form-control" required>
@@ -706,7 +736,32 @@ export const agregarNuevoAnimal = async () => {
     showCancelButton: true,
     confirmButtonText: 'Agregar',
     confirmButtonColor: '#00d563',
+    didOpen: () => {
+      const confirmButton = Swal.getConfirmButton();
+      const actualizarEstadoBoton = () => {
+        if (confirmButton) {
+          confirmButton.disabled = !estanCamposRequeridosAgregarAnimalCompletos();
+        }
+      };
+
+      actualizarEstadoBoton();
+      const popup = Swal.getPopup();
+      if (!popup) return;
+
+      CAMPOS_REQUERIDOS_AGREGAR_ANIMAL.forEach((id) => {
+        const campo = popup.querySelector(`#${id}`);
+        if (!campo) return;
+        ['input', 'change'].forEach((evento) => {
+          campo.addEventListener(evento, actualizarEstadoBoton);
+        });
+      });
+    },
     preConfirm: () => {
+      if (!estanCamposRequeridosAgregarAnimalCompletos()) {
+        Swal.showValidationMessage('Complete todos los campos requeridos');
+        return Promise.reject('VALIDATION_ERROR');
+      }
+
       const nombre = document.getElementById('nombre').value;
       const raza = document.getElementById('raza').value;
       const fecha_nacimiento = document.getElementById('fecha_nacimiento').value;
@@ -715,11 +770,6 @@ export const agregarNuevoAnimal = async () => {
       const id_potrero = document.getElementById('id_potrero').value;
       const id_persona = document.getElementById('id_persona').value;
       const peso = document.getElementById('peso').value;
-
-      if (!nombre || !raza || !fecha_nacimiento || !estado || !sexo) {
-        Swal.showValidationMessage('Complete todos los campos requeridos');
-        throw new Error('VALIDATION_ERROR');
-      }
 
       validarCapacidadPotrero(id_potrero);
 
@@ -734,7 +784,7 @@ export const agregarNuevoAnimal = async () => {
         id_persona: id_persona ? Number.parseInt(id_persona, 10) : null
       };
 
-  return limpiarCampos(data, ['id_potrero']);
+      return limpiarCampos(data, ['id_potrero']);
     }
   }).then(async result => {
     if (!result.isConfirmed) return;

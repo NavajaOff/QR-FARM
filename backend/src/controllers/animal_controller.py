@@ -1,6 +1,6 @@
 # Controlador Ganado
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
 from flask import jsonify, request
 from ..models.animal import Ganado
 from ..services.animal_service import GanadoService
@@ -26,7 +26,13 @@ class GanadoController:
                 data['fecha_nacimiento'] = datetime.strptime(data['fecha_nacimiento'], '%Y-%m-%d').date()
             except (ValueError, TypeError) as date_error:
                 raise ValueError('Formato de fecha inválido: ' + str(data.get("fecha_nacimiento"))) from date_error
+            GanadoController._validar_fecha_nacimiento_no_futura(data['fecha_nacimiento'])
         return data
+
+    @staticmethod
+    def _validar_fecha_nacimiento_no_futura(fecha: Optional[date]) -> None:
+        if fecha and fecha > datetime.utcnow().date():
+            raise ValueError('La fecha de nacimiento no puede ser futura')
 
     @staticmethod
     def _obtener_tenant_id_desde_contexto() -> Optional[int]:
@@ -274,7 +280,7 @@ class GanadoController:
             # Actualizar los campos del ganado con los nuevos datos
             for key, value in data.items():
                 if key == 'fecha_nacimiento' and value:
-                    value = datetime.strptime(value, '%Y-%m-%d').date()
+                    value = GanadoController._parsear_fecha_nacimiento({'fecha_nacimiento': value})['fecha_nacimiento']
                 setattr(ganado_existente, key, value)
 
             # Intentar actualizar en la base de datos
