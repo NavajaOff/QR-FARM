@@ -319,7 +319,11 @@ const parseGanadoResponse = (input: unknown): GanadoResource => {
     propietario: parseOwner(data.propietario),
     potrero: parsePotrero(data.potrero),
     vacunas: parseVacunas(data.vacunas),
-    historial: parseHistorial(data.historial)
+    historial: parseHistorial(data.historial),
+    edadTexto: formatEdadTextoFromPayload(
+      toIsoString(data.fecha_nacimiento),
+      toNullableNumber(data.edad)
+    )
   };
 };
 
