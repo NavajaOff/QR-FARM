@@ -3,6 +3,8 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 import io from 'socket.io-client';
 import api from '../../services/api.js';
+import { capitalizarPalabras } from '../../utils/text.js';
+import { potreros, cargarDatosIniciales as cargarDatosInicialesPotreros, cargarPotreros } from './gestionar-potreros.js';
 
 // Variables reactivas
 export const currentIndex = ref(0);
@@ -25,7 +27,7 @@ const buildPersonaNombre = (persona) => {
     persona.segundo_apellido
   ].filter(Boolean);
   const nombreCompuesto = partes.join(' ').trim();
-  return nombreCompuesto || null;
+  return capitalizarPalabras(nombreCompuesto) || null;
 };
 
 const obtenerNombrePersonaPorId = (personaId, fallback = 'Sin asignar') => {
@@ -33,7 +35,7 @@ const obtenerNombrePersonaPorId = (personaId, fallback = 'Sin asignar') => {
   const persona = personasUsuario.value.find(p => p.id == personaId);
   const nombre = buildPersonaNombre(persona);
   if (nombre) return nombre;
-  return `Persona ${personaId}`;
+  return capitalizarPalabras(`Persona ${personaId}`);
 };
 
 const obtenerNombrePersonaDesdeEntidad = (entidad, fallback = 'Sin asignar') => {
@@ -41,13 +43,13 @@ const obtenerNombrePersonaDesdeEntidad = (entidad, fallback = 'Sin asignar') => 
   if (entidad.persona_nombre) return entidad.persona_nombre;
   if (entidad.propietario) {
     if (typeof entidad.propietario === 'string') {
-      return entidad.propietario;
+      return capitalizarPalabras(entidad.propietario);
     }
     if (entidad.propietario.nombre) {
-      return entidad.propietario.nombre;
+      return capitalizarPalabras(entidad.propietario.nombre);
     }
     if (entidad.propietario.persona_nombre) {
-      return entidad.propietario.persona_nombre;
+      return capitalizarPalabras(entidad.propietario.persona_nombre);
     }
   }
   return obtenerNombrePersonaPorId(entidad.id_persona, fallback);
@@ -70,8 +72,6 @@ const obtenerNombrePotreroDesdeEntidad = (entidad, fallback = 'Sin asignar') => 
 // Control de cancelación con Axios
 let cancelTokenSource = null;
 
-// Importar potreros para el select
-import { potreros, cargarDatosIniciales as cargarDatosInicialesPotreros, cargarPotreros } from './gestionar-potreros.js';
 import { getApiBaseUrl, getBackendUrl } from '../../utils/config.js';
 
 // API configuration
@@ -506,7 +506,7 @@ function construirOpcionesPropietario(animal) {
   return [
     `<option value="">Seleccionar propietario</option>`,
     ...personasUsuario.value.map(p => {
-      const nombre = `${p.primer_nombre} ${p.primer_apellido}`.trim();
+      const nombre = capitalizarPalabras(`${p.primer_nombre} ${p.primer_apellido}`.trim());
       return `<option value="${p.id}" ${p.id === animal.id_persona ? 'selected' : ''}>${nombre}</option>`;
     })
   ].join('');
@@ -724,10 +724,10 @@ export const agregarNuevoAnimal = async () => {
           <label class="form-label">Propietario:</label>
           <select id="id_persona" class="form-control">
             <option value="">Seleccionar propietario</option>
-            ${personasUsuario.value.map(p => {
-              const nombre = `${p.primer_nombre} ${p.primer_apellido}`.trim();
-              return `<option value="${p.id}">${nombre}</option>`;
-            }).join('')}
+          ${personasUsuario.value.map(p => {
+            const nombre = capitalizarPalabras(`${p.primer_nombre} ${p.primer_apellido}`.trim());
+            return `<option value="${p.id}">${nombre}</option>`;
+          }).join('')}
           </select>
         </div>
       </form>

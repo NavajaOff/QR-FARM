@@ -14,14 +14,14 @@ export const error = ref(null);
 
 const buildPersonaNombre = (persona) => {
   if (!persona) return '';
-  if (persona.nombre_completo) return persona.nombre_completo;
+  if (persona.nombre_completo) return capitalizarPalabras(persona.nombre_completo);
   const partes = [
     persona.primer_nombre,
     persona.segundo_nombre,
     persona.primer_apellido,
     persona.segundo_apellido
   ].filter(Boolean);
-  return partes.join(' ').trim();
+  return capitalizarPalabras(partes.join(' ').trim());
 };
 
 const obtenerResponsableNombre = (personaId) => {
@@ -29,13 +29,13 @@ const obtenerResponsableNombre = (personaId) => {
   const persona = personasUsuario.value.find(p => p.id == personaId);
   const etiqueta = buildPersonaNombre(persona);
   if (etiqueta) return etiqueta;
-  return `Persona ${personaId}`;
+  return capitalizarPalabras(`Persona ${personaId}`);
 };
 
 const mapPotreroFromApi = (potrero) => {
   const mapped = {
     id: potrero.id,
-    nombre: potrero.nombre,
+    nombre: capitalizarPalabras(potrero.nombre || ''),
     estado: potrero.estado || potrero.estado_nombre, // Usar estado o estado_nombre
     capacidad: potrero.capacidad,
     ocupacion: potrero.ocupacion,
@@ -73,6 +73,7 @@ const mapPotreroFromApi = (potrero) => {
 
 import { getApiBaseUrl, getBackendUrl } from '../../utils/config.js';
 import api from '../../services/api.js';
+import { capitalizarPalabras } from '../../utils/text.js';
 
 // API configuration
 const API_BASE = getApiBaseUrl();
@@ -225,7 +226,7 @@ export const crearPotrero = () => {
   // Construir opciones de responsable
   let responsableOptions = '<option value="">Seleccionar responsable</option>';
   for (const persona of personasUsuario.value) {
-    const nombreCompleto = `${persona.primer_nombre} ${persona.primer_apellido}`.trim();
+    const nombreCompleto = capitalizarPalabras(`${persona.primer_nombre} ${persona.primer_apellido}`.trim());
     responsableOptions += `<option value="${persona.id}">${nombreCompleto}</option>`;
   }
 
@@ -329,7 +330,7 @@ const construirOpcionesTipoPasto = (potrero) => {
 const construirOpcionesResponsable = (potrero) => {
   let responsableOptions = '<option value="">Seleccionar responsable</option>';
   for (const persona of personasUsuario.value) {
-    const nombreCompleto = persona.nombre_completo || `${persona.primer_nombre} ${persona.primer_apellido}`.trim();
+    const nombreCompleto = capitalizarPalabras(persona.nombre_completo || `${persona.primer_nombre} ${persona.primer_apellido}`.trim());
     const selected = persona.id === potrero.responsable_persona_id || nombreCompleto === potrero.responsable ? 'selected' : '';
     responsableOptions += `<option value="${persona.id}" ${selected}>${nombreCompleto}</option>`;
   }
