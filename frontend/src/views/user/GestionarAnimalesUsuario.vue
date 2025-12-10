@@ -84,9 +84,6 @@
                   <button class="btn btn-sm btn-outline-primary" @click="verPerfilAnimal(animal)">
                     <i class="fas fa-eye me-1"></i>Detalles
                   </button>
-                  <button class="btn btn-sm btn-outline-warning" @click="editarAnimal(animal)">
-                    <i class="fas fa-edit me-1"></i>Editar
-                  </button>
                 </div>
               </div>
             </div>
@@ -119,8 +116,7 @@ const {
   animalesFiltrados,
   capitalizar,
   estadoClass,
-  verPerfilAnimal,
-  editarAnimal
+  verPerfilAnimal
 } = useGestionarAnimalesUsuario()
 
 const apiBaseUrl = computed(() => getApiBaseUrl())
