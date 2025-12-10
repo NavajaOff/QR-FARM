@@ -16,6 +16,9 @@
             <button class="btn btn-primary" @click="generarReporte">
               <i class="fas fa-file-pdf me-2"></i>Generar Reporte
             </button>
+            <button class="btn btn-outline-info" @click="abrirGestionTiposVacuna">
+              <i class="fas fa-syringe me-2"></i>Gestionar tipos de vacuna
+            </button>
           </div>
         </div>
 
