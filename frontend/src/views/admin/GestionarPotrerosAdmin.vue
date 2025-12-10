@@ -64,6 +64,9 @@
                 <div class="col-6"><strong>Responsable:</strong> {{ potreros[currentIndex].responsable }}</div>
               </div>
               <div class="row g-3 mb-3">
+                <div class="col-6"><strong>Tipo de pasto:</strong> {{ potreros[currentIndex].pasto }}</div>
+              </div>
+              <div class="row g-3 mb-3">
                 <div class="col-12"><strong>Próxima limpieza:</strong> {{ potreros[currentIndex].proximaLimpieza || 'No programada' }}</div>
               </div>
               <div class="row g-3 mb-3">

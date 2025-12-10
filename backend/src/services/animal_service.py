@@ -1020,7 +1020,7 @@ class GanadoService:
                 hp.fecha_ultima_limpieza AS potrero_ultima_limpieza,
                 hp.fecha_ultimo_uso AS potrero_fecha_ultimo_uso,
                 hp.fecha_proxima_limpieza AS potrero_proxima_limpieza,
-                p.estado AS potrero_estado,
+                ep.nombre_estado AS potrero_estado,
                 tp.tipo_pasto AS potrero_tipo_pasto,
                 per.telefono AS propietario_telefono,
                 CONCAT_WS(' ', per.primer_nombre, per.segundo_nombre, per.primer_apellido, per.segundo_apellido) AS propietario_nombre,
@@ -1029,6 +1029,7 @@ class GanadoService:
             LEFT JOIN qr q ON q.id_ganado = g.id
             LEFT JOIN estado_ganado eg ON eg.id = g.id_estado
             LEFT JOIN potrero p ON p.id = g.id_potrero
+            LEFT JOIN estado_potrero ep ON ep.id = p.id_estado_potrero
             LEFT JOIN tipo_pasto tp ON tp.id = p.id_tipo_pasto
             LEFT JOIN personas per ON per.id = g.id_persona
             LEFT JOIN roles ON roles.id = per.id_rol
@@ -1066,7 +1067,7 @@ class GanadoService:
                 NULL AS potrero_ultima_limpieza,
                 NULL AS potrero_fecha_ultimo_uso,
                 NULL AS potrero_proxima_limpieza,
-                p.estado AS potrero_estado,
+                ep.nombre_estado AS potrero_estado,
                 tp.tipo_pasto AS potrero_tipo_pasto,
                 per.telefono AS propietario_telefono,
                 CONCAT_WS(' ', per.primer_nombre, per.segundo_nombre, per.primer_apellido, per.segundo_apellido) AS propietario_nombre,
@@ -1075,6 +1076,7 @@ class GanadoService:
             LEFT JOIN qr q ON q.id_ganado = g.id
             LEFT JOIN estado_ganado eg ON eg.id = g.id_estado
             LEFT JOIN potrero p ON p.id = g.id_potrero
+            LEFT JOIN estado_potrero ep ON ep.id = p.id_estado_potrero
             LEFT JOIN tipo_pasto tp ON tp.id = p.id_tipo_pasto
             LEFT JOIN personas per ON per.id = g.id_persona
             LEFT JOIN roles ON roles.id = per.id_rol
