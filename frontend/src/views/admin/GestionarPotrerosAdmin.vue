@@ -79,6 +79,7 @@
               <div class="d-flex gap-2 justify-content-center">
                 <button class="btn btn-primary" @click="editarPotrero(potreros[currentIndex].id)"><i class="fas fa-edit me-1"></i>Editar</button>
                 <button class="btn btn-success" @click="crearPotrero()"><i class="fas fa-plus me-1"></i>Crear Potrero</button>
+                <button class="btn btn-outline-info" @click="abrirGestionPastos"><i class="fas fa-tasks me-1"></i>Gestionar pastos</button>
               </div>
             </div>
           </div>
@@ -93,6 +94,7 @@
 
 <script>
 import gestionarPotrerosAdmin from '../../assets/js/gestionar-potreros-admin.js';
+import { abrirGestionPastos } from '../../assets/js/gestionar-potreros.js';
 import TenantSelector from '../../components/TenantSelector.vue';
 import authService from '../../services/authService.js';
 
@@ -109,6 +111,7 @@ export default {
   },
   methods: {
     ...gestionarPotrerosAdmin.methods,
+    abrirGestionPastos,
     onTenantChanged() {
       // Recargar potreros cuando cambia el tenant
       this.cargarPotreros();

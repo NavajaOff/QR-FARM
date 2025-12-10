@@ -931,6 +931,50 @@ class PotreroService:
             return []
 
     @staticmethod
+    def crear_tipo_pasto(nombre: str) -> Dict[str, Any]:
+        """Crea un nuevo tipo de pasto si no existe y retorna su registro."""
+        nombre_limpio = nombre.strip()
+        if not nombre_limpio:
+            raise ValueError("El tipo de pasto no puede estar vacío.")
+
+        with db.get_cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO tipo_pasto (tipo_pasto)
+                VALUES (%s)
+                ON DUPLICATE KEY UPDATE tipo_pasto = VALUES(tipo_pasto)
+            """, (nombre_limpio,))
+            tipo_id = cursor.lastrowid
+            if not tipo_id:
+                cursor.execute("SELECT id FROM tipo_pasto WHERE tipo_pasto = %s", (nombre_limpio,))
+                encontrado = cursor.fetchone()
+                tipo_id = encontrado['id'] if encontrado else None
+
+            if tipo_id is None:
+                raise ValueError("No fue posible crear el tipo de pasto.")
+
+            cursor.execute("SELECT id, tipo_pasto FROM tipo_pasto WHERE id = %s", (tipo_id,))
+            return cursor.fetchone()
+
+    @staticmethod
+    def actualizar_tipo_pasto(tipo_id: int, nombre: str) -> Dict[str, Any]:
+        """Actualiza el nombre de un tipo de pasto existente."""
+        nombre_limpio = nombre.strip()
+        if not nombre_limpio:
+            raise ValueError("El tipo de pasto no puede estar vacío.")
+
+        with db.get_cursor() as cursor:
+            cursor.execute("""
+                UPDATE tipo_pasto
+                SET tipo_pasto = %s
+                WHERE id = %s
+            """, (nombre_limpio, tipo_id))
+            cursor.execute("SELECT id, tipo_pasto FROM tipo_pasto WHERE id = %s", (tipo_id,))
+            result = cursor.fetchone()
+            if not result:
+                raise ValueError("No se encontró el tipo de pasto especificado.")
+            return result
+
+    @staticmethod
     def get_personas_usuario(tenant_id_override: Optional[int] = None) -> List[Dict[str, Any]]:
         """
         Get all personas with rol usuario, filtrado por tenant.

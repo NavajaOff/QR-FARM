@@ -428,6 +428,80 @@ class PotreroController:
     @staticmethod
     @token_required
     @tenant_required
+    @permission_required('crear_potreros')
+    def crear_tipo_pasto() -> Tuple[Any, int]:
+        """Permite crear un nuevo tipo de pasto."""
+        try:
+            data = request.get_json()
+            nombre = (data or {}).get('nombre')
+            if not nombre or not isinstance(nombre, str):
+                return jsonify({
+                    'error': 'Datos inválidos',
+                    'message': 'El nombre del tipo de pasto es obligatorio.',
+                    'success': False
+                }), 400
+
+            tipo = PotreroService.crear_tipo_pasto(nombre)
+            return jsonify({'data': tipo, 'success': True}), 201
+        except ValueError as ve:
+            return jsonify({
+                'error': 'Datos inválidos',
+                'message': str(ve),
+                'success': False
+            }), 400
+        except DatabaseError as e:
+            return jsonify({
+                'error': PotreroController.ERROR_BASE_DATOS,
+                'message': str(e),
+                'success': False
+            }), 500
+        except Exception as e:
+            return jsonify({
+                'error': PotreroController.ERROR_INTERNO_SERVIDOR,
+                'message': str(e),
+                'success': False
+            }), 500
+
+    @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('editar_potreros')
+    def actualizar_tipo_pasto(pasto_id: int) -> Tuple[Any, int]:
+        """Actualiza el nombre de un tipo de pasto."""
+        try:
+            data = request.get_json()
+            nombre = (data or {}).get('nombre')
+            if not nombre or not isinstance(nombre, str):
+                return jsonify({
+                    'error': 'Datos inválidos',
+                    'message': 'El nombre del tipo de pasto es obligatorio.',
+                    'success': False
+                }), 400
+
+            tipo = PotreroService.actualizar_tipo_pasto(pasto_id, nombre)
+            return jsonify({'data': tipo, 'success': True}), 200
+        except ValueError as ve:
+            return jsonify({
+                'error': 'Datos inválidos',
+                'message': str(ve),
+                'success': False
+            }), 400
+        except DatabaseError as e:
+            return jsonify({
+                'error': PotreroController.ERROR_BASE_DATOS,
+                'message': str(e),
+                'success': False
+            }), 500
+        except Exception as e:
+            return jsonify({
+                'error': PotreroController.ERROR_INTERNO_SERVIDOR,
+                'message': str(e),
+                'success': False
+            }), 500
+
+    @staticmethod
+    @token_required
+    @tenant_required
     @permission_required('ver_potreros')
     def get_personas_usuario() -> Tuple[Any, int]:
         """

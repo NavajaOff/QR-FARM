@@ -177,6 +177,130 @@ export const cargarPotreros = async () => {
   }
 };
 
+const crearTipoPastoBackend = async (nombre) => {
+  if (!nombre || !nombre.trim()) {
+    throw new Error('El nombre del tipo de pasto no puede estar vacío.');
+  }
+  const response = await api.post('/potreros/tipos-pasto', { nombre: nombre.trim() });
+  if (response.data?.success) {
+    const tipo = response.data.data;
+    if (!tiposPasto.value.some(tp => tp.id === tipo.id)) {
+      tiposPasto.value.push(tipo);
+    }
+    actualizarListaTiposDom();
+    return tipo;
+  }
+  throw new Error(response.data?.message || 'No fue posible crear el tipo de pasto.');
+};
+
+const actualizarTipoPastoBackend = async (id, nombre) => {
+  if (!nombre || !nombre.trim()) {
+    throw new Error('El nombre del tipo de pasto no puede estar vacío.');
+  }
+  const response = await api.put(`/potreros/tipos-pasto/${id}`, { nombre: nombre.trim() });
+  if (response.data?.success) {
+    await cargarTiposPasto();
+    actualizarListaTiposDom();
+    return response.data.data;
+  }
+  throw new Error(response.data?.message || 'No fue posible actualizar el tipo de pasto.');
+};
+
+const renderTiposPastoHtml = () => {
+  return tiposPasto.value
+    .map(tipo => `
+      <div class="d-flex justify-content-between align-items-center border-bottom py-1">
+        <span>${tipo.tipo_pasto}</span>
+        <button type="button" class="btn btn-sm btn-outline-primary btn-editar-tipo-pasto" data-id="${tipo.id}" data-nombre="${tipo.tipo_pasto}">Editar</button>
+      </div>
+    `)
+    .join('');
+};
+
+const actualizarListaTiposDom = () => {
+  const lista = document.getElementById('gestion-tipos-list');
+  if (lista) {
+    lista.innerHTML = renderTiposPastoHtml();
+    attachGestionHandlers();
+  }
+};
+
+const attachGestionHandlers = () => {
+  const botonesEditar = document.querySelectorAll('.btn-editar-tipo-pasto');
+  botonesEditar.forEach(btn => {
+    if (btn.dataset.hook === 'true') return;
+    btn.dataset.hook = 'true';
+    btn.addEventListener('click', async () => {
+      const tipoId = Number(btn.dataset.id);
+      const nombreActual = btn.dataset.nombre;
+      const { value } = await Swal.fire({
+        title: 'Editar tipo de pasto',
+        input: 'text',
+        inputValue: nombreActual,
+        showCancelButton: true,
+        confirmButtonText: 'Actualizar',
+        preConfirm: (valor) => {
+          if (!valor || !valor.trim()) {
+            Swal.showValidationMessage('El nombre no puede estar vacío.');
+            return false;
+          }
+          return valor.trim();
+        }
+      });
+      if (value && value !== nombreActual) {
+        try {
+          await actualizarTipoPastoBackend(tipoId, value);
+          Swal.fire('Actualizado', 'Tipo de pasto actualizado correctamente.', 'success');
+        } catch (error) {
+          Swal.showValidationMessage(error.message || 'No se pudo actualizar.');
+        }
+      }
+    });
+  });
+
+  const btnAgregar = document.getElementById('gestion-btn-agregar');
+  if (btnAgregar) {
+    btnAgregar.onclick = async () => {
+      const input = document.getElementById('gestion-nuevo-tipo');
+      const valor = input?.value;
+      if (!valor || !valor.trim()) {
+        Swal.showValidationMessage('El nombre del tipo de pasto es obligatorio.');
+        return;
+      }
+      try {
+        await crearTipoPastoBackend(valor);
+        if (input) input.value = '';
+        Swal.fire('Creado', 'Tipo de pasto agregado correctamente.', 'success');
+      } catch (error) {
+        Swal.showValidationMessage(error.message || 'Error creando tipo de pasto.');
+      }
+    };
+  }
+};
+
+export const abrirGestionPastos = async () => {
+  await cargarTiposPasto();
+  await Swal.fire({
+    title: 'Gestionar tipos de pasto',
+    html: `
+      <div id="gestion-tipos-list">${renderTiposPastoHtml()}</div>
+      <div class="mt-3">
+        <label class="form-label">Agregar nuevo tipo</label>
+        <div class="input-group">
+          <input id="gestion-nuevo-tipo" class="form-control" placeholder="Nombre del tipo de pasto">
+          <button type="button" class="btn btn-success" id="gestion-btn-agregar">Agregar</button>
+        </div>
+      </div>
+    `,
+    width: '600px',
+    showCancelButton: true,
+    confirmButtonText: 'Cerrar',
+    didOpen: () => {
+      attachGestionHandlers();
+    }
+  });
+};
+
 // Utility functions
 export const formatDate = (dateString) => {
   if (!dateString) return '';
