@@ -96,6 +96,55 @@ class GanadoService:
         return edad if edad >= 0 else None
 
     @staticmethod
+    def _calcular_detalle_edad(valor: Any) -> Optional[Dict[str, int]]:
+        nacimiento = GanadoService._parse_to_date(valor)
+        if not nacimiento:
+            return None
+        hoy = date.today()
+        years = hoy.year - nacimiento.year
+        months = hoy.month - nacimiento.month
+        if hoy.day < nacimiento.day:
+            months -= 1
+        if months < 0:
+            years -= 1
+            months += 12
+        if years < 0:
+            years = 0
+            months = 0
+        return {"years": years, "months": months}
+
+    @staticmethod
+    def _parse_to_date(valor: Any) -> Optional[date]:
+        if valor is None:
+            return None
+        if isinstance(valor, datetime):
+            return valor.date()
+        if isinstance(valor, date):
+            return valor
+        if isinstance(valor, str):
+            try:
+                return datetime.fromisoformat(valor.replace('Z', '')).date()
+            except ValueError:
+                try:
+                    return datetime.strptime(valor.split('T')[0], '%Y-%m-%d').date()
+                except ValueError:
+                    return None
+        return None
+
+    @staticmethod
+    def _formatear_edad_texto(valor: Any) -> str:
+        detalle = GanadoService._calcular_detalle_edad(valor)
+        if not detalle:
+            return "Sin información"
+        years = detalle["years"]
+        months = detalle["months"]
+        if years >= 1:
+            return "1 año" if years == 1 else f"{years} años"
+        if months >= 1:
+            return "1 mes" if months == 1 else f"{months} meses"
+        return "Menos de un mes"
+
+    @staticmethod
     def _empty_propietario() -> Dict[str, Optional[str]]:
         return {
             "nombre": None,
@@ -980,6 +1029,7 @@ class GanadoService:
             "historial": [],
             "id_potrero": GanadoService._to_nullable_int(row.get("id_potrero")),
             "id_persona": GanadoService._to_nullable_int(row.get("id_persona")),
+            "edadTexto": GanadoService._formatear_edad_texto(row.get("fecha_nacimiento")),
         }
 
     @staticmethod

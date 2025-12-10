@@ -47,6 +47,7 @@ export interface GanadoResource {
   raza: string | null;
   fecha_nacimiento: string | null;
   edad: number | null;
+  edadTexto: string | null;
   sexo: string | null;
   estado: string | null;
   estado_salud: string | null;
@@ -152,6 +153,51 @@ const toNullableNumber = (value: unknown): number | null => {
   if (value === null || value === undefined) return null;
   const numeric = Number(value);
   return Number.isFinite(numeric) ? numeric : null;
+};
+
+const calculateAgeDetailFromDate = (value: string | null): { years: number; months: number } | null => {
+  if (!value) return null;
+  const candidate = new Date(value);
+  if (Number.isNaN(candidate.getTime())) return null;
+  const today = new Date();
+  let years = today.getFullYear() - candidate.getFullYear();
+  let months = today.getMonth() - candidate.getMonth();
+  if (today.getDate() < candidate.getDate()) {
+    months -= 1;
+  }
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+  if (years < 0) {
+    years = 0;
+    months = 0;
+  }
+  return { years, months };
+};
+
+const formatEdadTextoFromDetail = (detail: { years: number; months: number } | null): string | null => {
+  if (!detail) return null;
+  if (detail.years >= 1) {
+    return detail.years === 1 ? '1 año' : `${detail.years} años`;
+  }
+  if (detail.months >= 1) {
+    return detail.months === 1 ? '1 mes' : `${detail.months} meses`;
+  }
+  return 'Menos de un mes';
+};
+
+const formatEdadTextoFromPayload = (fechaNacimiento: string | null, edadValue: number | null): string => {
+  const detail = calculateAgeDetailFromDate(fechaNacimiento);
+  const detalleTexto = formatEdadTextoFromDetail(detail);
+  if (detalleTexto) {
+    return detalleTexto;
+  }
+  if (typeof edadValue === 'number' && Number.isFinite(edadValue)) {
+    if (edadValue === 1) return '1 año';
+    if (edadValue > 1) return `${edadValue} años`;
+  }
+  return 'Sin datos';
 };
 
 const parseOwner = (value: unknown): GanadoOwner => {
@@ -546,10 +592,10 @@ export const transformEmbeddedPayload = (payload: EmbeddedQrPayload): GanadoReso
   const propietarioNombre = toNullableString(payload.p) ?? toNullableString(payload.propietario?.nombre);
   const contacto = toNullableString(payload.ct) ?? toNullableString(payload.propietario?.contacto);
   const potreroData = payload.potrero ?? null;
+  const fechaNac = toIsoString(payload.fecha_nacimiento);
   
   // Calcular edad si hay fecha_nacimiento
   let edadCalculada: number | null = null;
-  const fechaNac = toIsoString(payload.fecha_nacimiento);
   if (fechaNac) {
     try {
       const fecha = new Date(fechaNac);
@@ -564,6 +610,7 @@ export const transformEmbeddedPayload = (payload: EmbeddedQrPayload): GanadoReso
       edadCalculada = null;
     }
   }
+  const edadTextoCalculada = formatEdadTextoFromPayload(fechaNac, edadCalculada ?? toNullableNumber(payload.edad));
   
   return {
     id: identifier,
@@ -574,6 +621,7 @@ export const transformEmbeddedPayload = (payload: EmbeddedQrPayload): GanadoReso
     sexo: toNullableString(payload.sexo),
     estado: estado,
     estado_salud: toNullableString(payload.estado_salud),
+    edadTexto: edadTextoCalculada,
     peso: toNullableNumber(payload.peso),
     codigo_qr: codigo,
     propietario: {
