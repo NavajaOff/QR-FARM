@@ -1047,10 +1047,19 @@ class PotreroService:
     def _actualizar_ocupacion_en_db(potrero_id: int, ocupacion: int) -> Dict[str, Any]:
         """Actualiza la columna ocupacion en la tabla potrero y devuelve el registro actualizado."""
         ocupacion = max(0, int(ocupacion))
+        tenant_id = None
+        capacidad = None
         with db.get_cursor() as cursor:
+            cursor.execute("SELECT capacidad, tenant_id FROM potrero WHERE id = %s", (potrero_id,))
+            row = cursor.fetchone()
+            if row:
+                capacidad = row.get('capacidad')
+                tenant_id = row.get('tenant_id')
             cursor.execute("""
                 UPDATE potrero
                 SET ocupacion = %s
                 WHERE id = %s
             """, (ocupacion, potrero_id))
+        if capacidad is not None:
+            PotreroService._actualizar_estado_por_ocupacion(potrero_id, capacidad, ocupacion, tenant_id)
         return PotreroService.get_by_id(potrero_id)
