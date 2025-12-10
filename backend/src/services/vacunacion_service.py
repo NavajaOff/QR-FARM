@@ -1,5 +1,5 @@
 # Servicio Vacunacion
-from typing import List, Optional
+from typing import Dict, List, Optional
 from src.database.db import get_connection
 from src.models.vacunacion import Vacunacion
 from src.utils.tenant import get_current_tenant_id
@@ -311,4 +311,70 @@ class VacunacionService:
             if 'cursor' in locals():
                 cursor.close()
             if 'conn' in locals() and conn.is_connected():
+                conn.close()
+
+    @staticmethod
+    def crear_tipo_vacuna(nombre: str) -> Dict[str, Any]:
+        """Crear o devolver un tipo de vacuna existente."""
+        nombre_limpio = nombre.strip()
+        if not nombre_limpio:
+            raise ValueError("El nombre del tipo de vacuna no puede estar vacío.")
+
+        conn = None
+        cursor = None
+        try:
+            conn = get_connection()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                INSERT INTO tipo_vacuna (nombre_vacuna)
+                VALUES (%s)
+                ON DUPLICATE KEY UPDATE nombre_vacuna = VALUES(nombre_vacuna)
+            """, (nombre_limpio,))
+            conn.commit()
+
+            tipo_id = cursor.lastrowid
+            if not tipo_id:
+                cursor.execute("SELECT id FROM tipo_vacuna WHERE nombre_vacuna = %s", (nombre_limpio,))
+                encontrado = cursor.fetchone()
+                tipo_id = encontrado['id'] if encontrado else None
+
+            if tipo_id is None:
+                raise ValueError("No fue posible crear el tipo de vacuna.")
+
+            cursor.execute("SELECT id, nombre_vacuna AS nombre FROM tipo_vacuna WHERE id = %s", (tipo_id,))
+            return cursor.fetchone()
+        finally:
+            if cursor:
+                cursor.close()
+            if conn and conn.is_connected():
+                conn.close()
+
+    @staticmethod
+    def actualizar_tipo_vacuna(tipo_id: int, nombre: str) -> Dict[str, Any]:
+        """Actualiza el nombre de un tipo de vacuna."""
+        nombre_limpio = nombre.strip()
+        if not nombre_limpio:
+            raise ValueError("El nombre del tipo de vacuna no puede estar vacío.")
+
+        conn = None
+        cursor = None
+        try:
+            conn = get_connection()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                UPDATE tipo_vacuna
+                SET nombre_vacuna = %s
+                WHERE id = %s
+            """, (nombre_limpio, tipo_id))
+            conn.commit()
+
+            cursor.execute("SELECT id, nombre_vacuna AS nombre FROM tipo_vacuna WHERE id = %s", (tipo_id,))
+            result = cursor.fetchone()
+            if not result:
+                raise ValueError("No se encontró el tipo de vacuna especificado.")
+            return result
+        finally:
+            if cursor:
+                cursor.close()
+            if conn and conn.is_connected():
                 conn.close()

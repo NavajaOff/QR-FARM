@@ -1,5 +1,5 @@
 # Controlador Vacunacion
-from typing import Tuple, Any
+from typing import Tuple, Any, Dict
 from flask import request, jsonify
 from src.services.vacunacion_service import VacunacionService
 from src.models.vacunacion import Vacunacion
@@ -277,4 +277,70 @@ class VacunacionController:
             return jsonify({
                 "status": "error",
                 "message": VacunacionController.ERROR_INTERNO_SERVIDOR
+            }), 500
+
+    @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('crear_vacunaciones')
+    def crear_tipo_vacuna() -> Tuple[Any, int]:
+        """Crear un nuevo tipo de vacuna."""
+        try:
+            data = request.get_json()
+            nombre = (data or {}).get('nombre')
+            if not nombre or not isinstance(nombre, str):
+                return jsonify({
+                    'status': 'error',
+                    'message': 'El nombre del tipo de vacuna es obligatorio.'
+                }), 400
+
+            tipo = VacunacionService.crear_tipo_vacuna(nombre)
+            return jsonify({
+                'status': 'success',
+                'message': 'Tipo de vacuna creado.',
+                'data': tipo
+            }), 201
+        except ValueError as ve:
+            return jsonify({
+                'status': 'error',
+                'message': str(ve)
+            }), 400
+        except Exception as e:
+            print(f"Error creando tipo de vacuna: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': VacunacionController.ERROR_INTERNO_SERVIDOR
+            }), 500
+
+    @staticmethod
+    @token_required
+    @tenant_required
+    @permission_required('editar_vacunaciones')
+    def actualizar_tipo_vacuna(tipo_id: int) -> Tuple[Any, int]:
+        """Actualizar un tipo de vacuna."""
+        try:
+            data = request.get_json()
+            nombre = (data or {}).get('nombre')
+            if not nombre or not isinstance(nombre, str):
+                return jsonify({
+                    'status': 'error',
+                    'message': 'El nombre del tipo de vacuna es obligatorio.'
+                }), 400
+
+            tipo = VacunacionService.actualizar_tipo_vacuna(tipo_id, nombre)
+            return jsonify({
+                'status': 'success',
+                'message': 'Tipo de vacuna actualizado.',
+                'data': tipo
+            }), 200
+        except ValueError as ve:
+            return jsonify({
+                'status': 'error',
+                'message': str(ve)
+            }), 400
+        except Exception as e:
+            print(f"Error actualizando tipo de vacuna: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'message': VacunacionController.ERROR_INTERNO_SERVIDOR
             }), 500

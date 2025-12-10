@@ -72,10 +72,6 @@ export function useGestionarAnimalesUsuario() {
     })
   }
 
-  const editarAnimal = () => {
-    Swal.fire('Funcionalidad en desarrollo', 'Pronto podrás editar tus animales desde aquí.', 'info')
-  }
-
   onMounted(() => {
     if (!authService.isAuthenticated() || !authService.isUser()) {
       globalThis.location.href = '/login'
@@ -98,7 +94,6 @@ export function useGestionarAnimalesUsuario() {
     animalesFiltrados,
     capitalizar,
     estadoClass,
-    verPerfilAnimal,
-    editarAnimal
+    verPerfilAnimal
   }
 }

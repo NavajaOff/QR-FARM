@@ -16,7 +16,8 @@ import {
   nextPotrero,
   toggleAccordion,
   estadoClass,
-  actualizarProximaLimpieza
+  actualizarProximaLimpieza,
+  abrirGestionPastos
 } from './gestionar-potreros.js';
 
 export default {
@@ -40,7 +41,8 @@ export default {
       toggleAccordion,
       estadoClass,
       cargarPotreros,
-      actualizarProximaLimpieza
+      actualizarProximaLimpieza,
+      abrirGestionPastos
     };
   }
 };

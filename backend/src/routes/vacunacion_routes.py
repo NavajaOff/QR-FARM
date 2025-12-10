@@ -32,3 +32,13 @@ def delete_vacunacion(vacunacion_id):
 def get_tipos_vacuna():
     """Obtener lista de tipos de vacuna"""
     return VacunacionController.obtener_tipos_vacuna()
+
+@vacunacion_bp.route('/tipos-vacuna', methods=['POST'])
+def create_tipo_vacuna():
+    """Crear un nuevo tipo de vacuna"""
+    return VacunacionController.crear_tipo_vacuna()
+
+@vacunacion_bp.route('/tipos-vacuna/<int:tipo_id>', methods=['PUT'])
+def update_tipo_vacuna(tipo_id):
+    """Actualizar un tipo de vacuna"""
+    return VacunacionController.actualizar_tipo_vacuna(tipo_id)
