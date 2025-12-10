@@ -273,7 +273,8 @@ export const cargarAnimales = async (incluirBajas = false) => {
           estado: estadoFinal,
           potreroActual: obtenerNombrePotreroDesdeEntidad(animal),
           propietario: obtenerNombrePersonaDesdeEntidad(animal),
-          edad: animal.fecha_nacimiento ? calcularEdad(animal.fecha_nacimiento) : 'No definida',
+          edad: animal.fecha_nacimiento ? calcularEdad(animal.fecha_nacimiento) : null,
+          edadTexto: animal.fecha_nacimiento ? obtenerEdadTexto(animal.fecha_nacimiento) : 'Sin información',
           codigo_qr: animal.codigo_qr
         };
       });
@@ -306,6 +307,38 @@ export const calcularEdad = (fechaNacimiento) => {
   return edad;
 };
 
+const calcularDetalleEdad = (fechaNacimiento) => {
+  if (!fechaNacimiento) return null;
+  const nacimiento = new Date(fechaNacimiento);
+  if (Number.isNaN(nacimiento.getTime())) return null;
+  const hoy = new Date();
+  let years = hoy.getFullYear() - nacimiento.getFullYear();
+  let months = hoy.getMonth() - nacimiento.getMonth();
+  if (hoy.getDate() < nacimiento.getDate()) {
+    months--;
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+  if (years < 0) {
+    years = 0;
+  }
+  return { years, months };
+};
+
+const obtenerEdadTexto = (fechaNacimiento) => {
+  const detalle = calcularDetalleEdad(fechaNacimiento);
+  if (!detalle) return 'Sin información';
+  if (detalle.years >= 1) {
+    return detalle.years === 1 ? '1 año' : `${detalle.years} años`;
+  }
+  if (detalle.months >= 1) {
+    return detalle.months === 1 ? '1 mes' : `${detalle.months} meses`;
+  }
+  return 'Menos de un mes';
+};
+
 export const formatDate = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);
@@ -326,7 +359,7 @@ const obtenerFechaHoyParaInput = () => {
   return `${anio}-${mes}-${dia}`;
 };
 
-const CAMPOS_REQUERIDOS_AGREGAR_ANIMAL = ['nombre', 'raza', 'fecha_nacimiento', 'estado', 'sexo'];
+const CAMPOS_REQUERIDOS_AGREGAR_ANIMAL = ['nombre', 'raza', 'fecha_nacimiento', 'estado', 'sexo', 'id_potrero'];
 
 const estanCamposRequeridosAgregarAnimalCompletos = () => {
   return CAMPOS_REQUERIDOS_AGREGAR_ANIMAL.every((id) => {
@@ -771,6 +804,10 @@ export const agregarNuevoAnimal = async () => {
       const id_persona = document.getElementById('id_persona').value;
       const peso = document.getElementById('peso').value;
 
+      if (!id_potrero) {
+        Swal.showValidationMessage('Seleccione primero un potrero válido');
+        return Promise.reject('POTRERO_REQUIRED');
+      }
       validarCapacidadPotrero(id_potrero);
 
       const data = {

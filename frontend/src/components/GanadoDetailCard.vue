@@ -78,7 +78,7 @@
         </div>
         <div class="ganado-field">
           <span class="ganado-field__label"><i class="fas fa-birthday-cake"></i>Edad</span>
-          <span class="ganado-field__value">{{ formatEdad(ganado.edad) }}</span>
+          <span class="ganado-field__value">{{ formatOrDefault(ganado.edadTexto) }}</span>
         </div>
         <div class="ganado-field">
           <span class="ganado-field__label"><i class="fas fa-calendar-day"></i>Fecha de nacimiento</span>
@@ -281,11 +281,6 @@ const formatCapitalized = (value: string | null): string | null => {
 
 const formatSexo = (value: string | null): string => {
   return formatOrDefault(formatCapitalized(value));
-};
-
-const formatEdad = (value: number | null): string => {
-  if (value === null) return 'Sin datos';
-  return value === 1 ? '1 año' : `${value} años`;
 };
 
 const formatPeso = (value: number | null): string => {

@@ -50,7 +50,7 @@
                     <td>{{ animal.id }}</td>
                     <td>{{ animal.nombre }}</td>
                     <td>{{ animal.raza }}</td>
-                    <td>{{ animal.edad }} años</td>
+                    <td>{{ animal.edadTexto }}</td>
                     <td>{{ animal.peso }}</td>
                     <td>{{ animal.potreroActual }}</td>
                     <td>
