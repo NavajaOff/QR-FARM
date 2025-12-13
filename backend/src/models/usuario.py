@@ -3,6 +3,7 @@ from typing import Optional, Dict, Any, Tuple
 from datetime import datetime
 from passlib.hash import bcrypt
 from enum import Enum
+from .cargo import Cargo
 
 class EstadoUsuario(str, Enum):
     ACTIVO = 'activo'
@@ -54,7 +55,9 @@ class Persona:
                  telefono: Optional[str] = None,
                  fecha_creacion: Optional[datetime] = None,
                  rol: Optional[Rol] = None,
-                 tenant_id: Optional[int] = None):
+                 tenant_id: Optional[int] = None,
+                 cargo_id: Optional[int] = None,
+                 cargo: Optional[Cargo] = None):
 
         self.id = id
         self.id_rol = id_rol
@@ -67,6 +70,8 @@ class Persona:
         self.fecha_creacion = fecha_creacion
         self.rol = rol
         self.tenant_id = tenant_id
+        self.cargo_id = cargo_id
+        self.cargo = cargo
 
     @property
     def nombre_completo(self) -> str:
@@ -93,10 +98,13 @@ class Persona:
             email=data.get('email', ''),
             telefono=data.get('telefono'),
             fecha_creacion=data.get('fecha_creacion'),
-            tenant_id=data.get('tenant_id')
+            tenant_id=data.get('tenant_id'),
+            cargo_id=data.get('cargo_id')
         )
         if 'rol' in data and data['rol']:
             persona.rol = Rol.from_dict(data['rol'])
+        if 'cargo' in data and data['cargo']:
+            persona.cargo = Cargo.from_dict(data['cargo'])
         return persona
 
     def to_dict(self) -> Dict[str, Any]:
@@ -111,10 +119,13 @@ class Persona:
             'telefono': self.telefono,
             'nombre_completo': self.nombre_completo,
             'fecha_creacion': self.fecha_creacion.isoformat() if self.fecha_creacion else None,
-            'tenant_id': self.tenant_id
+            'tenant_id': self.tenant_id,
+            'cargo_id': self.cargo_id
         }
         if self.rol:
             data['rol'] = self.rol.to_dict()
+        if self.cargo:
+            data['cargo'] = self.cargo.to_dict()
         return data
 
 class Usuario:
@@ -204,7 +215,8 @@ class Usuario:
             segundo_apellido=data.get('segundo_apellido'),
             email=data.get('email', ''),
             telefono=data.get('telefono'),
-            id_rol=2  # Rol por defecto (usuario normal) - ID 2 según la BD
+            id_rol=2,  # Rol por defecto (usuario normal) - ID 2 según la BD
+            cargo_id=data.get('cargo_id')
         )
 
         # Crear usuario con contraseña hasheada
@@ -243,5 +255,14 @@ class Usuario:
             data['rol_obj'] = self.rol.to_dict()
         else:
             data['rol'] = 'usuario'  # Valor por defecto
+
+        # Cargo para compatibilidad con frontend
+        if self.persona:
+            if self.persona.cargo:
+                data['cargo'] = self.persona.cargo.nombre_cargo
+                data['cargo_obj'] = self.persona.cargo.to_dict()
+            elif self.persona.cargo_id:
+                # Si hay cargo_id pero no se cargó el objeto cargo, incluir al menos el ID
+                data['cargo_id'] = self.persona.cargo_id
 
         return data

@@ -7,6 +7,7 @@ from flask import jsonify, request, current_app, g
 from ..models.usuario import Usuario, EstadoUsuario
 from ..services.usuario_service import UsuarioService
 from ..services.recovery_service import RecoveryService
+from ..services.cargo_service import CargoService
 from ..utils.auth import token_required
 
 logger = logging.getLogger(__name__)
@@ -806,11 +807,21 @@ class UsuarioController:
                 }), 401
 
             persona = usuario.persona.to_dict() if usuario.persona else {}
+            # Obtener el nombre del cargo desde el objeto cargo o desde el dict
+            cargo_nombre = None
+            if persona.get('cargo'):
+                if isinstance(persona.get('cargo'), dict):
+                    cargo_nombre = persona.get('cargo').get('nombre_cargo')
+                elif hasattr(persona.get('cargo'), 'nombre_cargo'):
+                    cargo_nombre = persona.get('cargo').nombre_cargo
+            
             data = {
                 'nombre_completo': persona.get('nombre_completo') or '',
                 'email': persona.get('email') or '',
                 'telefono': persona.get('telefono'),
-                'fecha_creacion': persona.get('fecha_creacion')
+                'fecha_creacion': persona.get('fecha_creacion'),
+                'cargo': cargo_nombre,
+                'cargo_id': persona.get('cargo_id')
             }
 
             return jsonify({
@@ -988,6 +999,9 @@ class UsuarioController:
 
         if 'id_rol' in data:
             persona.id_rol = int(data['id_rol'])
+        
+        if 'cargo_id' in data:
+            persona.cargo_id = int(data['cargo_id']) if data['cargo_id'] else None
 
     @staticmethod
     def _actualizar_datos_usuario(usuario, data):
@@ -1034,6 +1048,23 @@ class UsuarioController:
                 
         except Exception as e:
             logger.error("Error en eliminar_usuario: %s", e, exc_info=True)
+            return jsonify({
+                'status': 'error',
+                'message': ERROR_PROCESAR_SOLICITUD
+            }), 500
+
+    @staticmethod
+    @token_required
+    def obtener_cargos():
+        """Obtiene todos los cargos disponibles."""
+        try:
+            cargos = CargoService.obtener_todos_cargos()
+            return jsonify({
+                'status': 'success',
+                'data': [cargo.to_dict() for cargo in cargos]
+            }), 200
+        except Exception as e:
+            logger.error("Error en obtener_cargos: %s", e, exc_info=True)
             return jsonify({
                 'status': 'error',
                 'message': ERROR_PROCESAR_SOLICITUD

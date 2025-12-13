@@ -63,11 +63,11 @@
               </div>
             </div>
             <div class="row">
-              <div class="col-md-6 mb-3">
+              <div v-if="isEditing" class="col-md-6 mb-3">
                 <label class="form-label" for="potrero-area">Área (m²)</label>
                 <input type="number" id="potrero-area" class="form-control" v-model.number="form.area" step="0.01" min="0">
               </div>
-              <div class="col-md-6 mb-3">
+              <div class="col-md-6 mb-3" :class="{ 'offset-md-6': !isEditing }">
                 <label class="form-label" for="potrero-ultima-limpieza">Última limpieza</label>
                 <input type="date" id="potrero-ultima-limpieza" class="form-control" v-model="form.ultima_limpieza">
               </div>
@@ -146,6 +146,12 @@ export default {
       },
       immediate: true,
       deep: true
+    },
+    'form.hectareas'(newHectareas) {
+      // Calcular área automáticamente cuando se cambian las hectáreas (solo en creación)
+      if (!this.isEditing && newHectareas !== null && newHectareas !== undefined && newHectareas > 0) {
+        this.form.area = newHectareas * 10000; // 1 hectárea = 10,000 m²
+      }
     }
   },
   methods: {

@@ -109,6 +109,7 @@ export const userAPI = {
   update: (id, data) => api.put(`/usuarios/${id}`, data),
   delete: (id) => api.delete(`/usuarios/${id}`),
   changeStatus: (id, status) => api.put(`/usuarios/${id}/estado`, { estado: status }),
+  getCargos: () => api.get('/usuarios/cargos'),
 };
 
 export const ganadoAPI = {

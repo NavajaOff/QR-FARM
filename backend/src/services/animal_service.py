@@ -6,6 +6,9 @@ from ..database.db import get_connection
 from ..models.animal import Ganado, EstadoGanado
 from .potrero_service import PotreroService
 from ..utils.tenant import get_current_tenant_id
+from ..services.auditoria_service import AuditoriaService
+from ..models.historial_cambio import TipoEntidad, TipoAccion
+from ..utils.auditoria_helper import obtener_usuario_y_tenant_actual
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 QR_STORAGE_DIR = BASE_DIR / "qr"
@@ -347,6 +350,28 @@ class GanadoService:
             conn.commit()
 
             GanadoService._sincronizar_potrero_despues_crear(ganado)
+            
+            # Registrar cambio en auditoría
+            usuario_id_actual, tenant_id_auditoria = obtener_usuario_y_tenant_actual()
+            if usuario_id_actual:
+                datos_nuevos = {
+                    'id': ganado.id,
+                    'nombre': ganado.nombre,
+                    'raza': ganado.raza,
+                    'sexo': ganado.sexo.value if hasattr(ganado.sexo, 'value') else str(ganado.sexo),
+                    'peso': ganado.peso,
+                    'estado': ganado.estado
+                }
+                AuditoriaService.registrar_cambio(
+                    usuario_id=usuario_id_actual,
+                    tenant_id=tenant_id_auditoria or tenant_id,
+                    entidad_tipo=TipoEntidad.GANADO,
+                    entidad_id=ganado.id,
+                    accion=TipoAccion.CREAR,
+                    descripcion=f"Ganado creado: {ganado.nombre}",
+                    datos_nuevos=datos_nuevos
+                )
+            
             return ganado
 
         except Exception as e:
@@ -697,9 +722,45 @@ class GanadoService:
             potrero_anterior_id = GanadoService._obtener_potrero_anterior(id)
             nuevo_potrero_id = ganado.id_potrero
             
+            # Obtener datos anteriores para auditoría
+            datos_anteriores = None
+            if ganado_existente:
+                datos_anteriores = {
+                    'id': id,
+                    'nombre': ganado_existente.nombre,
+                    'raza': ganado_existente.raza,
+                    'sexo': ganado_existente.sexo.value if hasattr(ganado_existente.sexo, 'value') else str(ganado_existente.sexo),
+                    'peso': ganado_existente.peso,
+                    'estado': ganado_existente.estado
+                }
+            
             GanadoService._verificar_cambio_potrero(nuevo_potrero_id, potrero_anterior_id)
             actualizado = GanadoService._actualizar_ganado_en_db(id, ganado, tenant_id_override)
             GanadoService._sincronizar_potreros_despues_actualizacion(actualizado, nuevo_potrero_id, potrero_anterior_id)
+            
+            # Registrar cambio en auditoría
+            if actualizado:
+                usuario_id_actual, tenant_id_auditoria = obtener_usuario_y_tenant_actual()
+                tenant_id = tenant_id_override if tenant_id_override is not None else GanadoService._obtener_tenant_id()
+                if usuario_id_actual:
+                    datos_nuevos = {
+                        'id': id,
+                        'nombre': ganado.nombre,
+                        'raza': ganado.raza,
+                        'sexo': ganado.sexo.value if hasattr(ganado.sexo, 'value') else str(ganado.sexo),
+                        'peso': ganado.peso,
+                        'estado': ganado.estado
+                    }
+                    AuditoriaService.registrar_cambio(
+                        usuario_id=usuario_id_actual,
+                        tenant_id=tenant_id_auditoria or tenant_id,
+                        entidad_tipo=TipoEntidad.GANADO,
+                        entidad_id=id,
+                        accion=TipoAccion.ACTUALIZAR,
+                        descripcion=f"Ganado actualizado: {ganado.nombre}",
+                        datos_anteriores=datos_anteriores,
+                        datos_nuevos=datos_nuevos
+                    )
             
             return actualizado
         except Exception:
@@ -752,6 +813,19 @@ class GanadoService:
                 cursor.close()
                 conn.close()
                 return "No tiene acceso a este animal"
+            
+            # Obtener datos completos del animal para auditoría
+            ganado_anterior = GanadoService.obtener_ganado(id, tenant_id_override)
+            datos_anteriores = None
+            nombre_animal = None
+            if ganado_anterior:
+                datos_anteriores = {
+                    'id': id,
+                    'nombre': ganado_anterior.nombre,
+                    'id_estado': animal.get('id_estado'),
+                    'estado': ganado_anterior.estado
+                }
+                nombre_animal = ganado_anterior.nombre
 
             id_estado_actual = animal.get('id_estado')
 
@@ -788,6 +862,20 @@ class GanadoService:
                     PotreroService.sincronizar_ocupacion(potrero_id)
                 except Exception:
                     pass
+
+            # Registrar cambio en auditoría
+            usuario_id_actual, tenant_id_auditoria = obtener_usuario_y_tenant_actual()
+            if usuario_id_actual:
+                AuditoriaService.registrar_cambio(
+                    usuario_id=usuario_id_actual,
+                    tenant_id=tenant_id_auditoria or tenant_id,
+                    entidad_tipo=TipoEntidad.GANADO,
+                    entidad_id=id,
+                    accion=TipoAccion.DESACTIVAR,
+                    descripcion=f"Ganado dado de baja: {nombre_animal or f'ID {id}'} - Causa: {causa_baja}",
+                    datos_anteriores=datos_anteriores,
+                    datos_nuevos={'causa_baja': causa_baja, 'observaciones': observaciones}
+                )
 
             cursor.close()
             conn.close()
@@ -838,6 +926,19 @@ class GanadoService:
                 conn.close()
                 return "No tiene acceso a este animal"
             
+            # Obtener datos completos del animal para auditoría
+            ganado_anterior = GanadoService.obtener_ganado(id, tenant_id_override)
+            datos_anteriores = None
+            nombre_animal = None
+            if ganado_anterior:
+                datos_anteriores = {
+                    'id': id,
+                    'nombre': ganado_anterior.nombre,
+                    'id_estado': animal.get('id_estado'),
+                    'estado': ganado_anterior.estado
+                }
+                nombre_animal = ganado_anterior.nombre
+            
             id_estado_actual = animal.get('id_estado')
             
             # Verificar si ya está activo (id_estado < 4)
@@ -867,6 +968,20 @@ class GanadoService:
             
             cursor.execute(sql, params)
             conn.commit()
+            
+            # Registrar cambio en auditoría
+            usuario_id_actual, tenant_id_auditoria = obtener_usuario_y_tenant_actual()
+            if usuario_id_actual:
+                AuditoriaService.registrar_cambio(
+                    usuario_id=usuario_id_actual,
+                    tenant_id=tenant_id_auditoria or tenant_id,
+                    entidad_tipo=TipoEntidad.GANADO,
+                    entidad_id=id,
+                    accion=TipoAccion.DESACTIVAR,
+                    descripcion=f"Ganado dado de baja: {nombre_animal or f'ID {id}'} - Causa: {causa_baja}",
+                    datos_anteriores=datos_anteriores,
+                    datos_nuevos={'causa_baja': causa_baja, 'observaciones': observaciones}
+                )
             
             cursor.close()
             conn.close()

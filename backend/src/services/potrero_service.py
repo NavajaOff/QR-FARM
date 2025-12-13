@@ -5,6 +5,9 @@ from src.database.db import db, get_connection
 from datetime import datetime, timedelta
 from src.utils.tenant import get_current_tenant_id
 from dateutil.parser import parse
+from ..services.auditoria_service import AuditoriaService
+from ..models.historial_cambio import TipoEntidad, TipoAccion
+from ..utils.auditoria_helper import obtener_usuario_y_tenant_actual
 
 class PotreroService:
     """Service class for handling Potrero business logic."""
@@ -287,15 +290,20 @@ class PotreroService:
         """Prepara los datos para la inserción del potrero (sin campos de actividad)."""
         nombre = data.get('nombre') or PotreroService._generar_nombre_potrero()
 
-        # Auto-calcular hectáreas si se proporciona área
+        # Auto-calcular área desde hectáreas si no se proporciona área
         hectareas = data.get('hectareas')
+        area_value = data.get('area')
 
-        if hectareas is None:
-            area_value = data.get('area')
-            if area_value is not None:
+        # Si no hay área pero sí hay hectáreas, calcular área automáticamente
+        if area_value is None or area_value == '':
+            if hectareas is not None and hectareas > 0:
+                # Calcular área automáticamente desde hectáreas (1 hectárea = 10,000 m²)
+                area_value = float(hectareas) * 10000
+        # Si no hay hectáreas pero sí hay área, calcular hectáreas automáticamente
+        elif hectareas is None or hectareas == '':
+            if area_value is not None and area_value > 0:
                 # Calcular hectáreas automáticamente si se proporciona área
                 hectareas = float(area_value) / 10000
-        # Nota: 'area' no se persiste en BD (eliminada según dump SQL), solo se usa para calcular hectáreas
 
         # Nota: fecha_ultimo_uso, ultima_limpieza y proxima_limpieza ahora se gestionan
         # en la tabla historial_potrero, no en potrero
@@ -313,7 +321,7 @@ class PotreroService:
             data.get('capacidad'),
             data.get('ocupacion', 0),
             hectareas,
-            data.get('area'),
+            area_value,
             data.get('descripcion')
         )
         return values
@@ -552,7 +560,28 @@ class PotreroService:
 
         PotreroService._registrar_actividades_potrero_create(potrero_id, data, tenant_id)
 
-        return PotreroService._obtener_potrero_completo(potrero_id)
+        potrero = PotreroService._obtener_potrero_completo(potrero_id)
+        
+        # Registrar cambio en auditoría
+        usuario_id_actual, tenant_id_auditoria = obtener_usuario_y_tenant_actual()
+        if usuario_id_actual:
+            datos_nuevos = {
+                'id': potrero_id,
+                'nombre': potrero.get('nombre'),
+                'area': potrero.get('area'),
+                'capacidad': potrero.get('capacidad')
+            }
+            AuditoriaService.registrar_cambio(
+                usuario_id=usuario_id_actual,
+                tenant_id=tenant_id_auditoria or tenant_id,
+                entidad_tipo=TipoEntidad.POTRERO,
+                entidad_id=potrero_id,
+                accion=TipoAccion.CREAR,
+                descripcion=f"Potrero creado: {potrero.get('nombre', f'ID {potrero_id}')}",
+                datos_nuevos=datos_nuevos
+            )
+        
+        return potrero
 
     @staticmethod
     def _procesar_campo_fecha(key: str, value: Any) -> Any:
@@ -742,10 +771,44 @@ class PotreroService:
         if actividades_data:
             PotreroService._actualizar_actividades_potrero(potrero_id, actividades_data)
 
+        # Obtener datos anteriores para auditoría
+        potrero_anterior = PotreroService.get_by_id(potrero_id, tenant_id_override)
+        datos_anteriores = None
+        if potrero_anterior:
+            datos_anteriores = {
+                'id': potrero_id,
+                'nombre': potrero_anterior.get('nombre'),
+                'area': potrero_anterior.get('area'),
+                'capacidad': potrero_anterior.get('capacidad')
+            }
+        
         if not update_fields:
             return PotreroService.get_by_id(potrero_id)
 
-        return PotreroService._ejecutar_actualizacion(potrero_id, update_fields, values)
+        potrero_actualizado = PotreroService._ejecutar_actualizacion(potrero_id, update_fields, values)
+        
+        # Registrar cambio en auditoría
+        usuario_id_actual, tenant_id_auditoria = obtener_usuario_y_tenant_actual()
+        if usuario_id_actual:
+            datos_nuevos = {
+                'id': potrero_id,
+                'nombre': potrero_actualizado.get('nombre'),
+                'area': potrero_actualizado.get('area'),
+                'capacidad': potrero_actualizado.get('capacidad')
+            }
+            nombre_potrero = potrero_actualizado.get('nombre', f'ID {potrero_id}')
+            AuditoriaService.registrar_cambio(
+                usuario_id=usuario_id_actual,
+                tenant_id=tenant_id_auditoria or tenant_id,
+                entidad_tipo=TipoEntidad.POTRERO,
+                entidad_id=potrero_id,
+                accion=TipoAccion.ACTUALIZAR,
+                descripcion=f"Potrero actualizado: {nombre_potrero}",
+                datos_anteriores=datos_anteriores,
+                datos_nuevos=datos_nuevos
+            )
+        
+        return potrero_actualizado
 
     @staticmethod
     def delete(potrero_id: int, tenant_id_override: Optional[int] = None) -> bool:
@@ -756,8 +819,18 @@ class PotreroService:
             potrero_id: ID del potrero
             tenant_id_override: Si se proporciona, valida que el potrero pertenezca a este tenant
         """
-        # First check if potrero exists
-        PotreroService.get_by_id(potrero_id, tenant_id_override)
+        # Obtener datos anteriores para auditoría antes de eliminar
+        potrero_anterior = PotreroService.get_by_id(potrero_id, tenant_id_override)
+        datos_anteriores = None
+        nombre_potrero = None
+        if potrero_anterior:
+            datos_anteriores = {
+                'id': potrero_id,
+                'nombre': potrero_anterior.get('nombre'),
+                'area': potrero_anterior.get('area'),
+                'capacidad': potrero_anterior.get('capacidad')
+            }
+            nombre_potrero = potrero_anterior.get('nombre', f'ID {potrero_id}')
 
         tenant_id = tenant_id_override if tenant_id_override is not None else PotreroService._obtener_tenant_id()
         
@@ -773,7 +846,21 @@ class PotreroService:
                 params = (potrero_id, tenant_id)
             
             cursor.execute(sql, params)
-            return True
+        
+        # Registrar cambio en auditoría después de eliminar
+        usuario_id_actual, tenant_id_auditoria = obtener_usuario_y_tenant_actual()
+        if usuario_id_actual:
+            AuditoriaService.registrar_cambio(
+                usuario_id=usuario_id_actual,
+                tenant_id=tenant_id_auditoria or tenant_id,
+                entidad_tipo=TipoEntidad.POTRERO,
+                entidad_id=potrero_id,
+                accion=TipoAccion.ELIMINAR,
+                descripcion=f"Potrero eliminado: {nombre_potrero or f'ID {potrero_id}'}",
+                datos_anteriores=datos_anteriores
+            )
+        
+        return True
 
     @staticmethod
     def _obtener_potreros_por_estado(estado: str, tenant_id: Optional[int] = None) -> List[Dict[str, Any]]:

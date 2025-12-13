@@ -36,3 +36,4 @@ usuario_bp.route('/<int:id>/estado', methods=['PUT'])(token_required(UsuarioCont
 usuario_bp.route(USER_ID_ROUTE, methods=['DELETE'])(token_required(UsuarioController.eliminar_usuario))
 usuario_bp.route('/profile', methods=['GET'])(token_required(UsuarioController.obtener_perfil_actual))
 usuario_bp.route('/profile', methods=['PUT'])(token_required(UsuarioController.actualizar_perfil_actual))
+usuario_bp.route('/cargos', methods=['GET'])(token_required(UsuarioController.obtener_cargos))

@@ -124,7 +124,11 @@ export const cargarEstadosPotrero = async () => {
     const response = await api.get('/potreros/estados');
     const data = response.data;
     if (data.success) {
-      estadosPotrero.value = data.data;
+      // Filtrar el estado "ocupado" ya que se maneja automáticamente
+      estadosPotrero.value = (data.data || []).filter(estado => {
+        const nombreEstado = (estado.nombre_estado || estado.estado || estado.nombre || '').toLowerCase();
+        return nombreEstado !== 'ocupado';
+      });
     } else {
       estadosPotrero.value = [];
     }
@@ -376,7 +380,6 @@ export const crearPotrero = () => {
           </select>
         </div>
         <div class="mb-3"><label class="form-label">Última limpieza:</label><input type="date" id="ultima_limpieza" class="form-control" max="${maxFechaUltimaLimpieza}"></div>
-        <div class="mb-3"><label class="form-label">Área (m²):</label><input type="number" id="area" class="form-control" placeholder="Ej: 2500" step="0.01" min="0"></div>
         <div class="mb-3"><label class="form-label">Descripción:</label><textarea id="descripcion" class="form-control" rows="2" placeholder="Descripción opcional del potrero"></textarea></div>
       </form>
     `,
@@ -390,8 +393,9 @@ export const crearPotrero = () => {
       const id_tipo_pasto = document.getElementById('id_tipo_pasto').value;
       const responsable_persona_id = document.getElementById('responsable_persona_id').value;
       const ultima_limpieza = document.getElementById('ultima_limpieza').value;
-      const area = document.getElementById('area').value;
       const descripcion = document.getElementById('descripcion').value;
+      // Calcular área automáticamente desde hectáreas (1 hectárea = 10,000 m²)
+      const area = hectareas ? parseFloat(hectareas) * 10000 : null;
 
       // Obtener tenant_id seleccionado para super_admin
       const selectedTenantId = localStorage.getItem('qr_farm_selected_tenant_id');
@@ -406,7 +410,7 @@ export const crearPotrero = () => {
         id_tipo_pasto: id_tipo_pasto ? Number.parseInt(id_tipo_pasto, 10) : null,
         responsable_persona_id: responsable_persona_id ? Number.parseInt(responsable_persona_id, 10) : null,
         ultima_limpieza,
-        area: area ? Number.parseFloat(area) : null,
+        area: area, // Calculada automáticamente desde hectáreas (1 hectárea = 10,000 m²)
         descripcion
       };
     }

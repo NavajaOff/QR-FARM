@@ -21,6 +21,7 @@
                     <th>Nombre</th>
                     <th>Email</th>
                     <th>Rol</th>
+                    <th>Cargo</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                   </tr>
@@ -34,6 +35,13 @@
                       <span class="badge" :class="usuario.rol === 'admin' ? 'bg-danger' : 'bg-primary'">
                         {{ usuario.rol }}
                       </span>
+                    </td>
+                    <td>
+                      <span v-if="usuario.cargo || usuario.persona?.cargo?.nombre_cargo || usuario.persona?.cargo_id" 
+                            class="badge bg-info">
+                        {{ usuario.cargo || usuario.persona?.cargo?.nombre_cargo || 'N/A' }}
+                      </span>
+                      <span v-else class="text-muted">-</span>
                     </td>
                     <td>
                       <span class="badge" :class="usuario.estado === 'activo' ? 'bg-success' : 'bg-secondary'">
@@ -184,6 +192,23 @@
                   <div class="form-text">Asignar tenant al usuario (solo super admin)</div>
                 </div>
               </div>
+              <!-- Campo de cargo solo para admin de tenant (no super admin) -->
+              <div v-if="isTenantAdmin" class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="add_cargo_id" class="form-label">Cargo</label>
+                  <select class="form-select" id="add_cargo_id" v-model.number="addForm.cargo_id">
+                    <option :value="null">-- Seleccionar cargo --</option>
+                    <option
+                      v-for="cargo in cargos"
+                      :key="cargo.id"
+                      :value="cargo.id"
+                    >
+                      {{ cargo.nombre_cargo }}
+                    </option>
+                  </select>
+                  <div class="form-text">Seleccionar el cargo del usuario en la finca</div>
+                </div>
+              </div>
             </form>
           </div>
           <div class="modal-footer">
@@ -290,6 +315,23 @@
                     <option :value="1">Administrador</option>
                     <option :value="2">Usuario</option>
                   </select>
+                </div>
+              </div>
+              <!-- Campo de cargo solo para admin de tenant (no super admin) -->
+              <div v-if="isTenantAdmin" class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="edit_cargo_id" class="form-label">Cargo</label>
+                  <select class="form-select" id="edit_cargo_id" v-model.number="editForm.cargo_id">
+                    <option :value="null">-- Seleccionar cargo --</option>
+                    <option
+                      v-for="cargo in cargos"
+                      :key="cargo.id"
+                      :value="cargo.id"
+                    >
+                      {{ cargo.nombre_cargo }}
+                    </option>
+                  </select>
+                  <div class="form-text">Seleccionar el cargo del usuario en la finca</div>
                 </div>
               </div>
             </form>
