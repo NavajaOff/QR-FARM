@@ -3,6 +3,9 @@ from typing import Dict, List, Optional
 from src.database.db import get_connection
 from src.models.vacunacion import Vacunacion
 from src.utils.tenant import get_current_tenant_id
+from ..services.auditoria_service import AuditoriaService
+from ..models.historial_cambio import TipoEntidad, TipoAccion
+from ..utils.auditoria_helper import obtener_usuario_y_tenant_actual
 
 class VacunacionService:
     @staticmethod
@@ -175,8 +178,30 @@ class VacunacionService:
             print(f"Service: Ejecutando query: {query}")
             print(f"Service: Valores: {values}")
             cursor.execute(query, values)
+            vacunacion_id = cursor.lastrowid
             conn.commit()
             print("Service: Vacunación creada exitosamente")
+            
+            # Registrar cambio en auditoría
+            usuario_id_actual, tenant_id_auditoria = obtener_usuario_y_tenant_actual()
+            if usuario_id_actual:
+                datos_nuevos = {
+                    'id': vacunacion_id,
+                    'id_animal': vacunacion.id_animal,
+                    'fecha_aplicacion': str(vacunacion.fecha_aplicacion) if vacunacion.fecha_aplicacion else None,
+                    'proxima_dosis': str(proxima_dosis) if proxima_dosis else None,
+                    'id_tipo_vacuna': vacunacion.id_tipo_vacuna,
+                    'estado': vacunacion.estado.value if hasattr(vacunacion.estado, 'value') else str(vacunacion.estado)
+                }
+                AuditoriaService.registrar_cambio(
+                    usuario_id=usuario_id_actual,
+                    tenant_id=tenant_id_auditoria or tenant_id,
+                    entidad_tipo=TipoEntidad.VACUNA,
+                    entidad_id=vacunacion_id,
+                    accion=TipoAccion.CREAR,
+                    descripcion=f"Vacunación creada para animal ID {vacunacion.id_animal}",
+                    datos_nuevos=datos_nuevos
+                )
 
             return True
 
@@ -207,6 +232,12 @@ class VacunacionService:
 
             tenant_id = tenant_id_override if tenant_id_override is not None else VacunacionService._obtener_tenant_id()
             
+            # Obtener datos anteriores para auditoría
+            vacunacion_anterior = VacunacionService.obtener_vacunacion_por_id(id, tenant_id_override)
+            datos_anteriores = None
+            if vacunacion_anterior:
+                datos_anteriores = vacunacion_anterior.to_dict()
+            
             query = """
                 UPDATE vacunacion SET
                     id_animal = %s,
@@ -236,6 +267,29 @@ class VacunacionService:
 
             cursor.execute(query, values)
             conn.commit()
+            
+            # Registrar cambio en auditoría
+            if cursor.rowcount > 0:
+                usuario_id_actual, tenant_id_auditoria = obtener_usuario_y_tenant_actual()
+                if usuario_id_actual:
+                    datos_nuevos = {
+                        'id': id,
+                        'id_animal': vacunacion.id_animal,
+                        'fecha_aplicacion': str(vacunacion.fecha_aplicacion) if vacunacion.fecha_aplicacion else None,
+                        'proxima_dosis': str(vacunacion.proxima_dosis) if vacunacion.proxima_dosis else None,
+                        'id_tipo_vacuna': vacunacion.id_tipo_vacuna,
+                        'estado': vacunacion.estado.value if hasattr(vacunacion.estado, 'value') else str(vacunacion.estado)
+                    }
+                    AuditoriaService.registrar_cambio(
+                        usuario_id=usuario_id_actual,
+                        tenant_id=tenant_id_auditoria or tenant_id,
+                        entidad_tipo=TipoEntidad.VACUNA,
+                        entidad_id=id,
+                        accion=TipoAccion.ACTUALIZAR,
+                        descripcion=f"Vacunación actualizada ID {id}",
+                        datos_anteriores=datos_anteriores,
+                        datos_nuevos=datos_nuevos
+                    )
 
             return cursor.rowcount > 0
 
@@ -265,6 +319,12 @@ class VacunacionService:
 
             tenant_id = tenant_id_override if tenant_id_override is not None else VacunacionService._obtener_tenant_id()
             
+            # Obtener datos anteriores para auditoría antes de eliminar
+            vacunacion_anterior = VacunacionService.obtener_vacunacion_por_id(id, tenant_id_override)
+            datos_anteriores = None
+            if vacunacion_anterior:
+                datos_anteriores = vacunacion_anterior.to_dict()
+            
             query = "DELETE FROM vacunacion WHERE id = %s"
             params = (id,)
             if tenant_id is not None:
@@ -277,6 +337,21 @@ class VacunacionService:
             print(f"Service: Query ejecutada, rowcount: {cursor.rowcount}")
 
             result = cursor.rowcount > 0
+            
+            # Registrar cambio en auditoría después de eliminar
+            if result:
+                usuario_id_actual, tenant_id_auditoria = obtener_usuario_y_tenant_actual()
+                if usuario_id_actual:
+                    AuditoriaService.registrar_cambio(
+                        usuario_id=usuario_id_actual,
+                        tenant_id=tenant_id_auditoria or tenant_id,
+                        entidad_tipo=TipoEntidad.VACUNA,
+                        entidad_id=id,
+                        accion=TipoAccion.ELIMINAR,
+                        descripcion=f"Vacunación eliminada ID {id}",
+                        datos_anteriores=datos_anteriores
+                    )
+            
             print(f"Service: Resultado de eliminación: {result}")
             return result
 

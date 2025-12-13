@@ -7,6 +7,9 @@ from ..database.db import get_connection
 logger = logging.getLogger(__name__)
 from ..models.usuario import Usuario, Persona, Rol, EstadoUsuario
 from ..models.cargo import Cargo
+from ..services.auditoria_service import AuditoriaService
+from ..models.historial_cambio import TipoEntidad, TipoAccion
+from ..utils.auditoria_helper import obtener_usuario_y_tenant_actual
 
 class UsuarioService:
     # Constantes para mensajes y queries
@@ -334,6 +337,26 @@ class UsuarioService:
                 usuario.tenant_id = tenant_id_final
                 persona.id = id_persona
                 usuario.persona = persona
+
+                # Registrar cambio en auditoría
+                usuario_id_actual, tenant_id_auditoria = obtener_usuario_y_tenant_actual()
+                if usuario_id_actual:
+                    datos_nuevos = {
+                        'id': usuario_id,
+                        'email': persona.email,
+                        'nombre': persona.nombre_completo,
+                        'rol_id': persona.id_rol,
+                        'cargo_id': persona.cargo_id
+                    }
+                    AuditoriaService.registrar_cambio(
+                        usuario_id=usuario_id_actual,
+                        tenant_id=tenant_id_auditoria or tenant_id_final,
+                        entidad_tipo=TipoEntidad.USUARIO,
+                        entidad_id=usuario_id,
+                        accion=TipoAccion.CREAR,
+                        descripcion=f"Usuario creado: {persona.nombre_completo} ({persona.email})",
+                        datos_nuevos=datos_nuevos
+                    )
 
                 return usuario, "Usuario creado exitosamente"
 
@@ -673,18 +696,32 @@ class UsuarioService:
             
             # Verificar que el usuario existe y obtener id_persona
             # IMPORTANTE: tenant_id está en personas, no en usuarios
-            sql_check = "SELECT u.id_persona, p.tenant_id FROM usuarios u INNER JOIN personas p ON u.id_persona = p.id WHERE u.id = %s"
+            sql_check = "SELECT u.id_persona, p.tenant_id, p.email, p.primer_nombre, p.primer_apellido FROM usuarios u INNER JOIN personas p ON u.id_persona = p.id WHERE u.id = %s"
             cursor.execute(sql_check, (id,))
             result = cursor.fetchone()
             if not result:
                 return False, "Usuario no encontrado"
-            
+
             # Validar tenant_id si no es super_admin
             # IMPORTANTE: tenant_id viene de personas (p.tenant_id)
             if tenant_id is not None and result.get('tenant_id') != tenant_id:
                 return False, "No tiene permisos para eliminar este usuario"
-                
+
             id_persona = result['id_persona']
+            
+            # Obtener datos del usuario para auditoría antes de eliminarlo
+            usuario_anterior = UsuarioService.obtener_usuario(id, incluir_inactivos=True, tenant_id_override=tenant_id)
+            datos_anteriores = None
+            nombre_usuario_eliminado = None
+            if usuario_anterior and usuario_anterior.persona:
+                datos_anteriores = {
+                    'id': usuario_anterior.id,
+                    'email': usuario_anterior.persona.email,
+                    'nombre': usuario_anterior.persona.nombre_completo,
+                    'rol_id': usuario_anterior.persona.id_rol,
+                    'cargo_id': usuario_anterior.persona.cargo_id
+                }
+                nombre_usuario_eliminado = usuario_anterior.persona.nombre_completo
             
             try:
                 # Iniciar transacción
@@ -704,6 +741,19 @@ class UsuarioService:
                 
                 # Commit de la transacción
                 conn.commit()
+                
+                # Registrar cambio en auditoría DESPUÉS del commit exitoso
+                usuario_id_actual, tenant_id_auditoria = obtener_usuario_y_tenant_actual()
+                if usuario_id_actual:
+                    AuditoriaService.registrar_cambio(
+                        usuario_id=usuario_id_actual,
+                        tenant_id=tenant_id_auditoria or tenant_id,
+                        entidad_tipo=TipoEntidad.USUARIO,
+                        entidad_id=id,
+                        accion=TipoAccion.ELIMINAR,
+                        descripcion=f"Usuario eliminado: {nombre_usuario_eliminado or f'ID {id}'}",
+                        datos_anteriores=datos_anteriores
+                    )
                 
                 return True, "Usuario eliminado exitosamente"
                 
@@ -857,6 +907,26 @@ class UsuarioService:
                 usuario.tenant_id = tenant_id
                 persona.id = id_persona
                 usuario.persona = persona
+
+                # Registrar cambio en auditoría
+                usuario_id_actual, tenant_id_auditoria = obtener_usuario_y_tenant_actual()
+                if usuario_id_actual:
+                    datos_nuevos = {
+                        'id': id_usuario,
+                        'email': persona.email,
+                        'nombre': persona.nombre_completo,
+                        'rol_id': persona.id_rol,
+                        'cargo_id': persona.cargo_id
+                    }
+                    AuditoriaService.registrar_cambio(
+                        usuario_id=usuario_id_actual,
+                        tenant_id=tenant_id_auditoria or tenant_id,
+                        entidad_tipo=TipoEntidad.USUARIO,
+                        entidad_id=id_usuario,
+                        accion=TipoAccion.CREAR,
+                        descripcion=f"Usuario registrado: {persona.nombre_completo} ({persona.email})",
+                        datos_nuevos=datos_nuevos
+                    )
 
                 return usuario, "Usuario registrado exitosamente"
 
@@ -1174,12 +1244,49 @@ class UsuarioService:
             if id_persona is None:
                 return False
 
+            # Obtener datos anteriores para auditoría
+            usuario_anterior = UsuarioService.obtener_usuario(id, incluir_inactivos=True, tenant_id_override=tenant_id)
+            datos_anteriores = None
+            if usuario_anterior and usuario_anterior.persona:
+                datos_anteriores = {
+                    'id': usuario_anterior.id,
+                    'email': usuario_anterior.persona.email,
+                    'nombre': usuario_anterior.persona.nombre_completo,
+                    'rol_id': usuario_anterior.persona.id_rol,
+                    'cargo_id': usuario_anterior.persona.cargo_id,
+                    'estado': usuario_anterior.estado.value
+                }
+
             try:
                 original_autocommit = UsuarioService._preparar_transaccion(conn)
                 UsuarioService._actualizar_persona_en_bd(cursor, usuario, id_persona)
                 UsuarioService._actualizar_usuario_en_bd(cursor, usuario, id, tenant_id)
                 UsuarioService._actualizar_contrasena_en_bd(cursor, usuario, id, tenant_id)
                 conn.commit()
+                
+                # Registrar cambio en auditoría
+                usuario_id_actual, tenant_id_auditoria = obtener_usuario_y_tenant_actual()
+                if usuario_id_actual:
+                    datos_nuevos = {
+                        'id': id,
+                        'email': usuario.persona.email if usuario.persona else None,
+                        'nombre': usuario.persona.nombre_completo if usuario.persona else None,
+                        'rol_id': usuario.persona.id_rol if usuario.persona else None,
+                        'cargo_id': usuario.persona.cargo_id if usuario.persona else None,
+                        'estado': usuario.estado.value
+                    }
+                    nombre_usuario = usuario.persona.nombre_completo if usuario.persona else f"Usuario ID {id}"
+                    AuditoriaService.registrar_cambio(
+                        usuario_id=usuario_id_actual,
+                        tenant_id=tenant_id_auditoria or tenant_id,
+                        entidad_tipo=TipoEntidad.USUARIO,
+                        entidad_id=id,
+                        accion=TipoAccion.ACTUALIZAR,
+                        descripcion=f"Usuario actualizado: {nombre_usuario}",
+                        datos_anteriores=datos_anteriores,
+                        datos_nuevos=datos_nuevos
+                    )
+                
                 return True
 
             except Exception as e:
