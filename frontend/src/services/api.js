@@ -145,5 +145,9 @@ export const tenantAPI = {
   update: (id, data) => api.put(`/tenants/${id}`, data),
 };
 
+export const notificationAPI = {
+  getUpcoming: () => api.get('/notificaciones/proximas'),
+};
+
 // Exportar instancia por defecto para uso general
 export default api;
