@@ -3,7 +3,7 @@
     <!-- Barra superior -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-gradient-primary shadow-sm" aria-label="Barra de navegación del administrador">
       <div class="container-fluid px-4">
-        <div class="d-flex align-items-center w-100">
+  <div class="d-flex align-items-center w-100">
           <button
             class="btn btn-outline-light d-md-none me-3"
             type="button"
@@ -26,6 +26,80 @@
 
           <!-- Selector de Tenant (solo para super admin) -->
           <TenantSelector />
+
+          <!-- Notificaciones -->
+          <div class="notification-wrapper me-3" ref="notificationWrapper">
+            <button
+              class="btn btn-outline-light btn-sm notification-button d-flex align-items-center"
+              type="button"
+              @click.stop="toggleNotifications"
+              title="Ver alertas"
+            >
+              <i class="fas fa-bell"></i>
+              <span v-if="notifications.length" class="badge bg-danger ms-1">
+                {{ notifications.length }}
+              </span>
+              <span class="visually-hidden">Notificaciones</span>
+            </button>
+            <div v-if="notificationsVisible" class="notification-popover shadow" ref="notificationPopover">
+              <div class="notification-header">
+                <strong>Alertas próximas</strong>
+                <button class="btn btn-link btn-sm text-decoration-none" @click.stop="refreshNotifications">
+                  <i class="fas fa-sync-alt"></i>
+                </button>
+              </div>
+              <div v-if="notificationsLoading" class="text-center py-3">
+                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                <small class="d-block mt-1">Cargando...</small>
+              </div>
+              <div v-else-if="notificationsError" class="text-danger px-3 py-2 small">
+                {{ notificationsError }}
+              </div>
+              <div v-else-if="notifications.length === 0" class="px-3 py-2 small text-muted">
+                Sin alertas próximas en los próximos {{ notificationWindow }} días.
+              </div>
+            <div v-else class="notification-list">
+              <article
+                v-for="(notificacion, index) in notifications"
+                :key="`${notificacion.tipo}-${index}-${notificacion.id}`"
+                class="notification-card"
+                :class="{ 'notification-clickable': notificacion.tipo === 'recuperacion' }"
+                @click="handleNotificationClick(notificacion)"
+              >
+                <header class="notification-card-header">
+                  <span class="badge bg-info text-dark text-uppercase">
+                    {{ notificacion.tipo }}
+                  </span>
+                  <span class="notification-card-date">
+                    {{ formatDate(notificacion.fecha) }}
+                  </span>
+                </header>
+                <h6 class="notification-card-title">
+                  {{ notificacion.titulo }}
+                </h6>
+                <p class="notification-card-description">
+                  {{ notificacion.descripcion }}
+                </p>
+                <div class="notification-card-meta">
+                  <span>
+                    <i class="fas fa-hourglass-half me-1"></i>
+                    {{ notificacion.dias_restantes }} días restantes
+                  </span>
+                </div>
+                <div class="notification-card-footer">
+                  <div>
+                    <strong>Responsable:</strong>
+                    <span>{{ notificacion.responsable }}</span>
+                  </div>
+                  <div>
+                    <strong>Contexto:</strong>
+                    <span>{{ contextLabel(notificacion) }}</span>
+                  </div>
+                </div>
+              </article>
+            </div>
+            </div>
+          </div>
 
           <!-- Información del usuario -->
           <div class="d-flex align-items-center me-3">
@@ -83,6 +157,10 @@
             <router-link class="nav-link mb-1 small" to="/admin/gestionar-usuarios">
               <i class="fas fa-users me-2"></i>{{ isSuperAdmin ? 'Administradores' : 'Usuarios' }}
             </router-link>
+            <!-- Recuperaciones para admin y super admin -->
+            <router-link class="nav-link mb-1 small" to="/admin/gestionar-recuperaciones">
+              <i class="fas fa-key me-2"></i>Recuperaciones
+            </router-link>
             <!-- Ganado solo para admin (NO super admin) -->
             <router-link v-if="!isSuperAdmin" class="nav-link mb-1 small" to="/admin/gestionar-animales">
               <i class="fas fa-cow me-2"></i>Ganado
@@ -122,6 +200,7 @@
 <script>
 import authService from '../services/authService.js';
 import TenantSelector from '../components/TenantSelector.vue';
+import { notificationAPI } from '../services/api.js';
 
 export default {
   components: {
@@ -130,7 +209,12 @@ export default {
   name: 'AdminLayout',
   data() {
     return {
-      userName: ''
+      userName: '',
+      notifications: [],
+      notificationsVisible: false,
+      notificationsLoading: false,
+      notificationsError: null,
+      notificationWindow: 7
     };
   },
   computed: {
@@ -187,6 +271,8 @@ export default {
       
       if (user) {
         this.userName = user?.persona?.primer_nombre || user?.primer_nombre || user?.email || 'Administrador';
+        this.fetchNotifications();
+        document.addEventListener('click', this.handleDocumentClick);
         console.log("[AdminLayout] Nombre de usuario establecido:", this.userName);
       } else {
         console.warn("[AdminLayout] No se encontraron datos del usuario, usando valor por defecto");
@@ -203,42 +289,84 @@ export default {
   methods: {
     async logout(event) {
       try {
-        // Prevenir comportamiento por defecto si es un evento
         if (event) {
           event.preventDefault();
           event.stopPropagation();
         }
 
-        console.log('[AdminLayout] Iniciando proceso de logout...');
-
-        // Limpiar servicio de autenticación
         authService.logout();
-        console.log('[AdminLayout] authService.logout() ejecutado');
-
-        // Limpiar cualquier estado adicional
         localStorage.clear();
         sessionStorage.clear();
-        console.log('[AdminLayout] localStorage y sessionStorage limpiados');
-
-        // Intentar redirigir con router
         await this.$router.push('/login');
-        console.log('[AdminLayout] Redirección a login exitosa');
       } catch (error) {
-        console.error('[AdminLayout] Error crítico en logout:', error);
-        console.error('[AdminLayout] Stack trace:', error.stack);
-
-        // Forzar limpieza y redirección en caso de error
-        try {
-          localStorage.clear();
-          sessionStorage.clear();
-          globalThis.location.href = '/login';
-        } catch (cleanupError) {
-          console.error('[AdminLayout] Error en limpieza de emergencia:', cleanupError);
-          // Último recurso: recargar la página
-          globalThis.location.reload();
-        }
+        console.error('[AdminLayout] logout error', error);
+        localStorage.clear();
+        sessionStorage.clear();
+        globalThis.location.reload();
+      }
+    },
+    async fetchNotifications() {
+      this.notificationsLoading = true;
+      this.notificationsError = null;
+      try {
+        const response = await notificationAPI.getUpcoming();
+        this.notifications = response.data?.data || [];
+      } catch (error) {
+        this.notificationsError = 'No se pudieron cargar las alertas.';
+      } finally {
+        this.notificationsLoading = false;
+      }
+    },
+    toggleNotifications() {
+      this.notificationsVisible = !this.notificationsVisible;
+      if (this.notificationsVisible && !this.notifications.length && !this.notificationsLoading) {
+        this.fetchNotifications();
+      }
+    },
+    refreshNotifications() {
+      this.fetchNotifications();
+    },
+    formatDate(value) {
+      if (!value) {
+        return 'Fecha desconocida';
+      }
+      try {
+        return new Date(value).toLocaleDateString('es-ES', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        });
+      } catch (error) {
+        return value;
+      }
+    },
+    contextLabel(notificacion) {
+      const contexto = notificacion.contexto || {};
+      return (
+        contexto.nombre_tipo_vacuna ||
+        contexto.nombre_vacuna ||
+        contexto.nombre_potrero ||
+        contexto.nombre_animal ||
+        'Contexto sin detalle'
+      );
+    },
+    handleDocumentClick(event) {
+      const popover = this.$refs.notificationPopover;
+      const wrapper = this.$refs.notificationWrapper;
+      if (!popover || !wrapper) return;
+      if (!wrapper.contains(event.target)) {
+        this.notificationsVisible = false;
+      }
+    },
+    handleNotificationClick(notificacion) {
+      if (notificacion.tipo === 'recuperacion') {
+        this.notificationsVisible = false;
+        this.$router.push('/admin/gestionar-recuperaciones');
       }
     }
+  },
+  unmounted() {
+    document.removeEventListener('click', this.handleDocumentClick);
   }
 };
 </script>
@@ -449,6 +577,117 @@ export default {
 .admin-sidebar .nav-link i {
   width: 20px;
   text-align: center;
+}
+
+
+.notification-wrapper {
+  position: relative;
+}
+
+.notification-button {
+  position: relative;
+}
+
+.notification-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  width: 320px;
+  background: #fff;
+  color: #212529;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
+  z-index: 1050;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.notification-list {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 0.45rem 0;
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+.notification-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.notification-meta {
+  font-size: 0.8rem;
+}
+
+.notification-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 0.75rem;
+  padding: 0.85rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  margin-bottom: 0.85rem;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.notification-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.notification-card-title {
+  font-size: 1rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+.notification-card-description {
+  margin: 0.35rem 0;
+  font-size: 0.9rem;
+}
+
+.notification-card-meta {
+  display: flex;
+  justify-content: flex-start;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: #4a4a4a;
+}
+
+.notification-card-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #2f2f2f;
+  margin-top: 0.5rem;
+  border-top: 1px dashed rgba(0, 0, 0, 0.12);
+  padding-top: 0.45rem;
+}
+
+.notification-card-footer span {
+  margin-left: 0.35rem;
+  font-weight: 500;
+}
+
+.notification-clickable {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.notification-clickable:hover {
+  background: rgba(52, 152, 219, 0.1) !important;
 }
 
 

@@ -20,6 +20,11 @@ const routes = [
     name: 'Contacto',
     component: () => import('../views/public/Contacto.vue')
   },
+  {
+    path: '/recuperar',
+    name: 'RecuperarPassword',
+    component: () => import('../views/public/RecuperarPassword.vue')
+  },
 
   // Rutas de administrador con layout anidado
   {
@@ -92,6 +97,12 @@ const routes = [
         name: 'EscanearQRAdmin',
         component: () => import('../views/admin/EscanearQRAdmin.vue'),
         meta: { requiresAuth: true, allowedRoles: ['admin'], requiresTenant: true }
+      },
+      {
+        path: 'gestionar-recuperaciones',
+        name: 'GestionarRecuperaciones',
+        component: () => import('../views/admin/GestionarRecuperaciones.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['admin', 'super_admin'] }
       }
     ]
   },

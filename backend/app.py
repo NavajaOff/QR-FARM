@@ -25,6 +25,7 @@ from src.routes.animal_routes import animal_bp
 from src.routes.vacunacion_routes import vacunacion_bp
 from src.routes.reporte_routes import reporte_bp
 from src.routes.tenant_routes import tenant_bp
+from src.routes.notification_routes import notification_bp
 from src.utils.init_super_admin import inicializar_super_admin
 from src.utils.auth import token_required
 from src.utils.tenant import get_current_tenant_id, _es_super_admin_usuario
@@ -399,6 +400,7 @@ app.register_blueprint(animal_bp, url_prefix='/api/animales')
 app.register_blueprint(vacunacion_bp, url_prefix='/api/vacunaciones')
 app.register_blueprint(reporte_bp, url_prefix='/api/reportes')
 app.register_blueprint(tenant_bp, url_prefix='/api/tenants')
+app.register_blueprint(notification_bp, url_prefix='/api/notificaciones')
 
 # Inicializar super_admin desde variables de entorno (solo si la BD está disponible)
 print("🔐 Inicializando super_admin desde variables de entorno...")

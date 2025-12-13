@@ -51,10 +51,13 @@ class UsuarioService:
             return False
 
     @staticmethod
-    def _construir_condiciones_sql(incluir_inactivos, tenant_id, excluir_super_admin):
+    def _construir_condiciones_sql(incluir_inactivos, tenant_id, excluir_super_admin, solo_admins=False):
         """Construye las condiciones SQL para la consulta.
         
         IMPORTANTE: tenant_id está en la tabla personas (p.tenant_id), NO en usuarios (u.tenant_id).
+        
+        Args:
+            solo_admins: Si es True, solo mostrar usuarios con rol admin/administrador (para superadmin)
         """
         conditions = []
         params = []
@@ -66,6 +69,9 @@ class UsuarioService:
             print(f"[USUARIO_SERVICE] Filtro de tenant_id aplicado desde personas: {tenant_id}")
         if excluir_super_admin:
             conditions.append("(r.rol IS NULL OR LOWER(TRIM(r.rol)) != 'super_admin')")
+        if solo_admins:
+            # Solo mostrar admins/administradores (no usuarios normales)
+            conditions.append("LOWER(TRIM(r.rol)) IN ('admin', 'administrador')")
         return conditions, params
     
     @staticmethod
@@ -943,7 +949,7 @@ class UsuarioService:
                 conn.close()
 
     @staticmethod
-    def obtener_todos_usuarios(incluir_inactivos: bool = False, tenant_id: Optional[int] = None, excluir_super_admin: bool = False) -> List[Usuario]:
+    def obtener_todos_usuarios(incluir_inactivos: bool = False, tenant_id: Optional[int] = None, excluir_super_admin: bool = False, solo_admins: bool = False) -> List[Usuario]:
         """
         Obtener todos los usuarios con filtrado automático de super admin para usuarios no privilegiados.
 
@@ -989,7 +995,7 @@ class UsuarioService:
                 LEFT JOIN roles r ON u.id_rol = r.id
             """
 
-            conditions, params = UsuarioService._construir_condiciones_sql(incluir_inactivos, tenant_id, excluir_super_admin)
+            conditions, params = UsuarioService._construir_condiciones_sql(incluir_inactivos, tenant_id, excluir_super_admin, solo_admins)
             if conditions:
                 sql += " WHERE " + " AND ".join(conditions)
             

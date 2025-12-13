@@ -6,6 +6,8 @@ import jwt
 from flask import jsonify, request, current_app, g
 from ..models.usuario import Usuario, EstadoUsuario
 from ..services.usuario_service import UsuarioService
+from ..services.recovery_service import RecoveryService
+from ..utils.auth import token_required
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +110,8 @@ class UsuarioController:
     MSG_CLAVE_CORTA = 'La contraseña debe tener al menos 6 caracteres'
     MSG_NOT_AUTHENTICATED = 'No autenticado'
     MSG_FIELD_REQUIRED = 'El campo {field} es requerido'
+    MSG_RECOVERY_EMAIL_REQUIRED = 'El email es obligatorio para recuperar la contraseña'
+    MSG_RECOVERY_TOKEN_INVALID = 'Token de recuperación inválido o expirado'
     
     @staticmethod
     def _validar_datos_registro(data):
@@ -199,6 +203,132 @@ class UsuarioController:
         """Verifica si un usuario es super admin."""
         rol_nombre = UsuarioController._obtener_nombre_rol(usuario)
         return rol_nombre == 'super_admin'
+
+    @staticmethod
+    def request_password_recovery():
+        data = request.get_json(silent=True) or {}
+        email = (data.get('email') or '').strip()
+
+        if not email:
+            return _respuesta_error(UsuarioController.MSG_RECOVERY_EMAIL_REQUIRED, 400)
+
+        try:
+            result = RecoveryService.request_password_recovery(email)
+            return jsonify({
+                'status': 'success',
+                'message': result.get('message', 'Solicitud de recuperación creada. El administrador revisará tu solicitud.'),
+                'recovery_id': result.get('recovery_id')
+            }), 200
+        except ValueError as ve:
+            return _respuesta_error(str(ve), 400)
+        except Exception:
+            logger.exception("Error al solicitar recuperación de contraseña")
+            return _respuesta_error(ERROR_PROCESAR_SOLICITUD, 500)
+
+    @staticmethod
+    def confirm_password_recovery():
+        data = request.get_json(silent=True) or {}
+        token = (data.get('token') or '').strip()
+        password = data.get('password')
+        email = (data.get('email') or '').strip()
+
+        try:
+            RecoveryService.confirm_password_recovery(token, password, email)
+            return jsonify({
+                'status': 'success',
+                'message': 'Contraseña actualizada correctamente.'
+            }), 200
+        except ValueError as ve:
+            return _respuesta_error(str(ve), 400)
+        except Exception:
+            logger.exception("Error al confirmar recuperación de contraseña")
+            return _respuesta_error(ERROR_PROCESAR_SOLICITUD, 500)
+
+    @staticmethod
+    @token_required
+    def list_recovery_requests():
+        """List pending password recovery requests for current admin."""
+        try:
+            from flask import g
+            from ..utils.tenant import get_current_tenant_id, _obtener_rol_nombre
+            
+            current_user = getattr(g, 'current_user', None)
+            if not current_user:
+                return _respuesta_error('Usuario no autenticado', 401)
+            
+            rol_nombre = _obtener_rol_nombre(current_user)
+            is_superadmin = rol_nombre == 'super_admin'
+            tenant_id = None
+            
+            # Superadmin can see all admin requests or filter by tenant
+            if is_superadmin:
+                tenant_param = request.args.get('tenant_id')
+                if tenant_param:
+                    try:
+                        tenant_id = int(tenant_param)
+                    except (ValueError, TypeError):
+                        pass
+            else:
+                # Regular admin sees only user requests from their tenant (excluding their own)
+                tenant_id = get_current_tenant_id(require_tenant=True)
+                if tenant_id is None:
+                    return _respuesta_error('No se pudo determinar el tenant', 400)
+            
+            requests = RecoveryService.list_pending_requests(
+                tenant_id=tenant_id,
+                current_user_id=current_user.id,
+                is_superadmin=is_superadmin
+            )
+            return jsonify({
+                'status': 'success',
+                'data': requests
+            }), 200
+        except Exception:
+            logger.exception("Error al listar solicitudes de recuperación")
+            return _respuesta_error(ERROR_PROCESAR_SOLICITUD, 500)
+
+    @staticmethod
+    @token_required
+    def approve_recovery_request(recovery_id: int):
+        """Approve a password recovery request."""
+        try:
+            from flask import g
+            current_user = getattr(g, 'current_user', None)
+            if not current_user:
+                return _respuesta_error('Usuario no autenticado', 401)
+            
+            result = RecoveryService.approve_recovery_request(recovery_id, current_user.id)
+            return jsonify({
+                'status': 'success',
+                'message': result.get('message'),
+                'token': result.get('token')  # Include token for admin visibility
+            }), 200
+        except ValueError as ve:
+            return _respuesta_error(str(ve), 400)
+        except Exception:
+            logger.exception("Error al aprobar solicitud de recuperación")
+            return _respuesta_error(ERROR_PROCESAR_SOLICITUD, 500)
+
+    @staticmethod
+    @token_required
+    def reject_recovery_request(recovery_id: int):
+        """Reject a password recovery request."""
+        try:
+            from flask import g
+            current_user = getattr(g, 'current_user', None)
+            if not current_user:
+                return _respuesta_error('Usuario no autenticado', 401)
+            
+            RecoveryService.reject_recovery_request(recovery_id, current_user.id)
+            return jsonify({
+                'status': 'success',
+                'message': 'Solicitud rechazada correctamente.'
+            }), 200
+        except ValueError as ve:
+            return _respuesta_error(str(ve), 400)
+        except Exception:
+            logger.exception("Error al rechazar solicitud de recuperación")
+            return _respuesta_error(ERROR_PROCESAR_SOLICITUD, 500)
     
     @staticmethod
     def _obtener_tenant_id_override(es_super_admin, data):
@@ -601,7 +731,9 @@ class UsuarioController:
                     'message': 'No se puede determinar el tenant del usuario. Por favor, cierre sesión y vuelva a iniciar sesión.'
                 }), 403
             
-            usuarios = UsuarioService.obtener_todos_usuarios(incluir_inactivos=True, tenant_id=tenant_id)
+            # Superadmin solo ve admins (no usuarios normales)
+            solo_admins = es_super
+            usuarios = UsuarioService.obtener_todos_usuarios(incluir_inactivos=True, tenant_id=tenant_id, solo_admins=solo_admins)
             usuarios = UsuarioController._filtrar_usuarios_por_tenant(usuarios, tenant_id)
             
             return jsonify({

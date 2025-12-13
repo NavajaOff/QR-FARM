@@ -95,6 +95,14 @@ export const authAPI = {
   updateProfile: (data) => api.put('/usuarios/profile', data),
 };
 
+export const recoveryAPI = {
+  request: (email) => api.post('/usuarios/recovery/request', { email }),
+  confirm: (payload) => api.post('/usuarios/recovery/confirm', payload),
+  listRequests: () => api.get('/usuarios/recovery/requests'),
+  approve: (recoveryId) => api.post(`/usuarios/recovery/${recoveryId}/approve`),
+  reject: (recoveryId) => api.post(`/usuarios/recovery/${recoveryId}/reject`),
+};
+ 
 export const userAPI = {
   getAll: () => api.get('/usuarios/'),
   getById: (id) => api.get(`/usuarios/${id}`),
@@ -143,6 +151,10 @@ export const tenantAPI = {
   getCurrent: () => api.get('/tenants/actual'),
   create: (data) => api.post('/tenants', data),
   update: (id, data) => api.put(`/tenants/${id}`, data),
+};
+
+export const notificationAPI = {
+  getUpcoming: () => api.get('/notificaciones/proximas'),
 };
 
 // Exportar instancia por defecto para uso general
