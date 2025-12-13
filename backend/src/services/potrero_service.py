@@ -290,15 +290,20 @@ class PotreroService:
         """Prepara los datos para la inserción del potrero (sin campos de actividad)."""
         nombre = data.get('nombre') or PotreroService._generar_nombre_potrero()
 
-        # Auto-calcular hectáreas si se proporciona área
+        # Auto-calcular área desde hectáreas si no se proporciona área
         hectareas = data.get('hectareas')
+        area_value = data.get('area')
 
-        if hectareas is None:
-            area_value = data.get('area')
-            if area_value is not None:
+        # Si no hay área pero sí hay hectáreas, calcular área automáticamente
+        if area_value is None or area_value == '':
+            if hectareas is not None and hectareas > 0:
+                # Calcular área automáticamente desde hectáreas (1 hectárea = 10,000 m²)
+                area_value = float(hectareas) * 10000
+        # Si no hay hectáreas pero sí hay área, calcular hectáreas automáticamente
+        elif hectareas is None or hectareas == '':
+            if area_value is not None and area_value > 0:
                 # Calcular hectáreas automáticamente si se proporciona área
                 hectareas = float(area_value) / 10000
-        # Nota: 'area' no se persiste en BD (eliminada según dump SQL), solo se usa para calcular hectáreas
 
         # Nota: fecha_ultimo_uso, ultima_limpieza y proxima_limpieza ahora se gestionan
         # en la tabla historial_potrero, no en potrero
@@ -316,7 +321,7 @@ class PotreroService:
             data.get('capacidad'),
             data.get('ocupacion', 0),
             hectareas,
-            data.get('area'),
+            area_value,
             data.get('descripcion')
         )
         return values
