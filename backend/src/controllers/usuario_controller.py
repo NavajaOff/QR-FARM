@@ -6,6 +6,7 @@ import jwt
 from flask import jsonify, request, current_app, g
 from ..models.usuario import Usuario, EstadoUsuario
 from ..services.usuario_service import UsuarioService
+from ..services.recovery_service import RecoveryService
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +109,8 @@ class UsuarioController:
     MSG_CLAVE_CORTA = 'La contraseña debe tener al menos 6 caracteres'
     MSG_NOT_AUTHENTICATED = 'No autenticado'
     MSG_FIELD_REQUIRED = 'El campo {field} es requerido'
+    MSG_RECOVERY_EMAIL_REQUIRED = 'El email es obligatorio para recuperar la contraseña'
+    MSG_RECOVERY_TOKEN_INVALID = 'Token de recuperación inválido o expirado'
     
     @staticmethod
     def _validar_datos_registro(data):
@@ -199,6 +202,45 @@ class UsuarioController:
         """Verifica si un usuario es super admin."""
         rol_nombre = UsuarioController._obtener_nombre_rol(usuario)
         return rol_nombre == 'super_admin'
+
+    @staticmethod
+    def request_password_recovery():
+        data = request.get_json(silent=True) or {}
+        email = (data.get('email') or '').strip()
+
+        if not email:
+            return _respuesta_error(UsuarioController.MSG_RECOVERY_EMAIL_REQUIRED, 400)
+
+        try:
+            result = RecoveryService.request_password_recovery(email)
+            return jsonify({
+                'status': 'success',
+                'message': 'Se envió un token al administrador autorizado.',
+                'destinatario': result.get('destinatario')
+            }), 200
+        except ValueError as ve:
+            return _respuesta_error(str(ve), 400)
+        except Exception:
+            logger.exception("Error al solicitar recuperación de contraseña")
+            return _respuesta_error(ERROR_PROCESAR_SOLICITUD, 500)
+
+    @staticmethod
+    def confirm_password_recovery():
+        data = request.get_json(silent=True) or {}
+        token = (data.get('token') or '').strip()
+        password = data.get('password')
+
+        try:
+            RecoveryService.confirm_password_recovery(token, password)
+            return jsonify({
+                'status': 'success',
+                'message': 'Contraseña actualizada correctamente.'
+            }), 200
+        except ValueError as ve:
+            return _respuesta_error(str(ve), 400)
+        except Exception:
+            logger.exception("Error al confirmar recuperación de contraseña")
+            return _respuesta_error(ERROR_PROCESAR_SOLICITUD, 500)
     
     @staticmethod
     def _obtener_tenant_id_override(es_super_admin, data):

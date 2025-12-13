@@ -19,6 +19,8 @@ usuario_bp = Blueprint('usuario', __name__)
 # para permitir asignar tenant_id (solo super admin)
 usuario_bp.route('/register', methods=['POST'])(UsuarioController.registrar_usuario)
 usuario_bp.route('/login', methods=['POST'])(UsuarioController.login)
+usuario_bp.route('/recovery/request', methods=['POST'])(UsuarioController.request_password_recovery)
+usuario_bp.route('/recovery/confirm', methods=['POST'])(UsuarioController.confirm_password_recovery)
 
 # Ruta adicional para compatibilidad
 usuario_bp.route('/', methods=['POST'])(UsuarioController.login)

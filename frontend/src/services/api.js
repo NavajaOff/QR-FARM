@@ -95,6 +95,11 @@ export const authAPI = {
   updateProfile: (data) => api.put('/usuarios/profile', data),
 };
 
+export const recoveryAPI = {
+  request: (email) => api.post('/usuarios/recovery/request', { email }),
+  confirm: (payload) => api.post('/usuarios/recovery/confirm', payload),
+};
+ 
 export const userAPI = {
   getAll: () => api.get('/usuarios/'),
   getById: (id) => api.get(`/usuarios/${id}`),

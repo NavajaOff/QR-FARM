@@ -70,6 +70,11 @@
                     </button>
                   </div>
                 </form>
+                <div class="mt-3 text-center">
+                  <router-link to="/recuperar" class="text-white text-decoration-underline">
+                    ¿Olvidaste tu contraseña?
+                  </router-link>
+                </div>
 
               </div>
             </div>

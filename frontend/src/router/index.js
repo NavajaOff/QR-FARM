@@ -20,6 +20,11 @@ const routes = [
     name: 'Contacto',
     component: () => import('../views/public/Contacto.vue')
   },
+  {
+    path: '/recuperar',
+    name: 'RecuperarPassword',
+    component: () => import('../views/public/RecuperarPassword.vue')
+  },
 
   // Rutas de administrador con layout anidado
   {
