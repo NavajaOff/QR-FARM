@@ -99,52 +99,9 @@ cp .env.example .env
 Copy-Item .env.example .env
 ```
 
-**Edita el archivo `.env`** y configura las siguientes variables:
+**Edita el archivo `.env`** y configura las variables a tu entorno tus usuarios tus contraseñas
 
-```env
-# ============================================================================
-# Configuración de Flask
-# ============================================================================
-FLASK_ENV=production
-DEBUG=False
-SECRET_KEY=tu_clave_secreta_aqui_genera_una_aleatoria
-FLASK_APP=app.py
 
-# ============================================================================
-# Configuración de Base de Datos
-# NOTA: En Docker, estas variables se sobrescriben por docker-compose.yml
-# DB_HOST se establece automáticamente como 'mysql' dentro de Docker
-# ============================================================================
-DB_HOST=mysql
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=gestion_ganadera
-
-# ============================================================================
-# Configuración CORS (OBLIGATORIO)
-# Debe incluir el puerto del frontend: http://localhost:5174
-# ============================================================================
-CORS_ORIGINS=http://localhost:5174,http://localhost:5173,http://localhost:80
-
-# ============================================================================
-# URL del Backend para el Frontend (OBLIGATORIO)
-# Debe usar el puerto externo mapeado: http://localhost:5010
-# ============================================================================
-VITE_BACKEND_URL=http://localhost:5010
-
-# ============================================================================
-# Super Administrador (creado automáticamente)
-# ============================================================================
-ROOT_SUPER_ADMIN_EMAIL=superadmin@qrfarm.com
-ROOT_SUPER_ADMIN_PASSWORD=tu_contraseña_segura_aqui
-ROOT_SUPER_ADMIN_NOMBRE=Super Administrador QR-Farm
-
-# ============================================================================
-# JWT Secret Key (para tokens de autenticación)
-# ============================================================================
-JWT_SECRET_KEY=tu_jwt_secret_aqui_genera_una_aleatoria
-```
 
 **Generar claves seguras:**
 
@@ -327,10 +284,9 @@ docker compose logs -f mysql
 
 Una vez que todos los servicios estén corriendo:
 
-- **Frontend (Interfaz Web):** http://localhost:5174
-- **Backend API:** http://localhost:5010
-- **Health Check API:** http://localhost:5010/api/health
-- **Base de datos MySQL:** `localhost:3313` (desde herramientas externas)
+- **Frontend (Interfaz Web):** la ruta que te dio el frontend
+- **Backend API:** la ruta que te dio el backend
+- **Base de datos MySQL:**  (desde herramientas externas)
 
 ### 3. Credenciales de Acceso
 
@@ -340,7 +296,7 @@ Una vez que todos los servicios estén corriendo:
 
 ### 4. Prueba Rápida
 
-1. Abre tu navegador en http://localhost:5174
+1. Abre tu navegador en la ruta del frontend
 2. Inicia sesión con las credenciales del super admin que definiste en el .env
 3. Deberías ver el dashboard de QR-Farm
 
