@@ -97,6 +97,12 @@ const routes = [
         name: 'EscanearQRAdmin',
         component: () => import('../views/admin/EscanearQRAdmin.vue'),
         meta: { requiresAuth: true, allowedRoles: ['admin'], requiresTenant: true }
+      },
+      {
+        path: 'gestionar-recuperaciones',
+        name: 'GestionarRecuperaciones',
+        component: () => import('../views/admin/GestionarRecuperaciones.vue'),
+        meta: { requiresAuth: true, allowedRoles: ['admin', 'super_admin'] }
       }
     ]
   },

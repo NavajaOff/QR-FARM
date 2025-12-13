@@ -21,6 +21,9 @@ usuario_bp.route('/register', methods=['POST'])(UsuarioController.registrar_usua
 usuario_bp.route('/login', methods=['POST'])(UsuarioController.login)
 usuario_bp.route('/recovery/request', methods=['POST'])(UsuarioController.request_password_recovery)
 usuario_bp.route('/recovery/confirm', methods=['POST'])(UsuarioController.confirm_password_recovery)
+usuario_bp.route('/recovery/requests', methods=['GET'])(token_required(UsuarioController.list_recovery_requests))
+usuario_bp.route('/recovery/<int:recovery_id>/approve', methods=['POST'])(token_required(UsuarioController.approve_recovery_request))
+usuario_bp.route('/recovery/<int:recovery_id>/reject', methods=['POST'])(token_required(UsuarioController.reject_recovery_request))
 
 # Ruta adicional para compatibilidad
 usuario_bp.route('/', methods=['POST'])(UsuarioController.login)

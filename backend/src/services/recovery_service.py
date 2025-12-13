@@ -6,7 +6,7 @@ import logging
 import os
 import secrets
 from datetime import datetime, timedelta
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from src.database.db import get_connection
 from src.models.usuario import Usuario
@@ -22,6 +22,9 @@ class RecoveryService:
     TOKEN_TTL_MINUTES = 30
     ADMIN_ROLES = {'admin', 'administrador'}
     SUPER_ROLE = 'super_admin'
+    ESTADO_PENDIENTE = 'pendiente'
+    ESTADO_APROBADA = 'aprobada'
+    ESTADO_RECHAZADA = 'rechazada'
 
     @staticmethod
     def _generate_token() -> tuple[str, str]:
@@ -59,19 +62,44 @@ class RecoveryService:
                 conn.close()
 
     @staticmethod
-    def _insert_token_record(token_hash: str, usuario_id: int, tipo: str, tenant_id: Optional[int], destinatario: str, contexto: str) -> None:
+    def _insert_recovery_request(usuario_id: int, tipo: str, tenant_id: Optional[int], solicitante_email: str, contexto: str) -> int:
+        """Create a recovery request in pending state (no token yet)."""
         conn = get_connection()
         if conn is None:
             raise RuntimeError("No hay conexión a la base de datos")
         cursor = conn.cursor()
-        expires_at = datetime.utcnow() + timedelta(minutes=RecoveryService.TOKEN_TTL_MINUTES)
         try:
             cursor.execute("""
                 INSERT INTO password_recovery_tokens (
                     usuario_id, token_hash, tipo, tenant_id, solicitante_email,
-                    contexto, expires_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (usuario_id, token_hash, tipo, tenant_id, destinatario, contexto, expires_at))
+                    contexto, estado, expires_at
+                ) VALUES (%s, NULL, %s, %s, %s, %s, %s, NULL)
+            """, (usuario_id, tipo, tenant_id, solicitante_email, contexto, RecoveryService.ESTADO_PENDIENTE))
+            conn.commit()
+            return cursor.lastrowid
+        finally:
+            cursor.close()
+            if hasattr(conn, 'is_connected') and conn.is_connected():
+                conn.close()
+
+    @staticmethod
+    def _update_recovery_with_token(recovery_id: int, token_hash: str, approved_by: int) -> None:
+        """Update recovery request with token when approved."""
+        expires_at = datetime.utcnow() + timedelta(minutes=RecoveryService.TOKEN_TTL_MINUTES)
+        conn = get_connection()
+        if conn is None:
+            raise RuntimeError("No hay conexión a la base de datos")
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                UPDATE password_recovery_tokens
+                SET token_hash = %s,
+                    estado = %s,
+                    expires_at = %s,
+                    approved_at = UTC_TIMESTAMP(),
+                    approved_by = %s
+                WHERE id = %s
+            """, (token_hash, RecoveryService.ESTADO_APROBADA, expires_at, approved_by, recovery_id))
             conn.commit()
         finally:
             cursor.close()
@@ -80,6 +108,7 @@ class RecoveryService:
 
     @staticmethod
     def request_password_recovery(email: str) -> Dict[str, str]:
+        """Create a password recovery request in pending state."""
         if not email:
             raise ValueError("El email es obligatorio")
         usuario = UsuarioService.buscar_por_email(email)
@@ -96,6 +125,7 @@ class RecoveryService:
         if rol_nombre == RecoveryService.SUPER_ROLE:
             raise ValueError("Contacta al equipo para recuperar la clave de superadmin")
 
+        # Determine who should approve (admin of tenant or superadmin)
         if tipo == 'usuario':
             destinatario = RecoveryService._find_admin_email(tenant_id)
             if not destinatario:
@@ -105,26 +135,42 @@ class RecoveryService:
             if not destinatario:
                 raise ValueError("No se ha configurado el correo del superadmin (ROOT_SUPER_ADMIN_EMAIL)")
 
-        token, token_hash = RecoveryService._generate_token()
         persona_nombre = usuario.persona.nombre_completo if usuario.persona else email
         persona_email = usuario.persona.email if usuario.persona else email
         contexto = f"destinatario={destinatario};solicitante={persona_email}"
-        RecoveryService._insert_token_record(
-            token_hash, usuario.id, tipo, tenant_id, persona_email, contexto
+        
+        # Create recovery request in pending state (no token yet)
+        recovery_id = RecoveryService._insert_recovery_request(
+            usuario.id, tipo, tenant_id, persona_email, contexto
         )
 
+        # Send notification email to approver
         subject = "Solicitud de recuperación de contraseña QR FARM"
         body = (
-            f"Se ha generado un token de recuperación para {persona_nombre} ({persona_email}).\n"
-            f"Usa este código temporal: {token}\n"
-            f"El token expira en {RecoveryService.TOKEN_TTL_MINUTES} minutos."
+            f"El usuario {persona_nombre} ({persona_email}) ha solicitado recuperar su contraseña.\n"
+            f"Por favor, revisa la solicitud en el sistema y aprueba o rechaza la solicitud."
         )
-        send_email(destinatario, subject, body)
+        
+        try:
+            send_email(destinatario, subject, body)
+            logger.info(
+                f"Password recovery request notification sent to {destinatario} for user {persona_email} "
+                f"(type: {tipo}, tenant_id: {tenant_id}, recovery_id: {recovery_id})"
+            )
+        except Exception as e:
+            logger.error(
+                f"Failed to send password recovery notification to {destinatario} for user {persona_email}: {e}"
+            )
+            # Don't fail the request if email fails, just log it
 
-        return {'destinatario': destinatario}
+        return {
+            'message': 'Solicitud de recuperación creada. El administrador revisará tu solicitud.',
+            'recovery_id': recovery_id
+        }
 
     @staticmethod
     def confirm_password_recovery(token: str, new_password: str) -> None:
+        """Confirm password recovery using approved token."""
         if not token or not new_password:
             raise ValueError("Token y nueva contraseña son obligatorios")
         if len(new_password) < 6:
@@ -137,7 +183,7 @@ class RecoveryService:
         cursor = conn.cursor(dictionary=True)
         try:
             cursor.execute("""
-                SELECT id, usuario_id
+                SELECT id, usuario_id, estado
                 FROM password_recovery_tokens
                 WHERE token_hash = %s
                   AND used_at IS NULL
@@ -147,6 +193,10 @@ class RecoveryService:
             row = cursor.fetchone()
             if not row:
                 raise ValueError("Token inválido o expirado")
+            
+            # Check if request was approved
+            if row['estado'] != RecoveryService.ESTADO_APROBADA:
+                raise ValueError("La solicitud no ha sido aprobada por el administrador")
 
             usuario = Usuario(id=row['usuario_id'])
             usuario.set_password(new_password)
@@ -159,6 +209,137 @@ class RecoveryService:
                 "UPDATE password_recovery_tokens SET used_at = UTC_TIMESTAMP() WHERE id = %s",
                 (row['id'],)
             )
+            conn.commit()
+        finally:
+            cursor.close()
+            if hasattr(conn, 'is_connected') and conn.is_connected():
+                conn.close()
+
+    @staticmethod
+    def list_pending_requests(tenant_id: Optional[int] = None) -> List[Dict]:
+        """List pending password recovery requests for admin/superadmin."""
+        conn = get_connection()
+        if conn is None:
+            raise RuntimeError("Base de datos no disponible")
+        cursor = conn.cursor(dictionary=True)
+        try:
+            query = """
+                SELECT 
+                    prt.id,
+                    prt.usuario_id,
+                    prt.tipo,
+                    prt.tenant_id,
+                    prt.solicitante_email,
+                    prt.contexto,
+                    prt.created_at,
+                    prt.approved_at,
+                    prt.rejected_at,
+                    u.id AS usuario_id_db,
+                    CONCAT(
+                        COALESCE(p.primer_nombre, ''), ' ',
+                        COALESCE(p.segundo_nombre, ''), ' ',
+                        COALESCE(p.primer_apellido, ''), ' ',
+                        COALESCE(p.segundo_apellido, '')
+                    ) AS usuario_nombre,
+                    p.email AS usuario_email,
+                    r.rol AS usuario_rol
+                FROM password_recovery_tokens prt
+                JOIN usuarios u ON u.id = prt.usuario_id
+                LEFT JOIN personas p ON p.id = u.id_persona
+                LEFT JOIN roles r ON r.id = u.id_rol
+                WHERE prt.estado = %s
+                  AND prt.used_at IS NULL
+            """
+            params = [RecoveryService.ESTADO_PENDIENTE]
+            
+            if tenant_id is not None:
+                query += " AND prt.tenant_id = %s"
+                params.append(tenant_id)
+            
+            query += " ORDER BY prt.created_at DESC"
+            
+            cursor.execute(query, tuple(params))
+            rows = cursor.fetchall()
+            return rows
+        finally:
+            cursor.close()
+            if hasattr(conn, 'is_connected') and conn.is_connected():
+                conn.close()
+
+    @staticmethod
+    def approve_recovery_request(recovery_id: int, approved_by_user_id: int) -> Dict[str, str]:
+        """Approve a recovery request and generate token."""
+        conn = get_connection()
+        if conn is None:
+            raise RuntimeError("Base de datos no disponible")
+        cursor = conn.cursor(dictionary=True)
+        try:
+            # Check if request exists and is pending
+            cursor.execute("""
+                SELECT id, usuario_id, estado, solicitante_email
+                FROM password_recovery_tokens
+                WHERE id = %s
+            """, (recovery_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise ValueError("Solicitud no encontrada")
+            if row['estado'] != RecoveryService.ESTADO_PENDIENTE:
+                raise ValueError(f"La solicitud ya está {row['estado']}")
+            
+            # Generate token
+            token, token_hash = RecoveryService._generate_token()
+            
+            # Update request with token
+            RecoveryService._update_recovery_with_token(recovery_id, token_hash, approved_by_user_id)
+            
+            # Get user info for email
+            usuario = UsuarioService.obtener_usuario(row['usuario_id'])
+            persona_nombre = usuario.persona.nombre_completo if usuario.persona else row['solicitante_email']
+            persona_email = usuario.persona.email if usuario.persona else row['solicitante_email']
+            
+            # Send email with token to user
+            subject = "Solicitud de recuperación de contraseña aprobada - QR FARM"
+            body = (
+                f"Tu solicitud de recuperación de contraseña ha sido aprobada.\n"
+                f"Usa este código temporal para cambiar tu contraseña: {token}\n"
+                f"El token expira en {RecoveryService.TOKEN_TTL_MINUTES} minutos."
+            )
+            
+            try:
+                send_email(persona_email, subject, body)
+                logger.info(f"Recovery approval email sent to {persona_email} with token")
+            except Exception as e:
+                logger.error(f"Failed to send approval email to {persona_email}: {e}")
+                # Don't fail if email fails, token is already generated
+            
+            return {
+                'message': 'Solicitud aprobada. El token ha sido enviado al usuario.',
+                'token': token  # Return token for admin to see/manually share if needed
+            }
+        finally:
+            cursor.close()
+            if hasattr(conn, 'is_connected') and conn.is_connected():
+                conn.close()
+
+    @staticmethod
+    def reject_recovery_request(recovery_id: int, rejected_by_user_id: int) -> None:
+        """Reject a recovery request."""
+        conn = get_connection()
+        if conn is None:
+            raise RuntimeError("Base de datos no disponible")
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                UPDATE password_recovery_tokens
+                SET estado = %s,
+                    rejected_at = UTC_TIMESTAMP()
+                WHERE id = %s
+                  AND estado = %s
+            """, (RecoveryService.ESTADO_RECHAZADA, recovery_id, RecoveryService.ESTADO_PENDIENTE))
+            
+            if cursor.rowcount == 0:
+                raise ValueError("Solicitud no encontrada o ya procesada")
+            
             conn.commit()
         finally:
             cursor.close()

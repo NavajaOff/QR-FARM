@@ -14,13 +14,40 @@ class NotificationService:
 
     @staticmethod
     def _resolver_tenant_id(tenant_id_override: Optional[int]) -> Optional[int]:
-        """Choose the most specific tenant context."""
+        """Choose the most specific tenant context. Always requires tenant_id to filter notifications."""
         if tenant_id_override is not None:
             return tenant_id_override
         try:
-            return get_current_tenant_id()
-        except Exception:
-            return None
+            # Always require tenant_id to filter notifications per tenant
+            # Even superadmin must select a tenant to see notifications
+            from flask import g
+            if hasattr(g, 'current_user') and g.current_user:
+                from ..utils.tenant import _obtener_rol_nombre
+                rol_nombre = _obtener_rol_nombre(g.current_user)
+                if rol_nombre == 'super_admin':
+                    # Superadmin can use tenant_id from query params or context
+                    # If not provided, return None to show empty list (not error)
+                    tenant_id = get_current_tenant_id(require_tenant=False)
+                    # Return None instead of raising exception - will show empty notifications
+                    return tenant_id
+                else:
+                    # Non-superadmin users must have a tenant_id from their context
+                    tenant_id = get_current_tenant_id(require_tenant=True)
+                    if tenant_id is None:
+                        raise ValueError("Tenant ID requerido para usuarios no superadmin")
+                    return tenant_id
+            # Fallback: try to get tenant_id from context
+            tenant_id = get_current_tenant_id(require_tenant=True)
+            if tenant_id is None:
+                raise ValueError("No se pudo determinar el tenant_id del contexto")
+            return tenant_id
+        except ValueError:
+            # Re-raise ValueError to be handled by controller
+            raise
+        except Exception as e:
+            # Log other errors and re-raise
+            print(f"Error resolviendo tenant_id para notificaciones: {e}")
+            raise ValueError(f"Error al determinar el tenant: {str(e)}")
 
     @staticmethod
     def _formatear_notificacion_limpieza(
@@ -200,14 +227,61 @@ class NotificationService:
                 connection.close()
 
     @staticmethod
+    def _obtener_solicitudes_recuperacion_pendientes(
+        tenant_id_override: Optional[int]
+    ) -> List[Dict[str, Any]]:
+        """Fetch pending password recovery requests as notifications."""
+        tenant_id = NotificationService._resolver_tenant_id(tenant_id_override)
+        if tenant_id is None:
+            return []
+        
+        from src.services.recovery_service import RecoveryService
+        try:
+            requests = RecoveryService.list_pending_requests(tenant_id)
+            eventos = []
+            for req in requests:
+                created_at = req.get('created_at')
+                if isinstance(created_at, datetime):
+                    fecha_str = created_at.isoformat()
+                elif created_at:
+                    fecha_str = str(created_at)
+                else:
+                    fecha_str = datetime.utcnow().isoformat()
+                
+                eventos.append({
+                    'id': f"recovery-{req['id']}",
+                    'tipo': 'recuperacion',
+                    'titulo': f"Solicitud de recuperación de contraseña",
+                    'descripcion': f"Usuario {req.get('usuario_nombre', req.get('solicitante_email', 'Desconocido'))} ({req.get('usuario_email', req.get('solicitante_email', ''))})",
+                    'fecha': fecha_str,
+                    'dias_restantes': 0,
+                    'responsable': req.get('usuario_nombre', 'Usuario'),
+                    'contexto': {
+                        'recovery_id': req['id'],
+                        'usuario_id': req['usuario_id'],
+                        'tipo_solicitud': req.get('tipo', 'usuario'),
+                        'usuario_email': req.get('usuario_email', req.get('solicitante_email', ''))
+                    }
+                })
+            return eventos
+        except Exception as exc:
+            print(f"Error fetching recovery notifications: {exc}")
+            return []
+
+    @staticmethod
     def obtener_notificaciones_proximas(
         tenant_id_override: Optional[int]
     ) -> List[Dict[str, Any]]:
-        """Return the next alerts combining potrero and vaccination windows."""
+        """Return the next alerts combining potrero, vaccination, and recovery requests."""
         eventos_potreros = NotificationService._obtener_potreros_con_limpieza_proxima(tenant_id_override)
         eventos_vacunaciones = NotificationService._obtener_vacunaciones_con_dosis_proxima(tenant_id_override)
+        eventos_recuperacion = NotificationService._obtener_solicitudes_recuperacion_pendientes(tenant_id_override)
 
-        combinadas = eventos_potreros + eventos_vacunaciones
-        combinadas.sort(key=lambda evento: evento['fecha'])
+        combinadas = eventos_potreros + eventos_vacunaciones + eventos_recuperacion
+        # Sort by date, but recovery requests should appear first
+        combinadas.sort(key=lambda evento: (
+            0 if evento.get('tipo') == 'recuperacion' else 1,
+            evento['fecha']
+        ))
         return combinadas
 

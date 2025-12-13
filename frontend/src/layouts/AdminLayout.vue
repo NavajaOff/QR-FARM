@@ -63,6 +63,8 @@
                 v-for="(notificacion, index) in notifications"
                 :key="`${notificacion.tipo}-${index}-${notificacion.id}`"
                 class="notification-card"
+                :class="{ 'notification-clickable': notificacion.tipo === 'recuperacion' }"
+                @click="handleNotificationClick(notificacion)"
               >
                 <header class="notification-card-header">
                   <span class="badge bg-info text-dark text-uppercase">
@@ -154,6 +156,10 @@
             <!-- Usuarios para admin y super admin -->
             <router-link class="nav-link mb-1 small" to="/admin/gestionar-usuarios">
               <i class="fas fa-users me-2"></i>{{ isSuperAdmin ? 'Administradores' : 'Usuarios' }}
+            </router-link>
+            <!-- Recuperaciones para admin y super admin -->
+            <router-link class="nav-link mb-1 small" to="/admin/gestionar-recuperaciones">
+              <i class="fas fa-key me-2"></i>Recuperaciones
             </router-link>
             <!-- Ganado solo para admin (NO super admin) -->
             <router-link v-if="!isSuperAdmin" class="nav-link mb-1 small" to="/admin/gestionar-animales">
@@ -350,6 +356,12 @@ export default {
       if (!popover || !wrapper) return;
       if (!wrapper.contains(event.target)) {
         this.notificationsVisible = false;
+      }
+    },
+    handleNotificationClick(notificacion) {
+      if (notificacion.tipo === 'recuperacion') {
+        this.notificationsVisible = false;
+        this.$router.push('/admin/gestionar-recuperaciones');
       }
     }
   },
@@ -667,6 +679,15 @@ export default {
 .notification-card-footer span {
   margin-left: 0.35rem;
   font-weight: 500;
+}
+
+.notification-clickable {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.notification-clickable:hover {
+  background: rgba(52, 152, 219, 0.1) !important;
 }
 
 

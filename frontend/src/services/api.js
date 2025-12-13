@@ -98,6 +98,9 @@ export const authAPI = {
 export const recoveryAPI = {
   request: (email) => api.post('/usuarios/recovery/request', { email }),
   confirm: (payload) => api.post('/usuarios/recovery/confirm', payload),
+  listRequests: () => api.get('/usuarios/recovery/requests'),
+  approve: (recoveryId) => api.post(`/usuarios/recovery/${recoveryId}/approve`),
+  reject: (recoveryId) => api.post(`/usuarios/recovery/${recoveryId}/reject`),
 };
  
 export const userAPI = {

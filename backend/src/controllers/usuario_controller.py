@@ -7,6 +7,7 @@ from flask import jsonify, request, current_app, g
 from ..models.usuario import Usuario, EstadoUsuario
 from ..services.usuario_service import UsuarioService
 from ..services.recovery_service import RecoveryService
+from ..utils.auth import token_required
 
 logger = logging.getLogger(__name__)
 
@@ -215,8 +216,8 @@ class UsuarioController:
             result = RecoveryService.request_password_recovery(email)
             return jsonify({
                 'status': 'success',
-                'message': 'Se envió un token al administrador autorizado.',
-                'destinatario': result.get('destinatario')
+                'message': result.get('message', 'Solicitud de recuperación creada. El administrador revisará tu solicitud.'),
+                'recovery_id': result.get('recovery_id')
             }), 200
         except ValueError as ve:
             return _respuesta_error(str(ve), 400)
@@ -240,6 +241,87 @@ class UsuarioController:
             return _respuesta_error(str(ve), 400)
         except Exception:
             logger.exception("Error al confirmar recuperación de contraseña")
+            return _respuesta_error(ERROR_PROCESAR_SOLICITUD, 500)
+
+    @staticmethod
+    @token_required
+    def list_recovery_requests():
+        """List pending password recovery requests for current admin."""
+        try:
+            from flask import g
+            from ..utils.tenant import get_current_tenant_id, _obtener_rol_nombre
+            
+            current_user = getattr(g, 'current_user', None)
+            if not current_user:
+                return _respuesta_error('Usuario no autenticado', 401)
+            
+            rol_nombre = _obtener_rol_nombre(current_user)
+            tenant_id = None
+            
+            # Superadmin can see all or filter by tenant
+            if rol_nombre == 'super_admin':
+                tenant_param = request.args.get('tenant_id')
+                if tenant_param:
+                    try:
+                        tenant_id = int(tenant_param)
+                    except (ValueError, TypeError):
+                        pass
+            else:
+                # Regular admin sees only their tenant's requests
+                tenant_id = get_current_tenant_id(require_tenant=True)
+                if tenant_id is None:
+                    return _respuesta_error('No se pudo determinar el tenant', 400)
+            
+            requests = RecoveryService.list_pending_requests(tenant_id)
+            return jsonify({
+                'status': 'success',
+                'data': requests
+            }), 200
+        except Exception:
+            logger.exception("Error al listar solicitudes de recuperación")
+            return _respuesta_error(ERROR_PROCESAR_SOLICITUD, 500)
+
+    @staticmethod
+    @token_required
+    def approve_recovery_request(recovery_id: int):
+        """Approve a password recovery request."""
+        try:
+            from flask import g
+            current_user = getattr(g, 'current_user', None)
+            if not current_user:
+                return _respuesta_error('Usuario no autenticado', 401)
+            
+            result = RecoveryService.approve_recovery_request(recovery_id, current_user.id)
+            return jsonify({
+                'status': 'success',
+                'message': result.get('message'),
+                'token': result.get('token')  # Include token for admin visibility
+            }), 200
+        except ValueError as ve:
+            return _respuesta_error(str(ve), 400)
+        except Exception:
+            logger.exception("Error al aprobar solicitud de recuperación")
+            return _respuesta_error(ERROR_PROCESAR_SOLICITUD, 500)
+
+    @staticmethod
+    @token_required
+    def reject_recovery_request(recovery_id: int):
+        """Reject a password recovery request."""
+        try:
+            from flask import g
+            current_user = getattr(g, 'current_user', None)
+            if not current_user:
+                return _respuesta_error('Usuario no autenticado', 401)
+            
+            RecoveryService.reject_recovery_request(recovery_id, current_user.id)
+            return jsonify({
+                'status': 'success',
+                'message': 'Solicitud rechazada correctamente.'
+            }), 200
+        except ValueError as ve:
+            return _respuesta_error(str(ve), 400)
+        except Exception:
+            logger.exception("Error al rechazar solicitud de recuperación")
             return _respuesta_error(ERROR_PROCESAR_SOLICITUD, 500)
     
     @staticmethod
