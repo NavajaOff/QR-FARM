@@ -90,20 +90,8 @@ else
 fi
 echo "✅ Base de datos '$DB_NAME' verificada/creada."
 
-# Pre-verificar que la aplicación Flask puede cargarse antes de ejecutar migraciones
-# Esto evita que errores de importación bloqueen el arranque del contenedor
-echo "🔍 Verificando que la aplicación Flask puede cargarse..."
-if python -c "from app import app" 2>/dev/null; then
-    echo "✅ Aplicación Flask cargada correctamente."
-else
-    echo "❌ Error: No se pudo cargar la aplicación Flask."
-    echo "   Verifica que no haya errores de sintaxis o importación en el código."
-    echo "   Ejecutando importación con errores visibles..."
-    python -c "from app import app" 2>&1 || true
-    exit 1
-fi
-
-# Ejecutar migraciones de Alembic directamente
+# Ejecutar migraciones de Alembic ANTES de cargar Flask
+# Esto asegura que las tablas existan antes de que inicializar_super_admin() se ejecute
 echo "🚀 Ejecutando migraciones de base de datos (alembic upgrade head)..."
 if alembic -c alembic.ini upgrade head 2>&1; then
     echo "✅ Migraciones completadas exitosamente."

@@ -1,18 +1,17 @@
 # ============================================================================
-# docker-compose.yml - Configuración optimizada para builds estables
+# docker-compose.yml - Configuración optimizada para BuildKit
 # ============================================================================
-# Esta configuración evita fallos intermitentes por:
-# - No fuerza pulls innecesarios de imágenes base (usa cache local)
-# - Evita dependencia de auth.docker.io en cada build
-# - Usa builder clásico de Docker (no BuildKit) para mayor estabilidad
+# Esta configuración usa BuildKit para builds paralelos y optimizados.
+# BuildKit está habilitado por defecto en Docker Desktop y Docker Engine 20.10+
 # ============================================================================
-# IMPORTANTE: Para evitar timeouts de auth.docker.io, deshabilita BuildKit:
-# export DOCKER_BUILDKIT=0
-# export COMPOSE_DOCKER_CLI_BUILD=0
+# Para usar BuildKit explícitamente:
+# export DOCKER_BUILDKIT=1
+# export COMPOSE_DOCKER_CLI_BUILD=1
 # docker compose build
 # ============================================================================
-# BuildKit intenta verificar metadata de imágenes base incluso si están en cache,
-# causando timeouts en redes lentas. El builder clásico usa cache local directamente.
+# NOTA: Las imágenes intermedias (<none>) de multi-stage builds son normales.
+# BuildKit las genera para cachear stages intermedios y optimizar rebuilds.
+# Se pueden limpiar con: docker image prune -f
 # ============================================================================
 
 services:

@@ -1,5 +1,5 @@
 # Dockerfile para el backend de QR-Farm
-# Multi-stage build optimizado para tamaño mínimo (~300-350 MB)
+# Multi-stage build optimizado para BuildKit y tamaño mínimo
 
 # ============================================================================
 # Stage 1: Builder - Compila e instala dependencias Python que requieren gcc
@@ -29,10 +29,11 @@ RUN grep -v '^#' requirements.txt | grep -v '^pytest' | grep -v '^$' > /tmp/requ
     find /root/.local -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true && \
     find /root/.local -type f -name '*.pyc' -delete 2>/dev/null || true && \
     find /root/.local -type f -name '*.pyo' -delete 2>/dev/null || true && \
+    find /root/.local -type f -name '*.py[co]' -delete 2>/dev/null || true && \
     # Eliminar tests y documentación de paquetes (ahorra ~50-100MB)
-    find /root/.local -type d -name 'tests' -exec rm -rf {} + 2>/dev/null || true && \
-    find /root/.local -type d -name 'test' -exec rm -rf {} + 2>/dev/null || true && \
-    find /root/.local -type d -name 'docs' -exec rm -rf {} + 2>/dev/null || true
+    find /root/.local -type d \( -name 'tests' -o -name 'test' -o -name 'docs' -o -name '*.egg-info' \) -exec rm -rf {} + 2>/dev/null || true && \
+    # Eliminar archivos de metadata innecesarios de dist-info
+    find /root/.local -type d -name '*.dist-info' -exec sh -c 'rm -f "$1"/*.txt 2>/dev/null || true' _ {} \; 2>/dev/null || true
 
 # ============================================================================
 # Stage 2: Runtime - Imagen final optimizada sin herramientas de compilación
@@ -45,15 +46,15 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PIP_DEFAULT_TIMEOUT=100
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Instalar solo runtime dependencies: mysql-client para entrypoint.sh
 # Usar una sola capa RUN para reducir tamaño de imagen
 RUN apt-get update && apt-get install -y --no-install-recommends \
     default-mysql-client \
     && rm -rf /var/lib/apt/lists/* \
-    && rm -rf /tmp/* /var/tmp/*
+    && rm -rf /tmp/* /var/tmp/* \
+    && apt-get clean
 
 # Copiar paquetes Python instalados desde el stage builder
 COPY --from=builder /root/.local /root/.local
