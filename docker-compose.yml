@@ -1,6 +1,26 @@
+# ============================================================================
+# docker-compose.yml - Configuración optimizada para builds estables
+# ============================================================================
+# Esta configuración evita fallos intermitentes por:
+# - No fuerza pulls innecesarios de imágenes base (usa cache local)
+# - Evita dependencia de auth.docker.io en cada build
+# - Usa builder clásico de Docker (no BuildKit) para mayor estabilidad
+# ============================================================================
+# IMPORTANTE: Para evitar timeouts de auth.docker.io, deshabilita BuildKit:
+# export DOCKER_BUILDKIT=0
+# export COMPOSE_DOCKER_CLI_BUILD=0
+# docker compose build
+# ============================================================================
+# BuildKit intenta verificar metadata de imágenes base incluso si están en cache,
+# causando timeouts en redes lentas. El builder clásico usa cache local directamente.
+# ============================================================================
+
 services:
   mysql:
+    # pull_policy: if_not_present - Usa imagen local si existe, evita pull innecesario
+    # Esto previene timeouts de auth.docker.io cuando la imagen ya está en cache
     image: mysql:8.0
+    pull_policy: if_not_present
     container_name: qr-farm-mysql
     restart: unless-stopped
     environment:
@@ -13,14 +33,20 @@ services:
     networks:
       - qr-farm-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
+      # Verifica que MySQL esté listo para aceptar conexiones
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
 
   backend:
     build:
       context: .
       dockerfile: Dockerfile.backend
+      # Nota: Docker usa cache local automáticamente si la imagen base existe
+      # Para forzar pull: docker compose build --pull backend
+      # Para usar solo cache: docker compose build --no-cache backend (rebuild completo)
     container_name: qr-farm-backend
     restart: unless-stopped
     env_file:
@@ -29,6 +55,8 @@ services:
       - FLASK_ENV=production
       - DEBUG=False
       - DB_HOST=mysql
+      - DB_PORT=3306
+      - FLASK_APP=app.py
       # CORS_ORIGINS se lee desde .env via env_file
     ports:
       - "5010:5000"
@@ -36,11 +64,20 @@ services:
       - ./qr:/app/qr
     networks:
       - qr-farm-network
+    depends_on:
+      mysql:
+        condition: service_healthy
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      # Build args opcionales (se pueden pasar desde .env si es necesario)
+      # args:
+      #   VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:5010}
+      # Nota: Docker usa cache local automáticamente si la imagen base existe
+      # Para forzar pull: docker compose build --pull frontend
+      # Para usar solo cache: docker compose build --no-cache frontend (rebuild completo)
     container_name: qr-farm-frontend
     restart: unless-stopped
     ports:

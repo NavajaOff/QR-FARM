@@ -16,11 +16,14 @@ click==8.3.1
 PyJWT==2.10.1
 
 # CORS para frontend
-Flask-Cors==6.0.1
+Flask-Cors==6.0.2
 
 # Migraciones de base de datos
 Flask-Migrate==4.1.0
 Flask-SQLAlchemy==3.1.1
+# SQLAlchemy 2.x - Requerido por Flask-SQLAlchemy 3.1.1 (requiere >= 2.0.16)
+# Flask-Migrate 4.0.4+ es compatible con SQLAlchemy 2.0
+SQLAlchemy==2.0.45
 
 # WebSockets para actualizaciones en tiempo real
 Flask-SocketIO==5.5.1
@@ -30,7 +33,7 @@ python-socketio==5.15.0
 qrcode[pil]
 
 # Reportes PDF
-reportlab==4.4.5
+reportlab==4.4.6
 
 # Hashing y seguridad
 passlib==1.7.4
@@ -41,5 +44,5 @@ cryptography==46.0.3
 python-dateutil==2.9.0.post0
 
 # Pruebas
-pytest==9.0.1
+pytest==9.0.2
 pytest-cov==7.0.0

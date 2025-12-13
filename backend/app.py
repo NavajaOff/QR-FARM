@@ -83,16 +83,22 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 migrate = Migrate(app, directory='src/database/migrations')
 
 # Inicializar SocketIO para actualizaciones en tiempo real
-# CORS origins desde variables de entorno (obligatorio para producción)
+# CORS origins desde variables de entorno
 _cors_origins_env = os.getenv('CORS_ORIGINS', '')
 _flask_env = os.getenv('FLASK_ENV', 'production')
+_db_host = os.getenv('DB_HOST', '')
+
+# Determinar si estamos en un entorno local/Docker (no producción real)
+# Detectamos Docker si DB_HOST=mysql (nombre del servicio Docker)
+_is_docker_local = _db_host == 'mysql' or _db_host == 'localhost' or _db_host.startswith('127.')
+_is_development = _flask_env == 'development'
 
 if _cors_origins_env:
-    # Si hay variable de entorno, usar esos valores (separados por coma)
-    ALLOWED_CORS_ORIGINS = [origin.strip() for origin in _cors_origins_env.split(',')]
-elif _flask_env == 'development':
-    # Solo en desarrollo: valores por defecto para facilitar desarrollo local
-    # En producción debe configurarse explícitamente
+    # Si hay variable de entorno configurada, usarla (máxima prioridad)
+    ALLOWED_CORS_ORIGINS = [origin.strip() for origin in _cors_origins_env.split(',') if origin.strip()]
+    print(f"✅ CORS configurado desde variable de entorno: {len(ALLOWED_CORS_ORIGINS)} orígenes permitidos")
+elif _is_development:
+    # Modo desarrollo explícito: valores por defecto locales
     ALLOWED_CORS_ORIGINS = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
@@ -105,11 +111,25 @@ elif _flask_env == 'development':
     ]
     print("⚠️  ADVERTENCIA: Usando valores por defecto de CORS para desarrollo. "
           "Configure CORS_ORIGINS en producción.")
+elif _is_docker_local:
+    # Docker local o localhost: valores por defecto seguros solo para localhost
+    # Esto permite que Docker funcione sin configurar CORS_ORIGINS explícitamente
+    ALLOWED_CORS_ORIGINS = [
+        "http://localhost:5174",  # Frontend Docker (puerto externo)
+        "http://127.0.0.1:5174",
+        "http://localhost:5173",  # Frontend desarrollo
+        "http://127.0.0.1:5173",
+        "http://localhost:80",
+        "http://127.0.0.1:80"
+    ]
+    print("⚠️  ADVERTENCIA: Docker local detectado. Usando valores por defecto seguros de CORS (solo localhost).")
+    print("   Para producción real, configure CORS_ORIGINS explícitamente en variables de entorno.")
 else:
-    # En producción: sin valores por defecto - debe configurarse explícitamente
+    # Producción real (no localhost): CORS_ORIGINS es obligatorio
     raise RuntimeError(
         "CORS_ORIGINS debe estar configurado en variables de entorno para producción. "
-        "Ejemplo: CORS_ORIGINS=http://localhost:5174,http://localhost:5173"
+        "No se detectó entorno local (Docker/localhost). "
+        "Ejemplo: CORS_ORIGINS=https://tu-dominio.com,https://www.tu-dominio.com"
     )
 
 socketio = SocketIO(app, cors_allowed_origins=ALLOWED_CORS_ORIGINS)

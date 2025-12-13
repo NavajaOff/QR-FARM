@@ -108,13 +108,20 @@ cp .env.example .env
 # Esto es necesario para que el script funcione correctamente en Windows ejecutalo antes de construir los contenedores (en consola de wsl)
 sed -i 's/\r$//' backend/entrypoint.sh
 
-# Construir los servicios
+# Deshabilitar BuildKit para evitar timeouts de auth.docker.io
+# BuildKit intenta verificar metadata incluso si las imágenes están en cache
+export DOCKER_BUILDKIT=0
+export COMPOSE_DOCKER_CLI_BUILD=0
+
+# Construir los servicios (usa builder clásico, más tolerante a redes lentas)
 docker compose build
 
-# iniciar todos los servicios
+# Iniciar todos los servicios
 docker compose up -d
 
 ```
+
+**Nota sobre BuildKit:** Si experimentas timeouts de `auth.docker.io` durante el build, es porque BuildKit (activado por defecto) intenta verificar metadata de imágenes base incluso si ya están en cache local. Deshabilitar BuildKit con las variables de entorno arriba resuelve este problema usando el builder clásico de Docker, que es más tolerante a problemas de red.
 
 **Lo que sucede automáticamente:**
 1. ✅ MySQL se inicia y espera conexiones

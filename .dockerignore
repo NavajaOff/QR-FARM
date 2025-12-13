@@ -11,14 +11,14 @@
 .gitignore
 .gitattributes
 
-# Archivos de entorno (PERO .env se necesita - NO lo excluimos)
-# Solo excluimos variantes que no se usan
+# Archivos de entorno (NUNCA incluir .env en imágenes por seguridad)
+# Las variables se inyectan en runtime mediante docker-compose.yml (env_file)
+.env
 .env.local
 .env.development
 .env.production
 .env.*
-!.env
-!.env.example
+.env.example
 
 # Python - Cache y compilados (dentro de backend/)
 backend/__pycache__/
