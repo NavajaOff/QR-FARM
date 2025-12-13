@@ -29,6 +29,10 @@
                         <div class="col-md-6">
                           <input type="text" class="form-control" :value="formatDate(profile.fechaCreacion)" readonly>
                         </div>
+                        <div class="col-md-6" v-if="profile.cargo">
+                          <label class="form-label">Cargo</label>
+                          <input type="text" class="form-control" :value="profile.cargo" readonly>
+                        </div>
                       </div>
 
                       <div class="mt-4 d-flex gap-2">
@@ -64,6 +68,12 @@
                         <strong>Fecha de creación</strong>
                         <p class="mb-0">{{ formatDate(profile.fechaCreacion) }}</p>
                       </div>
+                      <div class="col-md-6" v-if="profile.cargo">
+                        <strong>Cargo</strong>
+                        <p class="mb-0">
+                          <span class="badge bg-info">{{ profile.cargo }}</span>
+                        </p>
+                      </div>
                     </div>
                     <div class="mt-4">
                       <button class="btn btn-primary" @click="mostrarResumen = false">Actualizar perfil</button>
@@ -81,6 +91,10 @@
                     <div class="mb-3">
                       <strong>Rol:</strong>
                       <span class="badge bg-info ms-2">{{ userRole }}</span>
+                    </div>
+                    <div class="mb-3" v-if="profile.cargo">
+                      <strong>Cargo:</strong>
+                      <span class="badge bg-success ms-2">{{ profile.cargo }}</span>
                     </div>
                     <div class="mb-3">
                       <strong>Fecha de creación:</strong>

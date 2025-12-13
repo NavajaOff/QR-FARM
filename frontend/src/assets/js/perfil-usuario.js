@@ -19,7 +19,9 @@ export default {
         nombreCompleto: '',
         email: '',
         telefono: '',
-        fechaCreacion: ''
+        fechaCreacion: '',
+        cargo: '',
+        cargoId: null
       }
     };
   },
@@ -55,7 +57,9 @@ export default {
             nombreCompleto: data.nombre_completo || '',
             email: data.email || '',
             telefono: data.telefono || '',
-            fechaCreacion: data.fecha_creacion || ''
+            fechaCreacion: data.fecha_creacion || '',
+            cargo: data.cargo || '',
+            cargoId: data.cargo_id || null
           };
           this.mostrarResumen = true; // Mostrar el resumen por defecto
         } else {

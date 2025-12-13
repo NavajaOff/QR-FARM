@@ -807,11 +807,21 @@ class UsuarioController:
                 }), 401
 
             persona = usuario.persona.to_dict() if usuario.persona else {}
+            # Obtener el nombre del cargo desde el objeto cargo o desde el dict
+            cargo_nombre = None
+            if persona.get('cargo'):
+                if isinstance(persona.get('cargo'), dict):
+                    cargo_nombre = persona.get('cargo').get('nombre_cargo')
+                elif hasattr(persona.get('cargo'), 'nombre_cargo'):
+                    cargo_nombre = persona.get('cargo').nombre_cargo
+            
             data = {
                 'nombre_completo': persona.get('nombre_completo') or '',
                 'email': persona.get('email') or '',
                 'telefono': persona.get('telefono'),
-                'fecha_creacion': persona.get('fecha_creacion')
+                'fecha_creacion': persona.get('fecha_creacion'),
+                'cargo': cargo_nombre,
+                'cargo_id': persona.get('cargo_id')
             }
 
             return jsonify({
