@@ -231,13 +231,30 @@ class NotificationService:
         tenant_id_override: Optional[int]
     ) -> List[Dict[str, Any]]:
         """Fetch pending password recovery requests as notifications."""
+        from flask import g
+        from ..utils.tenant import _obtener_rol_nombre
+        
         tenant_id = NotificationService._resolver_tenant_id(tenant_id_override)
-        if tenant_id is None:
+        
+        # Determine if current user is superadmin
+        is_superadmin = False
+        current_user_id = None
+        if hasattr(g, 'current_user') and g.current_user:
+            rol_nombre = _obtener_rol_nombre(g.current_user)
+            is_superadmin = rol_nombre == 'super_admin'
+            current_user_id = g.current_user.id
+        
+        # Superadmin without tenant selection: no recovery notifications
+        if is_superadmin and tenant_id is None:
             return []
         
         from src.services.recovery_service import RecoveryService
         try:
-            requests = RecoveryService.list_pending_requests(tenant_id)
+            requests = RecoveryService.list_pending_requests(
+                tenant_id=tenant_id,
+                current_user_id=current_user_id,
+                is_superadmin=is_superadmin
+            )
             eventos = []
             for req in requests:
                 created_at = req.get('created_at')

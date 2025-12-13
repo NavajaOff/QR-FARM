@@ -256,10 +256,11 @@ class UsuarioController:
                 return _respuesta_error('Usuario no autenticado', 401)
             
             rol_nombre = _obtener_rol_nombre(current_user)
+            is_superadmin = rol_nombre == 'super_admin'
             tenant_id = None
             
-            # Superadmin can see all or filter by tenant
-            if rol_nombre == 'super_admin':
+            # Superadmin can see all admin requests or filter by tenant
+            if is_superadmin:
                 tenant_param = request.args.get('tenant_id')
                 if tenant_param:
                     try:
@@ -267,12 +268,16 @@ class UsuarioController:
                     except (ValueError, TypeError):
                         pass
             else:
-                # Regular admin sees only their tenant's requests
+                # Regular admin sees only user requests from their tenant (excluding their own)
                 tenant_id = get_current_tenant_id(require_tenant=True)
                 if tenant_id is None:
                     return _respuesta_error('No se pudo determinar el tenant', 400)
             
-            requests = RecoveryService.list_pending_requests(tenant_id)
+            requests = RecoveryService.list_pending_requests(
+                tenant_id=tenant_id,
+                current_user_id=current_user.id,
+                is_superadmin=is_superadmin
+            )
             return jsonify({
                 'status': 'success',
                 'data': requests
@@ -725,7 +730,9 @@ class UsuarioController:
                     'message': 'No se puede determinar el tenant del usuario. Por favor, cierre sesión y vuelva a iniciar sesión.'
                 }), 403
             
-            usuarios = UsuarioService.obtener_todos_usuarios(incluir_inactivos=True, tenant_id=tenant_id)
+            # Superadmin solo ve admins (no usuarios normales)
+            solo_admins = es_super
+            usuarios = UsuarioService.obtener_todos_usuarios(incluir_inactivos=True, tenant_id=tenant_id, solo_admins=solo_admins)
             usuarios = UsuarioController._filtrar_usuarios_por_tenant(usuarios, tenant_id)
             
             return jsonify({

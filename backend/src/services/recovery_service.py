@@ -216,8 +216,15 @@ class RecoveryService:
                 conn.close()
 
     @staticmethod
-    def list_pending_requests(tenant_id: Optional[int] = None) -> List[Dict]:
-        """List pending password recovery requests for admin/superadmin."""
+    def list_pending_requests(tenant_id: Optional[int] = None, current_user_id: Optional[int] = None, is_superadmin: bool = False) -> List[Dict]:
+        """
+        List pending password recovery requests for admin/superadmin.
+        
+        Args:
+            tenant_id: Tenant ID to filter by (None for superadmin to see all)
+            current_user_id: ID of current user (to exclude their own requests for regular admins)
+            is_superadmin: Whether current user is superadmin
+        """
         conn = get_connection()
         if conn is None:
             raise RuntimeError("Base de datos no disponible")
@@ -252,9 +259,19 @@ class RecoveryService:
             """
             params = [RecoveryService.ESTADO_PENDIENTE]
             
-            if tenant_id is not None:
-                query += " AND prt.tenant_id = %s"
-                params.append(tenant_id)
+            if is_superadmin:
+                # Superadmin only sees admin recovery requests (admins of tenants)
+                query += " AND prt.tipo = 'admin'"
+            else:
+                # Regular admin only sees user recovery requests from their tenant
+                # and excludes their own requests
+                query += " AND prt.tipo = 'usuario'"
+                if tenant_id is not None:
+                    query += " AND prt.tenant_id = %s"
+                    params.append(tenant_id)
+                if current_user_id is not None:
+                    query += " AND prt.usuario_id != %s"
+                    params.append(current_user_id)
             
             query += " ORDER BY prt.created_at DESC"
             
