@@ -32,7 +32,7 @@ class NotificationService:
         if fecha is None:
             raise ValueError('Cleaning event missing fecha_proxima_limpieza')
 
-        dias_restantes = max(0, (fecha - referencia_datetime).days)
+        dias_restantes = max(0, (fecha.date() - referencia_datetime.date()).days)
         responsable = row.get('responsable_nombre') or 'Responsable no asignado'
         return {
             'id': row.get('potrero_id'),
@@ -58,9 +58,14 @@ class NotificationService:
         if fecha is None:
             raise ValueError('Vaccination event missing proxima_dosis')
 
-        dias_restantes = max(0, (fecha - referencia_datetime).days)
+        dias_restantes = max(0, (fecha.date() - referencia_datetime.date()).days)
         responsable = row.get('responsable_nombre') or 'Responsable no asignado'
-        vacuna = row.get('nombre_tipo_vacuna') or 'Vacuna desconocida'
+        vacuna = (
+            row.get('nombre_tipo_vacuna')
+            or row.get('nombre_vacuna')
+            or row.get('tipo_vacuna')
+            or 'Vacuna desconocida'
+        )
         animal = row.get('nombre_animal') or 'Animal desconocido'
         return {
             'id': row.get('vacunacion_id'),
@@ -74,6 +79,7 @@ class NotificationService:
                 'vacunacion_id': row.get('vacunacion_id'),
                 'animal_id': row.get('animal_id'),
                 'nombre_vacuna': vacuna,
+                'nombre_tipo_vacuna': row.get('nombre_tipo_vacuna'),
                 'nombre_animal': animal
             }
         }

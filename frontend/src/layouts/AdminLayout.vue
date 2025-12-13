@@ -58,21 +58,44 @@
               <div v-else-if="notifications.length === 0" class="px-3 py-2 small text-muted">
                 Sin alertas próximas en los próximos {{ notificationWindow }} días.
               </div>
-              <div v-else class="notification-list">
-                <div
-                  v-for="(notificacion, index) in notifications"
-                  :key="`${notificacion.tipo}-${index}-${notificacion.id}`"
-                  class="notification-item"
-                >
-                  <div class="notification-title">
-                    <span class="badge bg-info text-dark">{{ notificacion.tipo }}</span>
-                    {{ notificacion.titulo }}
+            <div v-else class="notification-list">
+              <article
+                v-for="(notificacion, index) in notifications"
+                :key="`${notificacion.tipo}-${index}-${notificacion.id}`"
+                class="notification-card"
+              >
+                <header class="notification-card-header">
+                  <span class="badge bg-info text-dark text-uppercase">
+                    {{ notificacion.tipo }}
+                  </span>
+                  <span class="notification-card-date">
+                    {{ formatDate(notificacion.fecha) }}
+                  </span>
+                </header>
+                <h6 class="notification-card-title">
+                  {{ notificacion.titulo }}
+                </h6>
+                <p class="notification-card-description">
+                  {{ notificacion.descripcion }}
+                </p>
+                <div class="notification-card-meta">
+                  <span>
+                    <i class="fas fa-hourglass-half me-1"></i>
+                    {{ notificacion.dias_restantes }} días restantes
+                  </span>
+                </div>
+                <div class="notification-card-footer">
+                  <div>
+                    <strong>Responsable:</strong>
+                    <span>{{ notificacion.responsable }}</span>
                   </div>
-                  <div class="notification-meta small text-muted">
-                    {{ notificacion.descripcion }} · {{ notificacion.dias_restantes }} días restantes
+                  <div>
+                    <strong>Contexto:</strong>
+                    <span>{{ contextLabel(notificacion) }}</span>
                   </div>
                 </div>
-              </div>
+              </article>
+            </div>
             </div>
           </div>
 
@@ -296,6 +319,30 @@ export default {
     },
     refreshNotifications() {
       this.fetchNotifications();
+    },
+    formatDate(value) {
+      if (!value) {
+        return 'Fecha desconocida';
+      }
+      try {
+        return new Date(value).toLocaleDateString('es-ES', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        });
+      } catch (error) {
+        return value;
+      }
+    },
+    contextLabel(notificacion) {
+      const contexto = notificacion.contexto || {};
+      return (
+        contexto.nombre_tipo_vacuna ||
+        contexto.nombre_vacuna ||
+        contexto.nombre_potrero ||
+        contexto.nombre_animal ||
+        'Contexto sin detalle'
+      );
     },
     handleDocumentClick(event) {
       const popover = this.$refs.notificationPopover;
@@ -570,6 +617,56 @@ export default {
 
 .notification-meta {
   font-size: 0.8rem;
+}
+
+.notification-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 0.75rem;
+  padding: 0.85rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+  margin-bottom: 0.85rem;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.notification-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.notification-card-title {
+  font-size: 1rem;
+  margin: 0;
+  font-weight: 600;
+}
+
+.notification-card-description {
+  margin: 0.35rem 0;
+  font-size: 0.9rem;
+}
+
+.notification-card-meta {
+  display: flex;
+  justify-content: flex-start;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: #4a4a4a;
+}
+
+.notification-card-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #2f2f2f;
+  margin-top: 0.5rem;
+  border-top: 1px dashed rgba(0, 0, 0, 0.12);
+  padding-top: 0.45rem;
+}
+
+.notification-card-footer span {
+  margin-left: 0.35rem;
+  font-weight: 500;
 }
 
 
