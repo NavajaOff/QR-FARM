@@ -6,6 +6,7 @@ from ..database.db import get_connection
 
 logger = logging.getLogger(__name__)
 from ..models.usuario import Usuario, Persona, Rol, EstadoUsuario
+from ..models.cargo import Cargo
 
 class UsuarioService:
     # Constantes para mensajes y queries
@@ -130,12 +131,20 @@ class UsuarioService:
         rol_nombre = result.get('rol_nombre')
         if rol_nombre and rol_nombre.lower() == 'super_admin':
             return None
-        
+
         rol = None
         if rol_nombre:
             rol = Rol(
                 id=result['id_rol'],
                 nombre_rol=rol_nombre
+            )
+        
+        cargo = None
+        if result.get('cargo_id_db'):
+            cargo = Cargo(
+                id=result['cargo_id_db'],
+                nombre_cargo=result.get('nombre_cargo', ''),
+                descripcion=result.get('cargo_descripcion')
             )
         
         # Obtener tenant_id desde personas (p.tenant_id)
@@ -152,7 +161,9 @@ class UsuarioService:
             email=result['email'],
             telefono=result['telefono'],
             fecha_creacion=result['fecha_creacion'],
-            tenant_id=tenant_id_persona
+            tenant_id=tenant_id_persona,
+            cargo_id=result.get('cargo_id'),
+            cargo=cargo
         )
         
         return Usuario(
@@ -228,15 +239,15 @@ class UsuarioService:
         sql_persona = """
             INSERT INTO personas (
                 id_rol, primer_nombre, segundo_nombre, primer_apellido,
-                segundo_apellido, email, telefono, fecha_creacion, tenant_id
+                segundo_apellido, email, telefono, fecha_creacion, tenant_id, cargo_id
             ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s, NOW(), %s
+                %s, %s, %s, %s, %s, %s, %s, NOW(), %s, %s
             )
         """
         values_persona = (
             persona.id_rol, persona.primer_nombre, persona.segundo_nombre,
             persona.primer_apellido, persona.segundo_apellido,
-            persona.email, persona.telefono, tenant_id
+            persona.email, persona.telefono, tenant_id, persona.cargo_id
         )
         cursor.execute(sql_persona, values_persona)
         return cursor.lastrowid
@@ -380,14 +391,15 @@ class UsuarioService:
                         primer_apellido = %s,
                         segundo_apellido = %s,
                         email = %s,
-                        telefono = %s
+                        telefono = %s,
+                        cargo_id = %s
                     WHERE id = %s
                 """
                 
                 values_persona = (
                     persona.id_rol, persona.primer_nombre, persona.segundo_nombre,
                     persona.primer_apellido, persona.segundo_apellido, 
-                    persona.email, persona.telefono, id_persona
+                    persona.email, persona.telefono, persona.cargo_id, id_persona
                 )
                 
                 cursor.execute(sql_persona, values_persona)
@@ -785,15 +797,15 @@ class UsuarioService:
         sql_persona = """
             INSERT INTO personas (
                 id_rol, primer_nombre, segundo_nombre, primer_apellido,
-                segundo_apellido, email, telefono, fecha_creacion, tenant_id
+                segundo_apellido, email, telefono, fecha_creacion, tenant_id, cargo_id
             ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s, NOW(), %s
+                %s, %s, %s, %s, %s, %s, %s, NOW(), %s, %s
             )
         """
         values_persona = (
             persona.id_rol, persona.primer_nombre, persona.segundo_nombre,
             persona.primer_apellido, persona.segundo_apellido,
-            persona.email, persona.telefono, tenant_id
+            persona.email, persona.telefono, tenant_id, persona.cargo_id
         )
         cursor.execute(sql_persona, values_persona)
         return cursor.lastrowid
@@ -878,9 +890,12 @@ class UsuarioService:
             tenant_id = tenant_id_override
 
             sql = """
-                SELECT u.*, p.*, r.rol as rol_nombre FROM usuarios u
+                SELECT u.*, p.*, r.rol as rol_nombre, 
+                       c.id as cargo_id_db, c.nombre_cargo, c.descripcion as cargo_descripcion 
+                FROM usuarios u
                 INNER JOIN personas p ON u.id_persona = p.id
                 LEFT JOIN roles r ON u.id_rol = r.id
+                LEFT JOIN cargos c ON p.cargo_id = c.id
                 WHERE u.id = %s
             """
             params = (id,)
@@ -910,6 +925,15 @@ class UsuarioService:
                         nombre_rol=result['rol_nombre']
                     )
 
+                # Crear cargo
+                cargo = None
+                if result.get('cargo_id_db'):
+                    cargo = Cargo(
+                        id=result['cargo_id_db'],
+                        nombre_cargo=result.get('nombre_cargo', ''),
+                        descripcion=result.get('cargo_descripcion')
+                    )
+
                 # Crear persona
                 persona = Persona(
                     id=result['id_persona'],
@@ -920,7 +944,9 @@ class UsuarioService:
                     segundo_apellido=result['segundo_apellido'],
                     email=result['email'],
                     telefono=result['telefono'],
-                    fecha_creacion=result['fecha_creacion']
+                    fecha_creacion=result['fecha_creacion'],
+                    cargo_id=result.get('cargo_id'),
+                    cargo=cargo
                 )
 
                 # Crear usuario
@@ -989,10 +1015,15 @@ class UsuarioService:
                        p.telefono,
                        p.fecha_creacion,
                        p.tenant_id,
-                       r.rol as rol_nombre
+                       p.cargo_id,
+                       r.rol as rol_nombre,
+                       c.id as cargo_id_db,
+                       c.nombre_cargo,
+                       c.descripcion as cargo_descripcion
                 FROM usuarios u
                 INNER JOIN personas p ON u.id_persona = p.id
                 LEFT JOIN roles r ON u.id_rol = r.id
+                LEFT JOIN cargos c ON p.cargo_id = c.id
             """
 
             conditions, params = UsuarioService._construir_condiciones_sql(incluir_inactivos, tenant_id, excluir_super_admin, solo_admins)
@@ -1076,7 +1107,8 @@ class UsuarioService:
                 primer_apellido = %s,
                 segundo_apellido = %s,
                 email = %s,
-                telefono = %s
+                telefono = %s,
+                cargo_id = %s
             WHERE id = %s
         """
         values_persona = (
@@ -1087,6 +1119,7 @@ class UsuarioService:
             usuario.persona.segundo_apellido,
             usuario.persona.email,
             usuario.persona.telefono,
+            usuario.persona.cargo_id,
             id_persona
         )
         cursor.execute(sql_persona, values_persona)
@@ -1177,9 +1210,12 @@ class UsuarioService:
             cursor = conn.cursor(dictionary=True)
 
             sql = """
-                SELECT u.*, p.*, r.rol as rol_nombre FROM usuarios u
+                SELECT u.*, p.*, r.rol as rol_nombre,
+                       c.id as cargo_id_db, c.nombre_cargo, c.descripcion as cargo_descripcion 
+                FROM usuarios u
                 INNER JOIN personas p ON u.id_persona = p.id
                 LEFT JOIN roles r ON u.id_rol = r.id
+                LEFT JOIN cargos c ON p.cargo_id = c.id
                 WHERE p.email = %s AND u.estado = 'activo'
             """
             cursor.execute(sql, (email,))
@@ -1194,6 +1230,15 @@ class UsuarioService:
                         nombre_rol=result['rol_nombre']
                     )
 
+                # Crear cargo
+                cargo = None
+                if result.get('cargo_id_db'):
+                    cargo = Cargo(
+                        id=result['cargo_id_db'],
+                        nombre_cargo=result.get('nombre_cargo', ''),
+                        descripcion=result.get('cargo_descripcion')
+                    )
+
                 # Crear persona - IMPORTANTE: tenant_id está en personas, no en usuarios
                 persona = Persona(
                     id=result['id_persona'],
@@ -1204,7 +1249,9 @@ class UsuarioService:
                     segundo_apellido=result['segundo_apellido'],
                     email=result['email'],
                     telefono=result['telefono'],
-                    fecha_creacion=result['fecha_creacion']
+                    fecha_creacion=result['fecha_creacion'],
+                    cargo_id=result.get('cargo_id'),
+                    cargo=cargo
                 )
 
                 # Obtener tenant_id desde personas (campo p.tenant_id)

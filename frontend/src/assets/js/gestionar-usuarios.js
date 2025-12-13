@@ -1,7 +1,7 @@
 import { useUsuarios } from '../../composables/useUsuarios.js';
 import { useTenants } from '../../composables/useTenants.js';
 import authService from '../../services/authService.js';
-import { authAPI } from '../../services/api.js';
+import { authAPI, userAPI } from '../../services/api.js';
 import Swal from 'sweetalert2';
 
 const SAFE_EMAIL_REGEX = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,}$/;
@@ -41,6 +41,8 @@ export default {
       showAddUserModal: false,
       showEditModal: false,
       creatingUser: false,
+      cargos: [],
+      cargosLoading: false,
       addForm: {
         primer_nombre: '',
         segundo_nombre: '',
@@ -51,7 +53,8 @@ export default {
         password: '',
         confirm_password: '',
         id_rol: 2,
-        tenant_id: null
+        tenant_id: null,
+        cargo_id: null
       },
       editForm: {
         primer_nombre: '',
@@ -61,7 +64,8 @@ export default {
         email: '',
         telefono: '',
         password: '',
-        id_rol: 2
+        id_rol: 2,
+        cargo_id: null
       },
       originalEditData: null,
       editingUserId: null
@@ -73,12 +77,19 @@ export default {
     },
     isSuperAdmin() {
       return authService.getRole() == 'super_admin';
+    },
+    isTenantAdmin() {
+      // Es admin pero NO super admin
+      return authService.isAdmin() && !this.isSuperAdmin;
     }
   },
   mounted() {
     this.cargarUsuarios();
     if (this.isSuperAdmin) {
       this.cargarTenants(true);
+    }
+    if (this.isTenantAdmin) {
+      this.cargarCargos();
     }
   },
   beforeUnmount() {
@@ -143,8 +154,23 @@ export default {
         password: '',
         confirm_password: '',
         id_rol: 2,
-        tenant_id: null
+        tenant_id: null,
+        cargo_id: null
       };
+    },
+
+    async cargarCargos() {
+      this.cargosLoading = true;
+      try {
+        const response = await userAPI.getCargos();
+        if (response.data?.status === 'success') {
+          this.cargos = response.data.data || [];
+        }
+      } catch (error) {
+        console.error('Error al cargar cargos:', error);
+      } finally {
+        this.cargosLoading = false;
+      }
     },
 
     async createUser() {
@@ -199,6 +225,11 @@ export default {
             payload.tenant_id = this.addForm.tenant_id;
           }
         }
+        
+        // Agregar cargo_id si es admin de tenant (no super admin)
+        if (this.isTenantAdmin && this.addForm.cargo_id) {
+          payload.cargo_id = this.addForm.cargo_id;
+        }
 
         const response = await authAPI.register(payload);
         if (response.data?.status === 'success') {
@@ -215,7 +246,7 @@ export default {
       }
     },
 
-    editUser(usuario) {
+    async editUser(usuario) {
       console.log('Usuario completo:', usuario);
       console.log('Persona del usuario:', usuario.persona);
 
@@ -227,8 +258,14 @@ export default {
         segundo_apellido: usuario.persona?.segundo_apellido || usuario.segundo_apellido || '',
         email: usuario.persona?.email || usuario.email || '',
         telefono: usuario.persona?.telefono || usuario.telefono || '',
-        id_rol: resolvedRoleId
+        id_rol: resolvedRoleId,
+        cargo_id: usuario.persona?.cargo_id || usuario.persona?.cargo?.id || null
       };
+      
+      // Cargar cargos si es tenant admin y aún no se han cargado
+      if (this.isTenantAdmin && this.cargos.length === 0) {
+        await this.cargarCargos();
+      }
 
       console.log('Datos base para editar:', baseData);
 
@@ -251,7 +288,8 @@ export default {
         email: '',
         telefono: '',
         password: '',
-        id_rol: 2
+        id_rol: 2,
+        cargo_id: null
       };
       this.originalEditData = null;
       this.editingUserId = null;
@@ -284,13 +322,10 @@ export default {
           }
         }
 
-        if (!value) {
-          return null;
-        }
-
+        // Solo incluir si hay valor o si cambió (incluyendo cuando se establece a null/vacío)
         const comparableOriginal = originalValue ?? '';
         if (value !== comparableOriginal) {
-          updateData[field] = value;
+          updateData[field] = value || null;
         }
       }
 
@@ -310,6 +345,18 @@ export default {
         }
       }
     },
+    _agregarCargoSiEsTenantAdmin(updateData) {
+      if (this.isTenantAdmin) {
+        // Normalizar valores: null, undefined, '', 0 -> null para comparación
+        const currentCargoId = (this.editForm.cargo_id && Number(this.editForm.cargo_id)) || null;
+        const originalCargoId = (this.originalEditData?.cargo_id && Number(this.originalEditData.cargo_id)) || null;
+        
+        // Comparar números o ambos null
+        if (currentCargoId !== originalCargoId) {
+          updateData.cargo_id = currentCargoId;
+        }
+      }
+    },
     _validarEmail(updateData) {
       if (updateData.email && !SAFE_EMAIL_REGEX.test(updateData.email)) {
         Swal.fire('Error', 'El formato del email no es válido', 'error');
@@ -325,13 +372,11 @@ export default {
         return;
       }
 
-      const updateData = this._procesarCamposActualizacion();
-      if (!updateData) {
-        return;
-      }
-
+      const updateData = this._procesarCamposActualizacion() || {};
+      
       this._agregarPasswordSiExiste(updateData);
       this._agregarRolSiEsAdmin(updateData);
+      this._agregarCargoSiEsTenantAdmin(updateData);
 
       if (Object.keys(updateData).length === 0) {
         Swal.fire('Información', 'No hay cambios para guardar', 'info');
