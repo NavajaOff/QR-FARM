@@ -24,6 +24,11 @@
 
         <form @submit.prevent="confirmarToken">
           <div class="mb-3">
+            <label class="form-label">Email registrado</label>
+            <input v-model="emailConfirm" type="email" class="form-control" placeholder="usuario@empresa.com" required />
+            <small class="form-text text-muted">Debe ser el mismo email con el que solicitaste la recuperación</small>
+          </div>
+          <div class="mb-3">
             <label class="form-label">Token recibido</label>
             <input v-model="token" class="form-control" placeholder="Código que llegó al administrador" required />
           </div>
@@ -61,6 +66,7 @@ const requestLoading = ref(false);
 const requestMessage = ref('');
 const requestError = ref('');
 
+const emailConfirm = ref('');
 const token = ref('');
 const password = ref('');
 const passwordConfirm = ref('');
@@ -92,6 +98,10 @@ const solicitarToken = async () => {
 };
 
 const confirmarToken = async () => {
+  if (!emailConfirm.value) {
+    confirmError.value = 'Debes ingresar tu email';
+    return;
+  }
   if (!validatePasswordConfirmation()) {
     confirmError.value = 'Las contraseñas deben coincidir';
     return;
@@ -102,6 +112,7 @@ const confirmarToken = async () => {
 
   try {
     await recoveryAPI.confirm({
+      email: emailConfirm.value,
       token: token.value,
       password: password.value
     });

@@ -120,7 +120,7 @@
             </div>
             <p class="text-muted small mb-0">
               <i class="fas fa-info-circle me-1"></i>
-              Este token ha sido enviado al usuario por correo electrónico. El token expira en 30 minutos.
+              El token expira en 30 minutos. Comparte este token con el usuario para que pueda cambiar su contraseña.
             </p>
           </div>
           <div class="modal-footer">
@@ -197,7 +197,7 @@ export default {
           Swal.fire({
             icon: 'success',
             title: 'Solicitud aprobada',
-            text: 'El token ha sido generado y enviado al usuario.',
+            text: 'El token ha sido generado. Compártelo con el usuario.',
             timer: 2000,
             showConfirmButton: false
           });

@@ -230,9 +230,10 @@ class UsuarioController:
         data = request.get_json(silent=True) or {}
         token = (data.get('token') or '').strip()
         password = data.get('password')
+        email = (data.get('email') or '').strip()
 
         try:
-            RecoveryService.confirm_password_recovery(token, password)
+            RecoveryService.confirm_password_recovery(token, password, email)
             return jsonify({
                 'status': 'success',
                 'message': 'Contraseña actualizada correctamente.'

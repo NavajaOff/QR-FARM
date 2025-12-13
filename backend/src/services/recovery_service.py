@@ -169,10 +169,12 @@ class RecoveryService:
         }
 
     @staticmethod
-    def confirm_password_recovery(token: str, new_password: str) -> None:
-        """Confirm password recovery using approved token."""
+    def confirm_password_recovery(token: str, new_password: str, email: str) -> None:
+        """Confirm password recovery using approved token. Validates that email matches the token owner."""
         if not token or not new_password:
             raise ValueError("Token y nueva contraseña son obligatorios")
+        if not email:
+            raise ValueError("El email es obligatorio para validar el token")
         if len(new_password) < 6:
             raise ValueError("La contraseña debe tener al menos 6 caracteres")
 
@@ -182,12 +184,16 @@ class RecoveryService:
             raise RuntimeError("Base de datos no disponible")
         cursor = conn.cursor(dictionary=True)
         try:
+            # Get token with user email for validation
             cursor.execute("""
-                SELECT id, usuario_id, estado
-                FROM password_recovery_tokens
-                WHERE token_hash = %s
-                  AND used_at IS NULL
-                  AND expires_at >= UTC_TIMESTAMP()
+                SELECT prt.id, prt.usuario_id, prt.estado, prt.solicitante_email,
+                       p.email AS usuario_email
+                FROM password_recovery_tokens prt
+                JOIN usuarios u ON u.id = prt.usuario_id
+                LEFT JOIN personas p ON p.id = u.id_persona
+                WHERE prt.token_hash = %s
+                  AND prt.used_at IS NULL
+                  AND prt.expires_at >= UTC_TIMESTAMP()
                 LIMIT 1
             """, (token_hash,))
             row = cursor.fetchone()
@@ -197,8 +203,23 @@ class RecoveryService:
             # Check if request was approved
             if row['estado'] != RecoveryService.ESTADO_APROBADA:
                 raise ValueError("La solicitud no ha sido aprobada por el administrador")
+            
+            # CRITICAL SECURITY: Validate that email matches the token owner
+            email_normalized = email.strip().lower()
+            solicitante_email = (row['solicitante_email'] or '').strip().lower()
+            usuario_email = (row['usuario_email'] or '').strip().lower()
+            
+            if email_normalized != solicitante_email and email_normalized != usuario_email:
+                raise ValueError("El email no coincide con el usuario que solicitó la recuperación. El token solo puede ser usado por el usuario que lo solicitó.")
+            
+            # Verify the user exists and email matches
+            usuario = UsuarioService.buscar_por_email(email)
+            if not usuario:
+                raise ValueError("Usuario no encontrado con ese email")
+            
+            if usuario.id != row['usuario_id']:
+                raise ValueError("El email no corresponde al usuario autorizado para este token")
 
-            usuario = Usuario(id=row['usuario_id'])
             usuario.set_password(new_password)
 
             cursor.execute(
@@ -330,7 +351,7 @@ class RecoveryService:
                 # Don't fail if email fails, token is already generated
             
             return {
-                'message': 'Solicitud aprobada. El token ha sido enviado al usuario.',
+                'message': 'Solicitud aprobada. El token ha sido generado.',
                 'token': token  # Return token for admin to see/manually share if needed
             }
         finally:
