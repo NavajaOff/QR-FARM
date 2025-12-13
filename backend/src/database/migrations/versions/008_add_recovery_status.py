@@ -25,6 +25,12 @@ def upgrade() -> None:
                     nullable=True,
                     existing_nullable=False)
     
+    # Make expires_at nullable (will be set when approved)
+    op.alter_column('password_recovery_tokens', 'expires_at',
+                    existing_type=sa.DateTime,
+                    nullable=True,
+                    existing_nullable=False)
+    
     # Add estado column with default 'pendiente'
     op.add_column('password_recovery_tokens', 
                   sa.Column('estado', recovery_status_enum, nullable=False, server_default='pendiente'))
@@ -50,6 +56,11 @@ def downgrade() -> None:
     op.drop_column('password_recovery_tokens', 'estado')
     
     # MySQL requires the full column definition when modifying
+    op.alter_column('password_recovery_tokens', 'expires_at',
+                    existing_type=sa.DateTime,
+                    nullable=False,
+                    existing_nullable=True)
+    
     op.alter_column('password_recovery_tokens', 'token_hash',
                     existing_type=sa.String(128),
                     nullable=False,
