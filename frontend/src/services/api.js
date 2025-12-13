@@ -1,7 +1,17 @@
 import axios from 'axios';
 
+// Obtener URL del backend desde variables de entorno (obligatorio)
+const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VUE_APP_API_BASE_URL?.replace(/\/api\/?$/, '');
+
+if (!backendUrl) {
+  throw new Error(
+    'VITE_BACKEND_URL o VUE_APP_API_BASE_URL debe estar configurado. ' +
+    'Configure la variable de entorno antes de ejecutar la aplicación.'
+  );
+}
+
 const api = axios.create({
-  baseURL: `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}/api`,
+  baseURL: `${backendUrl}/api`,
   timeout: 10000,
 });
 
@@ -74,7 +84,8 @@ api.interceptors.response.use(
     
     if (error.code === 'ERR_NETWORK') {
       console.error('[API] Error de red - No se pudo conectar al servidor');
-      alert('⚠️ No se pudo conectar al servidor Flask. Verifica que esté corriendo en el puerto 5000.');
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'el servidor backend';
+      alert(`⚠️ No se pudo conectar al servidor Flask. Verifica que esté corriendo en ${backendUrl}.`);
     } else if (error.response?.status === 401) {
       console.warn('[API] Error 401 - No autorizado, posible token expirado o inválido');
     } else if (error.response?.status === 403) {

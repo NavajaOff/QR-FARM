@@ -83,13 +83,16 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 migrate = Migrate(app, directory='src/database/migrations')
 
 # Inicializar SocketIO para actualizaciones en tiempo real
-# CORS origins desde variables de entorno o valores por defecto para desarrollo
+# CORS origins desde variables de entorno (obligatorio para producción)
 _cors_origins_env = os.getenv('CORS_ORIGINS', '')
+_flask_env = os.getenv('FLASK_ENV', 'production')
+
 if _cors_origins_env:
     # Si hay variable de entorno, usar esos valores (separados por coma)
     ALLOWED_CORS_ORIGINS = [origin.strip() for origin in _cors_origins_env.split(',')]
-else:
-    # Valores por defecto para desarrollo local
+elif _flask_env == 'development':
+    # Solo en desarrollo: valores por defecto para facilitar desarrollo local
+    # En producción debe configurarse explícitamente
     ALLOWED_CORS_ORIGINS = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
@@ -100,6 +103,14 @@ else:
         "http://localhost",
         "http://127.0.0.1"
     ]
+    print("⚠️  ADVERTENCIA: Usando valores por defecto de CORS para desarrollo. "
+          "Configure CORS_ORIGINS en producción.")
+else:
+    # En producción: sin valores por defecto - debe configurarse explícitamente
+    raise RuntimeError(
+        "CORS_ORIGINS debe estar configurado en variables de entorno para producción. "
+        "Ejemplo: CORS_ORIGINS=http://localhost:5174,http://localhost:5173"
+    )
 
 socketio = SocketIO(app, cors_allowed_origins=ALLOWED_CORS_ORIGINS)
 
@@ -495,11 +506,16 @@ if __name__ == '__main__':
     # Nota: El super_admin se crea automáticamente mediante inicializar_super_admin()
     # que se ejecuta al cargar la aplicación (línea 365)
     
+    # Obtener host y puerto desde variables de entorno o usar valores por defecto
+    backend_host = os.getenv('BACKEND_HOST', '0.0.0.0')
+    backend_port = os.getenv('BACKEND_PORT', '5000')
+    backend_url = f"http://{backend_host}:{backend_port}" if backend_host != '0.0.0.0' else f"http://localhost:{backend_port}"
+    
     print("\nURLs disponibles:")
-    print("  - URL: http://localhost:5000")
-    print("  - Health check: http://localhost:5000/api/health")
-    print("  - Login: http://localhost:5000/api/usuarios/login")
-    print("  - WebSocket: ws://localhost:5000/socket.io")
+    print(f"  - URL: {backend_url}")
+    print(f"  - Health check: {backend_url}/api/health")
+    print(f"  - Login: {backend_url}/api/usuarios/login")
+    print(f"  - WebSocket: ws://{backend_host}:{backend_port}/socket.io")
     print("\nPresiona Ctrl+C para detener")
     print("=" * 60)
 

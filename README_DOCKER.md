@@ -41,9 +41,9 @@ Docker permite ejecutar QR-Farm de forma **aislada y reproducible** en cualquier
 
 ### Servicios Docker
 
-- **MySQL 8.0**: Base de datos persistente (usuario root, sin contraseña, BD: gestion_ganadera)
-- **Backend (Flask)**: API REST en puerto 5000
-- **Frontend (Vue.js)**: Interfaz en puerto 80
+- **MySQL 8.0**: Base de datos persistente (usuario root, sin contraseña, BD: gestion_ganadera) - Puerto externo: 3313
+- **Backend (Flask)**: API REST en puerto interno 5000, mapeado al puerto externo 5010
+- **Frontend (Vue.js)**: Interfaz en puerto interno 80, mapeado al puerto externo 5174
 
 ### Configuración de Base de Datos Docker
 
@@ -55,14 +55,23 @@ Docker permite ejecutar QR-Farm de forma **aislada y reproducible** en cualquier
 
 **El backend se conecta usando credenciales hardcodeadas en docker-compose.yml**
 
-### Archivo .env.docker para Docker
+### Archivo .env para Docker
 ```bash
-# Copia de .env.docker.example y configura:
+# Copia de .env.example y configura:
 FLASK_ENV=production
 SECRET_KEY=tu_clave_secreta_aqui
 JWT_SECRET_KEY=tu_jwt_secret_aqui
-# ⚠️  NOTA: Las variables DB_* están HARDCODEADAS en docker-compose.yml
-# MySQL: root/(vacía)/gestion_ganadera - NO se usan las variables DB_* de este archivo
+# ⚠️  NOTA: Las variables DB_* están configuradas en docker-compose.yml
+# MySQL: root/(vacía)/gestion_ganadera - DB_HOST se sobrescribe a 'mysql' en docker-compose.yml
+
+# ⚠️  IMPORTANTE: Configuración CORS (obligatorio para producción)
+# Debe incluir el puerto del frontend: http://localhost:5174
+CORS_ORIGINS=http://localhost:5174,http://localhost:5173,http://localhost:80
+
+# ⚠️  IMPORTANTE: URL del backend para el frontend (obligatorio)
+# Debe usar el puerto externo mapeado: http://localhost:5010
+VITE_BACKEND_URL=http://localhost:5010
+
 ROOT_SUPER_ADMIN_EMAIL=superadmin@qrfarm.com
 ROOT_SUPER_ADMIN_PASSWORD=tu_contraseña_segura_aqui
 ROOT_SUPER_ADMIN_NOMBRE=Super Administrador QR-Farm
@@ -79,9 +88,11 @@ python -c "import secrets; print(secrets.token_hex(32))"
 ### 1. Preparar Variables de Entorno
 
 ```bash
-cp .env.docker .env
-# El archivo .env.docker ya tiene todas las configuraciones necesarias
-# Las variables DB_* están hardcodeadas en docker-compose.yml para consistencia
+cp .env.example .env
+# Edita el archivo .env y configura:
+# - CORS_ORIGINS=http://localhost:5174,http://localhost:5173,http://localhost:80
+# - VITE_BACKEND_URL=http://localhost:5010
+# - SECRET_KEY, JWT_SECRET_KEY, y otras credenciales
 ```
 
 
@@ -115,9 +126,9 @@ docker compose up -d
 
 ### 3. Acceder a la Aplicación
 
-- **Frontend**: http://localhost
-- **Backend API**: http://localhost:5000
-- **Base de datos**: localhost:3306 (desde host)
+- **Frontend**: http://localhost:5174
+- **Backend API**: http://localhost:5010
+- **Base de datos**: localhost:3313 (desde host)
 
 ## Comandos Útiles
 
@@ -138,8 +149,8 @@ docker-compose restart backend
 ## Configuración de Red
 
 Los servicios se comunican a través de la red `qr-farm-network`:
-- Backend conecta a MySQL usando `mysql:3306`
-- Frontend accede al backend desde el navegador usando `localhost:5000`
+- Backend conecta a MySQL usando `mysql:3306` (puerto interno del contenedor)
+- Frontend accede al backend desde el navegador usando `http://localhost:5010` (puerto externo mapeado)
 
 ## Persistencia de Datos
 
@@ -156,7 +167,7 @@ docker-compose logs mysql
 ```
 
 ### Error de CORS
-Verifica que las URLs permitidas en `backend/app.py` incluyan `http://localhost:80`
+Verifica que la variable de entorno `CORS_ORIGINS` en el archivo `.env` incluya `http://localhost:5174` (puerto del frontend)
 
 ### Migraciones no aplicadas
 Ejecuta manualmente:
@@ -192,9 +203,9 @@ Ya está corregido en el código, pero si persiste, verifica que uses `--build`.
 
 ### Verificación de Funcionamiento
 
-1. **Accede al frontend**: http://localhost
+1. **Accede al frontend**: http://localhost:5174
 2. **Haz login** con las credenciales arriba
-3. **Verifica la API**: http://localhost:5000/api/health
+3. **Verifica la API**: http://localhost:5010/api/health
 4. **Revisa logs**: `docker-compose logs -f`
 
 ### Próximos Pasos

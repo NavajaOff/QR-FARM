@@ -9,7 +9,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     ports:
-      - "3306:3306"
+      - "3313:3306"
     networks:
       - qr-farm-network
     healthcheck:
@@ -29,8 +29,9 @@ services:
       - FLASK_ENV=production
       - DEBUG=False
       - DB_HOST=mysql
+      # CORS_ORIGINS se lee desde .env via env_file
     ports:
-      - "5000:5000"
+      - "5010:5000"
     volumes:
       - ./qr:/app/qr
     networks:
@@ -43,7 +44,7 @@ services:
     container_name: qr-farm-frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "5174:80"
     depends_on:
       - backend
     networks:

@@ -1,0 +1,139 @@
+# (pegar todo el contenido de arriba)
+# ============================================================================
+# .dockerignore - Optimiza build context sin romper el proyecto
+# ============================================================================
+# IMPORTANTE: NO excluye .env, nginx.conf, backend/, ni frontend/
+# Solo excluye archivos innecesarios para el build
+# ============================================================================
+
+# Git (no necesario en build, pero .env SÍ se necesita)
+.git/
+.gitignore
+.gitattributes
+
+# Archivos de entorno (PERO .env se necesita - NO lo excluimos)
+# Solo excluimos variantes que no se usan
+.env.local
+.env.development
+.env.production
+.env.*
+!.env
+!.env.example
+
+# Python - Cache y compilados (dentro de backend/)
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.py[cod]
+backend/*.pyc
+backend/*.pyo
+backend/**/*.pyc
+backend/**/*.pyo
+
+# Python - Entornos virtuales (no necesarios)
+venv/
+env/
+.venv/
+.env/
+ENV/
+env.bak/
+venv.bak/
+
+# Python - Build artifacts (no necesarios)
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Python - Testing y coverage (no necesarios en build)
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache/
+nosetests.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Node.js - Dependencies (se instalan en build)
+frontend/node_modules/
+frontend/**/node_modules/
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Frontend - Build artifacts (se generan en build)
+frontend/dist/
+frontend/build/
+frontend/.vite/
+frontend/.cache/
+frontend/coverage/
+
+# Backend - Archivos temporales y QR (se crean en runtime)
+backend/qr/
+backend/*.log
+backend/logs/
+
+# Documentación y temporales (no necesarios)
+docs/
+tmp/
+*.md
+!README.md
+!README_DOCKER.md
+
+# Archivos de desarrollo (no necesarios)
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Testing y output (no necesarios)
+test-output.txt
+test-output-full.txt
+debug_recovery.py
+
+# SonarQube (no necesario)
+.scannerwork/
+.sonar_lock
+report-task.txt
+sonar-project.properties
+
+# Docker files (no necesarios en contexto)
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile*
+.dockerignore
+
+# Archivos de configuración no usados en Docker
+package.json
+tsconfig.json
+
+# Archivos de sistema
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
