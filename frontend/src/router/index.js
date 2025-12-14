@@ -211,6 +211,18 @@ function checkRoleAlias(userRole, allowedRoles) {
   return false;
 }
 
+function getTenantIdFromToken() {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.tenant_id || null;
+  } catch (error) {
+    console.error('Error obteniendo tenant_id del token:', error);
+    return null;
+  }
+}
+
 function invalidRole(to, userRole, roleInfo) {
   if (!to.meta.allowedRoles || !Array.isArray(to.meta.allowedRoles)) {
     return false;
@@ -223,8 +235,30 @@ function invalidRole(to, userRole, roleInfo) {
     return true;
   }
 
+  // Super admin no puede acceder a rutas que requieren tenant
   if (to.meta.requiresTenant && roleInfo.isSuperAdmin) {
     return true;
+  }
+
+  // Usuarios normales y admins necesitan tener tenant_id si la ruta lo requiere
+  if (to.meta.requiresTenant && (roleInfo.isUser || roleInfo.isAdmin)) {
+    const token = localStorage.getItem('token');
+    const tenantId = getTenantIdFromToken();
+    if (!tenantId) {
+      console.warn('[Router] Ruta requiere tenant pero usuario no tiene tenant_id asignado en el token');
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          console.warn('[Router] Token payload completo:', payload);
+        } catch (e) {
+          console.error('[Router] Error decodificando token:', e);
+        }
+      }
+      // Permitir acceso - el backend validará si el usuario tiene tenant asignado
+      // No bloquear aquí para permitir que el backend maneje la validación
+    } else {
+      console.log('[Router] Usuario tiene tenant_id:', tenantId);
+    }
   }
 
   return false;
@@ -285,18 +319,24 @@ router.beforeEach((to, from, next) => {
   const userRole = localStorage.getItem('userRole');
   const roleInfo = getRoleInfo(userRole);
 
+  console.log('[Router] Navegando a:', to.path, 'Rol:', userRole, 'Requiere tenant:', to.meta.requiresTenant);
+
   if (lacksAuth(to, token)) {
+    console.log('[Router] Sin autenticación, redirigiendo a login');
     return next('/login');
   }
 
   if (invalidRole(to, userRole, roleInfo)) {
+    console.log('[Router] Rol inválido, redirigiendo');
     return next(handleInvalidRoleRedirect(to, roleInfo));
   }
 
   if (token && isRootOrLogin(to.path)) {
+    console.log('[Router] Redirigiendo según rol');
     return next(redirectByRole(roleInfo));
   }
 
+  console.log('[Router] Acceso permitido a:', to.path);
   next();
 });
 

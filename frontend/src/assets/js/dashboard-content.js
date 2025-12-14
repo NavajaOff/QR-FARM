@@ -71,7 +71,7 @@ export default {
         const response = await tenantAPI.getAll(true);
         console.log('[DashboardContent] Respuesta de tenants:', response);
         
-        if (response.data?.success === true) {
+        if (response.data?.status === 'success') {
           this.tenants = response.data.data || [];
           this.estadisticas.tenants = this.tenants.length;
           console.log('[DashboardContent] Tenants cargados:', this.tenants.length);

@@ -27,6 +27,36 @@
       </div>
     </nav>
 
+    <!-- Menú lateral móvil (offcanvas) -->
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="userSidebar" aria-labelledby="userSidebarLabel">
+      <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="userSidebarLabel">Menú</h5>
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+      </div>
+      <div class="offcanvas-body">
+        <nav class="nav flex-column" aria-label="Menú lateral del usuario">
+          <router-link class="nav-link" to="/user/inicio" @click="closeOffcanvas">
+            <i class="fas fa-home me-2"></i>Inicio
+          </router-link>
+          <router-link class="nav-link" to="/user/ganado" @click="closeOffcanvas">
+            <i class="fas fa-cow me-2"></i>Mi Ganado
+          </router-link>
+          <router-link class="nav-link" to="/user/potreros" @click="closeOffcanvas">
+            <i class="fas fa-map-marked-alt me-2"></i>Potreros
+          </router-link>
+          <router-link class="nav-link" to="/user/registro-vacunacion" @click="closeOffcanvas">
+            <i class="fas fa-syringe me-2"></i>Vacunación
+          </router-link>
+          <router-link v-if="canViewQrScanner" class="nav-link" to="/user/scan-qr" @click="closeOffcanvas">
+            <i class="fas fa-qrcode me-2"></i>Escanear QR
+          </router-link>
+          <router-link class="nav-link" to="/user/perfil" @click="closeOffcanvas">
+            <i class="fas fa-user-edit me-2"></i>Perfil
+          </router-link>
+        </nav>
+      </div>
+    </div>
+
     <!-- Menú lateral fijo -->
     <div class="d-none d-md-block user-sidebar">
       <nav class="nav flex-column" aria-label="Menú lateral del usuario">
@@ -103,6 +133,27 @@ export default {
     logout() {
       authService.logout();
       this.$router.push('/login');
+    },
+    closeOffcanvas() {
+      // Cerrar el offcanvas cuando se hace clic en un enlace (solo en móvil)
+      const offcanvasElement = document.getElementById('userSidebar');
+      if (offcanvasElement) {
+        // Intentar usar Bootstrap si está disponible
+        if (typeof bootstrap !== 'undefined' && bootstrap.Offcanvas) {
+          const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvasElement);
+          if (offcanvasInstance) {
+            offcanvasInstance.hide();
+          }
+        } else {
+          // Fallback: remover clase manualmente
+          offcanvasElement.classList.remove('show');
+          document.body.classList.remove('offcanvas-backdrop');
+          const backdrop = document.querySelector('.offcanvas-backdrop');
+          if (backdrop) {
+            backdrop.remove();
+          }
+        }
+      }
     }
   }
 };

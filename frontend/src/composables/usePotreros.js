@@ -17,9 +17,19 @@ export function usePotreros() {
       const response = await potreroAPI.getAll()
       const payload = response.data
       if (payload?.success || payload?.status === 'success') {
-        potreros.value = payload.data || []
+          potreros.value = payload.data || []
+          console.log('DEBUG Frontend cargarPotreros: potreros loaded', potreros.value.length, 'first:', potreros.value[0] ? {id: potreros.value[0].id, estado: potreros.value[0].estado, estado_nombre: potreros.value[0].estado_nombre} : 'none')
+          if (potreros.value[0]) {
+              console.log('DEBUG Frontend: Campos del primer potrero:', Object.keys(potreros.value[0]))
+              console.log('DEBUG Frontend: Valores de actividades:', {
+                  ultima_limpieza: potreros.value[0].ultima_limpieza,
+                  proxima_limpieza: potreros.value[0].proxima_limpieza,
+                  ultimaLimpieza: potreros.value[0].ultimaLimpieza,
+                  proximaLimpieza: potreros.value[0].proximaLimpieza
+              })
+          }
       } else {
-        error.value = payload?.message || 'No fue posible obtener los potreros'
+          error.value = payload?.message || 'No fue posible obtener los potreros'
       }
     } catch (err) {
       error.value = err.message || 'Error desconocido al cargar potreros'
