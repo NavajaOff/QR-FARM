@@ -5,9 +5,20 @@ import './style.css'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
-// Configuración global usando variables de entorno (tiene prioridad sobre config.js)
+// Configuración global usando variables de entorno (obligatorio para producción)
+const apiBaseUrl = import.meta.env.VUE_APP_API_BASE_URL || import.meta.env.VITE_BACKEND_URL 
+  ? `${import.meta.env.VITE_BACKEND_URL || import.meta.env.VUE_APP_API_BASE_URL?.replace(/\/api\/?$/, '')}/api`
+  : globalThis.window?.config?.API_BASE_URL;
+
+if (!apiBaseUrl) {
+  throw new Error(
+    'VUE_APP_API_BASE_URL o VITE_BACKEND_URL debe estar configurado. ' +
+    'Configure la variable de entorno antes de ejecutar la aplicación.'
+  );
+}
+
 const config = {
-  API_BASE_URL: import.meta.env.VUE_APP_API_BASE_URL || globalThis.window?.config?.API_BASE_URL || 'http://localhost:5000/api',
+  API_BASE_URL: apiBaseUrl,
   APP_NAME: import.meta.env.VUE_APP_APP_NAME || globalThis.window?.config?.APP_NAME || 'QR Farm',
   DEBUG: import.meta.env.VUE_APP_DEBUG === 'true' || globalThis.window?.config?.DEBUG || false,
   TIMEOUT: globalThis.window?.config?.TIMEOUT || 10000,

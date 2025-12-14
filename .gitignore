@@ -1,6 +1,7 @@
 # Ignorar archivos de entorno (mantener .env.example)
 .env
 .env.local
+.env.docker
 .env.development
 .env.production
 

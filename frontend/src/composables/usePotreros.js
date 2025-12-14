@@ -17,9 +17,14 @@ export function usePotreros() {
       const response = await potreroAPI.getAll()
       const payload = response.data
       if (payload?.success || payload?.status === 'success') {
-        potreros.value = payload.data || []
+          // Mapear campos de actividades para consistencia con la vista
+          potreros.value = (payload.data || []).map(potrero => ({
+              ...potrero,
+              ultimaLimpieza: potrero.ultima_limpieza,
+              proximaLimpieza: potrero.proxima_limpieza
+          }))
       } else {
-        error.value = payload?.message || 'No fue posible obtener los potreros'
+          error.value = payload?.message || 'No fue posible obtener los potreros'
       }
     } catch (err) {
       error.value = err.message || 'Error desconocido al cargar potreros'

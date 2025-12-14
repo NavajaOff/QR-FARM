@@ -10,8 +10,14 @@ WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm install
 
-# Copiar archivo .env para variables de entorno en build
-COPY .env ./
+# Variables de entorno para build (opcionales, con valores por defecto)
+# Se pueden pasar como build args desde docker-compose.yml si es necesario
+# Valor por defecto: usa localhost:5010 (puerto externo del backend en Docker)
+ARG VITE_BACKEND_URL=http://localhost:5010
+ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
+
+# NOTA: .env NO se copia en la imagen por seguridad.
+# Si se necesitan variables específicas, pasarlas como build args en docker-compose.yml
 
 # Copiar código fuente
 COPY frontend/ .

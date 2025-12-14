@@ -5,6 +5,51 @@ import { socket } from '../socket.js'
 
 let socketRegistered = false
 
+// Utility functions for age calculation
+const calcularEdad = (fechaNacimiento) => {
+  if (!fechaNacimiento) return Number.NaN;
+  const nacimiento = new Date(fechaNacimiento);
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - nacimiento.getFullYear();
+  const mes = hoy.getMonth() - nacimiento.getMonth();
+  if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+    edad--;
+  }
+  return edad;
+};
+
+const calcularDetalleEdad = (fechaNacimiento) => {
+  if (!fechaNacimiento) return null;
+  const nacimiento = new Date(fechaNacimiento);
+  if (Number.isNaN(nacimiento.getTime())) return null;
+  const hoy = new Date();
+  let years = hoy.getFullYear() - nacimiento.getFullYear();
+  let months = hoy.getMonth() - nacimiento.getMonth();
+  if (hoy.getDate() < nacimiento.getDate()) {
+    months--;
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+  if (years < 0) {
+    years = 0;
+  }
+  return { years, months };
+};
+
+const obtenerEdadTexto = (fechaNacimiento) => {
+  const detalle = calcularDetalleEdad(fechaNacimiento);
+  if (!detalle) return 'Sin información';
+  if (detalle.years >= 1) {
+    return detalle.years === 1 ? '1 año' : `${detalle.years} años`;
+  }
+  if (detalle.months >= 1) {
+    return detalle.months === 1 ? '1 mes' : `${detalle.months} meses`;
+  }
+  return 'Menos de un mes';
+};
+
 export function useGanado() {
   const ganado = ref([])
   const loading = ref(false)
@@ -29,7 +74,10 @@ export function useGanado() {
         return [];
       };
       
-      ganado.value = extractDataFromResponse(response)
+      ganado.value = extractDataFromResponse(response).map(animal => ({
+        ...animal,
+        edadTexto: animal.fecha_nacimiento ? obtenerEdadTexto(animal.fecha_nacimiento) : 'Sin información'
+      }))
     } catch (err) {
       const errorMessage = err.response?.data?.message || err.message || 'Error al cargar el ganado'
       error.value = errorMessage
@@ -86,11 +134,15 @@ export function useGanado() {
 
   const upsertGanado = (nuevo) => {
     if (!nuevo?.id) return
+    const mapped = {
+      ...nuevo,
+      edadTexto: nuevo.fecha_nacimiento ? obtenerEdadTexto(nuevo.fecha_nacimiento) : 'Sin información'
+    }
     const index = ganado.value.findIndex(item => item.id === nuevo.id)
     if (index >= 0) {
-      ganado.value.splice(index, 1, { ...ganado.value[index], ...nuevo })
+      ganado.value.splice(index, 1, { ...ganado.value[index], ...mapped })
     } else {
-      ganado.value = [nuevo, ...ganado.value]
+      ganado.value = [mapped, ...ganado.value]
     }
   }
 

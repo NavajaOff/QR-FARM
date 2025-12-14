@@ -3,7 +3,8 @@
 
 /**
  * Get the backend base URL from environment variables or configuration
- * @returns {string} Backend base URL (e.g., 'http://localhost:5000')
+ * @returns {string} Backend base URL
+ * @throws {Error} If no backend URL is configured
  */
 export const getBackendUrl = () => {
   // Priority 1: Vite environment variable
@@ -28,8 +29,11 @@ export const getBackendUrl = () => {
     return url.replace(/\/api\/?$/, '');
   }
   
-  // Priority 4: Fallback to localhost (development only)
-  return 'http://localhost:5000';
+  // No fallback - must be configured via environment variables
+  throw new Error(
+    'VITE_BACKEND_URL o VUE_APP_API_BASE_URL debe estar configurado. ' +
+    'Configure la variable de entorno antes de ejecutar la aplicación.'
+  );
 };
 
 /**

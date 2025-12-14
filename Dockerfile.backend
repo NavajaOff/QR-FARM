@@ -1,33 +1,82 @@
 # Dockerfile para el backend de QR-Farm
-FROM python:3.11-slim
+# Multi-stage build optimizado para BuildKit y tamaño mínimo
 
-# Establecer directorio de trabajo
-WORKDIR /app
+# ============================================================================
+# Stage 1: Builder - Compila e instala dependencias Python que requieren gcc
+# ============================================================================
+FROM python:3.11-slim AS builder
 
-# Instalar dependencias del sistema
-RUN apt-get update && apt-get install -y \
+WORKDIR /build
+
+# Instalar herramientas de compilación y dependencias necesarias para compilar
+# extensiones Python (ej: mysql-connector-python, cryptography, etc.)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
-    default-libmysqlclient-dev \
+    g++ \
+    cpp \
     pkg-config \
-    default-mysql-client \
+    default-libmysqlclient-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar requirements e instalar dependencias Python
+# Excluir dependencias de desarrollo (pytest) que no se necesitan en producción
 COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Filtrar pytest y comentarios, instalar solo dependencias de producción
+RUN grep -v '^#' requirements.txt | grep -v '^pytest' | grep -v '^$' > /tmp/requirements-prod.txt && \
+    pip install --no-cache-dir --user --no-warn-script-location -r /tmp/requirements-prod.txt && \
+    rm /tmp/requirements-prod.txt && \
+    # Limpiar archivos innecesarios para reducir tamaño (archivos compilados Python)
+    find /root/.local -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true && \
+    find /root/.local -type f -name '*.pyc' -delete 2>/dev/null || true && \
+    find /root/.local -type f -name '*.pyo' -delete 2>/dev/null || true && \
+    find /root/.local -type f -name '*.py[co]' -delete 2>/dev/null || true && \
+    # Eliminar tests y documentación de paquetes (ahorra ~50-100MB)
+    find /root/.local -type d \( -name 'tests' -o -name 'test' -o -name 'docs' -o -name '*.egg-info' \) -exec rm -rf {} + 2>/dev/null || true && \
+    # Eliminar archivos de metadata innecesarios de dist-info
+    find /root/.local -type d -name '*.dist-info' -exec sh -c 'rm -f "$1"/*.txt 2>/dev/null || true' _ {} \; 2>/dev/null || true
 
-# Copiar código del backend
+# ============================================================================
+# Stage 2: Runtime - Imagen final optimizada sin herramientas de compilación
+# ============================================================================
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Variables de entorno para Python (optimización de espacio y comportamiento)
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Instalar solo runtime dependencies: mysql-client para entrypoint.sh
+# Usar una sola capa RUN para reducir tamaño de imagen
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    default-mysql-client \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /tmp/* /var/tmp/* \
+    && apt-get clean
+
+# Copiar paquetes Python instalados desde el stage builder
+COPY --from=builder /root/.local /root/.local
+
+# Asegurar que los scripts instalados en /root/.local/bin estén en el PATH
+ENV PATH=/root/.local/bin:$PATH
+
+# Copiar código del backend (después de instalar dependencias para mejor cache)
 COPY backend/ .
 
-# Copiar archivo de configuración .env
-COPY .env .
+# NOTA: .env NO se copia en la imagen por seguridad.
+# Las variables de entorno se inyectan en runtime mediante docker-compose.yml (env_file)
 
-# Copiar script de entrypoint
+# Copiar script de entrypoint a ubicación final y crear directorio qr
+# Limpiar archivos innecesarios del código fuente en una sola capa
 COPY backend/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-# Crear directorio para códigos QR
-RUN mkdir -p qr
+RUN chmod +x /entrypoint.sh && \
+    mkdir -p qr && \
+    # Limpiar archivos innecesarios del código fuente (si existen)
+    find . -type d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true && \
+    find . -type f -name '*.pyc' -delete 2>/dev/null || true && \
+    find . -type f -name '*.pyo' -delete 2>/dev/null || true
 
 # Exponer puerto
 EXPOSE 5000

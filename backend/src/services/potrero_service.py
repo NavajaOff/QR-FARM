@@ -178,7 +178,7 @@ class PotreroService:
             tenant_id = tenant_id_override if tenant_id_override is not None else PotreroService._obtener_tenant_id()
             
             sql = """
-                SELECT p.*, ep.nombre_estado as estado_nombre
+                SELECT p.*, ep.nombre_estado as estado
                 FROM potrero p
                 LEFT JOIN estado_potrero ep ON p.id_estado_potrero = ep.id
             """
@@ -200,6 +200,11 @@ class PotreroService:
                 potrero.update(actividades)
                 # Agregar información del responsable
                 PotreroService._agregar_responsable(potrero, tenant_id)
+
+            # DEBUG: Log del primer potrero para verificar campos
+            if potreros:
+                print(f"DEBUG: Primer potrero retornado - ID: {potreros[0].get('id')}, estado: {potreros[0].get('estado')}, estado_nombre: {potreros[0].get('estado_nombre')}")
+                print(f"DEBUG: Campos de actividades del primer potrero: ultima_limpieza={potreros[0].get('ultima_limpieza')}, proxima_limpieza={potreros[0].get('proxima_limpieza')}")
 
             return potreros
         except Exception as e:
@@ -226,7 +231,7 @@ class PotreroService:
         
         with db.get_cursor() as cursor:
             sql = """
-                SELECT p.*, ep.nombre_estado as estado_nombre
+                SELECT p.*, ep.nombre_estado as estado
                 FROM potrero p
                 LEFT JOIN estado_potrero ep ON p.id_estado_potrero = ep.id
                 WHERE p.id = %s

@@ -11,6 +11,7 @@ from typing import Sequence
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import types
 
 
 # revision identifiers, used by Alembic.
@@ -54,7 +55,7 @@ def _asegurar_columna_not_null(
     inspector: sa.Inspector,
     tabla: str,
     columna: str,
-    tipo: sa.TypeEngine
+    tipo: types.TypeEngine
 ) -> None:
     """Asegura que una columna sea NOT NULL."""
     try:

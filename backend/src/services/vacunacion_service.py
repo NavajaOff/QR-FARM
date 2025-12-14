@@ -1,5 +1,5 @@
 # Servicio Vacunacion
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from src.database.db import get_connection
 from src.models.vacunacion import Vacunacion
 from src.utils.tenant import get_current_tenant_id
