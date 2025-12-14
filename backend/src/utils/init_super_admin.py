@@ -4,7 +4,7 @@ from typing import Optional, Tuple
 from pathlib import Path
 from dotenv import load_dotenv
 from ..database.db import get_connection
-from passlib.hash import bcrypt
+from passlib.hash import argon2
 
 
 def _obtener_posibles_rutas_env():
@@ -165,16 +165,8 @@ def crear_super_admin_desde_env() -> Tuple[bool, str]:
         segundo_nombre = ' '.join(partes[1:-1]) if len(partes) > 2 else None
         segundo_apellido = None
         
-        # Hashear contraseña con manejo de errores de bcrypt
-        try:
-            password_hash = bcrypt.hash(password)
-        except Exception as bcrypt_error:
-            # Manejar error de bcrypt (versión incompatible)
-            print(f"⚠️  Error con bcrypt: {bcrypt_error}")
-            # Usar método alternativo si bcrypt falla
-            import hashlib
-            password_hash = hashlib.sha256(password.encode()).hexdigest()
-            print("⚠️  Usando hash SHA256 como alternativa")
+        # Hashear contraseña con Argon2 (más seguro que pbkdf2)
+        password_hash = argon2.hash(password)
         
         # Iniciar transacción
         conn.start_transaction()

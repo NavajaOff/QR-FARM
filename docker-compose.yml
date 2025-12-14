@@ -16,10 +16,7 @@
 
 services:
   mysql:
-    # pull_policy: if_not_present - Usa imagen local si existe, evita pull innecesario
-    # Esto previene timeouts de auth.docker.io cuando la imagen ya está en cache
     image: mysql:8.0
-    pull_policy: if_not_present
     container_name: qr-farm-mysql
     restart: unless-stopped
     environment:
@@ -32,7 +29,6 @@ services:
     networks:
       - qr-farm-network
     healthcheck:
-      # Verifica que MySQL esté listo para aceptar conexiones
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--silent"]
       interval: 5s
       timeout: 3s
@@ -43,45 +39,47 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.backend
-      # Nota: Docker usa cache local automáticamente si la imagen base existe
-      # Para forzar pull: docker compose build --pull backend
-      # Para usar solo cache: docker compose build --no-cache backend (rebuild completo)
     container_name: qr-farm-backend
     restart: unless-stopped
+    entrypoint:
+      - /bin/sh
+      - -c
+      - sed -i 's/\r$$//' /entrypoint.sh && exec /entrypoint.sh
     env_file:
       - .env
     environment:
-      - FLASK_ENV=production
-      - DEBUG=False
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - FLASK_APP=app.py
-      # CORS_ORIGINS se lee desde .env via env_file
+      FLASK_ENV: ${FLASK_ENV:-production}
+      DEBUG: ${DEBUG:-False}
+      RUN_SEEDERS: ${RUN_SEEDERS:-False}
+      PORT: ${PORT:-5000}
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-}
+      DB_NAME: ${DB_NAME:-gestion_ganadera}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5174,http://localhost:5173,http://localhost:80,http://frontend,http://frontend:80}
     ports:
-      - "5010:5000"
+      - "${BACKEND_PORT:-5010}:${PORT:-5000}"
     volumes:
       - ./qr:/app/qr
-    networks:
-      - qr-farm-network
     depends_on:
       mysql:
         condition: service_healthy
+    networks:
+      - qr-farm-network
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-      # Build args: VITE_BACKEND_URL se pasa desde .env o usa valor por defecto
-      # IMPORTANTE: En producción, configurar VITE_BACKEND_URL en .env con la URL real del backend
       args:
         VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:5010}
-      # Nota: Docker usa cache local automáticamente si la imagen base existe
-      # Para forzar pull: docker compose build --pull frontend
-      # Para usar solo cache: docker compose build --no-cache frontend (rebuild completo)
     container_name: qr-farm-frontend
     restart: unless-stopped
+    environment:
+      VITE_API_URL: ${VITE_BACKEND_URL:-http://localhost:5010}
     ports:
-      - "5174:80"
+      - "${FRONTEND_PORT:-5174}:80"
     depends_on:
       - backend
     networks:

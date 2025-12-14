@@ -12,7 +12,7 @@ import jwt
 import datetime
 import os
 from dotenv import load_dotenv
-from passlib.hash import bcrypt
+from passlib.hash import argon2
 from src.database.db import get_connection
 from src.services.usuario_service import UsuarioService
 from src.services.animal_service import GanadoService
@@ -247,7 +247,7 @@ def generate_token(user_id, email, role, tenant_id=None):
 def _validate_login_data(data):
     """Valida los datos de login"""
     if not data:
-        return None, _create_error_response("Se requieren datos JSON"), 400
+        return None, _create_error_response("Se requieren datos JSON válidos"), 400
 
     email = data.get('email')
     password = data.get('password')
@@ -265,23 +265,11 @@ def _create_error_response(message):
     })
 
 def _verify_password(stored_password, password):
-    """Verifica la contraseña con diferentes métodos de hash"""
+    """Verifica la contraseña con Argon2"""
     try:
-        if stored_password and stored_password.startswith('$2b$'):
-            try:
-                return bcrypt.verify(password, stored_password)
-            except (AttributeError, Exception) as bcrypt_error:
-                # Manejar error de bcrypt (versión incompatible)
-                print(f"Advertencia al verificar hash bcrypt: {bcrypt_error}")
-                # Fallback a comparación directa solo si no es hash bcrypt válido
-                return stored_password == password
-        else:
-            # Para contraseñas sin hash (compatibilidad)
-            return stored_password == password
-    except Exception as hash_error:
-        print(f"Error verificando hash: {hash_error}")
-        # Fallback a comparación directa
-        return stored_password == password
+        return argon2.verify(password, stored_password)
+    except Exception:
+        return False
 
 def _create_success_response(token, user_data):
     """Crea una respuesta de login exitoso"""
@@ -367,12 +355,22 @@ def _process_login_success(result):
 
 @app.route('/api/usuarios/login', methods=['POST'])
 def usuarios_login():
-    """Endpoint de autenticación de usuarios"""
+    """Endpoint de autenticación de usuarios usando UsuarioService"""
     try:
         print("Procesando login...")
 
+        # Obtener datos JSON de forma segura
+        try:
+            data = request.get_json()
+        except Exception as e:
+            print(f"Error parsing JSON: {e}")
+            return _create_error_response("Se requieren datos JSON válidos"), 400
+
+        if not data:
+            return _create_error_response("Se requieren datos JSON válidos"), 400
+
         # Validar datos del request
-        login_data, error_response, status_code = _validate_login_data(request.get_json())
+        login_data, error_response, status_code = _validate_login_data(data)
         if error_response:
             return error_response, status_code
 
@@ -380,13 +378,30 @@ def usuarios_login():
         password = login_data['password']
         print(f"Datos recibidos - Email: {email}")
 
-        # Consultar usuario en la base de datos
+        # Usar UsuarioService.autenticar_usuario para manejar correctamente el superadmin
         try:
-            result = _query_user_by_email(email)
+            usuario = UsuarioService.autenticar_usuario(email, password)
 
-            # Verificar credenciales
-            if result and _verify_password(result['contrasena'], password):
-                return _process_login_success(result)
+            if usuario:
+                # Login exitoso - generar token
+                tenant_id = getattr(usuario, 'tenant_id', None)
+
+                # Extraer datos de usuario de forma segura
+                email_token = usuario.persona.email if usuario.persona and hasattr(usuario.persona, 'email') else email
+                rol_token = usuario.rol.nombre_rol if usuario.rol and hasattr(usuario.rol, 'nombre_rol') else 'usuario'
+
+                token = generate_token(usuario.id, email_token, rol_token, tenant_id)
+                print("Login exitoso - Token generado")
+
+                user_data = {
+                    "id": usuario.id,
+                    "email": email_token,
+                    "rol": rol_token
+                }
+                if tenant_id:
+                    user_data['tenant_id'] = tenant_id
+
+                return _create_success_response(token, user_data)
             else:
                 print("Credenciales invalidas")
                 return _create_invalid_credentials_response()

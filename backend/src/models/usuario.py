@@ -1,7 +1,7 @@
 # Modelo Usuario
 from typing import Optional, Dict, Any, Tuple
 from datetime import datetime
-from passlib.hash import bcrypt
+from passlib.hash import argon2
 from enum import Enum
 from .cargo import Cargo
 
@@ -159,31 +159,19 @@ class Usuario:
         return ""
 
     def set_password(self, password: str) -> None:
-        """Establece la contraseña con hash bcrypt"""
-        try:
-            self.contrasena = bcrypt.hash(password)
-            self.password_hash = self.contrasena
-        except Exception:
-            # Si hay error con bcrypt, usar método alternativo
-            import hashlib
-            self.contrasena = hashlib.sha256(password.encode()).hexdigest()
-            self.password_hash = self.contrasena
+        """Establece la contraseña con hash Argon2"""
+        self.contrasena = argon2.hash(password)
+        self.password_hash = self.contrasena
 
     def check_password(self, password: str) -> bool:
-        """Verifica si la contraseña proporcionada coincide"""
+        """Verifica si la contraseña proporcionada coincide usando Argon2"""
         if self.contrasena is None:
             return False
-        
-        # Intentar verificar como hash bcrypt primero
+
         try:
-            return bcrypt.verify(password, self.contrasena)
-        except (ValueError, AttributeError):
-            # Si falla, intentar comparación directa (para usuarios antiguos sin hash)
-            # Esto permite compatibilidad con usuarios existentes
-            try:
-                return self.contrasena == password
-            except Exception:
-                return False
+            return argon2.verify(password, self.contrasena)
+        except Exception:
+            return False
 
     @staticmethod
     def from_dict(data: Dict[str, Any], include_persona: bool = True) -> 'Usuario':

@@ -138,8 +138,8 @@ def test_crear_super_admin_desde_env_success(mock_get_connection, monkeypatch):
     with patch('src.utils.init_super_admin._cargar_env', return_value=True), \
          patch('src.utils.init_super_admin.existe_super_admin', return_value=False), \
          patch('src.utils.init_super_admin.obtener_rol_super_admin_id', return_value=3), \
-         patch('src.utils.init_super_admin.bcrypt') as mock_bcrypt:
-        mock_bcrypt.hash.return_value = 'hashed_password'
+         patch('src.utils.init_super_admin.argon2') as mock_argon2:
+        mock_argon2.hash.return_value = 'hashed_password'
         mock_conn.start_transaction = Mock()
         mock_conn.commit = Mock()
 
@@ -191,39 +191,6 @@ def test_inicializar_super_admin_failure(mock_crear):
 
 
 @patch('src.utils.init_super_admin.get_connection')
-def test_crear_super_admin_desde_env_bcrypt_error(mock_get_connection, monkeypatch):
-    """Test crear_super_admin_desde_env cuando bcrypt falla y usa fallback."""
-    import hashlib
-    from src.utils.init_super_admin import crear_super_admin_desde_env
-    
-    monkeypatch.setenv('ROOT_SUPER_ADMIN_EMAIL', 'test@example.com')
-    monkeypatch.setenv('ROOT_SUPER_ADMIN_PASSWORD', 'password123')
-    monkeypatch.setenv('ROOT_SUPER_ADMIN_NOMBRE', 'Super Admin')
-
-    mock_conn = Mock()
-    mock_cursor = Mock(dictionary=True)
-    mock_get_connection.return_value = mock_conn
-    mock_conn.cursor.return_value = mock_cursor
-    mock_cursor.lastrowid = 1
-
-    with patch('src.utils.init_super_admin._cargar_env', return_value=True), \
-         patch('src.utils.init_super_admin.existe_super_admin', return_value=False), \
-         patch('src.utils.init_super_admin.obtener_rol_super_admin_id', return_value=3), \
-         patch('src.utils.init_super_admin.bcrypt') as mock_bcrypt:
-        # Simular error de bcrypt
-        mock_bcrypt.hash.side_effect = AttributeError("module 'bcrypt' has no attribute 'about'")
-        
-        # Verificar que se llama a hashlib cuando bcrypt falla
-        with patch('hashlib.sha256') as mock_sha256:
-            mock_sha256_instance = Mock()
-            mock_sha256_instance.hexdigest.return_value = 'sha256_hash'
-            mock_sha256.return_value = mock_sha256_instance
-
-            exito, mensaje = crear_super_admin_desde_env()
-
-            # Debe usar el fallback de hashlib
-            assert exito is True
-            mock_sha256.assert_called_once()
 
 
 @patch('src.utils.init_super_admin.get_connection')

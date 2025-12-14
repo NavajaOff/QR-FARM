@@ -37,8 +37,7 @@ reportlab==4.4.6
 
 # Hashing y seguridad
 passlib==1.7.4
-bcrypt==4.0.1
-cryptography==46.0.3
+argon2-cffi==23.1.0
 
 # Utilidades opcionales
 python-dateutil==2.9.0.post0
@@ -46,3 +45,5 @@ python-dateutil==2.9.0.post0
 # Pruebas
 pytest==9.0.2
 pytest-cov==7.0.0
+
+cryptography==46.0.3

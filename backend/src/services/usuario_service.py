@@ -91,11 +91,18 @@ class UsuarioService:
         return sql, params
     
     @staticmethod
-    def _procesar_resultados_usuarios(results, tenant_id):
-        """Procesa resultados de BD y filtra por tenant_id."""
+    def _procesar_resultados_usuarios(results, tenant_id, excluir_super_admin=False):
+        """
+        Procesa resultados de BD y filtra por tenant_id y super_admin.
+
+        Args:
+            results: Resultados de consulta de BD
+            tenant_id: ID del tenant para filtrar
+            excluir_super_admin: Si True, filtra usuarios con rol 'super_admin'
+        """
         usuarios = []
         for result in results:
-            usuario = UsuarioService._crear_usuario_desde_resultado(result)
+            usuario = UsuarioService._crear_usuario_desde_resultado(result, excluir_super_admin=excluir_super_admin)
             if not usuario:
                 continue
             if tenant_id is not None and usuario.tenant_id != tenant_id:
@@ -129,10 +136,17 @@ class UsuarioService:
         return UsuarioService._obtener_tenant_id_desde_g()
 
     @staticmethod
-    def _crear_usuario_desde_resultado(result):
-        """Crea un objeto Usuario desde un resultado de BD."""
+    def _crear_usuario_desde_resultado(result, excluir_super_admin=False):
+        """
+        Crea un objeto Usuario desde un resultado de BD.
+
+        Args:
+            result: Resultado de consulta de BD
+            excluir_super_admin: Si True, filtra usuarios con rol 'super_admin'.
+                                Usado para listados, NO para autenticación.
+        """
         rol_nombre = result.get('rol_nombre')
-        if rol_nombre and rol_nombre.lower() == 'super_admin':
+        if excluir_super_admin and rol_nombre and rol_nombre.lower() == 'super_admin':
             return None
 
         rol = None
@@ -1099,11 +1113,11 @@ class UsuarioService:
             conditions, params = UsuarioService._construir_condiciones_sql(incluir_inactivos, tenant_id, excluir_super_admin, solo_admins)
             if conditions:
                 sql += " WHERE " + " AND ".join(conditions)
-            
+
             sql, params = UsuarioService._validar_y_agregar_tenant_id_sql(sql, params, tenant_id)
             cursor.execute(sql, params)
             results = cursor.fetchall()
-            usuarios = UsuarioService._procesar_resultados_usuarios(results, tenant_id)
+            usuarios = UsuarioService._procesar_resultados_usuarios(results, tenant_id, excluir_super_admin=excluir_super_admin)
             return usuarios
 
         except Exception as e:
@@ -1312,13 +1326,17 @@ class UsuarioService:
 
     @staticmethod
     def buscar_por_email(email: str) -> Optional[Usuario]:
+        """
+        Busca usuario por email para autenticación.
+        NO filtra al superadmin (excluir_super_admin=False) para permitir login.
+        """
         try:
             conn = get_connection()
             cursor = conn.cursor(dictionary=True)
 
             sql = """
                 SELECT u.*, p.*, r.rol as rol_nombre,
-                       c.id as cargo_id_db, c.nombre_cargo, c.descripcion as cargo_descripcion 
+                       c.id as cargo_id_db, c.nombre_cargo, c.descripcion as cargo_descripcion
                 FROM usuarios u
                 INNER JOIN personas p ON u.id_persona = p.id
                 LEFT JOIN roles r ON u.id_rol = r.id
@@ -1329,56 +1347,10 @@ class UsuarioService:
 
             result = cursor.fetchone()
             if result:
-                # Crear rol
-                rol = None
-                if result.get('rol_nombre'):
-                    rol = Rol(
-                        id=result['id_rol'],
-                        nombre_rol=result['rol_nombre']
-                    )
+                # Usar _crear_usuario_desde_resultado con excluir_super_admin=False
+                # para permitir que el superadmin pueda autenticarse
+                return UsuarioService._crear_usuario_desde_resultado(result, excluir_super_admin=False)
 
-                # Crear cargo
-                cargo = None
-                if result.get('cargo_id_db'):
-                    cargo = Cargo(
-                        id=result['cargo_id_db'],
-                        nombre_cargo=result.get('nombre_cargo', ''),
-                        descripcion=result.get('cargo_descripcion')
-                    )
-
-                # Crear persona - IMPORTANTE: tenant_id está en personas, no en usuarios
-                persona = Persona(
-                    id=result['id_persona'],
-                    id_rol=result['id_rol'],
-                    primer_nombre=result['primer_nombre'],
-                    segundo_nombre=result['segundo_nombre'],
-                    primer_apellido=result['primer_apellido'],
-                    segundo_apellido=result['segundo_apellido'],
-                    email=result['email'],
-                    telefono=result['telefono'],
-                    fecha_creacion=result['fecha_creacion'],
-                    cargo_id=result.get('cargo_id'),
-                    cargo=cargo
-                )
-
-                # Obtener tenant_id desde personas (campo p.tenant_id)
-                tenant_id_persona = result.get('tenant_id')  # Este viene de personas p.*
-                
-                # Crear usuario
-                usuario = Usuario(
-                    id=result['id'],
-                    id_persona=result['id_persona'],
-                    id_rol=result['id_rol'],
-                    contrasena=result.get('contrasena'),
-                    estado=EstadoUsuario(result['estado']),
-                    persona=persona,
-                    rol=rol,
-                    tenant_id=tenant_id_persona  # tenant_id viene de personas, no de usuarios
-                )
-                
-                print(f"[BUSCAR_POR_EMAIL] Usuario encontrado: id={usuario.id}, persona_id={usuario.id_persona}, tenant_id={tenant_id_persona}")
-
-                return usuario
             return None
 
         except Exception as e:
@@ -1420,9 +1392,9 @@ class UsuarioService:
                 if usuario.id_rol:
                     rol = UsuarioService.obtener_rol(usuario.id_rol)
                     usuario.rol = rol
-                
+
                 UsuarioService._cargar_tenant_id_si_falta(usuario)
-                
+
                 return usuario
             return None
 
