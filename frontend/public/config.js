@@ -4,14 +4,24 @@
 // Para producción, configura VITE_BACKEND_URL en las variables de entorno
 // o modifica este archivo directamente
 (function() {
-  // Determinar la URL del backend basándose en el hostname actual
-  // En desarrollo local: usar localhost:5000
-  // En producción: usar el mismo origin o configurar manualmente
-  let backendUrl = 'http://localhost:5000';
+  // Determinar la URL del backend basándose en el entorno
+  // Docker: puerto 5174 → backend en 5010
+  // Local: puerto 5173 o sin puerto → backend en 5000
+  // Producción: usar configuración explícita o mismo dominio
+  let backendUrl = 'http://localhost:5000'; // Valor por defecto para desarrollo local
   
-  // Si no estamos en localhost, intentar usar el mismo origin
-  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    // En producción, asumir que el backend está en el mismo dominio pero puerto 5000
+  const currentPort = window.location.port;
+  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  
+  // Detectar si estamos en Docker (puerto 5174 es el puerto externo del frontend en Docker)
+  if (isLocalhost && currentPort === '5174') {
+    // Docker: frontend en 5174 → backend en 5010
+    backendUrl = 'http://localhost:5010';
+  } else if (isLocalhost && (currentPort === '5173' || !currentPort)) {
+    // Desarrollo local: frontend en 5173 o sin puerto → backend en 5000
+    backendUrl = 'http://localhost:5000';
+  } else if (!isLocalhost) {
+    // Producción: asumir que el backend está en el mismo dominio pero puerto 5000
     // O usar el mismo origin si el backend está en el mismo servidor
     backendUrl = window.location.origin.replace(/:\d+$/, ':5000');
   }

@@ -71,9 +71,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.frontend
-      # Build args opcionales (se pueden pasar desde .env si es necesario)
-      # args:
-      #   VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:5010}
+      # Build args: VITE_BACKEND_URL se pasa desde .env o usa valor por defecto
+      # IMPORTANTE: En producción, configurar VITE_BACKEND_URL en .env con la URL real del backend
+      args:
+        VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:5010}
       # Nota: Docker usa cache local automáticamente si la imagen base existe
       # Para forzar pull: docker compose build --pull frontend
       # Para usar solo cache: docker compose build --no-cache frontend (rebuild completo)
